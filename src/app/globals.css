@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+
+  /* System font stacks — see layout.tsx for why these aren't next/font/google
+     anymore. --font-serif/--font-display back the Romantic/Birthday themes
+     (lib/themes/registry.ts); --font-geist-sans/mono back everything else. */
+  --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-geist-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+  --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+  --font-display: "Century Gothic", "Trebuchet MS", Verdana, var(--font-geist-sans);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ==========================================================================
+   Greeting renderer (Sender wizard + shared Preview/Recipient experience) —
+   deliberately separate from the admin/partner dashboard styling above.
+   ========================================================================== */
+
+@keyframes greeting-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes greeting-rise-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes greeting-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-14px) rotate(3deg); }
+}
+
+@keyframes greeting-drift-down {
+  from { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  to { transform: translateY(110vh) rotate(220deg); opacity: 0.9; }
+}
+
+.greeting-anim-fade-in { animation: greeting-fade-in 900ms ease-out both; }
+.greeting-anim-rise-in { animation: greeting-rise-in 700ms ease-out both; }
+.greeting-anim-float { animation: greeting-float 6s ease-in-out infinite; }
+.greeting-anim-drift { animation: greeting-drift-down linear infinite; }
+
+/* Respect the user's motion preference: freeze decorative/entrance motion,
+   keep only the plain opacity fade so content still appears. */
+@media (prefers-reduced-motion: reduce) {
+  .greeting-anim-fade-in,
+  .greeting-anim-rise-in,
+  .greeting-anim-float,
+  .greeting-anim-drift {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

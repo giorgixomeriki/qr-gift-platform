@@ -1,0 +1,53 @@
+{
+  "name": "qr-gift-platform",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "node --env-file=.env.local ./node_modules/.bin/drizzle-kit generate",
+    "db:migrate": "node --env-file=.env.local ./node_modules/.bin/tsx src/db/migrate.ts",
+    "db:seed": "node --env-file=.env.local ./node_modules/.bin/tsx src/db/seed.ts",
+    "db:dev-bootstrap": "node --env-file=.env.local ./node_modules/.bin/tsx src/db/dev-bootstrap.ts",
+    "verify:commercial": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-commercial-invariants.ts",
+    "verify:phase1": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase1-security.ts",
+    "verify:phase2": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase2-security.ts",
+    "verify:phase3": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase3-security.ts",
+    "verify:phase4": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase4-security.ts",
+    "verify:phase5": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase5-security.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.116.0",
+    "drizzle-orm": "^0.45.2",
+    "nanoid": "^6.0.1",
+    "next": "15.5.25",
+    "next-intl": "^4.14.5",
+    "postgres": "^3.4.9",
+    "qrcode": "^1.5.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.7",
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.20.3",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.10",
+    "eslint": "^9",
+    "eslint-config-next": "15.5.25",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.13",
+    "typescript": "^5"
+  }
+}

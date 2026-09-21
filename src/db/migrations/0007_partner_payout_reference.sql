@@ -1,0 +1,1 @@
+ALTER TABLE "partner_payouts" ADD COLUMN "reference" text;

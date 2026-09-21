@@ -1,0 +1,357 @@
+{
+  "common": {
+    "appName": "QR Gift",
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "back": "Back",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "remove": "Remove",
+    "replace": "Replace",
+    "save": "Save"
+  },
+  "qr": {
+    "unavailableTitle": "This link isn't available",
+    "unavailableBody": "This QR code can't be used right now — it may have been removed or paused.",
+    "notFoundTitle": "We couldn't find this page",
+    "notFoundBody": "Double-check the link, or ask whoever shared it with you."
+  },
+  "sender": {
+    "entry": {
+      "title": "Make this gift unforgettable.",
+      "subtitle": "Add a message, photos, video or voice — a private surprise hidden inside this card.",
+      "cta": "Create & preview",
+      "priceLabel": "Activation",
+      "priceUnavailable": "This gift isn't available to activate right now — please try again later.",
+      "timeEstimate": "Takes about 2 minutes",
+      "afterActivation": "You'll preview it exactly as your recipient will see it before you pay.",
+      "addMessage": "Message",
+      "addPhoto": "Photos",
+      "addVideo": "Video",
+      "addVoice": "Voice",
+      "startError": "Couldn't start — please try again"
+    },
+    "noAccess": {
+      "title": "Someone's already preparing this gift",
+      "body": "This greeting is being created on another device or browser. Check back once it's ready."
+    }
+  },
+  "wizard": {
+    "back": "Back",
+    "backToPreview": "Back to Preview",
+    "continue": "Continue",
+    "saving": "Saving…",
+    "theme": {
+      "title": "Choose a theme",
+      "subtitle": "You can change this anytime before activating."
+    },
+    "message": {
+      "title": "Write your message",
+      "subtitle": "This is the heart of the greeting.",
+      "placeholder": "Write something from the heart…",
+      "errorEmpty": "Write a message before continuing",
+      "errorTooLong": "Keep it under 600 characters"
+    },
+    "media": {
+      "title": "Add photos, video & voice",
+      "subtitle": "Add as many as you like — all optional.",
+      "photos": "Photos (up to 3)",
+      "video": "Video",
+      "voice": "Voice message",
+      "addPhoto": "Add photo",
+      "addVideo": "Add a video",
+      "uploading": "Uploading…",
+      "errorType": "Unsupported file type. Use: {types}",
+      "errorSize": "File too large — max {limit}MB",
+      "errorGeneric": "Upload failed — check your connection and try again"
+    },
+    "voice": {
+      "tapToRecord": "Tap to record",
+      "recording": "Recording…",
+      "recordAgain": "Record again",
+      "saveVoice": "Save voice message",
+      "orUploadFile": "Or upload an audio file",
+      "uploadFile": "Upload an audio file",
+      "micDenied": "Microphone access was denied or is unavailable",
+      "unsupported": "Recording isn't supported in this browser — upload an audio file instead.",
+      "uploading": "Uploading…",
+      "errorType": "Unsupported audio file type",
+      "errorSize": "Recording too large — max {limit}MB",
+      "errorGeneric": "Upload failed — check your connection and try again"
+    },
+    "checkout": {
+      "title": "Checkout",
+      "subtitle": "One-time activation — this makes the greeting live for your recipient.",
+      "activationLabel": "Greeting activation",
+      "explanation": "One payment activates this greeting permanently for its recipient. No subscription, no hidden fees.",
+      "payButton": "Pay with TEST provider",
+      "testingOptions": "Testing options",
+      "simulateFailure": "Simulate failed payment",
+      "paymentFailed": "Payment failed. Nothing was charged and your greeting is untouched — you can try again.",
+      "retry": "Retry payment",
+      "backToPreview": "Back to Preview",
+      "processing": "Processing…",
+      "activating": "Payment successful — activating your greeting…",
+      "loading": "Loading…",
+      "payButtonReal": "Pay securely",
+      "verifying": "Verifying your payment…",
+      "verifyingBody": "This can take a few seconds. Please don't close this page.",
+      "cancelledMessage": "Payment was cancelled — nothing was charged. You can try again."
+    },
+    "preview": {
+      "edit": "Back and edit",
+      "activate": "Activate for {price}",
+      "priceUnavailable": "Activation isn't available right now — please try again later."
+    }
+  },
+  "greeting": {
+    "tapToOpen": "Tap to open",
+    "continue": "Continue",
+    "replay": "Replay"
+  },
+  "themes": {
+    "romantic": {
+      "name": "Romantic",
+      "tagline": "Someone made this just for you",
+      "opening": "Someone made this just for you",
+      "ending": "With love"
+    },
+    "birthday": {
+      "name": "Birthday",
+      "tagline": "A little celebration, just for you",
+      "opening": "A little celebration, just for you",
+      "ending": "Happy birthday!"
+    },
+    "minimal": {
+      "name": "Minimal",
+      "tagline": "Someone's thinking of you",
+      "opening": "Someone's thinking of you",
+      "ending": ""
+    }
+  },
+  "success": {
+    "banner": "Your surprise is ready — this is exactly what your recipient will see. Hand over the QR now."
+  },
+  "partner": {
+    "notAdmin": "Signed in as {email}, but not an admin.",
+    "signedInAs": "Signed in as {email}",
+    "dashboard": {
+      "title": "Partner dashboard",
+      "roleLine": "{email} — role: {role}",
+      "noMemberships": "You don't have access to any partner yet.",
+      "qrCardsTitle": "QR cards",
+      "salesCommissionTitle": "Sales & commission",
+      "otherTitle": "Other",
+      "stats": {
+        "issued": "Issued",
+        "distributed": "Distributed",
+        "scanned": "Scanned",
+        "available": "Available",
+        "successfulSales": "Successful sales",
+        "commissionEarned": "Commission earned",
+        "commissionPaid": "Commission paid",
+        "unpaidBalance": "Unpaid balance",
+        "draft": "Draft",
+        "active": "Active",
+        "batches": "Batches"
+      },
+      "membershipTitle": "Members",
+      "createBatchTitle": "Create QR batch",
+      "batchesTitle": "Batches",
+      "codesCount": "{count} codes",
+      "noBatches": "No batches yet."
+    }
+  },
+  "admin": {
+    "signedInAs": "Signed in as {email}",
+    "notAdmin": "Signed in as {email}, but not an admin.",
+    "dashboard": {
+      "title": "Admin dashboard",
+      "activeOfTotal": "{active}/{total} active",
+      "stats": {
+        "partners": "Partners",
+        "qrBatches": "QR batches",
+        "qrGenerated": "QR generated",
+        "qrDistributed": "QR distributed",
+        "qrActive": "QR active",
+        "qrBlocked": "QR blocked",
+        "successfulSales": "Successful sales",
+        "partnerCommissions": "Partner commissions"
+      },
+      "funnel": {
+        "title": "Conversion funnel",
+        "stageHeader": "Stage",
+        "countHeader": "Count",
+        "vsPreviousHeader": "vs. previous stage",
+        "stages": {
+          "qrGenerated": "QR generated",
+          "qrDistributed": "QR distributed",
+          "qrScanned": "QR scanned",
+          "creationStarted": "Creation started",
+          "previewViewed": "Preview viewed",
+          "checkoutStarted": "Checkout started",
+          "paymentSucceeded": "Payment succeeded",
+          "qrActivated": "QR activated",
+          "recipientViewed": "Recipient viewed"
+        }
+      }
+    },
+    "partnersPage": {
+      "title": "Partners",
+      "total": "{count} total",
+      "nameLabel": "Name",
+      "slugLabel": "Identifier",
+      "slugPlaceholder": "my-partner",
+      "commissionLabel": "Commission %",
+      "createButton": "Add partner",
+      "tableName": "Name",
+      "tableSlug": "Identifier",
+      "tableCommission": "Commission",
+      "tableStatus": "Status",
+      "empty": "No partners yet."
+    },
+    "partnerDetail": {
+      "membershipTitle": "Members",
+      "payoutsTitle": "Payouts",
+      "createBatchTitle": "Create QR batch",
+      "batchesTitle": "Batches",
+      "codesCount": "{count} codes",
+      "noBatches": "No batches yet.",
+      "suspend": "Suspend",
+      "reactivate": "Reactivate"
+    },
+    "moderation": {
+      "title": "Moderation",
+      "subtitle": "Find a Greeting, review reports, and block or unblock as needed.",
+      "findTitle": "Find a Greeting",
+      "openReportsTitle": "Open reports ({count})",
+      "staleDraftsTitle": "Abandoned drafts — older than 14 days ({count})",
+      "staleDraftsNote": "Visibility only — Greetings left in Draft are never deleted or reused automatically.",
+      "searchPlaceholder": "Public QR token or Greeting ID",
+      "searchButton": "Find",
+      "noResult": "No Greeting found for that identifier.",
+      "reasonRequired": "A reason is required",
+      "contentHiddenNote": "Content (message/media) is never shown here — moderation works from status information only.",
+      "blockThisGreeting": "Block this Greeting",
+      "unblockThisGreeting": "Unblock this Greeting",
+      "reasonLabel": "Reason (required, recorded in the audit log)",
+      "confirmBlock": "Confirm block",
+      "confirmUnblock": "Confirm unblock",
+      "noOpenReports": "No open reports.",
+      "reported": "Reported {date}",
+      "review": "Review",
+      "noStaleDrafts": "No abandoned drafts older than 14 days.",
+      "themeLabel": "Theme",
+      "qrStatusLabel": "QR status",
+      "createdLabel": "Created",
+      "updatedLabel": "Updated",
+      "activatedLabel": "Activated",
+      "paidOrderLabel": "Paid order",
+      "paidOrderYes": "Yes",
+      "paidOrderNo": "No",
+      "publicTokenHeader": "Public token",
+      "partnerHeader": "Partner",
+      "createdHeader": "Created",
+      "lastUpdatedHeader": "Last updated"
+    },
+    "reconcile": {
+      "button": "Reconcile stuck activations",
+      "running": "Checking…",
+      "result": "Checked {checked} paid-but-unactivated order(s), activated {activated}."
+    }
+  },
+  "print": {
+    "headline": "This gift has a digital surprise inside ❤️",
+    "instruction": "Scan the QR to open it",
+    "printThisPage": "Print this page"
+  },
+  "auth": {
+    "emailPlaceholder": "Email",
+    "passwordPlaceholder": "Password",
+    "logIn": "Log in",
+    "loggingIn": "Logging in…",
+    "adminLoginTitle": "Admin login",
+    "partnerLoginTitle": "Partner login"
+  },
+  "nav": {
+    "adminBrand": "QR Gift — Admin",
+    "partnerBrand": "QR Gift — Partner",
+    "dashboard": "Dashboard",
+    "partners": "Partners",
+    "moderation": "Moderation",
+    "signOut": "Sign out",
+    "managePartners": "Manage partners →"
+  },
+  "enums": {
+    "partnerStatus": {
+      "ACTIVE": "Active",
+      "SUSPENDED": "Suspended"
+    },
+    "qrStatus": {
+      "AVAILABLE": "Available",
+      "DRAFT": "Draft",
+      "ACTIVE": "Active",
+      "BLOCKED": "Blocked"
+    },
+    "distributionStatus": {
+      "NOT_DISTRIBUTED": "Not distributed",
+      "DISTRIBUTED": "Distributed"
+    },
+    "partnerRole": {
+      "OWNER": "Owner",
+      "ADMIN": "Admin",
+      "STAFF": "Staff",
+      "VIEWER": "Viewer"
+    }
+  },
+  "membershipManager": {
+    "userIdHeader": "User ID",
+    "roleHeader": "Role",
+    "remove": "Remove",
+    "noMembers": "No members yet.",
+    "emailLabel": "Email",
+    "emailPlaceholder": "teammate@example.com",
+    "roleLabel": "Role",
+    "addButton": "Add member",
+    "invited": "Invited {email} — they'll get a sign-in email.",
+    "added": "Added {email}."
+  },
+  "payoutManager": {
+    "unpaidBalance": "Unpaid balance",
+    "recordButton": "Record a payout",
+    "amountLabel": "Amount ({currency}) — max {max}",
+    "periodFrom": "Period from",
+    "periodTo": "Period to",
+    "referenceLabel": "Reference / note (how was this actually paid?)",
+    "referencePlaceholder": "e.g. bank transfer #1234, cash on 2026-01-15",
+    "confirmButton": "Confirm payout",
+    "periodHeader": "Period",
+    "amountHeader": "Amount",
+    "referenceHeader": "Reference",
+    "paidHeader": "Paid",
+    "noPayouts": "No payouts recorded yet.",
+    "noReference": "—"
+  },
+  "createBatchForm": {
+    "labelField": "Label",
+    "labelPlaceholder": "e.g. Tbilisi Mall — March",
+    "quantityField": "Quantity",
+    "submitButton": "Create batch"
+  },
+  "inventoryTable": {
+    "markSelected": "Mark selected distributed ({count})",
+    "markAll": "Mark all {count} remaining as distributed",
+    "exportCsv": "Export CSV",
+    "printCards": "Print QR cards",
+    "tokenHeader": "Public token",
+    "statusHeader": "Status",
+    "distributionHeader": "Distribution",
+    "assetHeader": "Asset",
+    "svgLink": "SVG",
+    "noCodes": "No QR codes in this batch."
+  },
+  "partnerSwitcher": {
+    "label": "Partner"
+  }
+}

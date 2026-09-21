@@ -1,0 +1,357 @@
+{
+  "common": {
+    "appName": "QR საჩუქარი",
+    "loading": "იტვირთება…",
+    "error": "დაფიქსირდა შეცდომა",
+    "retry": "ხელახლა ცდა",
+    "back": "უკან",
+    "continue": "გაგრძელება",
+    "cancel": "გაუქმება",
+    "remove": "წაშლა",
+    "replace": "შეცვლა",
+    "save": "შენახვა"
+  },
+  "qr": {
+    "unavailableTitle": "ეს ბმული მიუწვდომელია",
+    "unavailableBody": "ამ QR კოდის გამოყენება ამჟამად შეუძლებელია — შესაძლოა წაშლილია ან დროებით შეჩერებულია.",
+    "notFoundTitle": "გვერდი ვერ მოიძებნა",
+    "notFoundBody": "გადაამოწმეთ ბმული, ან ჰკითხეთ ვისაც გაუზიარებია."
+  },
+  "sender": {
+    "entry": {
+      "title": "აქციეთ ეს საჩუქარი დაუვიწყარად.",
+      "subtitle": "დაამატეთ მესიჯი, ფოტოები, ვიდეო ან ხმოვანი მისალმება — პირადი სიურპრიზი, ამ ბარათში დამალული.",
+      "cta": "შექმნა და გადახედვა",
+      "priceLabel": "გააქტიურება",
+      "priceUnavailable": "ამ საჩუქრის გააქტიურება ამჟამად ვერ ხერხდება — სცადეთ მოგვიანებით.",
+      "timeEstimate": "დაახლოებით 2 წუთი დასჭირდება",
+      "afterActivation": "გადახდამდე ნახავთ ზუსტად ისე, როგორც ეს თქვენს ადრესატს დაანახვება.",
+      "addMessage": "მესიჯი",
+      "addPhoto": "ფოტოები",
+      "addVideo": "ვიდეო",
+      "addVoice": "ხმოვანი",
+      "startError": "ვერ დაიწყო — სცადეთ ხელახლა"
+    },
+    "noAccess": {
+      "title": "ეს საჩუქარი უკვე მზადდება",
+      "body": "ეს მისალმება იქმნება სხვა მოწყობილობაზე ან ბრაუზერში. შეამოწმეთ მოგვიანებით."
+    }
+  },
+  "wizard": {
+    "back": "უკან",
+    "backToPreview": "გადახედვაზე დაბრუნება",
+    "continue": "გაგრძელება",
+    "saving": "ინახება…",
+    "theme": {
+      "title": "აირჩიეთ თემა",
+      "subtitle": "გააქტიურებამდე ნებისმიერ დროს შეგიძლიათ შეცვლა."
+    },
+    "message": {
+      "title": "დაწერეთ თქვენი მესიჯი",
+      "subtitle": "ეს არის მისალმების გული.",
+      "placeholder": "დაწერეთ რამე გულიდან…",
+      "errorEmpty": "გაგრძელებამდე დაწერეთ მესიჯი",
+      "errorTooLong": "დატოვეთ 600 სიმბოლომდე"
+    },
+    "media": {
+      "title": "დაამატეთ ფოტო, ვიდეო და ხმოვანი",
+      "subtitle": "დაამატეთ სურვილისამებრ — ყველა არჩევითია.",
+      "photos": "ფოტოები (მაქს. 3)",
+      "video": "ვიდეო",
+      "voice": "ხმოვანი მისალმება",
+      "addPhoto": "ფოტოს დამატება",
+      "addVideo": "ვიდეოს დამატება",
+      "uploading": "იტვირთება…",
+      "errorType": "მხარდაუჭერელი ფაილის ტიპი. გამოიყენეთ: {types}",
+      "errorSize": "ფაილი ძალიან დიდია — მაქსიმუმ {limit}MB",
+      "errorGeneric": "ატვირთვა ვერ მოხერხდა — შეამოწმეთ კავშირი და სცადეთ ხელახლა"
+    },
+    "voice": {
+      "tapToRecord": "შეეხეთ ჩასაწერად",
+      "recording": "იწერება…",
+      "recordAgain": "თავიდან ჩაწერა",
+      "saveVoice": "ხმოვანის შენახვა",
+      "orUploadFile": "ან ატვირთეთ აუდიო ფაილი",
+      "uploadFile": "აუდიო ფაილის ატვირთვა",
+      "micDenied": "მიკროფონზე წვდომა უარყოფილია ან მიუწვდომელია",
+      "unsupported": "ჩაწერა ამ ბრაუზერში მხარდაუჭერელია — ატვირთეთ აუდიო ფაილი ამის ნაცვლად.",
+      "uploading": "იტვირთება…",
+      "errorType": "მხარდაუჭერელი აუდიო ფაილის ტიპი",
+      "errorSize": "ჩანაწერი ძალიან დიდია — მაქსიმუმ {limit}MB",
+      "errorGeneric": "ატვირთვა ვერ მოხერხდა — შეამოწმეთ კავშირი და სცადეთ ხელახლა"
+    },
+    "checkout": {
+      "title": "გადახდა",
+      "subtitle": "ერთჯერადი გააქტიურება — მისალმება ხელმისაწვდომი გახდება თქვენი ადრესატისთვის.",
+      "activationLabel": "მისალმების გააქტიურება",
+      "explanation": "ერთი გადახდით მისალმება სამუდამოდ გააქტიურდება ადრესატისთვის. გამოწერის ან დამატებითი გადასახადების გარეშე.",
+      "payButton": "გადახდა TEST პროვაიდერით",
+      "testingOptions": "სატესტო პარამეტრები",
+      "simulateFailure": "წარუმატებელი გადახდის სიმულაცია",
+      "paymentFailed": "გადახდა ვერ შესრულდა. თანხა არ ჩამოგეჭრათ და მისალმება უცვლელია — შეგიძლიათ ხელახლა სცადოთ.",
+      "retry": "გადახდის გამეორება",
+      "backToPreview": "გადახედვაზე დაბრუნება",
+      "processing": "მუშავდება…",
+      "activating": "გადახდა წარმატებულია — მისალმება გააქტიურდება…",
+      "loading": "იტვირთება…",
+      "payButtonReal": "გადაიხადეთ უსაფრთხოდ",
+      "verifying": "მიმდინარეობს გადახდის შემოწმება…",
+      "verifyingBody": "ამას შეიძლება რამდენიმე წამი დასჭირდეს. გთხოვთ არ დახუროთ გვერდი.",
+      "cancelledMessage": "გადახდა გაუქმდა — თანხა არ ჩამოგეჭრათ. შეგიძლიათ ხელახლა სცადოთ."
+    },
+    "preview": {
+      "edit": "დაბრუნება და რედაქტირება",
+      "activate": "გააქტიურება — {price}",
+      "priceUnavailable": "გააქტიურება ამჟამად მიუწვდომელია — სცადეთ მოგვიანებით."
+    }
+  },
+  "greeting": {
+    "tapToOpen": "შეეხეთ გასახსნელად",
+    "continue": "გაგრძელება",
+    "replay": "თავიდან ყურება"
+  },
+  "themes": {
+    "romantic": {
+      "name": "რომანტიული",
+      "tagline": "ეს სპეციალურად თქვენთვის მომზადდა",
+      "opening": "ეს სპეციალურად თქვენთვის მომზადდა",
+      "ending": "სიყვარულით"
+    },
+    "birthday": {
+      "name": "დაბადების დღე",
+      "tagline": "პატარა დღესასწაული, სპეციალურად თქვენთვის",
+      "opening": "პატარა დღესასწაული, სპეციალურად თქვენთვის",
+      "ending": "გილოცავთ დაბადების დღეს!"
+    },
+    "minimal": {
+      "name": "მინიმალისტური",
+      "tagline": "ვიღაც თქვენზე ფიქრობს",
+      "opening": "ვიღაც თქვენზე ფიქრობს",
+      "ending": ""
+    }
+  },
+  "success": {
+    "banner": "თქვენი სიურპრიზი მზად არის — ზუსტად ასე დაინახავს მას ადრესატი. გადაეცით QR კოდი ახლავე."
+  },
+  "partner": {
+    "notAdmin": "შესული ხართ როგორც {email}, მაგრამ არ ხართ ადმინისტრატორი.",
+    "signedInAs": "შესული ხართ როგორც {email}",
+    "dashboard": {
+      "title": "პარტნიორის პანელი",
+      "roleLine": "{email} — როლი: {role}",
+      "noMemberships": "ჯერ არცერთ პარტნიორზე არ გაქვთ წვდომა.",
+      "qrCardsTitle": "QR ბარათები",
+      "salesCommissionTitle": "გაყიდვები და საკომისიო",
+      "otherTitle": "სხვა",
+      "stats": {
+        "issued": "გაცემული",
+        "distributed": "გავრცელებული",
+        "scanned": "სკანირებული",
+        "available": "ხელმისაწვდომი",
+        "successfulSales": "წარმატებული გაყიდვები",
+        "commissionEarned": "დარიცხული საკომისიო",
+        "commissionPaid": "გადახდილი საკომისიო",
+        "unpaidBalance": "გადასახდელი ნაშთი",
+        "draft": "მონახაზი",
+        "active": "აქტიური",
+        "batches": "პარტიები"
+      },
+      "membershipTitle": "წევრები",
+      "createBatchTitle": "QR პარტიის შექმნა",
+      "batchesTitle": "პარტიები",
+      "codesCount": "{count} კოდი",
+      "noBatches": "პარტიები ჯერ არ არის."
+    }
+  },
+  "admin": {
+    "signedInAs": "შესული ხართ როგორც {email}",
+    "notAdmin": "შესული ხართ როგორც {email}, მაგრამ არ ხართ ადმინისტრატორი.",
+    "dashboard": {
+      "title": "ადმინის პანელი",
+      "activeOfTotal": "{active}/{total} აქტიური",
+      "stats": {
+        "partners": "პარტნიორები",
+        "qrBatches": "QR პარტიები",
+        "qrGenerated": "წარმოქმნილი QR",
+        "qrDistributed": "გავრცელებული QR",
+        "qrActive": "აქტიური QR",
+        "qrBlocked": "დაბლოკილი QR",
+        "successfulSales": "წარმატებული გაყიდვები",
+        "partnerCommissions": "პარტნიორის საკომისიო"
+      },
+      "funnel": {
+        "title": "კონვერსიის ძაბრი",
+        "stageHeader": "ეტაპი",
+        "countHeader": "რაოდენობა",
+        "vsPreviousHeader": "წინა ეტაპთან შედარებით",
+        "stages": {
+          "qrGenerated": "QR წარმოქმნილია",
+          "qrDistributed": "QR გავრცელებულია",
+          "qrScanned": "QR სკანირებულია",
+          "creationStarted": "შექმნა დაწყებულია",
+          "previewViewed": "გადახედვა ნანახია",
+          "checkoutStarted": "გადახდა დაწყებულია",
+          "paymentSucceeded": "გადახდა წარმატებულია",
+          "qrActivated": "QR გააქტიურებულია",
+          "recipientViewed": "მიმღებმა ნახა"
+        }
+      }
+    },
+    "partnersPage": {
+      "title": "პარტნიორები",
+      "total": "სულ: {count}",
+      "nameLabel": "სახელი",
+      "slugLabel": "იდენტიფიკატორი",
+      "slugPlaceholder": "my-partner",
+      "commissionLabel": "საკომისიო %",
+      "createButton": "პარტნიორის დამატება",
+      "tableName": "სახელი",
+      "tableSlug": "იდენტიფიკატორი",
+      "tableCommission": "საკომისიო",
+      "tableStatus": "სტატუსი",
+      "empty": "პარტნიორები ჯერ არ არის."
+    },
+    "partnerDetail": {
+      "membershipTitle": "წევრები",
+      "payoutsTitle": "გადარიცხვები",
+      "createBatchTitle": "QR პარტიის შექმნა",
+      "batchesTitle": "პარტიები",
+      "codesCount": "{count} კოდი",
+      "noBatches": "პარტიები ჯერ არ არის.",
+      "suspend": "შეჩერება",
+      "reactivate": "აღდგენა"
+    },
+    "moderation": {
+      "title": "მოდერაცია",
+      "subtitle": "იპოვეთ მისალმება, გადახედეთ საჩივრებს და საჭიროებისამებრ დაბლოკეთ ან განბლოკეთ.",
+      "findTitle": "მისალმების ძებნა",
+      "openReportsTitle": "აქტიური საჩივრები ({count})",
+      "staleDraftsTitle": "მიტოვებული მონახაზები — 14 დღეზე მეტი ({count})",
+      "staleDraftsNote": "მხოლოდ სანახავად — მონახაზად დარჩენილი მისალმებები არასდროს იშლება ან გამოიყენება ავტომატურად ხელახლა.",
+      "searchPlaceholder": "საჯარო QR კოდი ან მისალმების ID",
+      "searchButton": "ძებნა",
+      "noResult": "ამ იდენტიფიკატორით მისალმება ვერ მოიძებნა.",
+      "reasonRequired": "მიზეზის მითითება სავალდებულოა",
+      "contentHiddenNote": "შინაარსი (მესიჯი/მედია) აქ არასდროს გამოჩნდება — მოდერაცია ეყრდნობა მხოლოდ სტატუსის ინფორმაციას.",
+      "blockThisGreeting": "მისალმების დაბლოკვა",
+      "unblockThisGreeting": "მისალმების განბლოკვა",
+      "reasonLabel": "მიზეზი (სავალდებულო, ფიქსირდება აუდიტის ჟურნალში)",
+      "confirmBlock": "დაბლოკვის დადასტურება",
+      "confirmUnblock": "განბლოკვის დადასტურება",
+      "noOpenReports": "აქტიური საჩივრები არ არის.",
+      "reported": "დაფიქსირდა {date}",
+      "review": "განხილვა",
+      "noStaleDrafts": "14 დღეზე მეტი ხნის მიტოვებული მონახაზი არ არის.",
+      "themeLabel": "თემა",
+      "qrStatusLabel": "QR სტატუსი",
+      "createdLabel": "შექმნის თარიღი",
+      "updatedLabel": "განახლების თარიღი",
+      "activatedLabel": "გააქტიურების თარიღი",
+      "paidOrderLabel": "გადახდილი შეკვეთა",
+      "paidOrderYes": "დიახ",
+      "paidOrderNo": "არა",
+      "publicTokenHeader": "საჯარო კოდი",
+      "partnerHeader": "პარტნიორი",
+      "createdHeader": "შექმნის თარიღი",
+      "lastUpdatedHeader": "ბოლო განახლება"
+    },
+    "reconcile": {
+      "button": "შეჩერებული გააქტიურებების გადამოწმება",
+      "running": "მიმდინარეობს გადამოწმება…",
+      "result": "შემოწმდა {checked} გადახდილი, მაგრამ არააქტიური შეკვეთა — გააქტიურდა {activated}."
+    }
+  },
+  "print": {
+    "headline": "ამ საჩუქარს ციფრული სიურპრიზი აქვს ❤️",
+    "instruction": "დაასკანერეთ QR მისი გასახსნელად",
+    "printThisPage": "გვერდის დაბეჭდვა"
+  },
+  "auth": {
+    "emailPlaceholder": "ელფოსტა",
+    "passwordPlaceholder": "პაროლი",
+    "logIn": "შესვლა",
+    "loggingIn": "შესვლა მიმდინარეობს…",
+    "adminLoginTitle": "ადმინისტრატორის შესვლა",
+    "partnerLoginTitle": "პარტნიორის შესვლა"
+  },
+  "nav": {
+    "adminBrand": "QR საჩუქარი — ადმინი",
+    "partnerBrand": "QR საჩუქარი — პარტნიორი",
+    "dashboard": "პანელი",
+    "partners": "პარტნიორები",
+    "moderation": "მოდერაცია",
+    "signOut": "გასვლა",
+    "managePartners": "პარტნიორების მართვა →"
+  },
+  "enums": {
+    "partnerStatus": {
+      "ACTIVE": "აქტიური",
+      "SUSPENDED": "შეჩერებული"
+    },
+    "qrStatus": {
+      "AVAILABLE": "ხელმისაწვდომი",
+      "DRAFT": "მონახაზი",
+      "ACTIVE": "აქტიური",
+      "BLOCKED": "დაბლოკილი"
+    },
+    "distributionStatus": {
+      "NOT_DISTRIBUTED": "არ არის გავრცელებული",
+      "DISTRIBUTED": "გავრცელებული"
+    },
+    "partnerRole": {
+      "OWNER": "მფლობელი",
+      "ADMIN": "ადმინისტრატორი",
+      "STAFF": "თანამშრომელი",
+      "VIEWER": "მნახველი"
+    }
+  },
+  "membershipManager": {
+    "userIdHeader": "მომხმარებლის ID",
+    "roleHeader": "როლი",
+    "remove": "წაშლა",
+    "noMembers": "წევრები ჯერ არ არის.",
+    "emailLabel": "ელფოსტა",
+    "emailPlaceholder": "teammate@example.com",
+    "roleLabel": "როლი",
+    "addButton": "წევრის დამატება",
+    "invited": "{email} მოწვეულია — მიუვა შესვლის ბმული ელფოსტაზე.",
+    "added": "{email} დაემატა."
+  },
+  "payoutManager": {
+    "unpaidBalance": "გადასახდელი ნაშთი",
+    "recordButton": "გადარიცხვის დაფიქსირება",
+    "amountLabel": "თანხა ({currency}) — მაქს. {max}",
+    "periodFrom": "პერიოდი (დან)",
+    "periodTo": "პერიოდი (მდე)",
+    "referenceLabel": "შენიშვნა (როგორ მოხდა რეალურად გადახდა?)",
+    "referencePlaceholder": "მაგ. საბანკო გადარიცხვა #1234, ნაღდი ფული 2026-01-15",
+    "confirmButton": "გადარიცხვის დადასტურება",
+    "periodHeader": "პერიოდი",
+    "amountHeader": "თანხა",
+    "referenceHeader": "შენიშვნა",
+    "paidHeader": "გადახდის თარიღი",
+    "noPayouts": "გადარიცხვები ჯერ არ დაფიქსირებულა.",
+    "noReference": "—"
+  },
+  "createBatchForm": {
+    "labelField": "სახელწოდება",
+    "labelPlaceholder": "მაგ. თბილისი მოლი — მარტი",
+    "quantityField": "რაოდენობა",
+    "submitButton": "პარტიის შექმნა"
+  },
+  "inventoryTable": {
+    "markSelected": "მონიშნულის გავრცელებულად მონიშვნა ({count})",
+    "markAll": "დარჩენილი {count}-ის გავრცელებულად მონიშვნა",
+    "exportCsv": "CSV გატანა",
+    "printCards": "QR ბარათების ბეჭდვა",
+    "tokenHeader": "საჯარო კოდი",
+    "statusHeader": "სტატუსი",
+    "distributionHeader": "გავრცელება",
+    "assetHeader": "ფაილი",
+    "svgLink": "SVG",
+    "noCodes": "ამ პარტიაში QR კოდები არ არის."
+  },
+  "partnerSwitcher": {
+    "label": "პარტნიორი"
+  }
+}
