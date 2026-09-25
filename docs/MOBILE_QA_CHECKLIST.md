@@ -71,6 +71,12 @@ failure.
   - [ ] Checkout does not double-submit if the network is slow (button
         disables while pending)
   - [ ] A timed-out request shows a real error message, not a blank screen
+  - [ ] Repeatedly retrying a failed upload/checkout in quick succession
+        (e.g. tapping retry many times on a flaky connection) eventually
+        shows the rate-limit's friendly "too many requests, try again
+        shortly" message rather than a generic crash or blank screen — this
+        is a new server-side control added in the pilot-readiness pass and
+        has not yet been exercised on real hardware
 
 ## Honest reporting
 

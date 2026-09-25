@@ -10,10 +10,12 @@ import {
   unblockGreeting,
   type GreetingLookupResult,
 } from "./service";
+import { logServerError } from "@/lib/log";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
-function errorResult(err: unknown): ActionResult<never> {
+function errorResult(scope: string, err: unknown, context: Record<string, string | number | undefined> = {}): ActionResult<never> {
+  logServerError(scope, err, context);
   return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
 }
 
@@ -22,7 +24,7 @@ export async function lookupGreetingAction(query: string): Promise<ActionResult<
     const result = await requireAdmin((tx) => findGreetingForModeration(tx, query));
     return { ok: true, data: result };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("lookupGreetingAction", err);
   }
 }
 
@@ -36,7 +38,7 @@ export async function listModerationOverviewAction(): Promise<
     }));
     return { ok: true, data };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("listModerationOverviewAction", err);
   }
 }
 
@@ -47,7 +49,7 @@ export async function blockGreetingAction(greetingId: string, reason: string, re
     revalidatePath("/admin/moderation");
     return { ok: true, data: undefined };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("blockGreetingAction", err, { greetingId });
   }
 }
 
@@ -58,6 +60,6 @@ export async function unblockGreetingAction(greetingId: string, reason: string):
     revalidatePath("/admin/moderation");
     return { ok: true, data: undefined };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("unblockGreetingAction", err, { greetingId });
   }
 }

@@ -21,6 +21,8 @@ export const FUNNEL_STAGE_KEYS = [
   "qrDistributed",
   "qrScanned",
   "creationStarted",
+  "themeSelected",
+  "contentCreated",
   "previewViewed",
   "checkoutStarted",
   "paymentSucceeded",
@@ -67,13 +69,23 @@ export async function getAdminMetrics(tx: Tx): Promise<AdminMetrics> {
     })
     .from(partnerLedgerEntries);
 
+  // Every per-greeting stage below counts DISTINCT greeting_id (QR_SCANNED
+  // counts distinct qr_code_id, since it can fire before a Greeting exists
+  // yet) rather than raw count(*) — an event like PREVIEW_VIEWED or
+  // RECIPIENT_VIEWED can genuinely fire more than once for the same
+  // Greeting (a repeat visit, a page refresh), and counting those rows
+  // directly inflated the funnel and produced conversion percentages that
+  // didn't reflect how many distinct QR codes/Greetings actually reached
+  // each stage.
   const [eventRow] = await tx
     .select({
-      scanned: sql<number>`count(*) filter (where ${analyticsEvents.eventType} = 'QR_SCANNED')::int`,
-      creationStarted: sql<number>`count(*) filter (where ${analyticsEvents.eventType} = 'CREATION_STARTED')::int`,
-      previewViewed: sql<number>`count(*) filter (where ${analyticsEvents.eventType} = 'PREVIEW_VIEWED')::int`,
-      checkoutStarted: sql<number>`count(*) filter (where ${analyticsEvents.eventType} = 'CHECKOUT_STARTED')::int`,
-      recipientViewed: sql<number>`count(*) filter (where ${analyticsEvents.eventType} = 'RECIPIENT_VIEWED')::int`,
+      scanned: sql<number>`count(distinct ${analyticsEvents.qrCodeId}) filter (where ${analyticsEvents.eventType} = 'QR_SCANNED')::int`,
+      creationStarted: sql<number>`count(distinct ${analyticsEvents.greetingId}) filter (where ${analyticsEvents.eventType} = 'CREATION_STARTED')::int`,
+      themeSelected: sql<number>`count(distinct ${analyticsEvents.greetingId}) filter (where ${analyticsEvents.eventType} = 'THEME_SELECTED')::int`,
+      contentCreated: sql<number>`count(distinct ${analyticsEvents.greetingId}) filter (where ${analyticsEvents.eventType} = 'CONTENT_CREATED')::int`,
+      previewViewed: sql<number>`count(distinct ${analyticsEvents.greetingId}) filter (where ${analyticsEvents.eventType} = 'PREVIEW_VIEWED')::int`,
+      checkoutStarted: sql<number>`count(distinct ${analyticsEvents.greetingId}) filter (where ${analyticsEvents.eventType} = 'CHECKOUT_STARTED')::int`,
+      recipientViewed: sql<number>`count(distinct ${analyticsEvents.greetingId}) filter (where ${analyticsEvents.eventType} = 'RECIPIENT_VIEWED')::int`,
     })
     .from(analyticsEvents);
 
@@ -92,6 +104,8 @@ export async function getAdminMetrics(tx: Tx): Promise<AdminMetrics> {
       distributed: qrRow?.distributed ?? 0,
       scanned: eventRow?.scanned ?? 0,
       creationStarted: eventRow?.creationStarted ?? 0,
+      themeSelected: eventRow?.themeSelected ?? 0,
+      contentCreated: eventRow?.contentCreated ?? 0,
       previewViewed: eventRow?.previewViewed ?? 0,
       checkoutStarted: eventRow?.checkoutStarted ?? 0,
       paid: salesRow?.count ?? 0,
@@ -116,6 +130,8 @@ function buildFunnel(counts: {
   distributed: number;
   scanned: number;
   creationStarted: number;
+  themeSelected: number;
+  contentCreated: number;
   previewViewed: number;
   checkoutStarted: number;
   paid: number;
@@ -127,6 +143,8 @@ function buildFunnel(counts: {
     { key: "qrDistributed", count: counts.distributed },
     { key: "qrScanned", count: counts.scanned },
     { key: "creationStarted", count: counts.creationStarted },
+    { key: "themeSelected", count: counts.themeSelected },
+    { key: "contentCreated", count: counts.contentCreated },
     { key: "previewViewed", count: counts.previewViewed },
     { key: "checkoutStarted", count: counts.checkoutStarted },
     { key: "paymentSucceeded", count: counts.paid },

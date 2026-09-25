@@ -6,10 +6,13 @@ import { requirePartnerContext } from "@/lib/auth/partner-context";
 import { createBatchSchema, markDistributedSchema } from "@/lib/validation/qr";
 import { createQrBatch, markQrCodesDistributed } from "./batches";
 import { recordAnalyticsEvent } from "@/lib/analytics";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { logServerError } from "@/lib/log";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-function errorResult(err: unknown): ActionResult {
+function errorResult(scope: string, err: unknown, context: Record<string, string | number | undefined> = {}): ActionResult {
+  logServerError(scope, err, context);
   return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
 }
 
@@ -19,14 +22,19 @@ const DISTRIBUTE_ROLES = ["OWNER", "ADMIN", "STAFF"] as const;
 export async function adminCreateBatchAction(partnerId: string, input: unknown): Promise<ActionResult> {
   try {
     const parsed = createBatchSchema.parse(input);
-    const { batch } = await requireAdmin((tx, adminUserId) =>
-      createQrBatch(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed),
-    );
+    const { batch } = await requireAdmin(async (tx, adminUserId) => {
+      // PRIVILEGED: generous, per-actor — catches a runaway script/bug, not
+      // real abuse (auth + RLS already gate this), and a batch can be up to
+      // 2000 codes so a legitimate operator issuing several batches in a
+      // session must never be blocked.
+      await enforceRateLimit({ key: `qr-batch-create:${adminUserId}`, limit: 30, windowSeconds: 60 });
+      return createQrBatch(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed);
+    });
     await recordAnalyticsEvent({ eventType: "QR_GENERATED", qrBatchId: batch.id, quantity: parsed.quantity }, { partnerId });
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminCreateBatchAction", err, { partnerId });
   }
 }
 
@@ -37,6 +45,7 @@ export async function partnerCreateBatchAction(input: unknown): Promise<ActionRe
       if (!(BATCH_CREATE_ROLES as readonly string[]).includes(ctx.role)) {
         throw new Error("Only an OWNER or ADMIN of this partner may create QR batches");
       }
+      await enforceRateLimit({ key: `qr-batch-create:${ctx.userId}`, limit: 30, windowSeconds: 60 });
       const result = await createQrBatch(tx, { actorType: "PARTNER", actorId: ctx.userId }, ctx.partnerId, parsed);
       return { ...result, partnerId: ctx.partnerId };
     });
@@ -44,7 +53,7 @@ export async function partnerCreateBatchAction(input: unknown): Promise<ActionRe
     revalidatePath("/partner/dashboard");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("partnerCreateBatchAction", err);
   }
 }
 
@@ -64,7 +73,7 @@ export async function partnerMarkDistributedAction(input: unknown): Promise<Acti
     revalidatePath("/partner/dashboard");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("partnerMarkDistributedAction", err);
   }
 }
 
@@ -80,6 +89,6 @@ export async function adminMarkDistributedAction(partnerId: string, input: unkno
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminMarkDistributedAction", err, { partnerId });
   }
 }

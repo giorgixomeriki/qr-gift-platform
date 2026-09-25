@@ -19,7 +19,19 @@ import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/pl
  * (architecture plan §2, §5). Deliberately has no layout chrome of its own —
  * the root layout is already bare, so this renders truly fullscreen with
  * nothing SaaS-shaped around it.
+ *
+ * Forced dynamic (Phase 2 hardening pass): the "draft"/"active" branches
+ * already call cookies(), which opts them out of caching on their own — but
+ * the "available" branch (a never-before-scanned QR) calls neither cookies()
+ * nor any other dynamic API, so without this it could be picked up by the
+ * Full Route Cache and served stale to the next scan of the same physical
+ * code after its state has already moved on (e.g. after someone else starts
+ * filling it in). This is a staleness/correctness guarantee, not a
+ * cross-tenant leak — the token is already part of the path, so any cache
+ * would be scoped per-token, never shared across different Greetings.
  */
+export const dynamic = "force-dynamic";
+
 export default async function QrEntryPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   const resolution = await resolveQrState(token);

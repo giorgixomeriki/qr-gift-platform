@@ -81,6 +81,9 @@ export async function updateGreetingTheme(greetingId: string, editToken: string,
   await withEditableGreeting(greetingId, (tx) =>
     tx.update(greetings).set({ themeId: themeRow.id, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId)),
   );
+
+  const partnerId = await getOwningPartnerId(greetingId);
+  await recordAnalyticsEvent({ eventType: "THEME_SELECTED", greetingId }, { partnerId });
 }
 
 export async function updateGreetingMessage(greetingId: string, editToken: string, text: string) {
@@ -100,6 +103,9 @@ export async function updateGreetingMessage(greetingId: string, editToken: strin
       await tx.insert(greetingContent).values({ greetingId, type: "text", slot: 0, textValue: message, status: "READY" });
     }
   });
+
+  const partnerId = await getOwningPartnerId(greetingId);
+  await recordAnalyticsEvent({ eventType: "CONTENT_CREATED", greetingId }, { partnerId });
 }
 
 /**

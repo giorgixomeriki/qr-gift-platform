@@ -57,6 +57,27 @@
       "when": 1789801536405,
       "tag": "0007_partner_payout_reference",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790200000000,
+      "tag": "0008_payout_period_exclusion",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790400000000,
+      "tag": "0009_rate_limiting",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1790400060000,
+      "tag": "0010_rate_limit_select_policy",
+      "breakpoints": true
     }
   ]
 }
