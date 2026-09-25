@@ -20,12 +20,19 @@
     "verify:phase2": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase2-security.ts",
     "verify:phase3": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase3-security.ts",
     "verify:phase4": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase4-security.ts",
-    "verify:phase5": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase5-security.ts"
+    "verify:phase5": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-phase5-security.ts",
+    "verify:password-reset": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-password-reset.ts",
+    "verify:payout-concurrency": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-payout-concurrency.ts",
+    "verify:admin-pagination": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-admin-pagination.ts",
+    "verify:rate-limiting": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-rate-limiting.ts",
+    "verify:analytics-funnel": "node --env-file=.env.local ./node_modules/.bin/tsx scripts/verify-analytics-funnel.ts",
+    "e2e": "node --env-file=.env.local ./node_modules/.bin/playwright test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.48.0",
     "nanoid": "^6.0.1",
     "next": "15.5.25",
     "next-intl": "^4.14.5",
@@ -38,6 +45,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.7",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^22.20.3",
     "@types/qrcode": "^1.5.5",

@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "QR Gift",
+    "appName": "QR Starr",
     "loading": "Loading…",
     "error": "Something went wrong",
     "retry": "Retry",
@@ -9,129 +9,208 @@
     "cancel": "Cancel",
     "remove": "Remove",
     "replace": "Replace",
-    "save": "Save"
+    "save": "Save",
+    "tagline": "A digital greeting inside every gift.",
+    "language": "Language",
+    "close": "Close",
+    "optional": "Optional",
+    "home": "Go to homepage",
+    "errorBody": "Please try again in a moment."
   },
   "qr": {
-    "unavailableTitle": "This link isn't available",
-    "unavailableBody": "This QR code can't be used right now — it may have been removed or paused.",
-    "notFoundTitle": "We couldn't find this page",
-    "notFoundBody": "Double-check the link, or ask whoever shared it with you."
+    "unavailableTitle": "This card isn't available",
+    "unavailableBody": "It may have been paused or removed. If it came with a gift, the shop that sold it can help.",
+    "notFoundTitle": "We couldn't find this card",
+    "notFoundBody": "Make sure the whole code was scanned, then try again."
   },
   "sender": {
     "entry": {
-      "title": "Make this gift unforgettable.",
-      "subtitle": "Add a message, photos, video or voice — a private surprise hidden inside this card.",
-      "cta": "Create & preview",
-      "priceLabel": "Activation",
-      "priceUnavailable": "This gift isn't available to activate right now — please try again later.",
-      "timeEstimate": "Takes about 2 minutes",
-      "afterActivation": "You'll preview it exactly as your recipient will see it before you pay.",
+      "title": "Make this gift speak",
+      "subtitle": "Add a message, photos, a video or your voice — a private surprise that opens when they scan the card.",
+      "cta": "Create greeting",
+      "priceLabel": "activation",
+      "priceUnavailable": "This card can't be activated right now. Please try again later.",
+      "timeEstimate": "About 2 minutes",
+      "afterActivation": "You'll see exactly what they'll see before you pay.",
       "addMessage": "Message",
       "addPhoto": "Photos",
       "addVideo": "Video",
       "addVoice": "Voice",
-      "startError": "Couldn't start — please try again"
+      "startError": "We couldn't start your greeting. Please try again.",
+      "eyebrow": "This card is waiting for your words"
     },
     "noAccess": {
-      "title": "Someone's already preparing this gift",
-      "body": "This greeting is being created on another device or browser. Check back once it's ready."
+      "title": "A greeting is on its way",
+      "body": "Someone is still preparing a greeting for this gift. Check back a little later.",
+      "hint": "Started it yourself? Open this link on the same phone and browser you used."
     }
   },
   "wizard": {
     "back": "Back",
-    "backToPreview": "Back to Preview",
+    "backToPreview": "Back to preview",
     "continue": "Continue",
     "saving": "Saving…",
     "theme": {
-      "title": "Choose a theme",
-      "subtitle": "You can change this anytime before activating."
+      "title": "Choose a design",
+      "subtitle": "This is how your greeting will open for them. You can change it until you activate.",
+      "saveError": "We couldn't save your choice. Please try again."
     },
     "message": {
       "title": "Write your message",
-      "subtitle": "This is the heart of the greeting.",
-      "placeholder": "Write something from the heart…",
-      "errorEmpty": "Write a message before continuing",
-      "errorTooLong": "Keep it under 600 characters"
+      "subtitle": "Say it the way you would in person.",
+      "placeholder": "Happy birthday! I wanted to say…",
+      "errorEmpty": "Write at least a line — it's the heart of the greeting.",
+      "errorTooLong": "Keep it under {limit} characters.",
+      "label": "Your message",
+      "hint": "A memory, a wish, or simply why they matter to you.",
+      "errorSave": "We couldn't save your message. Check your connection and try again."
     },
     "media": {
-      "title": "Add photos, video & voice",
-      "subtitle": "Add as many as you like — all optional.",
-      "photos": "Photos (up to 3)",
+      "title": "Add photos, video or your voice",
+      "subtitle": "All optional — but a voice note is the part people replay.",
+      "photos": "Photos",
       "video": "Video",
       "voice": "Voice message",
       "addPhoto": "Add photo",
       "addVideo": "Add a video",
       "uploading": "Uploading…",
-      "errorType": "Unsupported file type. Use: {types}",
-      "errorSize": "File too large — max {limit}MB",
-      "errorGeneric": "Upload failed — check your connection and try again"
+      "errorType": "This file type isn't supported. Use {types}.",
+      "errorSize": "This file is too large — the limit is {limit} MB.",
+      "errorGeneric": "Upload failed. Check your connection and try again.",
+      "photosHint": "Up to 3",
+      "videoHint": "One clip",
+      "voiceHint": "Up to 1 minute"
     },
     "voice": {
       "tapToRecord": "Tap to record",
       "recording": "Recording…",
       "recordAgain": "Record again",
-      "saveVoice": "Save voice message",
+      "saveVoice": "Use this recording",
       "orUploadFile": "Or upload an audio file",
       "uploadFile": "Upload an audio file",
-      "micDenied": "Microphone access was denied or is unavailable",
-      "unsupported": "Recording isn't supported in this browser — upload an audio file instead.",
+      "micDenied": "Microphone access is blocked. Allow it in your browser settings, or upload an audio file instead.",
+      "unsupported": "This browser can't record audio — upload an audio file instead.",
       "uploading": "Uploading…",
-      "errorType": "Unsupported audio file type",
-      "errorSize": "Recording too large — max {limit}MB",
-      "errorGeneric": "Upload failed — check your connection and try again"
+      "errorType": "This audio format isn't supported. Try MP3, M4A, WebM or OGG.",
+      "errorSize": "This recording is too large — the limit is {limit} MB.",
+      "errorGeneric": "Upload failed. Check your connection and try again.",
+      "stop": "Stop recording",
+      "limit": "Up to {max}",
+      "savedLabel": "Your voice message",
+      "previewLabel": "Listen back"
     },
     "checkout": {
-      "title": "Checkout",
-      "subtitle": "One-time activation — this makes the greeting live for your recipient.",
+      "title": "Activate your greeting",
+      "subtitle": "One payment, and your greeting goes live on this card.",
       "activationLabel": "Greeting activation",
-      "explanation": "One payment activates this greeting permanently for its recipient. No subscription, no hidden fees.",
-      "payButton": "Pay with TEST provider",
+      "explanation": "One-time payment. No subscription, no hidden fees.",
+      "payButton": "Pay {price} (test)",
       "testingOptions": "Testing options",
-      "simulateFailure": "Simulate failed payment",
-      "paymentFailed": "Payment failed. Nothing was charged and your greeting is untouched — you can try again.",
-      "retry": "Retry payment",
-      "backToPreview": "Back to Preview",
-      "processing": "Processing…",
-      "activating": "Payment successful — activating your greeting…",
+      "simulateFailure": "Simulate a failed payment",
+      "paymentFailed": "The payment didn't go through. You haven't been charged and your greeting is safe — try again.",
+      "retry": "Try again",
+      "backToPreview": "Back to preview",
+      "processing": "Processing payment…",
+      "activating": "Payment received — activating your greeting…",
       "loading": "Loading…",
-      "payButtonReal": "Pay securely",
-      "verifying": "Verifying your payment…",
-      "verifyingBody": "This can take a few seconds. Please don't close this page.",
-      "cancelledMessage": "Payment was cancelled — nothing was charged. You can try again."
+      "payButtonReal": "Pay {price} securely",
+      "verifying": "Confirming your payment…",
+      "verifyingBody": "This takes a few seconds. Please keep this page open.",
+      "cancelledMessage": "Payment was cancelled — you haven't been charged. You can try again.",
+      "summaryTitle": "Your greeting",
+      "edit": "Edit",
+      "items": {
+        "message": "Message",
+        "photos": "{count, plural, one {# photo} other {# photos}}",
+        "video": "Video",
+        "voice": "Voice message",
+        "theme": "Design · {name}"
+      },
+      "total": "Total",
+      "nextTitle": "What happens next",
+      "next1": "Your greeting goes live on this card instantly.",
+      "next2": "Give the gift together with the card.",
+      "next3": "They scan it — and your greeting opens.",
+      "lock": "Once activated, the greeting can't be edited — so take a last look at the preview.",
+      "testMode": "Test mode — no real payment is taken.",
+      "errorTitle": "Checkout isn't available",
+      "errorGeneric": "Something went wrong on our side. You haven't been charged — please try again."
     },
     "preview": {
-      "edit": "Back and edit",
-      "activate": "Activate for {price}",
-      "priceUnavailable": "Activation isn't available right now — please try again later."
-    }
+      "edit": "Back to editing",
+      "activate": "Activate · {price}",
+      "priceUnavailable": "Activation isn't available right now. Please try again later.",
+      "badge": "Preview",
+      "editShort": "Edit",
+      "readyTitle": "Happy with it?",
+      "readyBody": "This is exactly what they'll see when they scan the card."
+    },
+    "stepOf": "Step {current} of {total}",
+    "steps": {
+      "theme": "Design",
+      "message": "Message",
+      "media": "Media"
+    },
+    "toPreview": "See preview",
+    "skipToPreview": "Skip to preview",
+    "livePreview": "Live preview"
   },
   "greeting": {
     "tapToOpen": "Tap to open",
     "continue": "Continue",
-    "replay": "Replay"
+    "replay": "Watch again",
+    "open": "Open",
+    "previous": "Previous",
+    "listen": "Listen",
+    "voiceTitle": "A voice message for you",
+    "videoLabel": "Video message",
+    "photoAlt": "Photo {n} of {total}",
+    "play": "Play",
+    "pause": "Pause",
+    "seek": "Playback position",
+    "madeWith": "Made with QR Starr"
   },
   "themes": {
     "romantic": {
       "name": "Romantic",
-      "tagline": "Someone made this just for you",
+      "tagline": "Deep rose and falling petals",
       "opening": "Someone made this just for you",
       "ending": "With love"
     },
     "birthday": {
       "name": "Birthday",
-      "tagline": "A little celebration, just for you",
+      "tagline": "Warm, bright, confetti",
       "opening": "A little celebration, just for you",
       "ending": "Happy birthday!"
     },
     "minimal": {
       "name": "Minimal",
-      "tagline": "Someone's thinking of you",
+      "tagline": "Quiet paper — your words first",
       "opening": "Someone's thinking of you",
       "ending": ""
+    },
+    "wedding": {
+      "name": "Wedding",
+      "tagline": "Ivory, sage and white petals",
+      "opening": "A few words for your big day",
+      "ending": "Wishing you a lifetime of happiness"
+    },
+    "celebration": {
+      "name": "Celebration",
+      "tagline": "Midnight blue and falling stars",
+      "opening": "Something to celebrate",
+      "ending": "Congratulations!"
+    },
+    "elegant": {
+      "name": "Elegant",
+      "tagline": "Black and soft gold",
+      "opening": "A few words, just for you",
+      "ending": "With warmest wishes"
     }
   },
   "success": {
-    "banner": "Your surprise is ready — this is exactly what your recipient will see. Hand over the QR now."
+    "banner": "This is exactly what they'll see. Give the gift with the card — they scan it and it opens.",
+    "title": "Your greeting is live"
   },
   "partner": {
     "notAdmin": "Signed in as {email}, but not an admin.",
@@ -139,7 +218,7 @@
     "dashboard": {
       "title": "Partner dashboard",
       "roleLine": "{email} — role: {role}",
-      "noMemberships": "You don't have access to any partner yet.",
+      "noMemberships": "Your account isn't linked to a partner yet. Ask your QR Starr contact to add you.",
       "qrCardsTitle": "QR cards",
       "salesCommissionTitle": "Sales & commission",
       "otherTitle": "Other",
@@ -160,14 +239,18 @@
       "createBatchTitle": "Create QR batch",
       "batchesTitle": "Batches",
       "codesCount": "{count} codes",
-      "noBatches": "No batches yet."
+      "noBatches": "No batches yet.",
+      "noMembershipsTitle": "No shop linked yet",
+      "batchesHint": "Print cards, then mark them distributed as they go out with gifts.",
+      "noBatchesHint": "Create your first batch to print cards.",
+      "membershipHint": "People who can see this dashboard."
     }
   },
   "admin": {
     "signedInAs": "Signed in as {email}",
     "notAdmin": "Signed in as {email}, but not an admin.",
     "dashboard": {
-      "title": "Admin dashboard",
+      "title": "Platform overview",
       "activeOfTotal": "{active}/{total} active",
       "stats": {
         "partners": "Partners",
@@ -189,13 +272,20 @@
           "qrDistributed": "QR distributed",
           "qrScanned": "QR scanned",
           "creationStarted": "Creation started",
+          "themeSelected": "Theme selected",
+          "contentCreated": "Content created",
           "previewViewed": "Preview viewed",
           "checkoutStarted": "Checkout started",
           "paymentSucceeded": "Payment succeeded",
           "qrActivated": "QR activated",
           "recipientViewed": "Recipient viewed"
-        }
-      }
+        },
+        "description": "From printed card to opened greeting — where people drop off."
+      },
+      "salesTitle": "Sales",
+      "cardsTitle": "Cards",
+      "maintenanceTitle": "Maintenance",
+      "maintenanceHint": "Activates greetings whose payment succeeded but activation didn't complete. Safe to run any time."
     },
     "partnersPage": {
       "title": "Partners",
@@ -209,7 +299,8 @@
       "tableSlug": "Identifier",
       "tableCommission": "Commission",
       "tableStatus": "Status",
-      "empty": "No partners yet."
+      "empty": "No partners yet.",
+      "createTitle": "Add a partner"
     },
     "partnerDetail": {
       "membershipTitle": "Members",
@@ -219,7 +310,8 @@
       "codesCount": "{count} codes",
       "noBatches": "No batches yet.",
       "suspend": "Suspend",
-      "reactivate": "Reactivate"
+      "reactivate": "Reactivate",
+      "suspendConfirm": "Suspend? Their cards will stop working until reactivated."
     },
     "moderation": {
       "title": "Moderation",
@@ -262,26 +354,58 @@
     }
   },
   "print": {
-    "headline": "This gift has a digital surprise inside ❤️",
-    "instruction": "Scan the QR to open it",
-    "printThisPage": "Print this page"
+    "headline": "There's a message inside this gift",
+    "instruction": "Scan the code with your phone camera to open it",
+    "printThisPage": "Print this page",
+    "cardCount": "{count} cards"
   },
   "auth": {
     "emailPlaceholder": "Email",
     "passwordPlaceholder": "Password",
-    "logIn": "Log in",
-    "loggingIn": "Logging in…",
-    "adminLoginTitle": "Admin login",
-    "partnerLoginTitle": "Partner login"
+    "emailLabel": "Email address",
+    "passwordLabel": "Password",
+    "logIn": "Sign in",
+    "loggingIn": "Signing in…",
+    "adminLoginTitle": "Admin sign in",
+    "partnerLoginTitle": "Welcome back",
+    "forgotPasswordLink": "Forgot password?",
+    "forgotPasswordTitle": "Reset your password",
+    "requestNewLink": "Send reset link",
+    "sendingLink": "Sending…",
+    "resetEmailSentMessage": "If an account exists for that email, we've sent a link to reset your password. Check your inbox.",
+    "backToLogin": "Back to login",
+    "resetPasswordTitle": "Choose a new password",
+    "newPasswordPlaceholder": "New password",
+    "confirmPasswordPlaceholder": "Confirm new password",
+    "passwordMismatch": "Passwords don't match",
+    "settingPassword": "Saving…",
+    "setNewPasswordButton": "Save new password",
+    "resetSuccessMessage": "Your password has been updated. You can now log in with it.",
+    "invalidOrExpiredLink": "This reset link is invalid or has expired. Request a new one below.",
+    "invalidCredentials": "That email and password don't match. Please try again.",
+    "signInFailed": "We couldn't sign you in. Please try again in a moment.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "checkInboxTitle": "Check your inbox",
+    "forgotPasswordBody": "Enter your account email and we'll send you a link to choose a new password.",
+    "passwordRule": "Use at least {min} characters.",
+    "passwordSameAsOld": "Choose a password you haven't used before.",
+    "resetFailed": "We couldn't update your password. Please request a new link and try again.",
+    "partnerLoginBody": "Manage your cards, sales and commission.",
+    "adminLoginBody": "Restricted to QR Starr staff.",
+    "areaPartner": "Partner",
+    "areaAdmin": "Admin"
   },
   "nav": {
-    "adminBrand": "QR Gift — Admin",
-    "partnerBrand": "QR Gift — Partner",
+    "adminBrand": "QR Starr — Admin",
+    "partnerBrand": "QR Starr — Partner",
     "dashboard": "Dashboard",
     "partners": "Partners",
     "moderation": "Moderation",
     "signOut": "Sign out",
-    "managePartners": "Manage partners →"
+    "managePartners": "Manage partners",
+    "partnerArea": "Partner",
+    "adminArea": "Admin"
   },
   "enums": {
     "partnerStatus": {
@@ -331,13 +455,17 @@
     "referenceHeader": "Reference",
     "paidHeader": "Paid",
     "noPayouts": "No payouts recorded yet.",
-    "noReference": "—"
+    "noReference": "—",
+    "explainer": "Record a payout you've already made outside QR Starr (bank transfer, cash). This doesn't move money.",
+    "useFullBalance": "Use full balance",
+    "overBalance": "The amount is more than the unpaid balance."
   },
   "createBatchForm": {
     "labelField": "Label",
     "labelPlaceholder": "e.g. Tbilisi Mall — March",
     "quantityField": "Quantity",
-    "submitButton": "Create batch"
+    "submitButton": "Create batch",
+    "quantityHint": "Between 1 and 2,000 cards per batch."
   },
   "inventoryTable": {
     "markSelected": "Mark selected distributed ({count})",
@@ -349,9 +477,17 @@
     "distributionHeader": "Distribution",
     "assetHeader": "Asset",
     "svgLink": "SVG",
-    "noCodes": "No QR codes in this batch."
+    "noCodes": "No QR codes in this batch.",
+    "selectHeader": "Select"
   },
   "partnerSwitcher": {
     "label": "Partner"
+  },
+  "home": {
+    "eyebrow": "For partners",
+    "title": "Digital greetings for physical gifts",
+    "body": "QR Starr adds a personal message, photos, video and a voice note to flowers, cakes and gifts — revealed with a single scan.",
+    "partnerCta": "Partner sign in",
+    "adminCta": "Admin"
   }
 }

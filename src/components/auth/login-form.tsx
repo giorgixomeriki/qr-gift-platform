@@ -1,13 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { Button } from "@/components/ui/button";
+import { TextField } from "@/components/ui/field";
+import { Notice } from "@/components/ui/notice";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { PasswordField } from "./password-field";
 
-export function LoginForm({ title, redirectTo }: { title: string; redirectTo: string }) {
+export function LoginForm({
+  title,
+  subtitle,
+  redirectTo,
+  forgotPasswordHref,
+}: {
+  title: string;
+  subtitle?: string;
+  redirectTo: string;
+  /** Where "Forgot password?" points — the role-specific reset-request page (admin vs partner). */
+  forgotPasswordHref: string;
+}) {
   const t = useTranslations("auth");
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -19,53 +33,68 @@ export function LoginForm({ title, redirectTo }: { title: string; redirectTo: st
     setError(null);
 
     const supabase = createSupabaseBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
 
-    setPending(false);
     if (signInError) {
-      setError(signInError.message);
+      setPending(false);
+      // Supabase's messages are English and technical; map the common case to
+      // clear, localized copy that doesn't reveal which field was wrong.
+      setError(signInError.status === 400 || /invalid/i.test(signInError.message) ? t("invalidCredentials") : t("signInFailed"));
       return;
     }
-    router.push(redirectTo);
-    router.refresh();
+    // A full navigation, not router.push()+router.refresh(): the browser
+    // client's signInWithPassword sets the session cookie client-side, and an
+    // immediate client-side transition can race the very next server render
+    // reading that cookie before it's fully written (observed directly: a
+    // real "Unexpected end of JSON input" server error parsing a
+    // partially-propagated Supabase auth cookie). A full page load always
+    // sends whatever the browser has already committed — no race possible.
+    window.location.href = redirectTo;
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
-      <h1 className="text-lg font-medium text-neutral-100">{title}</h1>
-      <input
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+      <div>
+        <h1 className="text-h2">{title}</h1>
+        {subtitle && <p className="mt-1 text-body-sm text-ink-2">{subtitle}</p>}
+      </div>
+      <TextField
+        id="login-email"
         type="email"
         required
         autoComplete="email"
+        inputMode="email"
+        autoCapitalize="none"
+        spellCheck={false}
+        label={t("emailLabel")}
         placeholder={t("emailPlaceholder")}
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
         data-testid="login-email"
       />
-      <input
-        type="password"
-        required
+      <PasswordField
+        id="login-password"
         autoComplete="current-password"
-        placeholder={t("passwordPlaceholder")}
+        label={t("passwordLabel")}
         value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        className="rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-neutral-100"
-        data-testid="login-password"
+        onChange={setPassword}
+        testId="login-password"
       />
       {error && (
-        <p className="text-sm text-red-400" data-testid="login-error">
-          {error}
-        </p>
+        <Notice tone="danger">
+          <span data-testid="login-error">{error}</span>
+        </Notice>
       )}
-      <button
-        type="submit"
-        disabled={pending}
-        className="rounded bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-900 disabled:opacity-50"
-        data-testid="login-submit"
+      <Button type="submit" size="lg" block loading={pending} loadingLabel={t("loggingIn")} data-testid="login-submit">
+        {t("logIn")}
+      </Button>
+      <Link
+        href={forgotPasswordHref}
+        className="self-center text-label text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+        data-testid="forgot-password-link"
       >
-        {pending ? t("loggingIn") : t("logIn")}
-      </button>
+        {t("forgotPasswordLink")}
+      </Link>
     </form>
   );
 }

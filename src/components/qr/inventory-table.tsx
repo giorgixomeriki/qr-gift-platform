@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Download, Printer, QrCode } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Badge, table } from "@/components/dashboard/ui";
+import { Button, buttonClasses } from "@/components/ui/button";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -12,6 +15,8 @@ export type InventoryQrRow = {
   status: string;
   distributionStatus: string;
 };
+
+const STATUS_TONE = { AVAILABLE: "neutral", DRAFT: "warning", ACTIVE: "success", BLOCKED: "danger" } as const;
 
 /**
  * Per-batch inventory + distribution marking (Phase 1). Supports both a
@@ -62,86 +67,104 @@ export function InventoryTable({
   }
 
   return (
-    <div className="flex flex-col gap-3" data-testid="inventory-table">
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
+    <div className="flex flex-col" data-testid="inventory-table">
+      <div className="flex flex-wrap items-center gap-2 px-5 pb-4">
+        <Button
+          size="sm"
           disabled={pending || selected.size === 0}
           onClick={() => markSelected([...selected])}
-          className="rounded bg-neutral-900 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-40"
           data-testid="mark-selected-distributed"
         >
           {t("markSelected", { count: selected.size })}
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
           disabled={pending || undistributed.length === 0}
           onClick={() => markSelected(undistributed.map((r) => r.id))}
-          className="rounded border border-neutral-300 px-3 py-1.5 text-xs font-medium disabled:opacity-40"
           data-testid="mark-all-distributed"
         >
           {t("markAll", { count: undistributed.length })}
-        </button>
-        <a
-          href={`/api/qr/batches/${batchId}/export`}
-          className="text-xs text-neutral-600 underline"
-          data-testid="export-csv-link"
-        >
+        </Button>
+        <span className="mx-1 hidden h-5 w-px bg-line sm:block" aria-hidden />
+        <a href={`/api/qr/batches/${batchId}/export`} className={buttonClasses({ variant: "ghost", size: "sm" })} data-testid="export-csv-link">
+          <Download className="size-4" aria-hidden />
           {t("exportCsv")}
         </a>
         <a
           href={`/print/batch/${batchId}`}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-neutral-600 underline"
+          className={buttonClasses({ variant: "ghost", size: "sm" })}
           data-testid="print-batch-link"
         >
+          <Printer className="size-4" aria-hidden />
           {t("printCards")}
         </a>
-        {error && <span className="text-xs text-red-600">{error}</span>}
+        {error && (
+          <span className="text-caption text-danger" role="alert">
+            {error}
+          </span>
+        )}
       </div>
 
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs uppercase text-neutral-500">
-            <th className="py-1" />
-            <th className="py-1">{t("tokenHeader")}</th>
-            <th className="py-1">{t("statusHeader")}</th>
-            <th className="py-1">{t("distributionHeader")}</th>
-            <th className="py-1">{t("assetHeader")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className="border-t border-neutral-200" data-testid="inventory-row">
-              <td className="py-1">
-                <input
-                  type="checkbox"
-                  checked={selected.has(row.id)}
-                  disabled={row.distributionStatus === "DISTRIBUTED"}
-                  onChange={() => toggle(row.id)}
-                  data-testid="inventory-row-checkbox"
-                />
-              </td>
-              <td className="py-1 font-mono text-xs">{row.publicToken}</td>
-              <td className="py-1">{tStatus(row.status as "AVAILABLE" | "DRAFT" | "ACTIVE" | "BLOCKED")}</td>
-              <td className="py-1">{tDist(row.distributionStatus as "NOT_DISTRIBUTED" | "DISTRIBUTED")}</td>
-              <td className="py-1">
-                <a href={`/api/qr/${row.id}?format=svg`} target="_blank" rel="noreferrer" className="text-xs underline">
-                  {t("svgLink")}
-                </a>
-              </td>
-            </tr>
-          ))}
-          {rows.length === 0 && (
+      <div className={`${table.wrap} max-h-[28rem] overflow-y-auto`}>
+        <table className={table.table}>
+          <thead className={`${table.thead} sticky top-0 bg-surface`}>
             <tr>
-              <td colSpan={5} className="py-2 text-xs text-neutral-500">
-                {t("noCodes")}
-              </td>
+              <th className={`${table.th} w-10`}>
+                <span className="sr-only">{t("selectHeader")}</span>
+              </th>
+              <th className={table.th}>{t("tokenHeader")}</th>
+              <th className={table.th}>{t("statusHeader")}</th>
+              <th className={table.th}>{t("distributionHeader")}</th>
+              <th className={table.th}>{t("assetHeader")}</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id} className={table.tr} data-testid="inventory-row">
+                <td className={table.td}>
+                  <input
+                    type="checkbox"
+                    checked={selected.has(row.id)}
+                    disabled={row.distributionStatus === "DISTRIBUTED"}
+                    onChange={() => toggle(row.id)}
+                    aria-label={row.publicToken}
+                    className="size-4 accent-[var(--ink)]"
+                    data-testid="inventory-row-checkbox"
+                  />
+                </td>
+                <td className={`${table.td} font-mono text-caption tracking-wide`}>{row.publicToken}</td>
+                <td className={table.td}>
+                  <Badge tone={STATUS_TONE[row.status as keyof typeof STATUS_TONE] ?? "neutral"}>
+                    {tStatus(row.status as "AVAILABLE" | "DRAFT" | "ACTIVE" | "BLOCKED")}
+                  </Badge>
+                </td>
+                <td className={`${table.td} text-ink-2`}>{tDist(row.distributionStatus as "NOT_DISTRIBUTED" | "DISTRIBUTED")}</td>
+                <td className={table.td}>
+                  <a
+                    href={`/api/qr/${row.id}?format=svg`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-caption text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+                  >
+                    <QrCode className="size-3.5" aria-hidden />
+                    {t("svgLink")}
+                  </a>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-5 py-6 text-center text-caption text-ink-3">
+                  {t("noCodes")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

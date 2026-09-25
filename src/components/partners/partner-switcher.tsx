@@ -1,7 +1,9 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { control, fieldLabel } from "@/components/dashboard/ui";
 import { setActivePartnerAction } from "@/lib/auth/actions";
 
 type Membership = { partnerId: string; role: string; partnerName: string };
@@ -10,21 +12,26 @@ export function PartnerSwitcher({ memberships, activePartnerId }: { memberships:
   const t = useTranslations("partnerSwitcher");
   const tRole = useTranslations("enums.partnerRole");
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
 
   if (memberships.length <= 1) return null;
 
-  async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    await setActivePartnerAction(e.target.value);
-    router.refresh();
+  function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value;
+    startTransition(async () => {
+      await setActivePartnerAction(value);
+      router.refresh();
+    });
   }
 
   return (
-    <label className="flex items-center gap-2 text-xs text-neutral-500">
+    <label className={`${fieldLabel} min-w-56`}>
       {t("label")}
       <select
         defaultValue={activePartnerId ?? ""}
         onChange={handleChange}
-        className="rounded border border-neutral-300 bg-white px-2 py-1 text-xs"
+        disabled={pending}
+        className={control}
         data-testid="partner-switcher"
       >
         {memberships.map((m) => (

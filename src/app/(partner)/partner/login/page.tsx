@@ -1,11 +1,17 @@
 import { getTranslations } from "next-intl/server";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default async function PartnerLoginPage() {
   const t = await getTranslations("auth");
   return (
-    <main className="flex min-h-screen flex-1 items-center justify-center bg-neutral-950 p-8">
-      <LoginForm title={t("partnerLoginTitle")} redirectTo="/partner/dashboard" />
-    </main>
+    <AuthShell area={t("areaPartner")}>
+      <LoginForm
+        title={t("partnerLoginTitle")}
+        subtitle={t("partnerLoginBody")}
+        redirectTo="/partner/dashboard"
+        forgotPasswordHref="/partner/forgot-password"
+      />
+    </AuthShell>
   );
 }

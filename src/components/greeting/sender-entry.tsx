@@ -1,121 +1,96 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { ImageIcon, Mic, PenLine, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { ActionBar, FlowShell } from "@/components/flow/shell";
+import { Button } from "@/components/ui/button";
+import { Notice } from "@/components/ui/notice";
 import { startGreetingAction } from "@/lib/greetings/actions";
 import { LocaleSwitcher } from "./locale-switcher";
+import { ThemeSwatch } from "./theme-swatch";
 
 /**
- * A content-type affordance, not decoration — answers "what can I add?" at a
- * glance (Phase 4 §4) without a wall of text. Icons are plain SVG strokes,
- * not emoji, to keep this screen from reading as an AI-generated landing
- * page (Phase 4 §2's explicit warning against "random emojis").
+ * First screen after a sender scans an unused card. Its only job: make the
+ * idea click in three seconds and get one tap on the primary action. The
+ * hero is a real miniature of what the recipient will see — the same
+ * envelope the recipient experience opens with — not stock imagery.
  */
-function ContentTypeRow({ labels }: { labels: [string, string, string, string] }) {
-  const icons = [
-    // message
-    <path key="m" d="M4 5h16v11H8l-4 4V5z" />,
-    // photo
-    <g key="p">
-      <rect x="3" y="5" width="18" height="14" rx="2" />
-      <circle cx="9" cy="11" r="2" />
-      <path d="M3 17l5-5 4 4 3-3 6 6" />
-    </g>,
-    // video
-    <g key="v">
-      <rect x="3" y="6" width="13" height="12" rx="2" />
-      <path d="M16 10l5-3v10l-5-3z" />
-    </g>,
-    // voice
-    <g key="a">
-      <rect x="9" y="3" width="6" height="11" rx="3" />
-      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
-    </g>,
+export function SenderEntry({ publicToken, priceLabel }: { publicToken: string; priceLabel: string | null }) {
+  const t = useTranslations("sender.entry");
+  const [pending, startTransition] = useTransition();
+  const [failed, setFailed] = useState(false);
+
+  function handleStart() {
+    setFailed(false);
+    startTransition(async () => {
+      // startGreetingAction redirects on success and never returns in that
+      // case — reaching here means it returned an error result instead.
+      const result = await startGreetingAction(publicToken);
+      if (result && !result.ok) setFailed(true);
+    });
+  }
+
+  const contentTypes = [
+    { Icon: PenLine, label: t("addMessage") },
+    { Icon: ImageIcon, label: t("addPhoto") },
+    { Icon: Video, label: t("addVideo") },
+    { Icon: Mic, label: t("addVoice") },
   ];
 
   return (
-    <div className="grid grid-cols-4 gap-3" data-testid="content-type-row">
-      {labels.map((label, i) => (
-        <div key={label} className="flex flex-col items-center gap-1.5">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 opacity-70">
-            {icons[i]}
-          </svg>
-          <span className="text-[11px] text-neutral-500">{label}</span>
+    <FlowShell headerEnd={<LocaleSwitcher />} width="wide">
+      <div
+        className="grid flex-1 grid-rows-[auto_1fr] gap-6 pt-2 md:grid-cols-[1fr_1.05fr] md:grid-rows-1 md:items-center md:gap-14 md:py-12"
+        data-testid="sender-entry"
+      >
+        <ThemeSwatch
+          themeKey="romantic"
+          envelopeWidth="62%"
+          className="animate-fade aspect-[16/10] max-h-[34dvh] w-full rounded-[var(--radius-xl)] shadow-md md:order-2 md:aspect-[4/5] md:max-h-none"
+        />
+
+        <div className="flex flex-col md:order-1">
+          <div className="stagger">
+            <p className="text-eyebrow text-ember">{t("eyebrow")}</p>
+            <h1 className="text-display mt-2 md:mt-3">{t("title")}</h1>
+            <p className="mt-3 max-w-md text-body text-ink-2 md:mt-4">{t("subtitle")}</p>
+
+            <ul className="mt-7 flex flex-wrap gap-2 md:mt-9" data-testid="content-type-row">
+              {contentTypes.map(({ Icon, label }) => (
+                <li
+                  key={label}
+                  className="inline-flex h-9 items-center gap-2 rounded-full bg-surface pr-3.5 pl-3 text-label text-ink-2 shadow-xs ring-1 ring-line"
+                >
+                  <Icon className="size-4 text-ink" strokeWidth={1.75} aria-hidden />
+                  {label}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-5 text-caption text-ink-3">{t("afterActivation")}</p>
+          </div>
+
+          <ActionBar>
+            {failed && (
+              <Notice tone="danger" className="mb-1">
+                <span data-testid="start-error">{t("startError")}</span>
+              </Notice>
+            )}
+            <Button size="lg" block onClick={handleStart} loading={pending} disabled={!priceLabel} data-testid="start-greeting-button">
+              {t("cta")}
+            </Button>
+            {priceLabel ? (
+              <p className="text-center text-caption text-ink-2" data-testid="activation-price">
+                {t("timeEstimate")} · {t("priceLabel")} <span className="font-medium text-ink">{priceLabel}</span>
+              </p>
+            ) : (
+              <p className="text-center text-caption text-danger" data-testid="price-unavailable">
+                {t("priceUnavailable")}
+              </p>
+            )}
+          </ActionBar>
         </div>
-      ))}
-    </div>
-  );
-}
-
-export function SenderEntry({ publicToken, priceLabel }: { publicToken: string; priceLabel: string | null }) {
-  const t = useTranslations("sender.entry");
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleStart() {
-    setPending(true);
-    setError(null);
-    const result = await startGreetingAction(publicToken);
-    // startGreetingAction redirects on success and never returns in that
-    // case — reaching here means it returned an error result instead.
-    if (result && !result.ok) {
-      setPending(false);
-      setError(result.error);
-    }
-  }
-
-  return (
-    <main
-      className="relative flex min-h-screen flex-col items-center justify-center gap-9 px-6 py-16 text-center text-neutral-100"
-      style={{ background: "radial-gradient(circle at 50% 12%, #241a33 0%, #0b0a10 65%)" }}
-      data-testid="sender-entry"
-    >
-      <LocaleSwitcher className="absolute right-5 top-5 text-neutral-500" />
-
-      <div className="flex flex-col items-center gap-5">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" className="h-14 w-14 text-neutral-200" aria-hidden="true">
-          <rect x="3" y="9" width="18" height="11" rx="1.5" />
-          <path d="M3 9h18M12 9v11" />
-          <path d="M7.5 9a2.75 2.75 0 0 1 0-5.5C10 3.5 12 6 12 9c0-3 2-5.5 4.5-5.5a2.75 2.75 0 0 1 0 5.5" />
-        </svg>
-        <div className="flex flex-col items-center gap-2">
-          <h1 className="max-w-xs text-[1.75rem] font-semibold leading-tight">{t("title")}</h1>
-          <p className="max-w-[19rem] text-sm leading-relaxed text-neutral-400">{t("subtitle")}</p>
-        </div>
-        <ContentTypeRow labels={[t("addMessage"), t("addPhoto"), t("addVideo"), t("addVoice")]} />
       </div>
-
-      <div className="flex flex-col items-center gap-3">
-        <button
-          type="button"
-          onClick={handleStart}
-          disabled={pending || !priceLabel}
-          className="min-w-[15rem] rounded-full bg-white px-8 py-4 text-base font-semibold text-black transition active:scale-[0.98] disabled:opacity-50"
-          data-testid="start-greeting-button"
-        >
-          {pending ? "…" : t("cta")}
-        </button>
-
-        {priceLabel ? (
-          <p className="text-sm text-neutral-400" data-testid="activation-price">
-            {t("priceLabel")}: <span className="font-medium text-neutral-200">{priceLabel}</span>
-          </p>
-        ) : (
-          <p className="max-w-xs text-sm text-red-300" data-testid="price-unavailable">
-            {t("priceUnavailable")}
-          </p>
-        )}
-
-        <p className="max-w-[17rem] text-xs leading-relaxed text-neutral-500">
-          {t("timeEstimate")} · {t("afterActivation")}
-        </p>
-
-        {error && (
-          <p className="text-sm text-red-300" data-testid="start-error">
-            {error}
-          </p>
-        )}
-      </div>
-    </main>
+    </FlowShell>
   );
 }

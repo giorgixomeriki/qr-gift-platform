@@ -3,21 +3,30 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Badge } from "@/components/dashboard/ui";
+import { Button } from "@/components/ui/button";
 import { adminSetPartnerStatusAction } from "@/lib/partners/actions";
 
+/**
+ * Suspending a partner stops every one of their cards from working, so it
+ * takes an inline confirmation; reactivating is harmless and immediate.
+ */
 export function PartnerStatusToggle({ partnerId, status }: { partnerId: string; status: "ACTIVE" | "SUSPENDED" }) {
   const t = useTranslations("admin.partnerDetail");
   const tStatus = useTranslations("enums.partnerStatus");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [pending, setPending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function toggle() {
+  async function apply() {
     setPending(true);
     setError(null);
     const next = status === "ACTIVE" ? "SUSPENDED" : "ACTIVE";
     const result = await adminSetPartnerStatusAction(partnerId, next);
     setPending(false);
+    setConfirming(false);
     if (!result.ok) {
       setError(result.error);
       return;
@@ -26,25 +35,36 @@ export function PartnerStatusToggle({ partnerId, status }: { partnerId: string; 
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <span
-        className={`rounded px-2 py-0.5 text-xs font-medium ${
-          status === "ACTIVE" ? "bg-emerald-900 text-emerald-300" : "bg-red-900 text-red-300"
-        }`}
-        data-testid="partner-status-badge"
-      >
-        {tStatus(status)}
+    <div className="flex flex-wrap items-center gap-2">
+      <span data-testid="partner-status-badge">
+        <Badge tone={status === "ACTIVE" ? "success" : "danger"}>{tStatus(status)}</Badge>
       </span>
-      <button
-        type="button"
-        onClick={toggle}
-        disabled={pending}
-        className="text-xs text-neutral-400 underline hover:text-neutral-100 disabled:opacity-50"
-        data-testid="partner-status-toggle"
-      >
-        {pending ? "…" : status === "ACTIVE" ? t("suspend") : t("reactivate")}
-      </button>
-      {error && <span className="text-xs text-red-400">{error}</span>}
+      {confirming ? (
+        <>
+          <span className="text-caption text-ink-2">{t("suspendConfirm")}</span>
+          <Button size="sm" variant="secondary" onClick={() => setConfirming(false)} disabled={pending}>
+            {tCommon("cancel")}
+          </Button>
+          <Button size="sm" onClick={apply} loading={pending} className="bg-danger hover:bg-danger" data-testid="partner-status-confirm">
+            {t("suspend")}
+          </Button>
+        </>
+      ) : (
+        <Button
+          size="sm"
+          variant={status === "ACTIVE" ? "danger" : "secondary"}
+          onClick={() => (status === "ACTIVE" ? setConfirming(true) : apply())}
+          loading={pending}
+          data-testid="partner-status-toggle"
+        >
+          {status === "ACTIVE" ? t("suspend") : t("reactivate")}
+        </Button>
+      )}
+      {error && (
+        <span className="text-caption text-danger" role="alert">
+          {error}
+        </span>
+      )}
     </div>
   );
 }

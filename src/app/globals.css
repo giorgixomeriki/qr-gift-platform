@@ -1,77 +1,666 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Self-hosted fonts (SIL OFL 1.1 — licences in /public/fonts). Served from our
+ * own origin, never fetched from Google at build or run time. unicode-range
+ * means a Georgian-only page never downloads Latin files and vice versa.
+ *
+ * Google Sans carries UI text in both Latin and Georgian with one voice.
+ * Display/message text pairs Newsreader (Latin) with Noto Serif Georgian —
+ * chosen side by side for matching weight and x-height.
+ */
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(/fonts/google-sans-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(/fonts/google-sans-latin-ext.woff2) format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Google Sans";
+  font-style: normal;
+  font-weight: 400 600;
+  font-display: swap;
+  src: url(/fonts/google-sans-georgian.woff2) format("woff2");
+  unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url(/fonts/newsreader-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Newsreader";
+  font-style: italic;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url(/fonts/newsreader-italic-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Noto Serif Georgian";
+  font-style: normal;
+  font-weight: 400 500;
+  font-display: swap;
+  src: url(/fonts/noto-serif-georgian.woff2) format("woff2");
+  unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31;
+}
 
-  /* System font stacks — see layout.tsx for why these aren't next/font/google
-     anymore. --font-serif/--font-display back the Romantic/Birthday themes
-     (lib/themes/registry.ts); --font-geist-sans/mono back everything else. */
-  --font-geist-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --font-geist-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
-  --font-serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
-  --font-display: "Century Gothic", "Trebuchet MS", Verdana, var(--font-geist-sans);
+/*
+ * QR Starr design system — tokens.
+ *
+ * One source of truth for every surface: sender flow, recipient experience,
+ * partner and admin dashboards, print sheets. The greeting renderer layers
+ * theme-specific colours on top via --g-* custom properties
+ * (lib/themes/registry.ts) rather than a second stylesheet, so there is
+ * exactly one design system in the codebase.
+ */
+
+:root {
+  /* Surfaces — warm paper, never pure white/grey. */
+  --paper: #faf7f2;
+  --surface: #ffffff;
+  --surface-sunken: #f3eee7;
+  --surface-raised: #ffffff;
+
+  /* Ink — every text colour below passes WCAG AA on --paper and --surface. */
+  --ink: #1d1916; /* 16.9:1 */
+  --ink-2: #5a514a; /* 7.4:1 */
+  --ink-3: #776d65; /* 4.8:1 — captions, never essential copy on sunken */
+  --ink-inverse: #fbf8f4;
+
+  --line: #e6dfd5;
+  --line-strong: #d4cabd;
+
+  /* Brand. Primary actions are ink; ember is the "spark" accent, used sparingly. */
+  --primary: #1d1916;
+  --primary-hover: #3a322c;
+  --primary-press: #000000;
+  --ember: #b4523a; /* 4.9:1 on white */
+  --ember-soft: #f6e6df;
+  --ember-ink: #8f3c28;
+
+  --success: #2d7a57;
+  --success-soft: #e3f1ea;
+  --warning: #9a6212;
+  --warning-soft: #f8edd9;
+  --danger: #b3261e;
+  --danger-soft: #fae4e2;
+
+  --focus: #b4523a;
+  --disabled-bg: #ece6dd;
+  --disabled-ink: #9b918a;
+
+  --shadow-xs: 0 1px 2px rgb(29 25 22 / 0.06);
+  --shadow-sm: 0 1px 2px rgb(29 25 22 / 0.05), 0 2px 8px rgb(29 25 22 / 0.05);
+  --shadow-md: 0 2px 4px rgb(29 25 22 / 0.04), 0 8px 24px rgb(29 25 22 / 0.08);
+  --shadow-lg: 0 4px 12px rgb(29 25 22 / 0.06), 0 24px 56px rgb(29 25 22 / 0.14);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-inverse: var(--ink-inverse);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-ember: var(--ember);
+  --color-ember-soft: var(--ember-soft);
+  --color-ember-ink: var(--ember-ink);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  /* Google Sans carries both Latin and Georgian with one consistent voice.
+     The serif pairs Newsreader (Latin) with Noto Serif Georgian — matched for
+     weight and x-height, so bilingual lines don't look like two fonts. */
+  --font-sans: "Google Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Newsreader", "Noto Serif Georgian", Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Menlo, Consolas, monospace;
+
+  /* Radius scale: 3 steps + full. Controls 12, containers 20, sheets 28. */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+
+  --ease-out: var(--ease-out);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---------------------------------------------------------------------------
+ * Type scale. Display sizes are fluid; body sizes stay fixed for legibility.
+ * Georgian has no case and tends to set wider, so headings get a touch less
+ * negative tracking under :lang(ka) and uppercase transforms are disabled
+ * (they would silently switch Georgian into Mtavruli).
+ * ------------------------------------------------------------------------ */
+@utility text-display {
+  font-family: var(--font-serif);
+  font-size: clamp(2.125rem, 1.55rem + 2.6vw, 3.5rem);
+  line-height: 1.06;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+@utility text-h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.75rem, 1.45rem + 1.3vw, 2.375rem);
+  line-height: 1.12;
+  letter-spacing: -0.015em;
+  font-weight: 400;
+}
+@utility text-h2 {
+  font-size: 1.25rem;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+}
+@utility text-h3 {
+  font-size: 1.0625rem;
+  line-height: 1.35;
+  font-weight: 500;
+}
+@utility text-body {
+  font-size: 1rem;
+  line-height: 1.55;
+}
+@utility text-body-sm {
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+@utility text-label {
+  font-size: 0.875rem;
+  line-height: 1.3;
+  font-weight: 500;
+}
+@utility text-caption {
+  font-size: 0.8125rem;
+  line-height: 1.4;
+}
+@utility text-eyebrow {
+  font-size: 0.75rem;
+  line-height: 1.3;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+:lang(ka) .text-eyebrow {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.8125rem;
+}
+:lang(ka) .text-display,
+:lang(ka) .text-h1 {
+  letter-spacing: -0.005em;
+}
+:lang(ka) .text-display {
+  font-size: clamp(1.875rem, 1.4rem + 2.2vw, 3rem);
+  line-height: 1.12;
+}
+:lang(ka) .text-h1 {
+  font-size: clamp(1.5rem, 1.3rem + 1.1vw, 2.125rem);
+  line-height: 1.2;
+}
+
+/* ---------------------------------------------------------------------------
+ * Base
+ * ------------------------------------------------------------------------ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* ==========================================================================
-   Greeting renderer (Sender wizard + shared Preview/Recipient experience) —
-   deliberately separate from the admin/partner dashboard styling above.
-   ========================================================================== */
-
-@keyframes greeting-fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
+h1,
+h2,
+h3,
+p {
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+h1,
+h2 {
+  text-wrap: balance;
 }
 
-@keyframes greeting-rise-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
+::selection {
+  background: var(--ember-soft);
+  color: var(--ink);
 }
 
-@keyframes greeting-float {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-14px) rotate(3deg); }
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
-@keyframes greeting-drift-down {
-  from { transform: translateY(-10vh) rotate(0deg); opacity: 0; }
-  10% { opacity: 1; }
-  to { transform: translateY(110vh) rotate(220deg); opacity: 0.9; }
+/* ---------------------------------------------------------------------------
+ * Motion. Everything is short and state-carrying; the recipient reveal is
+ * the one intentionally expressive moment. All of it collapses under
+ * prefers-reduced-motion.
+ * ------------------------------------------------------------------------ */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+@keyframes shimmer {
+  from {
+    background-position: -200% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes twinkle {
+  0%,
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.82) rotate(12deg);
+    opacity: 0.75;
+  }
+}
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@keyframes sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes pulse-ring {
+  0% {
+    box-shadow: 0 0 0 0 rgb(179 38 30 / 0.35);
+  }
+  100% {
+    box-shadow: 0 0 0 18px rgb(179 38 30 / 0);
+  }
 }
 
-.greeting-anim-fade-in { animation: greeting-fade-in 900ms ease-out both; }
-.greeting-anim-rise-in { animation: greeting-rise-in 700ms ease-out both; }
-.greeting-anim-float { animation: greeting-float 6s ease-in-out infinite; }
-.greeting-anim-drift { animation: greeting-drift-down linear infinite; }
+@utility animate-rise {
+  animation: rise 520ms var(--ease-out) both;
+}
+@utility animate-fade {
+  animation: fade 400ms var(--ease-out) both;
+}
+@utility animate-pop {
+  animation: pop 420ms var(--ease-out) both;
+}
+@utility animate-twinkle {
+  animation: twinkle 3.2s var(--ease-in-out) infinite;
+}
+@utility animate-float {
+  animation: float 5s var(--ease-in-out) infinite;
+}
 
-/* Respect the user's motion preference: freeze decorative/entrance motion,
-   keep only the plain opacity fade so content still appears. */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface-sunken) 25%, #ebe4da 50%, var(--surface-sunken) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+
+.stagger > * {
+  animation: rise 560ms var(--ease-out) both;
+}
+.stagger > *:nth-child(2) {
+  animation-delay: 60ms;
+}
+.stagger > *:nth-child(3) {
+  animation-delay: 120ms;
+}
+.stagger > *:nth-child(4) {
+  animation-delay: 180ms;
+}
+.stagger > *:nth-child(5) {
+  animation-delay: 240ms;
+}
+.stagger > *:nth-child(n + 6) {
+  animation-delay: 300ms;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .greeting-anim-fade-in,
-  .greeting-anim-rise-in,
-  .greeting-anim-float,
-  .greeting-anim-drift {
+  *,
+  *::before,
+  *::after {
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
+}
+
+/* Native <dialog> used for bottom sheets. */
+dialog.sheet {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  max-width: none;
+  max-height: none;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  color: inherit;
+}
+dialog.sheet::backdrop {
+  background: rgb(20 16 13 / 0.45);
+  animation: fade 240ms var(--ease-out);
+}
+dialog.sheet[open] .sheet-panel {
+  animation: sheet-up 340ms var(--ease-out);
+}
+@media (min-width: 640px) {
+  dialog.sheet[open] .sheet-panel {
+    animation: rise 280ms var(--ease-out);
+  }
+}
+
+/* ===========================================================================
+ * Recipient experience
+ * Theme colours arrive as --g-* custom properties (lib/themes/registry.ts).
+ * The stage machine (closed → opening → open) toggles data-stage on .gift;
+ * every transition below is keyed off that single attribute.
+ * ======================================================================== */
+.gift {
+  background: var(--g-bg);
+  background-color: var(--g-base);
+  color: var(--g-ink);
+}
+
+.envelope {
+  position: relative;
+  width: min(80vw, 340px);
+  aspect-ratio: 32 / 22;
+  perspective: 1000px;
+  filter: drop-shadow(0 24px 40px rgb(0 0 0 / 0.22)) drop-shadow(0 4px 10px rgb(0 0 0 / 0.12));
+  transition:
+    transform 700ms var(--ease-out),
+    opacity 600ms var(--ease-out),
+    filter 600ms var(--ease-out);
+}
+.envelope-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: var(--g-envelope-flap);
+}
+.envelope-letter {
+  position: absolute;
+  inset: 7% 6% 5%;
+  border-radius: 10px;
+  background: #fffdf9;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+  display: grid;
+  place-items: start center;
+  padding-top: 12%;
+  z-index: 1;
+  transition: transform 700ms var(--ease-out);
+}
+.envelope-front {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.envelope-flap {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 58%;
+  transform-origin: top;
+  transform-style: preserve-3d;
+  z-index: 4;
+  transition:
+    transform 560ms var(--ease-in-out),
+    z-index 0s linear 280ms;
+}
+.envelope-flap > svg {
+  display: block;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.06));
+}
+.envelope-seal {
+  position: absolute;
+  left: 50%;
+  top: 58%;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 17%;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(circle at 35% 30%, color-mix(in oklab, var(--g-seal) 70%, white) 0%, var(--g-seal) 55%);
+  color: var(--g-seal-ink);
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 0.25),
+    inset 0 -2px 4px rgb(0 0 0 / 0.18);
+  transform: translate(-50%, -50%);
+  transition:
+    transform 320ms var(--ease-out),
+    opacity 240ms var(--ease-out);
+}
+.envelope-name {
+  position: absolute;
+  inset: auto 0 11% 0;
+  z-index: 3;
+  text-align: center;
+  color: var(--g-envelope-ink);
+}
+
+/* Idle float lives on a wrapper so it never fights the exit transition on .envelope. */
+.gift[data-stage="closed"] .envelope-float {
+  animation: float 5s var(--ease-in-out) infinite;
+}
+
+/* envelope reveal: seal lifts → flap opens → letter rises → envelope falls away */
+.gift[data-reveal="envelope"][data-stage="opening"] .envelope-seal {
+  transform: translate(-50%, -50%) scale(0.4);
+  opacity: 0;
+}
+.gift[data-reveal="envelope"][data-stage="opening"] .envelope-flap {
+  transform: rotateX(180deg);
+  z-index: 0;
+  transition-delay: 160ms, 440ms;
+}
+.gift[data-reveal="envelope"][data-stage="opening"] .envelope-letter {
+  transform: translateY(-58%);
+  transition-delay: 620ms;
+}
+.gift[data-reveal="envelope"][data-stage="opening"] .envelope {
+  transform: translateY(18vh) scale(0.94);
+  opacity: 0;
+  transition-delay: 1150ms;
+}
+
+/* burst reveal: seal pops, confetti flies, envelope drops away */
+.gift[data-reveal="burst"][data-stage="opening"] .envelope-seal {
+  transform: translate(-50%, -50%) scale(1.5);
+  opacity: 0;
+  transition-duration: 360ms;
+}
+.gift[data-reveal="burst"][data-stage="opening"] .envelope {
+  transform: scale(0.9);
+  opacity: 0;
+  transition-delay: 260ms;
+}
+
+/* fade reveal: a slow bloom of light */
+.gift[data-reveal="fade"][data-stage="opening"] .envelope {
+  transform: scale(1.04);
+  opacity: 0;
+  filter: blur(6px);
+  transition-duration: 800ms;
+}
+
+.gift-closed-ui {
+  transition: opacity 300ms var(--ease-out);
+}
+.gift[data-stage="opening"] .gift-closed-ui {
+  opacity: 0;
+}
+
+/* Content stagger once open */
+.gift-content > * {
+  animation: rise 700ms var(--ease-out) both;
+}
+.gift-content > *:nth-child(1) {
+  animation-delay: 80ms;
+}
+.gift-content > *:nth-child(2) {
+  animation-delay: 220ms;
+}
+.gift-content > *:nth-child(3) {
+  animation-delay: 360ms;
+}
+.gift-content > *:nth-child(4) {
+  animation-delay: 500ms;
+}
+.gift-content > *:nth-child(n + 5) {
+  animation-delay: 620ms;
+}
+
+/* Particles */
+@keyframes particle-burst {
+  from {
+    transform: translate(-50%, -50%) scale(0.3) rotate(0deg);
+    opacity: 1;
+  }
+  75% {
+    opacity: 1;
+  }
+  to {
+    transform: translate(-50%, -50%) translate(var(--dx), var(--dy)) scale(1) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+@keyframes particle-drift {
+  0% {
+    transform: translate3d(0, -8vh, 0) rotate(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--alpha, 0.9);
+  }
+  85% {
+    opacity: var(--alpha, 0.9);
+  }
+  100% {
+    transform: translate3d(var(--sway), 108vh, 0) rotate(var(--rot));
+    opacity: 0;
+  }
+}
+.particle {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.particle[data-mode="burst"] {
+  left: 50%;
+  top: 45%;
+  animation: particle-burst var(--dur) cubic-bezier(0.15, 0.7, 0.3, 1) both;
+}
+.particle[data-mode="drift"] {
+  top: 0;
+  animation: particle-drift var(--dur) linear var(--delay) 2 both;
+}
+.particle[data-shape="petal"] {
+  border-radius: 80% 0 55% 50% / 55% 0 80% 50%;
+}
+.particle[data-shape="confetti"] {
+  border-radius: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .particle {
+    display: none;
+  }
+}
+
+/* Waveform bars in the voice player */
+.wave-bar {
+  transition: background-color 120ms linear;
 }

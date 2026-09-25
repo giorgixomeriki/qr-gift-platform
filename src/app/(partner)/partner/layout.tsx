@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { DashboardShell } from "@/components/dashboard/shell";
 import { signOutAction } from "@/lib/auth/actions";
 import { getSessionUser } from "@/lib/auth/session";
 
@@ -13,22 +14,14 @@ export default async function PartnerLayout({ children }: { children: React.Reac
   const user = await getSessionUser();
 
   if (!user) {
-    return <div className="flex min-h-screen flex-col bg-neutral-950">{children}</div>;
+    return <div className="flex min-h-dvh flex-col">{children}</div>;
   }
 
   const t = await getTranslations("nav");
 
   return (
-    <div className="flex min-h-screen flex-col bg-neutral-50">
-      <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-3">
-        <span className="text-sm font-semibold text-neutral-800">{t("partnerBrand")}</span>
-        <form action={signOutAction.bind(null, "/partner/login")}>
-          <button type="submit" className="text-sm text-neutral-500 hover:text-neutral-800">
-            {t("signOut")}
-          </button>
-        </form>
-      </header>
-      <main className="flex-1 p-6">{children}</main>
-    </div>
+    <DashboardShell area={t("partnerArea")} signOutAction={signOutAction.bind(null, "/partner/login")} signOutLabel={t("signOut")}>
+      {children}
+    </DashboardShell>
   );
 }

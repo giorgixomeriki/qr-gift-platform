@@ -33,10 +33,5 @@ export async function getDefaultProductPrice(partnerId: string): Promise<{ amoun
   return getDisplayPrice(partnerId, product.id);
 }
 
-export function formatMinorAmount(amountMinor: number, currency: string, locale: string): string {
-  return new Intl.NumberFormat(locale === "ka" ? "ka-GE" : "en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 2,
-  }).format(amountMinor / 100);
-}
+/** Re-exported from the client-safe module so server and client format identically. */
+export { formatMinorAmount } from "@/lib/format/money";

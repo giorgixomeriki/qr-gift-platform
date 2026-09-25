@@ -4,7 +4,9 @@ import { checkIsAdmin } from "@/db/client";
 import { getSessionUser } from "@/lib/auth/session";
 import { requireAdmin } from "@/lib/auth/admin";
 import { listOpenReports, listStaleDrafts } from "@/lib/moderation/service";
+import { NotAdmin } from "@/components/admin/not-admin";
 import { ModerationSearch, OpenReportsList, StaleDraftsList } from "@/components/admin/moderation-panel";
+import { PageHeader, Panel } from "@/components/dashboard/ui";
 
 /**
  * Admin moderation (Phase 4 §12/§13) — operational metadata only, never
@@ -18,9 +20,7 @@ export default async function AdminModerationPage() {
 
   const t = await getTranslations("admin");
   const isAdmin = await checkIsAdmin(user.id);
-  if (!isAdmin) {
-    return <p className="text-sm text-neutral-400">{t("notAdmin", { email: user.email ?? "" })}</p>;
-  }
+  if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
   const { reports, staleDrafts } = await requireAdmin(async (tx) => ({
     reports: await listOpenReports(tx),
@@ -30,26 +30,19 @@ export default async function AdminModerationPage() {
 
   return (
     <div className="flex flex-col gap-8" data-testid="admin-moderation-page">
-      <div>
-        <h1 className="text-lg font-medium text-neutral-100">{tm("title")}</h1>
-        <p className="text-sm text-neutral-500">{tm("subtitle")}</p>
-      </div>
+      <PageHeader title={tm("title")} description={tm("subtitle")} />
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-neutral-300">{tm("findTitle")}</h2>
+      <Panel title={tm("findTitle")} description={tm("contentHiddenNote")}>
         <ModerationSearch />
-      </section>
+      </Panel>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-neutral-300">{tm("openReportsTitle", { count: reports.length })}</h2>
+      <Panel title={tm("openReportsTitle", { count: reports.length })} flush>
         <OpenReportsList reports={reports} />
-      </section>
+      </Panel>
 
-      <section className="flex flex-col gap-3">
-        <h2 className="text-sm font-medium text-neutral-300">{tm("staleDraftsTitle", { count: staleDrafts.length })}</h2>
-        <p className="text-xs text-neutral-600">{tm("staleDraftsNote")}</p>
+      <Panel title={tm("staleDraftsTitle", { count: staleDrafts.length })} description={tm("staleDraftsNote")} flush>
         <StaleDraftsList drafts={staleDrafts} />
-      </section>
+      </Panel>
     </div>
   );
 }
