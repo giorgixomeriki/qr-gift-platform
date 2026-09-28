@@ -45,6 +45,13 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
           EDIT_TOKEN_SECRET: "ci-placeholder-edit-token-secret-value"
           PAYMENTS_PROVIDER: "TEST"
+          # CI BUILD-ONLY placeholder, not a credential: env.ts requires
+          # DATABASE_URL to be set, but the build never queries the database
+          # (postgres.js connects lazily, on the first query). Port 1 on
+          # localhost has no server, so any accidental connection attempt
+          # would fail loudly instead of reaching a real database. The later
+          # steps export the runner's real local-Supabase DATABASE_URL.
+          DATABASE_URL: "postgresql://ci-build-placeholder:unused@127.0.0.1:1/ci_build_placeholder"
 
       - uses: supabase/setup-cli@v1
         with:
