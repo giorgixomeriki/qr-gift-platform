@@ -51,6 +51,63 @@ export async function createAvailableQr() {
   };
 }
 
+/**
+ * A throwaway batch under the partner `email` OWNS (partner@dev.local -> Dev
+ * Partner), holding one unclaimed card and one card with a live greeting —
+ * for asserting which credentials the partner surfaces release (QA-01).
+ */
+export async function createPartnerBatchWithLiveCard(email: string) {
+  const [membership] = await sql`
+    select pm.partner_id from partner_members pm join auth.users u on u.id = pm.user_id
+    where u.email = ${email} and pm.role = 'OWNER' limit 1`;
+  if (!membership) throw new Error(`${email} owns no partner — run npm run db:dev-bootstrap`);
+  const partnerId = membership.partner_id as string;
+  const batchId = crypto.randomUUID();
+  const availableId = crypto.randomUUID();
+  const liveId = crypto.randomUUID();
+  const greetingId = crypto.randomUUID();
+  const availableToken = randomToken("E2EAVAIL");
+  const liveToken = randomToken("E2ELIVE");
+  const message = `Private message ${crypto.randomUUID()}`;
+
+  await sql`insert into qr_batches (id, partner_id, label, quantity) values (${batchId}, ${partnerId}, ${"e2e-privacy-" + batchId.slice(0, 8)}, 2)`;
+  await sql`insert into qr_codes (id, public_token, batch_id, partner_id, status) values
+    (${availableId}, ${availableToken}, ${batchId}, ${partnerId}, 'AVAILABLE'),
+    (${liveId}, ${liveToken}, ${batchId}, ${partnerId}, 'DRAFT')`;
+  const [theme] = await sql`select id from themes limit 1`;
+  const [product] = await sql`select id from products limit 1`;
+  await sql`insert into greetings (id, qr_code_id, theme_id, product_id, status, edit_token_hash, activated_at)
+    values (${greetingId}, ${liveId}, ${theme!.id}, ${product!.id}, 'ACTIVE', 'e2e-not-a-real-hash', now())`;
+  await sql`insert into greeting_content (greeting_id, type, slot, text_value, status) values (${greetingId}, 'text', 0, ${message}, 'READY')`;
+  // The activation invariant requires the ACTIVE greeting to exist first.
+  await sql`update qr_codes set status = 'ACTIVE', activated_at = now() where id = ${liveId}`;
+
+  return {
+    partnerId,
+    batchId,
+    availableQrId: availableId,
+    availableToken,
+    liveQrId: liveId,
+    liveToken,
+    message,
+    auditActions: async (actorEmail: string) => {
+      const rows = await sql`
+        select a.action from audit_logs a join auth.users u on u.id = a.actor_id
+        where u.email = ${actorEmail} and a.target_id in (${batchId}, ${availableId}, ${liveId})`;
+      return rows.map((r) => r.action as string);
+    },
+    cleanup: async () => {
+      await sql`delete from audit_logs where target_id in (${batchId}, ${availableId}, ${liveId})`;
+      await sql`delete from analytics_events where qr_code_id in (${availableId}, ${liveId})`;
+      await sql`delete from greeting_content where greeting_id = ${greetingId}`;
+      await sql`update qr_codes set status = 'BLOCKED' where id = ${liveId}`;
+      await sql`delete from greetings where id = ${greetingId}`;
+      await sql`delete from qr_codes where batch_id = ${batchId}`;
+      await sql`delete from qr_batches where id = ${batchId}`;
+    },
+  };
+}
+
 /** Suspends or reactivates a fixture partner (QA-04 coverage). */
 export async function setPartnerStatus(partnerId: string, status: "ACTIVE" | "SUSPENDED") {
   await sql`update partners set status = ${status} where id = ${partnerId}`;

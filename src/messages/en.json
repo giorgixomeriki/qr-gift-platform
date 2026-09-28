@@ -419,7 +419,8 @@
       "AVAILABLE": "Available",
       "DRAFT": "Draft",
       "ACTIVE": "Active",
-      "BLOCKED": "Blocked"
+      "BLOCKED": "Blocked",
+      "USED": "Used"
     },
     "distributionStatus": {
       "NOT_DISTRIBUTED": "Not distributed",

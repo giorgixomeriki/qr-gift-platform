@@ -27,6 +27,7 @@
     "verify:rate-limiting": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-rate-limiting.ts",
     "verify:analytics-funnel": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-analytics-funnel.ts",
     "verify:pilot-protections": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-pilot-protections.ts",
+    "verify:partner-privacy": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-privacy.ts",
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test"
   },
   "dependencies": {

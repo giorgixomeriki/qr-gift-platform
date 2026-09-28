@@ -6,23 +6,23 @@ import { Download, Printer, QrCode } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge, table } from "@/components/dashboard/ui";
 import { Button, buttonClasses } from "@/components/ui/button";
+import type { InventoryQrRow } from "@/lib/qr/credential-access";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
-export type InventoryQrRow = {
-  id: string;
-  publicToken: string;
-  status: string;
-  distributionStatus: string;
-};
+export type { InventoryQrRow };
 
-const STATUS_TONE = { AVAILABLE: "neutral", DRAFT: "warning", ACTIVE: "success", BLOCKED: "danger" } as const;
+const STATUS_TONE = { AVAILABLE: "neutral", USED: "info", DRAFT: "warning", ACTIVE: "success", BLOCKED: "danger" } as const;
 
 /**
  * Per-batch inventory + distribution marking (Phase 1). Supports both a
  * lightweight single-row mark and a bulk "select all not-yet-distributed"
  * action — distribution is recorded as a deliberate confirmation, never
  * inferred from batch creation (see lib/qr/batches.ts markQrCodesDistributed).
+ *
+ * Rows arrive already shaped by lib/qr/credential-access.ts: a card whose
+ * credential isn't released to this viewer has a masked label and no QR
+ * asset link.
  */
 export function InventoryTable({
   batchId,
@@ -130,28 +130,34 @@ export function InventoryTable({
                     checked={selected.has(row.id)}
                     disabled={row.distributionStatus === "DISTRIBUTED"}
                     onChange={() => toggle(row.id)}
-                    aria-label={row.publicToken}
+                    aria-label={row.label}
                     className="size-4 accent-[var(--ink)]"
                     data-testid="inventory-row-checkbox"
                   />
                 </td>
-                <td className={`${table.td} font-mono text-caption tracking-wide`}>{row.publicToken}</td>
+                <td className={`${table.td} font-mono text-caption tracking-wide ${row.credentialReleased ? "" : "text-ink-3"}`} data-testid="inventory-row-label">
+                  {row.label}
+                </td>
                 <td className={table.td}>
                   <Badge tone={STATUS_TONE[row.status as keyof typeof STATUS_TONE] ?? "neutral"}>
-                    {tStatus(row.status as "AVAILABLE" | "DRAFT" | "ACTIVE" | "BLOCKED")}
+                    {tStatus(row.status)}
                   </Badge>
                 </td>
                 <td className={`${table.td} text-ink-2`}>{tDist(row.distributionStatus as "NOT_DISTRIBUTED" | "DISTRIBUTED")}</td>
                 <td className={table.td}>
-                  <a
-                    href={`/api/qr/${row.id}?format=svg`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 text-caption text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
-                  >
-                    <QrCode className="size-3.5" aria-hidden />
-                    {t("svgLink")}
-                  </a>
+                  {row.credentialReleased ? (
+                    <a
+                      href={`/api/qr/${row.id}?format=svg`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-caption text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+                    >
+                      <QrCode className="size-3.5" aria-hidden />
+                      {t("svgLink")}
+                    </a>
+                  ) : (
+                    <span className="text-caption text-ink-3">—</span>
+                  )}
                 </td>
               </tr>
             ))}

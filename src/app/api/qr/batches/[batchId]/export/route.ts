@@ -1,8 +1,10 @@
 import { getSessionUser } from "@/lib/auth/session";
-import { withUserContext } from "@/db/client";
+import { checkIsAdmin, withUserContext } from "@/db/client";
 import { getQrBatch, listQrCodesForBatch, markExported } from "@/lib/qr/batches";
 import { getPartnerById } from "@/lib/partners/service";
 import { buildQrInventoryCsv } from "@/lib/qr/csv";
+import { isCredentialReleasable, maskPublicToken, statusForViewer } from "@/lib/qr/credential-access";
+import { recordAuditLog } from "@/lib/audit";
 
 /**
  * Print-ready CSV export for one QR batch (Phase 1). Authorization is RLS
@@ -11,12 +13,18 @@ import { buildQrInventoryCsv } from "@/lib/qr/csv";
  * app_is_partner_member(partner_id) for THIS batch's actual partner — so a
  * partner user can never export another partner's batch no matter what id is
  * in the URL, and no separate "is this my batch" check is needed here.
+ *
+ * Partners get credentials (token + URL) only for still-unclaimed cards;
+ * claimed cards appear masked, with status USED (lib/qr/credential-access.ts).
+ * Every export is audit logged with how many credentials it released.
  */
 export async function GET(_request: Request, { params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
 
   const user = await getSessionUser();
   if (!user) return new Response("Unauthorized", { status: 401 });
+
+  const viewer = (await checkIsAdmin(user.id)) ? "ADMIN" : "PARTNER";
 
   const csv = await withUserContext(user.id, async (tx) => {
     const batch = await getQrBatch(tx, batchId);
@@ -26,15 +34,28 @@ export async function GET(_request: Request, { params }: { params: Promise<{ bat
     const qrCodes = await listQrCodesForBatch(tx, batchId);
     await markExported(tx, batchId);
 
-    return buildQrInventoryCsv(
-      qrCodes.map((qr) => ({
-        publicToken: qr.publicToken,
+    const rows = qrCodes.map((qr) => {
+      const released = isCredentialReleasable(viewer, qr.status);
+      return {
+        publicToken: released ? qr.publicToken : maskPublicToken(qr.publicToken),
+        publicUrl: released ? undefined : "",
         batchLabel: batch.label,
         partnerName: partner?.name ?? "",
-        status: qr.status,
+        status: statusForViewer(viewer, qr.status),
         distributionStatus: qr.distributionStatus,
-      })),
-    );
+      };
+    });
+
+    await recordAuditLog(tx, {
+      actorType: viewer,
+      actorId: user.id,
+      action: "QR_BATCH_EXPORTED",
+      targetType: "qr_batch",
+      targetId: batch.id,
+      metadata: { partnerId: batch.partnerId, codes: rows.length, credentialsReleased: rows.filter((r) => r.publicUrl === undefined).length },
+    });
+
+    return buildQrInventoryCsv(rows);
   });
 
   if (csv === null) return new Response("Not found", { status: 404 });

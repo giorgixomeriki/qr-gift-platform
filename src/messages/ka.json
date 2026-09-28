@@ -419,7 +419,8 @@
       "AVAILABLE": "ხელმისაწვდომი",
       "DRAFT": "მონახაზი",
       "ACTIVE": "აქტიური",
-      "BLOCKED": "დაბლოკილი"
+      "BLOCKED": "დაბლოკილი",
+      "USED": "გამოყენებული"
     },
     "distributionStatus": {
       "NOT_DISTRIBUTED": "არ არის გავრცელებული",

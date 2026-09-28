@@ -12,6 +12,7 @@ import { getPartnerMetrics } from "@/lib/dashboard/partner-metrics";
 import { formatMinorAmount } from "@/lib/format/money";
 import { listPartnerMembers, getPartnerById } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
+import { toInventoryRow } from "@/lib/qr/credential-access";
 import { EmptyState, PageHeader, Panel, Stat, StatGroup } from "@/components/dashboard/ui";
 import { PartnerSwitcher } from "@/components/partners/partner-switcher";
 import { MembershipManager } from "@/components/partners/membership-manager";
@@ -56,7 +57,11 @@ export default async function PartnerDashboardPage() {
     const members = await listPartnerMembers(tx, ctx.partnerId);
     const batches = await listQrBatches(tx, ctx.partnerId);
     const batchesWithCodes = await Promise.all(
-      batches.map(async (batch) => ({ batch, qrCodes: await listQrCodesForBatch(tx, batch.id) })),
+      batches.map(async (batch) => ({
+        batch: { id: batch.id, label: batch.label },
+        // Credentials only for still-unclaimed cards (lib/qr/credential-access.ts).
+        qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "PARTNER")),
+      })),
     );
     return { partner, metrics, members, batchesWithCodes, role: ctx.role };
   }, activePartnerId);

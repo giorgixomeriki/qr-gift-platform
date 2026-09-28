@@ -7,6 +7,7 @@ import { getSessionUser } from "@/lib/auth/session";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getPartnerById, listPartnerMembers } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
+import { toInventoryRow } from "@/lib/qr/credential-access";
 import { getPartnerUnpaidBalance, listPartnerPayouts } from "@/lib/payments/payouts";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { PartnerStatusToggle } from "@/components/admin/partner-status-toggle";
@@ -39,7 +40,10 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
     const members = await listPartnerMembers(tx, partnerId);
     const batches = await listQrBatches(tx, partnerId);
     const batchesWithCodes = await Promise.all(
-      batches.map(async (batch) => ({ batch, qrCodes: await listQrCodesForBatch(tx, batch.id) })),
+      batches.map(async (batch) => ({
+        batch: { id: batch.id, label: batch.label },
+        qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "ADMIN")),
+      })),
     );
     const unpaidBalanceMinor = await getPartnerUnpaidBalance(tx, partnerId, partner.currency);
     const payouts = await listPartnerPayouts(tx, partnerId);

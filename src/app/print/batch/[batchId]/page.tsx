@@ -1,9 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { withUserContext } from "@/db/client";
+import { checkIsAdmin, withUserContext } from "@/db/client";
 import { getQrBatch, listQrCodesForBatch } from "@/lib/qr/batches";
 import { getPartnerById } from "@/lib/partners/service";
 import { generateQrSvg, publicQrUrl } from "@/lib/qr/asset";
+import { isCredentialReleasable } from "@/lib/qr/credential-access";
+import { recordAuditLog } from "@/lib/audit";
 import { PrintButton } from "@/components/admin/print-button";
 import { Logo } from "@/components/ui/logo";
 import { SetHtmlLang } from "@/components/print/set-html-lang";
@@ -25,18 +27,34 @@ import type { Locale } from "@/lib/i18n/config";
  * rather than a second one — Phase 4 is polish, not a routing restructure —
  * so the `lang` attribute reflects the viewer's locale even though the
  * visible copy below is the partner's; that's a cosmetic gap only.
+ *
+ * Partners can print only still-unclaimed cards: a claimed card's QR is the
+ * key to someone's greeting and no longer an inventory item
+ * (lib/qr/credential-access.ts). Admins can reprint any card. Every print
+ * sheet render is audit logged with how many credentials it released.
  */
+export const dynamic = "force-dynamic";
 export default async function PrintBatchPage({ params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
 
   const user = await getSessionUser();
   if (!user) redirect("/admin/login");
 
+  const viewer = (await checkIsAdmin(user.id)) ? "ADMIN" : "PARTNER";
+
   const data = await withUserContext(user.id, async (tx) => {
     const batch = await getQrBatch(tx, batchId);
     if (!batch) return null;
     const partner = await getPartnerById(tx, batch.partnerId);
-    const qrCodes = await listQrCodesForBatch(tx, batchId);
+    const qrCodes = (await listQrCodesForBatch(tx, batchId)).filter((qr) => isCredentialReleasable(viewer, qr.status));
+    await recordAuditLog(tx, {
+      actorType: viewer,
+      actorId: user.id,
+      action: "QR_BATCH_PRINT_VIEWED",
+      targetType: "qr_batch",
+      targetId: batch.id,
+      metadata: { partnerId: batch.partnerId, credentialsReleased: qrCodes.length },
+    });
     return { batch, partner, qrCodes };
   });
 
