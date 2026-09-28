@@ -36,6 +36,7 @@ export async function createAvailableQr() {
 
   return {
     publicToken,
+    partnerId,
     cleanup: async () => {
       await sql`delete from analytics_events where qr_code_id = ${qrId}`;
       await sql`delete from greeting_content where greeting_id in (select id from greetings where qr_code_id = ${qrId})`;
@@ -47,6 +48,29 @@ export async function createAvailableQr() {
       await sql`delete from qr_batches where id = ${batchId}`;
       await sql`delete from partners where id = ${partnerId}`;
     },
+  };
+}
+
+/** Suspends or reactivates a fixture partner (QA-04 coverage). */
+export async function setPartnerStatus(partnerId: string, status: "ACTIVE" | "SUSPENDED") {
+  await sql`update partners set status = ${status} where id = ${partnerId}`;
+}
+
+/** Order statuses and greeting/QR state behind a public token — for asserting what a flow did (or didn't) create. */
+export async function commercialStateOf(publicToken: string) {
+  const [row] = await sql`
+    select g.status as greeting, q.status as qr,
+      coalesce((select array_agg(o.status::text order by o.created_at) from orders o where o.qr_code_id = q.id), '{}') as orders,
+      (select o.id from orders o where o.qr_code_id = q.id order by o.created_at desc limit 1) as latest_order_id,
+      (select p.provider_payment_id from payments p join orders o on o.id = p.order_id where o.qr_code_id = q.id order by p.created_at desc limit 1) as latest_payment_id
+    from qr_codes q left join greetings g on g.qr_code_id = q.id
+    where q.public_token = ${publicToken}`;
+  return {
+    greeting: (row?.greeting ?? null) as string | null,
+    qr: row?.qr as string,
+    orders: (row?.orders ?? []) as string[],
+    latestOrderId: (row?.latest_order_id ?? null) as string | null,
+    latestPaymentId: (row?.latest_payment_id ?? null) as string | null,
   };
 }
 

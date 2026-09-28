@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { withPublicContext } from "@/db/client";
 import { qrCodes, greetings } from "@/db/schema";
 
@@ -19,16 +19,28 @@ export type QrResolution =
  * analytics attribution by the caller) so the dashboards' "scanned" figures
  * reflect real traffic; a "not_found"/"blocked" resolution never reaches this
  * far, so it carries no partnerId and cannot leak partner existence either way.
+ *
+ * Suspended partner (QA-04): no new commercial activity — an AVAILABLE card
+ * can't be started and a DRAFT can't be continued to checkout, so both
+ * resolve to "blocked". A greeting that is already ACTIVE (paid for) stays
+ * readable by its recipient: suspension is about the partner's business,
+ * not about taking away something a customer already bought.
  */
 export async function resolveQrState(publicToken: string): Promise<QrResolution> {
   return withPublicContext(async (tx) => {
     const [qr] = await tx
-      .select({ id: qrCodes.id, status: qrCodes.status, partnerId: qrCodes.partnerId })
+      .select({
+        id: qrCodes.id,
+        status: qrCodes.status,
+        partnerId: qrCodes.partnerId,
+        partnerActive: sql<boolean>`app_partner_is_active(${qrCodes.partnerId})`,
+      })
       .from(qrCodes)
       .where(eq(qrCodes.publicToken, publicToken))
       .limit(1);
 
     if (!qr) return { kind: "not_found" };
+    if (!qr.partnerActive && (qr.status === "AVAILABLE" || qr.status === "DRAFT")) return { kind: "blocked" };
 
     switch (qr.status) {
       case "AVAILABLE":

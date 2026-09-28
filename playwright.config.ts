@@ -54,6 +54,7 @@ export default defineConfig({
     timeout: 60_000,
     env: {
       PAYMENTS_PROVIDER: "TEST",
+      ALLOW_TEST_PAYMENTS: "true",
     },
   },
 });

@@ -71,6 +71,8 @@ jobs:
           echo "EDIT_TOKEN_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
           echo "NEXT_PUBLIC_APP_URL=http://localhost:3000" >> "$GITHUB_ENV"
           echo "PAYMENTS_PROVIDER=TEST" >> "$GITHUB_ENV"
+          echo "ALLOW_TEST_PAYMENTS=true" >> "$GITHUB_ENV"
+          echo "TEST_PAYMENTS_WEBHOOK_SECRET=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
 
       - name: Apply migrations
         run: npm run db:migrate

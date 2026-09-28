@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { withPublicContext, withClaimableQr, type Tx } from "@/db/client";
 import { qrCodes, greetings, themes, products } from "@/db/schema";
 import { generateEditToken, hashEditToken } from "@/lib/security/edit-token";
@@ -27,7 +27,12 @@ export class StartGreetingError extends Error {}
 export async function startGreeting(publicToken: string): Promise<{ greetingId: string; editToken: string }> {
   const qr = await withPublicContext(async (tx) => {
     const [row] = await tx
-      .select({ id: qrCodes.id, status: qrCodes.status, partnerId: qrCodes.partnerId })
+      .select({
+        id: qrCodes.id,
+        status: qrCodes.status,
+        partnerId: qrCodes.partnerId,
+        partnerActive: sql<boolean>`app_partner_is_active(${qrCodes.partnerId})`,
+      })
       .from(qrCodes)
       .where(eq(qrCodes.publicToken, publicToken))
       .limit(1);
@@ -37,6 +42,11 @@ export async function startGreeting(publicToken: string): Promise<{ greetingId: 
   if (!qr) throw new StartGreetingError("QR not found");
   if (qr.status !== "AVAILABLE") {
     throw new StartGreetingError("This QR has already been started or is unavailable");
+  }
+  // Suspended partner: no new claims. qr_codes_update_by_claim enforces the
+  // same rule in RLS (migrations/0011) in case this check is ever bypassed.
+  if (!qr.partnerActive) {
+    throw new StartGreetingError("This QR is unavailable");
   }
 
   const [defaultTheme, defaultProduct] = await withPublicContext(async (tx) => {

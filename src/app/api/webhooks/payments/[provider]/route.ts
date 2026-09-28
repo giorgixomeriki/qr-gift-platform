@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { getPaymentProvider } from "@/lib/payments/provider-factory";
-import { confirmPaymentSuccess, activatePaidOrder, PaymentConfirmationError } from "@/lib/payments/service";
+import { confirmPaymentSuccess, activatePaidOrder, refundIneligiblePayment, PaymentConfirmationError } from "@/lib/payments/service";
 import { paymentProviderKeySchema, ProviderNotImplementedError } from "@/lib/payments/types";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 
@@ -30,6 +30,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return new NextResponse("Unknown provider", { status: 404 });
   }
 
+  // The TEST webhook only exists where fake payments were explicitly enabled
+  // AND a signing secret is configured; the signature itself is checked in
+  // TestPaymentProvider.handleWebhook. Anywhere else it is simply absent.
+  if (parsedProvider.data === "TEST" && (!env.ALLOW_TEST_PAYMENTS || !env.TEST_PAYMENTS_WEBHOOK_SECRET || env.NODE_ENV === "production")) {
+    return new NextResponse("Unknown provider", { status: 404 });
+  }
+
   // Raw body FIRST, before any parsing — a real provider's signature is
   // computed over the exact bytes sent, not over a re-serialized JSON object,
   // which could differ (key order, whitespace, number formatting).
@@ -53,7 +60,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const { order } = await confirmPaymentSuccess({
+    const { order, outcome } = await confirmPaymentSuccess({
       provider: parsedProvider.data,
       providerPaymentId: webhookResult.providerPaymentId,
       orderId: webhookResult.orderId,
@@ -61,6 +68,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       currency: webhookResult.currency,
       metadata: webhookResult.metadata,
     });
+
+    if (outcome === "REFUND_REQUIRED") {
+      // Money was captured for a greeting that can no longer be activated
+      // (blocked / partner suspended / no message). Hand it back rather than
+      // keep it; if the provider can't refund yet the order stays queued in
+      // REFUND_REQUIRED. Still a 200: the notification itself was handled.
+      await refundIneligiblePayment(order.id);
+      return NextResponse.json({ received: true });
+    }
 
     if (webhookResult.status === "SUCCEEDED") {
       const { activated } = await activatePaidOrder(webhookResult.orderId);

@@ -76,6 +76,9 @@ export const orderStatusEnum = pgEnum("order_status", [
   "CANCELED",
   "REFUNDED",
   "PARTIALLY_REFUNDED",
+  // Captured for a greeting that was no longer purchasable when the payment
+  // arrived (migrations/0011) — never activated, no commission; awaits refund.
+  "REFUND_REQUIRED",
 ]);
 
 export const paymentStatusEnum = pgEnum("payment_status", [

@@ -195,6 +195,8 @@ async function main() {
 
   const dupQr = await makeAvailableQr();
   const { greetingId: dupGreeting, editToken: dupToken } = await startGreeting(dupQr.token);
+  // A message is required before checkout (migrations/0011 purchase eligibility).
+  await updateGreetingMessage(dupGreeting, dupToken, "Duplicate callback test");
   const { summary: dupSummary } = await getOrCreateCheckoutOrder(dupGreeting, dupToken);
   const dupProviderPaymentId = `dup_test_${crypto.randomUUID()}`;
   await confirmPaymentSuccess({ provider: "TEST", providerPaymentId: dupProviderPaymentId, orderId: dupSummary.orderId, amountMinor: dupSummary.grossAmountMinor, currency: dupSummary.currency });

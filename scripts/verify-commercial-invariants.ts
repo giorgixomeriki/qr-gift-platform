@@ -95,6 +95,9 @@ async function main() {
     (${qrOther}, ${qrOtherToken}, ${batchId}, ${partnerA}, 'DRAFT')`;
   await admin`insert into greetings (id, qr_code_id, theme_id, product_id, status, edit_token_hash) values
     (${greetingUnpaid}, ${qrOther}, ${theme.id}, ${product.id}, 'DRAFT', ${hashEditToken(editTokenUnpaid)})`;
+  // A message is required before checkout (migrations/0011 purchase eligibility).
+  await admin`insert into greeting_content (greeting_id, type, slot, text_value, status) values
+    (${greetingA}, 'text', 0, 'verify message', 'READY'), (${greetingUnpaid}, 'text', 0, 'verify message', 'READY')`;
 
   console.log("\n--- Attribution & checkout ---");
 

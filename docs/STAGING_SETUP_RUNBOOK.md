@@ -57,7 +57,12 @@ pilot dry run.
    variable set).
 3. Set `PAYMENTS_PROVIDER=TEST` explicitly for staging. This pilot's own
    constraints exclude real BOG payment processing — staging must not
-   silently pick up `BOG` from a misconfigured default.
+   silently pick up `BOG` from a misconfigured default. Also set
+   `ALLOW_TEST_PAYMENTS=true`: the TEST provider refuses every payment
+   operation without that explicit opt-in. Leave
+   `TEST_PAYMENTS_WEBHOOK_SECRET` unset unless a tool needs to play the
+   provider (unset = the TEST webhook endpoint returns 404). See
+   `docs/ENVIRONMENT_MATRIX.md`.
 4. Set `NEXT_PUBLIC_APP_URL` to staging's real HTTPS origin (not
    `localhost`) — this feeds the password-reset email link
    (`supabase/config.toml`'s `additional_redirect_urls` on the Supabase side

@@ -37,6 +37,21 @@ const envSchema = z.object({
   // are not implemented — selecting it does not mean BOG is integrated.
   PAYMENTS_PROVIDER: z.enum(["TEST", "BOG"]).default("TEST"),
 
+  // The TEST provider only works when this is explicitly "true" — selecting
+  // PAYMENTS_PROVIDER=TEST (or inheriting its default) is not enough on its
+  // own, so a deployment can't end up with fake payments by accident. Still
+  // refused outright when NODE_ENV=production (provider-factory.ts).
+  ALLOW_TEST_PAYMENTS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
+  // Shared secret that signs TEST webhook calls (HMAC-SHA256 of the raw body,
+  // hex, in the x-test-webhook-signature header — see test-provider.ts).
+  // Unset = the TEST webhook endpoint does not exist (404). The in-app
+  // "simulate payment" button does not use the webhook and doesn't need it.
+  TEST_PAYMENTS_WEBHOOK_SECRET: z.string().min(32).optional(),
+
   // Real-provider credentials — all optional at the schema level (TEST mode
   // needs none of them), but superRefine below requires every one of them
   // the instant PAYMENTS_PROVIDER=BOG, so a half-configured real provider
