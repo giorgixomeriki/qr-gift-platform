@@ -108,7 +108,7 @@ export default async function PartnerDashboardPage() {
       </div>
 
       <section className="flex flex-col gap-4">
-        <div className="flex items-baseline justify-between gap-3">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           <h2 className="text-h2">{td("batchesTitle")}</h2>
           <span className="text-caption text-ink-3">{td("batchesHint")}</span>
         </div>

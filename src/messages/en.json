@@ -37,7 +37,8 @@
       "addVideo": "Video",
       "addVoice": "Voice",
       "startError": "We couldn't start your greeting. Please try again.",
-      "eyebrow": "This card is waiting for your words"
+      "eyebrow": "This card is waiting for your words",
+      "previewFirst": "preview before you pay"
     },
     "noAccess": {
       "title": "A greeting is on its way",
@@ -134,7 +135,8 @@
       "lock": "Once activated, the greeting can't be edited — so take a last look at the preview.",
       "testMode": "Test mode — no real payment is taken.",
       "errorTitle": "Checkout isn't available",
-      "errorGeneric": "Something went wrong on our side. You haven't been charged — please try again."
+      "errorGeneric": "Something went wrong on our side. You haven't been charged — please try again.",
+      "secureNote": "Secure payment"
     },
     "preview": {
       "edit": "Back to editing",
@@ -143,7 +145,8 @@
       "badge": "Preview",
       "editShort": "Edit",
       "readyTitle": "Happy with it?",
-      "readyBody": "This is exactly what they'll see when they scan the card."
+      "readyBody": "This is exactly what they'll see when they scan the card.",
+      "viewingAs": "Viewing as recipient"
     },
     "stepOf": "Step {current} of {total}",
     "steps": {

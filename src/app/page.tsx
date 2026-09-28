@@ -29,7 +29,7 @@ export default async function RootPage() {
             </ButtonLink>
           </div>
         </div>
-        <ThemeSwatch themeKey="celebration" envelopeWidth="58%" className="animate-fade aspect-[4/3] w-full rounded-[var(--radius-xl)] shadow-md md:aspect-[4/5]" />
+        <ThemeSwatch themeKey="celebration" scale={0.85} className="animate-fade aspect-[4/3] w-full rounded-[var(--radius-lg)] md:aspect-[4/5]" />
       </main>
     </div>
   );

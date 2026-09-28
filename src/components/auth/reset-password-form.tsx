@@ -59,7 +59,7 @@ export function ResetPasswordForm() {
           <LinkIcon className="size-6" strokeWidth={1.75} aria-hidden />
         </span>
         <div>
-          <h1 className="text-h2">{t("resetPasswordTitle")}</h1>
+          <h1 className="font-serif text-[1.875rem] leading-tight tracking-[-0.01em]">{t("resetPasswordTitle")}</h1>
           <p className="mt-2 text-body-sm text-ink-2" role="alert" data-testid="reset-link-invalid">
             {t("invalidOrExpiredLink")}
           </p>
@@ -78,7 +78,7 @@ export function ResetPasswordForm() {
           <CircleCheck className="size-7" strokeWidth={1.5} aria-hidden />
         </span>
         <div>
-          <h1 className="text-h2">{t("resetPasswordTitle")}</h1>
+          <h1 className="font-serif text-[1.875rem] leading-tight tracking-[-0.01em]">{t("resetPasswordTitle")}</h1>
           <p className="mt-2 text-body-sm text-ink-2" role="status" data-testid="reset-success">
             {t("resetSuccessMessage")}
           </p>
@@ -93,8 +93,8 @@ export function ResetPasswordForm() {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div>
-        <h1 className="text-h2">{t("resetPasswordTitle")}</h1>
-        <p className="mt-1 text-body-sm text-ink-2">{t("passwordRule", { min: MIN_LENGTH })}</p>
+        <h1 className="font-serif text-[1.875rem] leading-tight tracking-[-0.01em]">{t("resetPasswordTitle")}</h1>
+        <p className="mt-2 text-body-sm text-ink-2">{t("passwordRule", { min: MIN_LENGTH })}</p>
       </div>
       <PasswordField
         id="new-password"

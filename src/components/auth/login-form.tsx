@@ -55,8 +55,8 @@ export function LoginForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div>
-        <h1 className="text-h2">{title}</h1>
-        {subtitle && <p className="mt-1 text-body-sm text-ink-2">{subtitle}</p>}
+        <h1 className="font-serif text-[1.875rem] leading-tight tracking-[-0.01em]">{title}</h1>
+        {subtitle && <p className="mt-2 text-body-sm text-ink-2">{subtitle}</p>}
       </div>
       <TextField
         id="login-email"

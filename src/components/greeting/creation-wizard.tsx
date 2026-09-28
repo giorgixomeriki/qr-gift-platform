@@ -2,16 +2,15 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ArrowRight, Check, ChevronLeft, Lock, Pencil } from "lucide-react";
+import { ArrowRight, Check, ChevronLeft, Lock, Pencil, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { ActionBar } from "@/components/flow/shell";
 import { Button } from "@/components/ui/button";
-import { TextArea } from "@/components/ui/field";
-import { Logo } from "@/components/ui/logo";
+import { Logo, Spark } from "@/components/ui/logo";
 import { Notice } from "@/components/ui/notice";
 import { Spinner } from "@/components/ui/spinner";
 import { formatMinorAmount } from "@/lib/format/money";
-import { SELECTABLE_THEMES, getThemeConfig, type ThemeKey } from "@/lib/themes/registry";
+import { SELECTABLE_THEMES, getThemeConfig, themeVars, type ThemeKey } from "@/lib/themes/registry";
 import { updateThemeAction, updateMessageAction, viewPreviewAction } from "@/lib/greetings/actions";
 import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction } from "@/lib/payments/actions";
 import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
@@ -113,7 +112,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
             />
           </div>
         ) : (
-          <div className="grid flex-1 gap-12 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-16 lg:pt-4">
+          <div className={`grid flex-1 gap-12 lg:gap-16 lg:pt-4 ${step === "message" ? "" : "lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
             <div className="mx-auto flex w-full max-w-xl flex-col">
               <StepProgress index={wizardStepIndex} step={step} />
               {step === "theme" && (
@@ -125,7 +124,13 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
                 />
               )}
               {step === "message" && (
-                <MessageStep greetingId={initial.greetingId} message={message} onChange={setMessage} onContinue={() => goToStep("media")} />
+                <MessageStep
+                  greetingId={initial.greetingId}
+                  themeKey={themeKey}
+                  message={message}
+                  onChange={setMessage}
+                  onContinue={() => goToStep("media")}
+                />
               )}
               {step === "media" && (
                 <MediaStep
@@ -140,7 +145,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
                 />
               )}
             </div>
-            <aside className="hidden lg:block" aria-hidden>
+            <aside className={step === "message" ? "hidden" : "hidden lg:block"} aria-hidden>
               <div className="sticky top-20">
                 <LivePreview themeKey={themeKey} content={content} />
               </div>
@@ -302,7 +307,7 @@ function ThemeStep({ greetingId, selected, onSelect, onContinue }: { greetingId:
                   active ? "shadow-md ring-2 ring-ink ring-offset-2 ring-offset-paper" : "shadow-xs ring-1 ring-line group-hover:shadow-sm"
                 }`}
               >
-                <ThemeSwatch themeKey={theme.key} className="aspect-[4/5]" envelopeWidth="70%" />
+                <ThemeSwatch themeKey={theme.key} className="aspect-[4/5]" />
                 {active && (
                   <span className="animate-pop absolute top-2.5 right-2.5 grid size-7 place-items-center rounded-full bg-ink text-white shadow-sm">
                     <Check className="size-4" strokeWidth={2.5} aria-hidden />
@@ -321,11 +326,24 @@ function ThemeStep({ greetingId, selected, onSelect, onContinue }: { greetingId:
   );
 }
 
-function MessageStep({ greetingId, message, onChange, onContinue }: { greetingId: string; message: string; onChange: (v: string) => void; onContinue: () => void }) {
+function MessageStep({
+  greetingId,
+  themeKey,
+  message,
+  onChange,
+  onContinue,
+}: {
+  greetingId: string;
+  themeKey: ThemeKey;
+  message: string;
+  onChange: (v: string) => void;
+  onContinue: () => void;
+}) {
   const t = useTranslations("wizard.message");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const limit = MESSAGE_MAX_LENGTH;
+  const theme = getThemeConfig(themeKey);
 
   async function handleContinue() {
     const trimmed = message.trim();
@@ -356,30 +374,51 @@ function MessageStep({ greetingId, message, onChange, onContinue }: { greetingId
   }
 
   const remaining = limit - message.length;
+  const describedBy = error ? "greeting-message-error" : "greeting-message-hint";
 
   return (
     <StepShell title={t("title")} subtitle={t("subtitle")} onContinue={handleContinue} continueLoading={saving}>
-      <TextArea
-        id="greeting-message"
-        label={t("label")}
-        value={message}
-        onChange={(e) => {
-          onChange(e.target.value.slice(0, limit));
-          if (error && e.target.value.trim()) setError(null);
-        }}
-        placeholder={t("placeholder")}
-        rows={8}
-        autoCapitalize="sentences"
-        error={error ?? undefined}
-        hint={t("hint")}
-        meta={
-          <span className={remaining <= 60 ? "text-warning" : undefined}>
-            {message.length}/{limit}
-          </span>
-        }
-        className="min-h-56 font-serif text-[1.1875rem] leading-relaxed"
-        data-testid="message-textarea"
-      />
+      {/* Written directly on the card, in the chosen design — what you type is what they'll read. */}
+      <label htmlFor="greeting-message" className="sr-only">
+        {t("label")}
+      </label>
+      <div className="gift -mx-4 px-4 py-8 sm:mx-0 sm:rounded-[var(--radius-lg)] sm:px-8" style={themeVars(theme)} data-stage="static">
+        <div
+          className={`paper-card mx-auto flex min-h-[22rem] w-full max-w-[26rem] flex-col items-center px-7 pt-9 pb-6 transition-shadow sm:px-9 ${
+            error ? "ring-2 ring-danger ring-offset-2 ring-offset-transparent" : "focus-within:ring-2 focus-within:ring-[var(--g-seal)]/40"
+          }`}
+        >
+          <Spark className="size-5 shrink-0 text-[var(--g-seal)]" />
+          <textarea
+            id="greeting-message"
+            value={message}
+            onChange={(e) => {
+              onChange(e.target.value.slice(0, limit));
+              if (error && e.target.value.trim()) setError(null);
+            }}
+            placeholder={t("placeholder")}
+            autoCapitalize="sentences"
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
+            className="relative z-10 mt-5 w-full flex-1 resize-none bg-transparent font-serif text-[1.1875rem] leading-[1.6] text-[var(--g-paper-ink)] outline-none focus-visible:outline-none [field-sizing:content] placeholder:text-[var(--g-paper-ink-soft)] placeholder:opacity-70 min-h-[15rem]"
+            data-testid="message-textarea"
+          />
+        </div>
+      </div>
+      <div className="mt-3 flex items-start justify-between gap-4 text-caption">
+        {error ? (
+          <p id="greeting-message-error" className="flex items-start gap-1.5 text-danger" role="alert">
+            {error}
+          </p>
+        ) : (
+          <p id="greeting-message-hint" className="text-ink-3">
+            {t("hint")}
+          </p>
+        )}
+        <span className={`shrink-0 tabular-nums ${remaining <= 60 ? "text-warning" : "text-ink-3"}`}>
+          {message.length}/{limit}
+        </span>
+      </div>
     </StepShell>
   );
 }
@@ -464,6 +503,10 @@ function PreviewStep({
   onCheckout: () => void;
 }) {
   const t = useTranslations("wizard.preview");
+  // One primary action at a time: while the greeting plays, its own controls
+  // lead and Activate waits quietly; at the ending, Activate takes the lead.
+  const [atEnding, setAtEnding] = useState(false);
+  const handleBeat = useCallback((kind: string) => setAtEnding(kind === "ending"), []);
   // Guards against React StrictMode's dev-only double-invoke and any
   // remount while this step stays mounted — PREVIEW_VIEWED must fire once
   // per genuine "sender opened Preview" action, not once per render/effect
@@ -475,50 +518,69 @@ function PreviewStep({
     void viewPreviewAction(greetingId);
   }, [greetingId]);
 
+  // A viewing layer, not an editor: plain bars above and below, and the
+  // greeting — exactly as the recipient gets it — in between, untouched.
   return (
-    <GreetingRenderer
-      theme={theme}
-      content={content}
-      mode="preview"
-      chrome={
-        <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex h-9 items-center gap-1 rounded-full bg-black/35 pr-3.5 pl-2 text-label text-white backdrop-blur-md transition-colors hover:bg-black/50"
-          >
-            <ChevronLeft className="size-4" aria-hidden />
-            {t("editShort")}
-          </button>
-          <span className="inline-flex h-7 items-center rounded-full bg-white/85 px-3 text-caption font-medium text-ink shadow-xs backdrop-blur-md">
-            {t("badge")}
-          </span>
-        </div>
-      }
-      senderControls={
-        <div
-          className="w-full max-w-sm rounded-[var(--radius-lg)] bg-surface p-5 text-left text-ink shadow-lg ring-1 ring-black/5"
-          data-testid="preview-sender-controls"
+    <div className="flex h-dvh w-full flex-col bg-surface">
+      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-2 pt-[var(--safe-top)] sm:px-4">
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label={t("edit")}
+          className="grid size-11 place-items-center rounded-md text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
         >
-          <p className="text-h3">{t("readyTitle")}</p>
-          <p className="mt-1 text-body-sm text-ink-2">{t("readyBody")}</p>
-          <div className="mt-4 flex flex-col gap-2">
-            {priceLabel ? (
-              <Button size="lg" block onClick={onCheckout} iconEnd={<ArrowRight className="size-4" aria-hidden />} data-testid="preview-activate-cta">
-                {t("activate", { price: priceLabel })}
-              </Button>
-            ) : (
-              <Notice tone="danger">
-                <span data-testid="preview-price-unavailable">{t("priceUnavailable")}</span>
-              </Notice>
-            )}
-            <Button variant="ghost" size="md" block onClick={onEdit} icon={<Pencil className="size-4" aria-hidden />} data-testid="preview-edit">
+          <X className="size-5" aria-hidden />
+        </button>
+        <p className="flex-1 text-center text-label text-ink">{t("viewingAs")}</p>
+        <span className="size-11" aria-hidden />
+      </header>
+
+      <GreetingRenderer theme={theme} content={content} mode="preview" embedded onBeatChange={handleBeat} />
+
+      {/* State-driven actions, never competing with the greeting's own control:
+          while it's sealed or playing, a single quiet row (the greeting's Open /
+          Continue is the one primary); at the ending, Activate becomes the primary. */}
+      <footer className="shrink-0 border-t border-line bg-surface px-4 pb-[max(0.5rem,var(--safe-bottom))]" data-testid="preview-sender-controls">
+        {!priceLabel ? (
+          <div className="mx-auto flex max-w-md flex-col gap-2 py-3">
+            <Notice tone="danger">
+              <span data-testid="preview-price-unavailable">{t("priceUnavailable")}</span>
+            </Notice>
+            <Button variant="secondary" size="lg" block onClick={onEdit} data-testid="preview-edit">
               {t("edit")}
             </Button>
           </div>
-        </div>
-      }
-    />
+        ) : atEnding ? (
+          <div className="animate-rise mx-auto flex max-w-md flex-col gap-2 pt-3">
+            <p className="text-center text-caption text-ink-3">{t("readyBody")}</p>
+            <div className="flex gap-2">
+              <Button variant="secondary" size="lg" onClick={onEdit} className="shrink-0" data-testid="preview-edit">
+                {t("editShort")}
+              </Button>
+              <Button size="lg" block onClick={onCheckout} className="flex-1" data-testid="preview-activate-cta">
+                {t("activate", { price: priceLabel })}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="mx-auto flex h-14 max-w-md items-center justify-between gap-3">
+            <Button variant="ghost" size="md" onClick={onEdit} icon={<Pencil className="size-4" aria-hidden />} className="-ml-2" data-testid="preview-edit">
+              {t("editShort")}
+            </Button>
+            <Button
+              variant="ghost"
+              size="md"
+              onClick={onCheckout}
+              iconEnd={<ArrowRight className="size-4" aria-hidden />}
+              className="-mr-2 text-ink"
+              data-testid="preview-activate-cta"
+            >
+              {t("activate", { price: priceLabel })}
+            </Button>
+          </div>
+        )}
+      </footer>
+    </div>
   );
 }
 
@@ -659,7 +721,7 @@ function CheckoutStep({
   ].filter(Boolean) as string[];
 
   return (
-    <div className="animate-rise flex flex-1 flex-col gap-8 pt-4" data-testid="checkout-step">
+    <div className="animate-rise flex flex-1 flex-col gap-7 pt-4" data-testid="checkout-step">
       <header>
         <h1 className="text-h1">{t("title")}</h1>
         <p className="mt-2 text-body text-ink-2">{t("subtitle")}</p>
@@ -675,71 +737,66 @@ function CheckoutStep({
         </div>
       ) : loading ? (
         <div className="flex flex-col gap-4" aria-busy="true">
-          <div className="skeleton h-36 rounded-[var(--radius-lg)]" />
-          <div className="skeleton h-5 w-1/2 rounded-full" />
-          <div className="skeleton h-8 w-1/3 rounded-full" />
+          <div className="flex items-center gap-4">
+            <div className="skeleton aspect-[4/5] w-[4.5rem] rounded-md" />
+            <div className="flex flex-1 flex-col gap-2">
+              <div className="skeleton h-4 w-4/5 rounded-full" />
+              <div className="skeleton h-3 w-1/2 rounded-full" />
+            </div>
+          </div>
+          <div className="skeleton mt-4 h-20 rounded-md" />
           <span className="sr-only">{t("loading")}</span>
         </div>
       ) : summary && !succeeded ? (
         <>
-          <section aria-labelledby="checkout-summary" className="rounded-[var(--radius-lg)] bg-surface p-4 shadow-xs ring-1 ring-line sm:p-5">
-            <div className="flex items-start gap-4">
-              <ThemeSwatch themeKey={themeKey} className="aspect-[4/5] w-20 shrink-0 rounded-md" envelopeWidth="74%" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h2 id="checkout-summary" className="text-caption text-ink-3">
-                    {t("summaryTitle")}
-                  </h2>
-                  <button type="button" onClick={onEdit} className="text-label text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
-                    {t("edit")}
-                  </button>
-                </div>
-                <p className="mt-1.5 line-clamp-3 font-serif text-[1.0625rem] leading-snug text-ink">{content.message}</p>
-              </div>
+          {/* What you're paying for: the card itself, not a description of it. */}
+          <section aria-labelledby="checkout-summary" className="flex items-center gap-4">
+            <ThemeSwatch themeKey={themeKey} className="aspect-[4/5] w-[4.5rem] shrink-0 rounded-md" />
+            <div className="min-w-0 flex-1">
+              <h2 id="checkout-summary" className="sr-only">
+                {t("summaryTitle")}
+              </h2>
+              <p className="line-clamp-2 font-serif text-[1.0625rem] leading-snug text-ink">{content.message}</p>
+              <p className="mt-1 text-caption text-ink-3">{items.join(" · ")}</p>
             </div>
-            <ul className="mt-4 flex flex-wrap gap-1.5 border-t border-line pt-4">
-              {items.map((label) => (
-                <li key={label} className="rounded-full bg-sunken px-2.5 py-1 text-caption text-ink-2">
-                  {label}
-                </li>
-              ))}
-            </ul>
+            <button
+              type="button"
+              onClick={onEdit}
+              className="shrink-0 self-start text-label text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+            >
+              {t("edit")}
+            </button>
           </section>
 
-          <section aria-label={t("total")} className="flex flex-col gap-3">
-            <div className="flex items-baseline justify-between gap-4 text-body">
-              <span className="text-ink-2">{t("activationLabel")}</span>
+          <section aria-label={t("total")} className="border-y border-line py-5">
+            <div className="flex items-baseline justify-between gap-4 text-body-sm text-ink-2">
+              <span>{t("activationLabel")}</span>
               <span className="tabular-nums">{amountLabel}</span>
             </div>
-            <div className="flex items-baseline justify-between gap-4 border-t border-line pt-3">
+            <div className="mt-3 flex items-baseline justify-between gap-4">
               <span className="text-h3">{t("total")}</span>
-              <span className="text-h2 tabular-nums" data-testid="checkout-amount">
+              <span className="font-serif text-[2rem] leading-none tabular-nums" data-testid="checkout-amount">
                 {amountLabel}
               </span>
             </div>
-            <p className="text-caption text-ink-3">{t("explanation")}</p>
+            <p className="mt-4 text-caption text-ink-3">
+              {t("explanation")} {t("lock")}
+            </p>
           </section>
 
           <section aria-labelledby="checkout-next">
-            <h2 id="checkout-next" className="text-h3">
+            <h2 id="checkout-next" className="text-label text-ink-2">
               {t("nextTitle")}
             </h2>
-            <ol className="mt-4 flex flex-col gap-4">
+            <ol className="mt-3 flex flex-col gap-2.5">
               {(["next1", "next2", "next3"] as const).map((k, i) => (
-                <li key={k} className="flex gap-3.5">
-                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-ember-soft text-caption font-medium text-ember-ink">
-                    {i + 1}
-                  </span>
-                  <span className="pt-0.5 text-body-sm text-ink-2">{t(k)}</span>
+                <li key={k} className="flex gap-3 text-body-sm text-ink">
+                  <span className="w-4 shrink-0 font-serif text-ink-3 tabular-nums">{i + 1}</span>
+                  <span>{t(k)}</span>
                 </li>
               ))}
             </ol>
           </section>
-
-          <div className="flex flex-col gap-3">
-            <Notice tone="info">{t("lock")}</Notice>
-            {isTestPayments && <Notice tone="warning">{t("testMode")}</Notice>}
-          </div>
 
           <div className="flex items-center justify-between gap-4 text-label">
             <button
@@ -768,7 +825,18 @@ function CheckoutStep({
             )}
           </div>
 
-          <ActionBar>
+          <ActionBar
+            note={
+              isTestPayments ? (
+                <span className="text-warning">{t("testMode")}</span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5">
+                  <Lock className="size-3" aria-hidden />
+                  {t("secureNote")}
+                </span>
+              )
+            }
+          >
             {cancelled && (
               <Notice tone="warning">
                 <span data-testid="payment-cancelled-message">{t("cancelledMessage")}</span>
@@ -787,14 +855,9 @@ function CheckoutStep({
               disabled={showRealPayButton && !summary.redirectUrl}
               loading={paying}
               loadingLabel={t("processing")}
-              icon={failed || cancelled ? undefined : <Lock className="size-4" aria-hidden />}
               data-testid={failed || cancelled ? "checkout-retry" : "checkout-pay"}
             >
-              {failed || cancelled
-                ? t("retry")
-                : isTestPayments
-                  ? t("payButton", { price: amountLabel ?? "" })
-                  : t("payButtonReal", { price: amountLabel ?? "" })}
+              {failed || cancelled ? t("retry") : isTestPayments ? t("payButton", { price: amountLabel ?? "" }) : t("payButtonReal", { price: amountLabel ?? "" })}
             </Button>
           </ActionBar>
         </>

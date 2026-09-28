@@ -39,6 +39,18 @@ export type ThemePalette = {
   envelopeInk: string;
   seal: string;
   sealInk: string;
+  /** The card's paper and ink — the greeting is always presented on a physical-feeling card. */
+  paper: string;
+  paperInk: string;
+  paperInkSoft: string;
+  /**
+   * Hairline edge for card + envelope. Only needed where paper and backdrop are
+   * close in tone (minimal: white on stone; elegant: charcoal on black); a
+   * 1px tonal edge separates them without a heavy border or shadow.
+   */
+  edge?: string;
+  /** Envelope liner (any CSS background) — visible once the flap opens, and in theme thumbnails. */
+  liner: string;
   particleColors: string[];
   dark: boolean;
 };
@@ -73,6 +85,10 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
       envelopeInk: "#5a2332",
       seal: "#9e2f47",
       sealInk: "#fbe3e1",
+      paper: "#fbf3ee",
+      paperInk: "#4a1827",
+      paperInkSoft: "#8a5a63",
+      liner: "repeating-linear-gradient(135deg, #9e2f47 0 7px, #b54a60 7px 14px)",
       particleColors: ["#f6b8bd", "#f9d3d0", "#e98c98"],
       dark: true,
     },
@@ -95,6 +111,10 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
       envelopeInk: "#7b5344",
       seal: "#df4f35",
       sealInk: "#fff4ea",
+      paper: "#fffdf8",
+      paperInk: "#3b1e14",
+      paperInkSoft: "#7b5344",
+      liner: "repeating-linear-gradient(45deg, #df4f35 0 6px, #fff4e8 6px 12px)",
       particleColors: ["#df4f35", "#f4a52a", "#3a9d8f", "#6c5fd3", "#f07fa8"],
       dark: false,
     },
@@ -117,6 +137,11 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
       envelopeInk: "#5b675e",
       seal: "#6f8b69",
       sealInk: "#f7f4ec",
+      paper: "#fffdf7",
+      paperInk: "#253029",
+      paperInkSoft: "#5b675e",
+      liner:
+        "repeating-linear-gradient(45deg, rgb(111 139 105 / 0.55) 0 1px, transparent 1px 9px), repeating-linear-gradient(-45deg, rgb(111 139 105 / 0.55) 0 1px, transparent 1px 9px), #e6ecdf",
       particleColors: ["#ffffff", "#f3efe4", "#dfe8d8"],
       dark: false,
     },
@@ -139,6 +164,10 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
       envelopeInk: "#34387a",
       seal: "#3d4296",
       sealInk: "#ffd479",
+      paper: "#fbf8f1",
+      paperInk: "#1f2150",
+      paperInkSoft: "#555a8c",
+      liner: "radial-gradient(#ffd479 0 1.2px, transparent 1.8px) 0 0 / 12px 12px, radial-gradient(#ffffff 0 0.8px, transparent 1.3px) 6px 6px / 12px 12px, #2b2f6b",
       particleColors: ["#ffd479", "#ffffff", "#b9bcff"],
       dark: true,
     },
@@ -156,11 +185,16 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
       onAccent: "#1a1611",
       card: "rgb(255 255 255 / 0.06)",
       line: "rgb(214 180 124 / 0.25)",
-      envelope: "#1d1b1d",
-      envelopeFlap: "#262326",
+      envelope: "#2a262a",
+      envelopeFlap: "#332e32",
       envelopeInk: "#d6b47c",
       seal: "#c8a266",
       sealInk: "#1a1611",
+      paper: "linear-gradient(165deg, #2a262a 0%, #1e1c1f 55%, #19171a 100%)",
+      paperInk: "#f1e6cf",
+      paperInkSoft: "#bfae8c",
+      edge: "rgb(214 180 124 / 0.32)",
+      liner: "linear-gradient(135deg, #a8813f 0%, #f1dca8 30%, #c9a266 55%, #f6e6bd 75%, #9c7738 100%)",
       particleColors: ["#e9cf9c", "#d6b47c", "#fff3d6"],
       dark: true,
     },
@@ -170,8 +204,8 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
     entrance: "fade",
     particle: "none",
     palette: {
-      background: "#f6f4f0",
-      base: "#f6f4f0",
+      background: "radial-gradient(120% 90% at 50% 0%, #f3f0ea 0%, #e7e2da 100%)",
+      base: "#ebe7e0",
       text: "#161514",
       textMuted: "#5f5a55",
       accent: "#161514",
@@ -179,10 +213,15 @@ export const THEME_REGISTRY: Record<ThemeKey, ThemeConfig> = {
       card: "rgb(255 255 255 / 0.85)",
       line: "rgb(22 21 20 / 0.1)",
       envelope: "#ffffff",
-      envelopeFlap: "#eeebe5",
+      envelopeFlap: "#f1eee8",
       envelopeInk: "#5f5a55",
       seal: "#161514",
       sealInk: "#f6f4f0",
+      paper: "#ffffff",
+      paperInk: "#161514",
+      paperInkSoft: "#6b6660",
+      edge: "rgb(84 70 52 / 0.12)",
+      liner: "repeating-linear-gradient(0deg, #e9e5de 0 1px, #f4f1ec 1px 9px)",
       particleColors: [],
       dark: false,
     },
@@ -226,6 +265,11 @@ export function themeVars(theme: ThemeConfig): CSSProperties {
     "--g-envelope-ink": p.envelopeInk,
     "--g-seal": p.seal,
     "--g-seal-ink": p.sealInk,
+    "--g-paper": p.paper,
+    "--g-paper-ink": p.paperInk,
+    "--g-paper-ink-soft": p.paperInkSoft,
+    "--g-edge": p.edge ?? "transparent",
+    "--g-liner": p.liner,
     colorScheme: p.dark ? "dark" : "light",
   } as CSSProperties;
 }

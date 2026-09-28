@@ -61,11 +61,21 @@ export function Panel({
   );
 }
 
+/**
+ * A group of related figures as one ledger-like surface divided by hairlines
+ * (gap-px over the line colour), rather than a row of separate boxes.
+ */
 export function StatGroup({ title, children, columns = 4 }: { title?: ReactNode; children: ReactNode; columns?: 3 | 4 }) {
   return (
     <div className="flex flex-col gap-3">
       {title && <h2 className="text-label text-ink-2">{title}</h2>}
-      <div className={`grid grid-cols-2 gap-3 ${columns === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>{children}</div>
+      <div
+        className={`grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius-lg)] bg-line shadow-xs ring-1 ring-line max-lg:[&>*:last-child:nth-child(odd)]:col-span-2 ${
+          columns === 4 ? "lg:grid-cols-4" : "lg:grid-cols-3"
+        }`}
+      >
+        {children}
+      </div>
     </div>
   );
 }
@@ -84,14 +94,15 @@ export function Stat({
   tone?: "default" | "accent";
 }) {
   return (
-    <div
-      className={`rounded-[var(--radius-lg)] p-4 shadow-xs ring-1 sm:p-5 ${
-        tone === "accent" ? "bg-ember-soft ring-transparent" : "bg-surface ring-line"
-      }`}
-      data-testid={testId}
-    >
+    <div className={`p-4 sm:p-5 ${tone === "accent" ? "bg-ember-soft/60" : "bg-surface"}`} data-testid={testId}>
       <p className="text-caption text-ink-2">{label}</p>
-      <p className="mt-2 text-[1.625rem] leading-none font-medium tracking-[-0.01em] tabular-nums text-ink">{value}</p>
+      <p
+        className={`mt-2 font-serif text-[1.75rem] leading-none tracking-[-0.01em] tabular-nums ${
+          tone === "accent" ? "text-ember-ink" : "text-ink"
+        }`}
+      >
+        {value}
+      </p>
       {hint && <p className="mt-2 text-caption text-ink-3">{hint}</p>}
     </div>
   );

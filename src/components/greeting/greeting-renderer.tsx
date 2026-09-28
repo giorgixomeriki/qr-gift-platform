@@ -57,6 +57,8 @@ export function GreetingRenderer({
   senderControls,
   senderBanner,
   chrome,
+  embedded = false,
+  onBeatChange,
   onContentPlayed,
 }: {
   theme: ThemeConfig;
@@ -70,8 +72,12 @@ export function GreetingRenderer({
    * recipient mode (Phase 3 §8), never for a genuine recipient.
    */
   senderBanner?: React.ReactNode;
-  /** Floating top-left control shown on every beat (Preview's "Edit"). */
+  /** Floating top-left control shown on every beat. */
   chrome?: React.ReactNode;
+  /** Fill a parent flex container instead of the whole viewport (used inside the Preview layer). */
+  embedded?: boolean;
+  /** Notified whenever the visible beat changes (Preview uses it to decide which action leads). */
+  onBeatChange?: (kind: Beat["kind"]) => void;
   /** Fired at most once per beat visit when the recipient actually plays video/audio (Phase 3 §14). */
   onContentPlayed?: (type: "video" | "audio") => void;
 }) {
@@ -125,6 +131,10 @@ export function GreetingRenderer({
     onContentPlayed?.(type);
   }
 
+  useEffect(() => {
+    onBeatChange?.(beat.kind);
+  }, [beat.kind, onBeatChange]);
+
   // Move focus to each new beat so keyboard and screen-reader users follow the story.
   useEffect(() => {
     if (beatIndex > 0) stageRef.current?.focus({ preventScroll: true });
@@ -137,7 +147,7 @@ export function GreetingRenderer({
 
   return (
     <div
-      className="gift relative isolate flex min-h-dvh w-full flex-col overflow-hidden"
+      className={`gift relative isolate flex w-full flex-col overflow-hidden ${embedded ? "min-h-0 flex-1" : "min-h-dvh"}`}
       style={themeVars(theme)}
       data-testid="greeting-renderer"
       data-mode={mode}
@@ -328,17 +338,20 @@ function MessageBeat({ text }: { text: string }) {
   // Short notes read as a centred statement; anything longer reads as a letter.
   const long = text.length > 100 || text.includes("\n");
   return (
-    <div className="animate-rise flex w-full flex-col items-center gap-6" data-testid="greeting-message-beat">
-      <Spark className="size-5 text-[var(--g-accent)]" />
-      <p
-        className={`w-full font-serif whitespace-pre-wrap text-[var(--g-ink)] [text-wrap:pretty] ${
-          long
-            ? "text-left text-[clamp(1.1875rem,1.05rem+0.6vw,1.4375rem)] leading-[1.6]"
-            : "text-center text-[clamp(1.625rem,1.25rem+1.8vw,2.25rem)] leading-[1.35]"
-        }`}
-      >
-        {text}
-      </p>
+    <div className="flex w-full justify-center" data-testid="greeting-message-beat">
+      {/* The message is presented on the card itself — the same paper the envelope held. */}
+      <article className="paper-card card-arrive flex max-h-[68dvh] min-h-[min(52dvh,28rem)] w-full max-w-[26rem] flex-col items-center overflow-y-auto px-8 pt-10 pb-10 sm:px-10">
+        <Spark className="size-5 shrink-0 text-[var(--g-seal)]" />
+        <p
+          className={`mt-6 w-full font-serif whitespace-pre-wrap text-[var(--g-paper-ink)] [text-wrap:pretty] ${
+            long
+              ? "my-auto text-left text-[clamp(1.125rem,1rem+0.5vw,1.3125rem)] leading-[1.62]"
+              : "my-auto text-center text-[clamp(1.5rem,1.2rem+1.4vw,2rem)] leading-[1.32]"
+          }`}
+        >
+          {text}
+        </p>
+      </article>
     </div>
   );
 }

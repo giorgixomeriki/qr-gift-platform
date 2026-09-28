@@ -74,7 +74,7 @@ export default async function AdminDashboardPage() {
             <thead className={table.thead}>
               <tr>
                 <th className={table.th}>{td("funnel.stageHeader")}</th>
-                <th className={`${table.th} w-2/5`}>
+                <th className={`${table.th} hidden w-2/5 sm:table-cell`}>
                   <span className="sr-only">{td("funnel.countHeader")}</span>
                 </th>
                 <th className={`${table.th} text-right`}>{td("funnel.countHeader")}</th>
@@ -85,7 +85,7 @@ export default async function AdminDashboardPage() {
               {metrics.funnel.map((stage) => (
                 <tr key={stage.key} className={table.tr} data-testid="funnel-row">
                   <td className={`${table.td} whitespace-nowrap text-ink`}>{tStage(stage.key)}</td>
-                  <td className={table.td} aria-hidden>
+                  <td className={`${table.td} hidden sm:table-cell`} aria-hidden>
                     <div className="h-2 w-full min-w-24 overflow-hidden rounded-full bg-sunken">
                       <div className="h-full rounded-full bg-ember" style={{ width: `${(stage.count / maxCount) * 100}%` }} />
                     </div>

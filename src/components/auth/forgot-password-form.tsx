@@ -68,7 +68,7 @@ export function ForgotPasswordForm({
           <MailCheck className="size-7" strokeWidth={1.5} aria-hidden />
         </span>
         <div>
-          <h1 className="text-h2">{t("checkInboxTitle")}</h1>
+          <h1 className="font-serif text-[1.875rem] leading-tight tracking-[-0.01em]">{t("checkInboxTitle")}</h1>
           <p className="mt-2 text-body-sm text-ink-2" role="status" data-testid="reset-email-sent">
             {t("resetEmailSentMessage")}
           </p>
@@ -81,8 +81,8 @@ export function ForgotPasswordForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5">
       <div>
-        <h1 className="text-h2">{title}</h1>
-        <p className="mt-1 text-body-sm text-ink-2">{t("forgotPasswordBody")}</p>
+        <h1 className="font-serif text-[1.875rem] leading-tight tracking-[-0.01em]">{title}</h1>
+        <p className="mt-2 text-body-sm text-ink-2">{t("forgotPasswordBody")}</p>
       </div>
       <TextField
         id="forgot-password-email"

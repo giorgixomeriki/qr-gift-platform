@@ -25,20 +25,21 @@ export function LivePreview({ themeKey, content }: { themeKey: string; content: 
         className="gift relative aspect-[9/17] w-full overflow-hidden rounded-[40px] shadow-lg ring-[6px] ring-ink transition-[background] duration-500"
         style={themeVars(theme)}
       >
-        <div className="flex h-full flex-col gap-4 overflow-hidden px-6 pt-12 pb-6">
-          <div className="text-center">
-            <Spark className="mx-auto mb-3 size-3.5 text-[var(--g-accent)]" />
-            <p className="font-serif text-[1.375rem] leading-[1.15] [text-wrap:balance]">{tt(`${theme.key}.opening`)}</p>
+        <div className="flex h-full flex-col items-center gap-5 overflow-hidden px-5 pt-10 pb-6">
+          <p className="text-center font-serif text-[1.125rem] leading-[1.2] [text-wrap:balance]">{tt(`${theme.key}.opening`)}</p>
+          {/* The same paper card the recipient reads. */}
+          <div className="paper-card flex w-full flex-1 flex-col items-center overflow-hidden px-5 pt-6 pb-5 after:inset-[7px]">
+            <Spark className="size-3.5 shrink-0 text-[var(--g-seal)]" />
+            <p className="mt-3 line-clamp-[10] w-full font-serif text-[0.875rem] leading-[1.55] whitespace-pre-line text-[var(--g-paper-ink)]">
+              {content.message || "…"}
+            </p>
           </div>
-          {hero && (
-            // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
-            <img src={hero.url} alt="" className="w-full shrink-0 rounded-2xl object-cover" style={{ aspectRatio: "4 / 3" }} />
-          )}
-          <p className="line-clamp-[9] font-serif text-[0.9375rem] leading-relaxed whitespace-pre-line text-[var(--g-ink)]">
-            {content.message || "…"}
-          </p>
-          {(content.audio || content.video) && (
-            <div className="mt-auto flex gap-2">
+          {(hero || content.audio || content.video) && (
+            <div className="flex w-full items-center gap-2">
+              {hero && (
+                // eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL
+                <img src={hero.url} alt="" className="size-11 rounded-[3px] bg-white object-cover p-[3px] shadow-sm" style={{ rotate: "-3deg" }} />
+              )}
               {content.audio && (
                 <span className="grid size-9 place-items-center rounded-full bg-[var(--g-accent)] text-[var(--g-on-accent)]">
                   <Mic className="size-4" />

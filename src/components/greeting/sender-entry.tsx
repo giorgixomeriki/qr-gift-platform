@@ -41,33 +41,27 @@ export function SenderEntry({ publicToken, priceLabel }: { publicToken: string; 
   return (
     <FlowShell headerEnd={<LocaleSwitcher />} width="wide">
       <div
-        className="grid flex-1 grid-rows-[auto_1fr] gap-6 pt-2 md:grid-cols-[1fr_1.05fr] md:grid-rows-1 md:items-center md:gap-14 md:py-12"
+        className="grid flex-1 grid-rows-[auto_1fr] gap-7 md:grid-cols-[1fr_1.1fr] md:grid-rows-1 md:items-center md:gap-16 md:py-12"
         data-testid="sender-entry"
       >
         <ThemeSwatch
           themeKey="romantic"
-          envelopeWidth="62%"
-          className="animate-fade aspect-[16/10] max-h-[34dvh] w-full rounded-[var(--radius-xl)] shadow-md md:order-2 md:aspect-[4/5] md:max-h-none"
+          scale={0.82}
+          className="animate-fade -mx-4 aspect-[5/4] max-h-[46dvh] sm:mx-0 sm:rounded-[var(--radius-lg)] md:order-2 md:aspect-[4/5] md:max-h-none"
         />
 
         <div className="flex flex-col md:order-1">
           <div className="stagger">
-            <p className="text-eyebrow text-ember">{t("eyebrow")}</p>
-            <h1 className="text-display mt-2 md:mt-3">{t("title")}</h1>
+            <h1 className="text-display">{t("title")}</h1>
             <p className="mt-3 max-w-md text-body text-ink-2 md:mt-4">{t("subtitle")}</p>
-
-            <ul className="mt-7 flex flex-wrap gap-2 md:mt-9" data-testid="content-type-row">
+            <p className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-label text-ink-2" data-testid="content-type-row">
               {contentTypes.map(({ Icon, label }) => (
-                <li
-                  key={label}
-                  className="inline-flex h-9 items-center gap-2 rounded-full bg-surface pr-3.5 pl-3 text-label text-ink-2 shadow-xs ring-1 ring-line"
-                >
-                  <Icon className="size-4 text-ink" strokeWidth={1.75} aria-hidden />
+                <span key={label} className="inline-flex items-center gap-1.5">
+                  <Icon className="size-4 text-ember" strokeWidth={1.75} aria-hidden />
                   {label}
-                </li>
+                </span>
               ))}
-            </ul>
-            <p className="mt-5 text-caption text-ink-3">{t("afterActivation")}</p>
+            </p>
           </div>
 
           <ActionBar>
@@ -81,7 +75,7 @@ export function SenderEntry({ publicToken, priceLabel }: { publicToken: string; 
             </Button>
             {priceLabel ? (
               <p className="text-center text-caption text-ink-2" data-testid="activation-price">
-                {t("timeEstimate")} · {t("priceLabel")} <span className="font-medium text-ink">{priceLabel}</span>
+                {t("timeEstimate")} · {t("priceLabel")} <span className="font-medium text-ink">{priceLabel}</span> · {t("previewFirst")}
               </p>
             ) : (
               <p className="text-center text-caption text-danger" data-testid="price-unavailable">
