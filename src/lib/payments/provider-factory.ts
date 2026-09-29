@@ -18,7 +18,12 @@ export function getPaymentProvider(): PaymentProvider {
           "Configure a real payment provider before deploying.",
       );
     }
-    return new TestPaymentProvider();
+    // Not relying on NODE_ENV alone: a remotely reachable non-production
+    // deployment (staging) must opt in to fake payments explicitly.
+    if (!env.ALLOW_TEST_PAYMENTS) {
+      throw new Error("PAYMENTS_PROVIDER=TEST requires ALLOW_TEST_PAYMENTS=true.");
+    }
+    return new TestPaymentProvider(env.TEST_PAYMENTS_WEBHOOK_SECRET);
   }
 
   if (env.PAYMENTS_PROVIDER === "BOG") {

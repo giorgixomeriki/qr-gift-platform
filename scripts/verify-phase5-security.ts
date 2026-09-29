@@ -17,6 +17,8 @@ const postgres = require("postgres") as typeof import("postgres");
 const { generatePublicToken } = require("../src/lib/security/public-token") as typeof import("../src/lib/security/public-token");
 const { startGreeting } = require("../src/lib/greetings/start") as typeof import("../src/lib/greetings/start");
 const { getOrCreateCheckoutOrder, checkPaymentReturn } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
+const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
+const { signTestWebhook, TEST_WEBHOOK_SIGNATURE_HEADER } = require("../src/lib/payments/providers/test-provider") as typeof import("../src/lib/payments/providers/test-provider");
 const { confirmPaymentSuccess, verifyAndReconcileOrder, markPaymentFailed } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
 const { recordManualPayout, getPartnerUnpaidBalance } = require("../src/lib/payments/payouts") as typeof import("../src/lib/payments/payouts");
 const { withAdminContext, withPartnerContext, withPublicContext } = require("../src/db/client") as typeof import("../src/db/client");
@@ -168,6 +170,8 @@ async function main() {
   async function newCheckoutOrder() {
     const qr = await makeAvailableQr();
     const { greetingId, editToken } = await startGreeting(qr.token);
+    // A message is required before checkout (migrations/0011 purchase eligibility).
+    await updateGreetingMessage(greetingId, editToken, "Phase 5 test message");
     const { summary } = await getOrCreateCheckoutOrder(greetingId, editToken);
     return { qr, greetingId, editToken, summary };
   }
@@ -303,13 +307,17 @@ async function main() {
     check("12. Webhook route rejects an unrecognized/unconfigured provider segment with 404", badRes.status === 404);
 
     const goodBody = JSON.stringify({ orderId: summary.orderId, providerPaymentId: pending!.provider_payment_id });
-    const goodReq = new NextRequest("http://localhost/api/webhooks/payments/TEST", { method: "POST", body: goodBody });
+    // A genuine TEST webhook is signed with TEST_PAYMENTS_WEBHOOK_SECRET (QA-08).
+    const webhookSecret = process.env.TEST_PAYMENTS_WEBHOOK_SECRET;
+    if (!webhookSecret) throw new Error("TEST_PAYMENTS_WEBHOOK_SECRET is required for the webhook checks");
+    const signed = { [TEST_WEBHOOK_SIGNATURE_HEADER]: signTestWebhook(goodBody, webhookSecret) };
+    const goodReq = new NextRequest("http://localhost/api/webhooks/payments/TEST", { method: "POST", body: goodBody, headers: signed });
     const goodRes = await POST(goodReq, { params: Promise.resolve({ provider: "TEST" }) });
     check("13. A genuine webhook for a real pending payment is accepted (200) and activates", goodRes.status === 200);
     const [orderAfterWebhook] = await admin`select status from orders where id = ${summary.orderId}`;
     check("    Order is PAID after the webhook", orderAfterWebhook?.status === "PAID");
 
-    const dupRes = await POST(new NextRequest("http://localhost/api/webhooks/payments/TEST", { method: "POST", body: goodBody }), { params: Promise.resolve({ provider: "TEST" }) });
+    const dupRes = await POST(new NextRequest("http://localhost/api/webhooks/payments/TEST", { method: "POST", body: goodBody, headers: signed }), { params: Promise.resolve({ provider: "TEST" }) });
     check("14. A duplicate delivery of the same webhook is still accepted (200), not an error — provider retry safety", dupRes.status === 200);
   }
 

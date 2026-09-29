@@ -6,7 +6,9 @@ import { verifyGreetingEditAccess } from "@/lib/greetings/access";
 import { publicEnv } from "@/lib/env.public";
 import { resolveActivePrice, splitCommission, getPartnerCommissionRateBps } from "./pricing";
 import { getPaymentProvider } from "./provider-factory";
-import { sanitizeProviderMetadata, type PaymentProviderKey } from "./types";
+import { sanitizeProviderMetadata, ProviderNotImplementedError, type PaymentProviderKey } from "./types";
+import { getPurchaseBlocker, type PurchaseBlocker } from "./eligibility";
+import { logServerError } from "@/lib/log";
 
 type Order = typeof orders.$inferSelect;
 
@@ -117,6 +119,14 @@ export async function createPaymentAttempt(order: Order, qrPublicToken: string):
  * Deliberately COMMITS as its own transaction, separate from activation
  * (activatePaidOrder below) — money-captured must be durable even if
  * activation fails afterward, so the customer is never asked to pay twice.
+ *
+ * Eligibility is re-checked here, under a lock on the greeting row
+ * (migrations/0011): a payment can arrive after the greeting was blocked by
+ * moderation, after its partner was suspended, or for a greeting with no
+ * message. The captured payment is still recorded truthfully (SUCCEEDED),
+ * but the order becomes REFUND_REQUIRED instead of PAID — no commission is
+ * booked and nothing is activated. Callers must then call
+ * refundIneligiblePayment (outcome "REFUND_REQUIRED").
  */
 export async function confirmPaymentSuccess(input: {
   provider: PaymentProviderKey;
@@ -125,7 +135,7 @@ export async function confirmPaymentSuccess(input: {
   amountMinor: number;
   currency: string;
   metadata?: Record<string, unknown>;
-}): Promise<{ alreadyProcessed: boolean; order: Order }> {
+}): Promise<{ alreadyProcessed: boolean; order: Order; outcome: "PAID" | "REFUND_REQUIRED"; blocker?: PurchaseBlocker }> {
   return withPaymentActivation(input.orderId, async (tx) => {
     const [order] = await tx
       .select()
@@ -136,7 +146,11 @@ export async function confirmPaymentSuccess(input: {
     if (!order) throw new PaymentConfirmationError(`Order ${input.orderId} not found`);
 
     if (order.status === "PAID") {
-      return { alreadyProcessed: true, order };
+      return { alreadyProcessed: true, order, outcome: "PAID" };
+    }
+    if (order.status === "REFUND_REQUIRED" || order.status === "REFUNDED") {
+      // A replayed notification for a payment already routed to refund.
+      return { alreadyProcessed: true, order, outcome: "REFUND_REQUIRED" };
     }
     if (order.status !== "PENDING_PAYMENT") {
       throw new PaymentConfirmationError(
@@ -173,6 +187,10 @@ export async function confirmPaymentSuccess(input: {
 
     const sanitizedMetadata = sanitizeProviderMetadata(input.metadata ?? {});
 
+    // Locked until this transaction commits — a concurrent moderation block
+    // waits for the payment decision rather than slipping in underneath it.
+    const blocker = await getPurchaseBlocker(tx, order.greetingId, { lock: true });
+
     if (existingPayment) {
       if (existingPayment.status !== "SUCCEEDED") {
         await tx
@@ -193,6 +211,16 @@ export async function confirmPaymentSuccess(input: {
       });
     }
 
+    if (blocker) {
+      const [refundOrder] = await tx
+        .update(orders)
+        .set({ status: "REFUND_REQUIRED" })
+        .where(eq(orders.id, order.id))
+        .returning();
+      if (!refundOrder) throw new PaymentConfirmationError("Failed to mark order REFUND_REQUIRED");
+      return { alreadyProcessed: false, order: refundOrder, outcome: "REFUND_REQUIRED" as const, blocker };
+    }
+
     const [paidOrder] = await tx
       .update(orders)
       .set({ status: "PAID", paidAt: sql`now()` })
@@ -211,8 +239,57 @@ export async function confirmPaymentSuccess(input: {
       })
       .onConflictDoNothing();
 
-    return { alreadyProcessed: false, order: paidOrder };
+    return { alreadyProcessed: false, order: paidOrder, outcome: "PAID" as const };
   });
+}
+
+/**
+ * Returns a payment captured for an ineligible greeting (an order in
+ * REFUND_REQUIRED, see confirmPaymentSuccess) through the provider that took
+ * it. Idempotent: a REFUNDED order is left alone, and the order only moves to
+ * REFUNDED once the provider itself reports the full amount refunded.
+ *
+ * TEST refunds deterministically. A real provider whose refundPayment is not
+ * implemented yet (BOG today — see providers/bog-provider.ts) leaves the
+ * order in REFUND_REQUIRED — orders in that status are the manual-refund
+ * queue until that adapter's refund call exists. The payment is never
+ * marked REFUNDED without the provider confirming it.
+ */
+export async function refundIneligiblePayment(orderId: string): Promise<{ status: "REFUNDED" | "REFUND_REQUIRED" }> {
+  const [order] = await withPaymentActivation(orderId, (tx) => tx.select().from(orders).where(eq(orders.id, orderId)).limit(1));
+  if (!order) throw new PaymentConfirmationError(`Order ${orderId} not found`);
+  if (order.status === "REFUNDED") return { status: "REFUNDED" };
+  if (order.status !== "REFUND_REQUIRED") {
+    throw new PaymentConfirmationError(`Order ${orderId} is ${order.status}, not awaiting a refund`);
+  }
+
+  const [payment] = await withPaymentActivation(orderId, (tx) =>
+    tx.select().from(payments).where(and(eq(payments.orderId, orderId), eq(payments.status, "SUCCEEDED"))).limit(1),
+  );
+  const provider = getPaymentProvider();
+  if (!payment?.providerPaymentId || payment.provider !== provider.key) {
+    logServerError("refundIneligiblePayment", new Error("No refundable payment through the configured provider"), { orderId });
+    return { status: "REFUND_REQUIRED" };
+  }
+
+  try {
+    const result = await provider.refundPayment(payment.providerPaymentId, payment.amountMinor);
+    if (result.status !== "REFUNDED" || result.refundedAmountMinor !== payment.amountMinor) {
+      logServerError("refundIneligiblePayment", new Error(`Provider refund ${result.status} for ${result.refundedAmountMinor}`), { orderId });
+      return { status: "REFUND_REQUIRED" };
+    }
+  } catch (err) {
+    // ProviderNotImplementedError: the real provider's refund API isn't
+    // integrated yet — the order stays queued for a manual refund.
+    logServerError("refundIneligiblePayment", err, { orderId, notImplemented: err instanceof ProviderNotImplementedError });
+    return { status: "REFUND_REQUIRED" };
+  }
+
+  await withPaymentActivation(orderId, async (tx) => {
+    await tx.update(payments).set({ status: "REFUNDED" }).where(and(eq(payments.id, payment.id), eq(payments.status, "SUCCEEDED")));
+    await tx.update(orders).set({ status: "REFUNDED" }).where(and(eq(orders.id, orderId), eq(orders.status, "REFUND_REQUIRED")));
+  });
+  return { status: "REFUNDED" };
 }
 
 /**
@@ -328,7 +405,7 @@ export async function verifyAndReconcileOrder(
     );
   }
 
-  await confirmPaymentSuccess({
+  const { outcome } = await confirmPaymentSuccess({
     provider: provider.key,
     providerPaymentId: verification.providerPaymentId,
     orderId,
@@ -336,6 +413,10 @@ export async function verifyAndReconcileOrder(
     currency: verification.currency,
     metadata: verification.metadata,
   });
+  if (outcome === "REFUND_REQUIRED") {
+    const { status } = await refundIneligiblePayment(orderId);
+    return { status, activated: false };
+  }
   const { activated } = await activatePaidOrder(orderId);
   return { status: "PAID", activated };
 }

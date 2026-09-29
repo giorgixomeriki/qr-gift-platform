@@ -7,11 +7,15 @@ import { z } from "zod";
  * into analytics — the union only has fields for counts/ids/durations, never
  * free-text content fields.
  *
- * This is the authoritative V1 commercial funnel (Phase 0.5 §8):
+ * This is the authoritative V1 commercial funnel (Phase 0.5 §8, extended by
+ * the pilot-readiness pass's Phase 6 with THEME_SELECTED/CONTENT_CREATED —
+ * the two stages between CREATION_STARTED and MEDIA_UPLOADED/PREVIEW_VIEWED
+ * that were being created in the DB but never recorded as funnel events):
  *
  *   QR_GENERATED    -> QR_DISTRIBUTED  -> QR_SCANNED -> CREATION_STARTED
- *   -> MEDIA_UPLOADED -> PREVIEW_VIEWED -> CHECKOUT_STARTED
- *   -> PAYMENT_SUCCEEDED -> QR_ACTIVATED -> RECIPIENT_VIEWED -> CONTENT_PLAYED
+ *   -> THEME_SELECTED -> CONTENT_CREATED -> MEDIA_UPLOADED -> PREVIEW_VIEWED
+ *   -> CHECKOUT_STARTED -> PAYMENT_SUCCEEDED -> QR_ACTIVATED
+ *   -> RECIPIENT_VIEWED -> CONTENT_PLAYED
  *
  * QR_GENERATED and QR_DISTRIBUTED are NOT the same event: a QR batch being
  * created (QR_GENERATED) does not mean the physical cards have left the
@@ -23,6 +27,8 @@ export const analyticsEventSchema = z.discriminatedUnion("eventType", [
   z.object({ eventType: z.literal("QR_DISTRIBUTED"), qrCodeId: z.uuid() }),
   z.object({ eventType: z.literal("QR_SCANNED"), qrCodeId: z.uuid() }),
   z.object({ eventType: z.literal("CREATION_STARTED"), qrCodeId: z.uuid(), greetingId: z.uuid() }),
+  z.object({ eventType: z.literal("THEME_SELECTED"), greetingId: z.uuid() }),
+  z.object({ eventType: z.literal("CONTENT_CREATED"), greetingId: z.uuid() }),
   z.object({
     eventType: z.literal("MEDIA_UPLOADED"),
     greetingId: z.uuid(),

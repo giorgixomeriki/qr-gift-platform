@@ -1,5 +1,13 @@
 # Pilot Launch Checklist
 
+> **⚠ NOT ready to accept real customer payments.** Bank of Georgia (or any
+> real payment provider) integration is intentionally unimplemented —
+> `BOGPaymentProvider`'s every method throws by design (see that file and
+> §7 below). Everything else in this checklist can be completed and verified
+> today; §7 is the one section that cannot be checked off until a real
+> provider is actually implemented against official documentation and
+> credentials neither this repo nor this checklist can supply.
+
 Operational, checkable steps for taking QR Gift from "builds and passes
 `verify:*` locally" to "first real Partner, first real paid transaction."
 Check each box only once it is genuinely true in the target environment —
@@ -20,7 +28,14 @@ explains what each one means for a *production* deploy specifically.
       `.env` file.
 - [ ] `DATABASE_URL` — the restricted `app_runtime` Postgres role (never the
       Supabase superuser/`postgres` role) against the **production**
-      Supabase project.
+      Supabase project. **Mandatory step, audit finding F-01:** migration
+      `0001_rls_and_functions.sql` creates this role with a fixed,
+      publicly-committed local-dev password (by design, documented there) —
+      running `npm run db:migrate` against a fresh production database
+      creates that exact known password there too. Immediately after the
+      first production migration run:
+      `ALTER ROLE app_runtime WITH PASSWORD '<fresh output of: openssl rand -base64 32>';`
+      then set this env var to match, before any traffic reaches that database.
 - [ ] `MIGRATIONS_DATABASE_URL` — superuser connection, used only by
       `npm run db:migrate` at deploy time. Not needed by the running app
       server itself — do not expose it to application runtime if the
@@ -279,16 +294,79 @@ For the very first production admin:
 - [ ] Know the payment provider's own support/incident contact once one is
       integrated — you cannot debug their outage from this codebase alone.
 
+## 19. Password reset & account recovery
+
+- [ ] `supabase/config.toml`'s `additional_redirect_urls` includes the real
+      production `NEXT_PUBLIC_APP_URL` (exact match — Supabase rejects a
+      `redirectTo` that isn't allowlisted). Locally this list already
+      includes both `127.0.0.1:3000` and `localhost:3000`; production needs
+      its own real domain added the same way, in the **production**
+      Supabase project's Auth settings (not this local `config.toml`, which
+      only applies to `supabase start`).
+- [ ] A real password-reset email actually arrives (not just Mailpit/Inbucket
+      locally) — depends on §2's real email delivery being configured.
+- [ ] `npm run verify:password-reset` passes against whichever environment
+      you're validating (it exercises the real Supabase Auth recovery flow —
+      no-enumeration, invalid-token rejection, one-time-token replay
+      rejection — directly).
+- [ ] Manually click through: request reset → real email → set new password →
+      log in with it, on both `/admin/login` and `/partner/login`.
+
+## 20. CI/CD
+
+- [ ] `.github/workflows/ci.yml` is green on `main` — see `docs/CI.md` for
+      exactly what it runs (typecheck, lint, build, then every `verify:*`
+      script against a throwaway local Supabase stack it starts and destroys
+      itself). It never touches a real environment and needs no repository
+      secrets configured — confirm this is still true if the workflow is
+      ever extended.
+- [ ] Decide whether e2e (`npm run e2e`, Playwright — see `e2e/`) should also
+      run in CI. It doesn't yet (browser install cost vs. current CI runtime
+      wasn't judged worth it at pilot scale) — this is a reasonable P2 addition
+      once the suite grows past its current focused core-flow coverage.
+
+## Security headers & rate limiting — status, not a gap to fix before pilot
+
+- [ ] Confirm in production: `next.config.ts`'s security headers (CSP,
+      `X-Frame-Options`, HSTS, etc.) are only applied when
+      `NODE_ENV=production` (by design — see that file's own comment on why
+      they break local dev) — a real request to the production domain should
+      show them; `curl -I` the live domain once after deploy to confirm.
+- [ ] **Known gap, not yet closed:** there is no application-level rate
+      limiting on `/admin/login`, `/partner/login`, the password-reset
+      request endpoint, or the payment webhook route. Supabase Auth's own
+      `[auth.rate_limit]` config provides some protection on the auth
+      endpoints themselves (sign-in attempts, email-sending frequency), but
+      nothing in this app's own routes throttles repeated requests.
+      Acceptable for a small first pilot; worth a real rate-limiting layer
+      (e.g. at the reverse-proxy/CDN level, or a Next.js middleware-based
+      limiter) before a wider launch.
+
 ## Summary: what's proven vs. what's still required
 
-**Proven working** (5/5 production builds, 161/161 automated checks,
-browser-verified consumer + admin flows): the entire non-payment-provider
+**Proven working** (production build, 180/180 `verify:*` automated checks,
+20/20 Playwright end-to-end checks across desktop and mobile-viewport
+emulation, real browser-verified consumer + admin flows including login,
+password reset, and locale switching): the entire non-payment-provider
 architecture — QR lifecycle, sender/recipient experience, checkout
 scaffolding with TEST provider, moderation, partner/admin dashboards,
-manual payouts, email-based membership, localization.
+manual payouts (now with a DB-level exclusion constraint closing the
+overlapping-period race), email-based membership with correct pagination
+past 50 users, localization, and CI running the whole automated suite on
+every push.
+
+Two real defects were found and fixed during this pass specifically by
+running the app in a real browser rather than only re-reading code: the
+login form's `router.push`+`router.refresh()` could race Supabase's cookie
+propagation and strand a user back on the login page, and a missing
+`revalidatePath(..., "layout")` meant the KA/EN locale switcher silently did
+nothing. Both are fixed and covered by the e2e suite now.
 
 **Still required before the first real paid transaction**: official BOG (or
 chosen provider) documentation and credentials (§7), then implementing and
-testing the placeholder adapter for real. Nothing else in this checklist is
-blocked on external information — the rest is genuinely just doing the
-listed operational steps.
+testing the placeholder adapter for real. One dependency advisory (`postcss`,
+via Next.js's own bundled copy) remains open — fixing it requires a Next.js
+16 major upgrade that was trialed and reverted after breaking `drizzle-kit`;
+see the implementation report for the full evaluation. Nothing else in this
+checklist is blocked on external information — the rest is genuinely just
+doing the listed operational steps.

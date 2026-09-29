@@ -1,10 +1,14 @@
 import { notFound, redirect } from "next/navigation";
 import { getSessionUser } from "@/lib/auth/session";
-import { withUserContext } from "@/db/client";
+import { checkIsAdmin, withUserContext } from "@/db/client";
 import { getQrBatch, listQrCodesForBatch } from "@/lib/qr/batches";
 import { getPartnerById } from "@/lib/partners/service";
 import { generateQrSvg, publicQrUrl } from "@/lib/qr/asset";
+import { isCredentialReleasable } from "@/lib/qr/credential-access";
+import { recordAuditLog } from "@/lib/audit";
 import { PrintButton } from "@/components/admin/print-button";
+import { Logo } from "@/components/ui/logo";
+import { SetHtmlLang } from "@/components/print/set-html-lang";
 import enMessages from "@/messages/en.json";
 import kaMessages from "@/messages/ka.json";
 import type { Locale } from "@/lib/i18n/config";
@@ -23,18 +27,34 @@ import type { Locale } from "@/lib/i18n/config";
  * rather than a second one — Phase 4 is polish, not a routing restructure —
  * so the `lang` attribute reflects the viewer's locale even though the
  * visible copy below is the partner's; that's a cosmetic gap only.
+ *
+ * Partners can print only still-unclaimed cards: a claimed card's QR is the
+ * key to someone's greeting and no longer an inventory item
+ * (lib/qr/credential-access.ts). Admins can reprint any card. Every print
+ * sheet render is audit logged with how many credentials it released.
  */
+export const dynamic = "force-dynamic";
 export default async function PrintBatchPage({ params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
 
   const user = await getSessionUser();
   if (!user) redirect("/admin/login");
 
+  const viewer = (await checkIsAdmin(user.id)) ? "ADMIN" : "PARTNER";
+
   const data = await withUserContext(user.id, async (tx) => {
     const batch = await getQrBatch(tx, batchId);
     if (!batch) return null;
     const partner = await getPartnerById(tx, batch.partnerId);
-    const qrCodes = await listQrCodesForBatch(tx, batchId);
+    const qrCodes = (await listQrCodesForBatch(tx, batchId)).filter((qr) => isCredentialReleasable(viewer, qr.status));
+    await recordAuditLog(tx, {
+      actorType: viewer,
+      actorId: user.id,
+      action: "QR_BATCH_PRINT_VIEWED",
+      targetType: "qr_batch",
+      targetId: batch.id,
+      metadata: { partnerId: batch.partnerId, credentialsReleased: qrCodes.length },
+    });
     return { batch, partner, qrCodes };
   });
 
@@ -53,57 +73,50 @@ export default async function PrintBatchPage({ params }: { params: Promise<{ bat
   );
 
   return (
-    <div style={{ background: "#f5f5f5", fontFamily: "Georgia, serif", minHeight: "100vh" }}>
-      <div className="print-toolbar" style={{ padding: "16px", textAlign: "center" }}>
-        <PrintButton label={messages.printThisPage} />
+    <div className="min-h-dvh bg-sunken print:bg-white">
+      <SetHtmlLang lang={locale} />
+      <div className="print-toolbar sticky top-0 z-10 border-b border-line bg-surface/90 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-4 px-4 sm:px-6">
+          <div className="min-w-0">
+            <p className="truncate text-label text-ink">{partner.name}</p>
+            <p className="text-caption text-ink-3">{messages.cardCount.replace("{count}", String(cards.length))}</p>
+          </div>
+          <PrintButton label={messages.printThisPage} />
+        </div>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(85mm, 1fr))",
-          gap: "6mm",
-          padding: "8mm",
-        }}
-      >
+      <div className="print-sheet mx-auto grid max-w-5xl justify-center overflow-x-auto gap-[6mm] p-[8mm] [grid-template-columns:repeat(auto-fill,85mm)]">
         {cards.map((card) => (
           <div
             key={card.token}
-            className="print-card"
-            style={{
-              background: "#ffffff",
-              border: "1px solid #000",
-              borderRadius: "3mm",
-              padding: "6mm",
-              width: "85mm",
-              height: "55mm",
-              boxSizing: "border-box",
-              display: "flex",
-              alignItems: "center",
-              gap: "5mm",
-              breakInside: "avoid",
-            }}
+            className="print-card flex h-[55mm] w-[85mm] break-inside-avoid items-center gap-[4mm] rounded-[3mm] bg-white p-[5mm] shadow-sm"
           >
             <div
-              style={{ width: "40mm", height: "40mm", flexShrink: 0 }}
+              className="h-[42mm] w-[42mm] shrink-0 [&_svg]:h-full [&_svg]:w-full"
               // Server-generated SVG from the `qrcode` library (lib/qr/asset.ts) —
               // never user content, safe to embed directly.
               dangerouslySetInnerHTML={{ __html: card.svg }}
             />
-            <div style={{ display: "flex", flexDirection: "column", gap: "2mm", minWidth: 0 }}>
-              <p style={{ margin: 0, fontSize: "11px", fontWeight: "bold", lineHeight: 1.3 }}>{messages.headline}</p>
-              <p style={{ margin: 0, fontSize: "9px", color: "#444" }}>{messages.instruction}</p>
-              <p style={{ margin: 0, fontSize: "8px", color: "#888" }}>{partner.name}</p>
+            <div className="flex h-full min-w-0 flex-col justify-between py-[1mm]">
+              <Logo className="text-[9pt]" />
+              <div className="flex flex-col gap-[1.5mm]">
+                <p className="font-serif text-[11pt] leading-[1.2] text-ink">{messages.headline}</p>
+                <p className="text-[7pt] leading-snug text-ink-2">{messages.instruction}</p>
+              </div>
+              <p className="truncate text-[6.5pt] tracking-wide text-ink-3">{partner.name}</p>
             </div>
           </div>
         ))}
       </div>
 
       <style>{`
+        @page { margin: 8mm; }
         @media print {
           .print-toolbar { display: none; }
-          body { background: #fff; }
-          .print-card { border-color: #000 !important; }
+          .print-sheet { padding: 0; max-width: none; }
+          /* Hairline dashed cut guide instead of a heavy border. */
+          .print-card { box-shadow: none !important; outline: 0.2mm dashed #c9c2b8; outline-offset: 0; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
         }
       `}</style>
     </div>

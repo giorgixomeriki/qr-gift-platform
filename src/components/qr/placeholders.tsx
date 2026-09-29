@@ -1,36 +1,29 @@
 import { getTranslations } from "next-intl/server";
+import { Ban, Hourglass } from "lucide-react";
+import { StatusScreen } from "@/components/flow/status-screen";
+import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
 
 /**
- * Remaining structural placeholders: BLOCKED (moderation — no content to show
- * either way) and a DRAFT visited without edit access (someone else's
- * in-progress draft, or a lost/cleared cookie). The ACTIVE recipient route
- * has a real experience — see components/greeting/recipient-view.tsx.
+ * Terminal QR states that have no greeting to show: BLOCKED (moderation — no
+ * content either way) and a DRAFT visited without edit access (someone
+ * else's in-progress draft, or a lost/cleared cookie). The ACTIVE recipient
+ * route has a real experience — see components/greeting/recipient-view.tsx.
  */
-
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-2 bg-neutral-950 p-8 text-center text-neutral-200">
-      {children}
-    </main>
-  );
-}
 
 export async function DraftNoAccessPlaceholder() {
   const t = await getTranslations("sender.noAccess");
   return (
-    <Shell>
-      <p className="text-lg">{t("title")}</p>
-      <p className="mt-2 max-w-xs text-sm text-neutral-500">{t("body")}</p>
-    </Shell>
+    <StatusScreen
+      icon={<Hourglass aria-hidden />}
+      title={t("title")}
+      body={t("body")}
+      hint={t("hint")}
+      headerEnd={<LocaleSwitcher />}
+    />
   );
 }
 
 export async function BlockedPlaceholder() {
   const t = await getTranslations("qr");
-  return (
-    <Shell>
-      <p className="text-lg">{t("unavailableTitle")}</p>
-      <p className="mt-2 max-w-xs text-sm text-neutral-500">{t("unavailableBody")}</p>
-    </Shell>
-  );
+  return <StatusScreen icon={<Ban aria-hidden />} title={t("unavailableTitle")} body={t("unavailableBody")} headerEnd={<LocaleSwitcher />} />;
 }

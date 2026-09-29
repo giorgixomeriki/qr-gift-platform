@@ -2,7 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { control, fieldLabel, table } from "@/components/dashboard/ui";
+import { Button } from "@/components/ui/button";
+import { formatMinorAmount } from "@/lib/format/money";
 
 type Payout = {
   id: string;
@@ -17,9 +20,6 @@ type Payout = {
 
 type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
-function fmt(d: string | Date) {
-  return new Date(d).toLocaleDateString();
-}
 
 /**
  * Manual payout recording (Phase 5 §16) — accounting inside QR Gift, never a
@@ -43,7 +43,11 @@ export function PayoutManager({
 }) {
   const t = useTranslations("payoutManager");
   const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
+  const money = (minor: number, cur: string) => formatMinorAmount(minor, cur, locale, { fixed: true });
+  const fmt = (d: string | Date) =>
+    new Date(d).toLocaleDateString(locale === "ka" ? "ka-GE" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
   const today = new Date().toISOString().slice(0, 10);
   const [confirming, setConfirming] = useState(false);
   const [amount, setAmount] = useState("");
@@ -77,132 +81,129 @@ export function PayoutManager({
     router.refresh();
   }
 
+  const over = amountValid && amountMinor > unpaidBalanceMinor;
+
   return (
-    <div className="flex flex-col gap-3" data-testid="payout-manager">
-      <div className="rounded border border-neutral-800 p-3">
-        <p className="text-xs uppercase text-neutral-500">{t("unpaidBalance")}</p>
-        <p className="mt-1 text-xl font-semibold text-neutral-100" data-testid="payout-unpaid-balance">
-          {(unpaidBalanceMinor / 100).toFixed(2)} {currency}
-        </p>
+    <div className="flex flex-col" data-testid="payout-manager">
+      <div className="flex flex-wrap items-end justify-between gap-4 p-5">
+        <div>
+          <p className="text-caption text-ink-2">{t("unpaidBalance")}</p>
+          <p className="mt-1 text-[1.75rem] leading-none font-medium tabular-nums" data-testid="payout-unpaid-balance">
+            {money(unpaidBalanceMinor, currency)}
+          </p>
+        </div>
+        {!confirming && (
+          <Button onClick={() => setConfirming(true)} disabled={unpaidBalanceMinor <= 0} data-testid="payout-start">
+            {t("recordButton")}
+          </Button>
+        )}
       </div>
 
-      {!confirming ? (
-        <button
-          type="button"
-          onClick={() => setConfirming(true)}
-          disabled={unpaidBalanceMinor <= 0}
-          className="w-fit rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 disabled:opacity-50"
-          data-testid="payout-start"
-        >
-          {t("recordButton")}
-        </button>
-      ) : (
-        <div className="flex flex-col gap-2 rounded border border-neutral-700 p-3" data-testid="payout-form">
-          <label className="flex flex-col gap-1 text-xs text-neutral-400">
-            {t("amountLabel", { currency, max: (unpaidBalanceMinor / 100).toFixed(2) })}
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-40 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-              data-testid="payout-amount"
-            />
-          </label>
-          <div className="flex gap-2">
-            <label className="flex flex-col gap-1 text-xs text-neutral-400">
-              {t("periodFrom")}
+      {confirming && (
+        <div className="mx-5 mb-5 flex flex-col gap-4 rounded-[var(--radius-md)] bg-paper p-4 ring-1 ring-line" data-testid="payout-form">
+          <p className="text-caption text-ink-2">{t("explainer")}</p>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className={fieldLabel}>
+              <span className="flex items-baseline justify-between gap-2">
+                {t("amountLabel", { currency, max: money(unpaidBalanceMinor, currency) })}
+              </span>
               <input
-                type="date"
-                value={periodFrom}
-                onChange={(e) => setPeriodFrom(e.target.value)}
-                className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-                data-testid="payout-period-from"
+                type="number"
+                inputMode="decimal"
+                step="0.01"
+                min="0.01"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                aria-invalid={over || undefined}
+                className={`${control} tabular-nums aria-invalid:ring-2 aria-invalid:ring-danger`}
+                data-testid="payout-amount"
               />
+              <button
+                type="button"
+                onClick={() => setAmount((unpaidBalanceMinor / 100).toFixed(2))}
+                className="w-fit text-caption font-normal text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+              >
+                {t("useFullBalance")}
+              </button>
             </label>
-            <label className="flex flex-col gap-1 text-xs text-neutral-400">
+            <label className={fieldLabel}>
+              {t("periodFrom")}
+              <input type="date" value={periodFrom} onChange={(e) => setPeriodFrom(e.target.value)} className={control} data-testid="payout-period-from" />
+            </label>
+            <label className={fieldLabel}>
               {t("periodTo")}
-              <input
-                type="date"
-                value={periodTo}
-                onChange={(e) => setPeriodTo(e.target.value)}
-                className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
-                data-testid="payout-period-to"
-              />
+              <input type="date" value={periodTo} onChange={(e) => setPeriodTo(e.target.value)} className={control} data-testid="payout-period-to" />
             </label>
           </div>
-          <label className="flex flex-col gap-1 text-xs text-neutral-400">
+          <label className={fieldLabel}>
             {t("referenceLabel")}
             <input
               value={reference}
               onChange={(e) => setReference(e.target.value)}
               placeholder={t("referencePlaceholder")}
-              className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+              className={control}
               data-testid="payout-reference"
             />
           </label>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={submit}
-              disabled={pending || !amountValid || amountMinor > unpaidBalanceMinor}
-              className="rounded bg-emerald-700 px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
-              data-testid="payout-confirm"
-            >
-              {pending ? "…" : t("confirmButton")}
-            </button>
-            <button
-              type="button"
+          {over && (
+            <p className="text-caption text-danger" role="alert">
+              {t("overBalance")}
+            </p>
+          )}
+          {error && (
+            <p className="text-caption text-danger" role="alert" data-testid="payout-error">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={submit} loading={pending} disabled={!amountValid || over} data-testid="payout-confirm">
+              {t("confirmButton")}
+            </Button>
+            <Button
+              variant="secondary"
               onClick={() => {
                 setConfirming(false);
                 setError(null);
               }}
-              className="rounded border border-neutral-700 px-3 py-1.5 text-xs"
               data-testid="payout-cancel"
             >
               {tCommon("cancel")}
-            </button>
+            </Button>
           </div>
-          {error && (
-            <p className="text-xs text-red-400" data-testid="payout-error">
-              {error}
-            </p>
-          )}
         </div>
       )}
 
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="text-left uppercase text-neutral-500">
-            <th className="py-1">{t("periodHeader")}</th>
-            <th className="py-1">{t("amountHeader")}</th>
-            <th className="py-1">{t("referenceHeader")}</th>
-            <th className="py-1">{t("paidHeader")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {payouts.map((p) => (
-            <tr key={p.id} className="border-t border-neutral-800" data-testid="payout-row">
-              <td className="py-1.5">
-                {fmt(p.periodFrom)} – {fmt(p.periodTo)}
-              </td>
-              <td className="py-1.5">
-                {(p.amountMinor / 100).toFixed(2)} {p.currency}
-              </td>
-              <td className="py-1.5">{p.reference ?? t("noReference")}</td>
-              <td className="py-1.5">{p.paidAt ? fmt(p.paidAt) : t("noReference")}</td>
-            </tr>
-          ))}
-          {payouts.length === 0 && (
+      <div className={`${table.wrap} border-t border-line`}>
+        <table className={table.table}>
+          <thead className={table.thead}>
             <tr>
-              <td colSpan={4} className="py-2 text-neutral-500">
-                {t("noPayouts")}
-              </td>
+              <th className={table.th}>{t("periodHeader")}</th>
+              <th className={`${table.th} text-right`}>{t("amountHeader")}</th>
+              <th className={table.th}>{t("referenceHeader")}</th>
+              <th className={table.th}>{t("paidHeader")}</th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {payouts.map((p) => (
+              <tr key={p.id} className={table.tr} data-testid="payout-row">
+                <td className={`${table.td} whitespace-nowrap`}>
+                  {fmt(p.periodFrom)} – {fmt(p.periodTo)}
+                </td>
+                <td className={`${table.td} text-right tabular-nums`}>{money(p.amountMinor, p.currency)}</td>
+                <td className={`${table.td} text-ink-2`}>{p.reference ?? t("noReference")}</td>
+                <td className={`${table.td} whitespace-nowrap text-ink-2`}>{p.paidAt ? fmt(p.paidAt) : t("noReference")}</td>
+              </tr>
+            ))}
+            {payouts.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-5 py-6 text-center text-caption text-ink-3">
+                  {t("noPayouts")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

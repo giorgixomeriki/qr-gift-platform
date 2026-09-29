@@ -93,19 +93,32 @@ export async function recordManualPayout(
     throw new PayoutError(`Payout amount (${input.amountMinor}) exceeds unpaid balance (${unpaidBalance})`);
   }
 
-  const [payout] = await tx
-    .insert(partnerPayouts)
-    .values({
-      partnerId: input.partnerId,
-      currency: input.currency,
-      amountMinor: input.amountMinor,
-      status: "PAID",
-      periodFrom: input.periodFrom,
-      periodTo: input.periodTo,
-      reference: input.reference,
-      paidAt: sql`now()`,
-    })
-    .returning();
+  let payout: typeof partnerPayouts.$inferSelect | undefined;
+  try {
+    [payout] = await tx
+      .insert(partnerPayouts)
+      .values({
+        partnerId: input.partnerId,
+        currency: input.currency,
+        amountMinor: input.amountMinor,
+        status: "PAID",
+        periodFrom: input.periodFrom,
+        periodTo: input.periodTo,
+        reference: input.reference,
+        paidAt: sql`now()`,
+      })
+      .returning();
+  } catch (err) {
+    // 23P01 = exclusion_violation — the real backstop behind the overlap
+    // check above (migrations/0008_payout_period_exclusion.sql): two
+    // concurrent calls can both pass that SELECT-based pre-check before
+    // either commits, but only one of their INSERTs can satisfy the DB
+    // constraint. Surfaced as the same friendly error either way.
+    if (err && typeof err === "object" && "code" in err && (err as { code?: string }).code === "23P01") {
+      throw new PayoutError("A payout already exists for an overlapping period — this looks like a duplicate");
+    }
+    throw err;
+  }
   if (!payout) throw new PayoutError("Failed to record payout — not authorized");
 
   // Negative PAYOUT entry — this is what reduces the balance (see

@@ -12,11 +12,19 @@ import {
   updatePartnerMemberRoleSchema,
 } from "@/lib/validation/partners";
 import * as partnerService from "./service";
+import { enforceRateLimit } from "@/lib/rate-limit";
+import { logServerError } from "@/lib/log";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 export type AddMemberByEmailResult = { ok: true; invited: boolean } | { ok: false; error: string };
 
-function errorResult(err: unknown): ActionResult {
+function errorResult(scope: string, err: unknown, context: Record<string, string | number | undefined> = {}): ActionResult {
+  logServerError(scope, err, context);
+  return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
+}
+
+function errorResultEmail(scope: string, err: unknown, context: Record<string, string | number | undefined> = {}): AddMemberByEmailResult {
+  logServerError(scope, err, context);
   return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
 }
 
@@ -39,7 +47,7 @@ export async function adminCreatePartnerAction(input: unknown): Promise<ActionRe
     revalidatePath("/admin/partners");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminCreatePartnerAction", err);
   }
 }
 
@@ -52,7 +60,7 @@ export async function adminUpdatePartnerAction(partnerId: string, input: unknown
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminUpdatePartnerAction", err, { partnerId });
   }
 }
 
@@ -64,7 +72,7 @@ export async function adminSetPartnerStatusAction(partnerId: string, status: unk
     revalidatePath("/admin/partners");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminSetPartnerStatusAction", err, { partnerId });
   }
 }
 
@@ -72,6 +80,11 @@ export async function adminSetPartnerStatusAction(partnerId: string, status: unk
 // Membership management — usable from either the admin console (any partner)
 // or a partner's own dashboard (OWNER/ADMIN of THAT partner only, enforced
 // both here and independently by RLS's partner_members_insert/update/delete).
+//
+// The by-email variants send a real invite email via Supabase Auth
+// (resolveOrInviteUserByEmail) — AUTHENTICATION-ADJACENT abuse surface (a
+// script could otherwise spam invite emails to arbitrary addresses under an
+// authenticated admin/OWNER session). Rate-limited by the acting user's id.
 // ---------------------------------------------------------------------------
 
 export async function adminAddPartnerMemberAction(partnerId: string, input: unknown): Promise<ActionResult> {
@@ -83,20 +96,21 @@ export async function adminAddPartnerMemberAction(partnerId: string, input: unkn
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminAddPartnerMemberAction", err, { partnerId });
   }
 }
 
 export async function adminAddPartnerMemberByEmailAction(partnerId: string, input: unknown): Promise<AddMemberByEmailResult> {
   try {
     const parsed = addPartnerMemberByEmailSchema.parse(input);
-    const result = await requireAdmin((tx, adminUserId) =>
-      partnerService.addPartnerMemberByEmail(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed),
-    );
+    const result = await requireAdmin(async (tx, adminUserId) => {
+      await enforceRateLimit({ key: `member-invite:${adminUserId}`, limit: 20, windowSeconds: 60 });
+      return partnerService.addPartnerMemberByEmail(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed);
+    });
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true, invited: result.invited };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
+    return errorResultEmail("adminAddPartnerMemberByEmailAction", err, { partnerId });
   }
 }
 
@@ -119,7 +133,7 @@ export async function adminUpdatePartnerMemberRoleAction(
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminUpdatePartnerMemberRoleAction", err, { partnerId, memberUserId });
   }
 }
 
@@ -131,7 +145,7 @@ export async function adminRemovePartnerMemberAction(partnerId: string, memberUs
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("adminRemovePartnerMemberAction", err, { partnerId, memberUserId });
   }
 }
 
@@ -140,12 +154,13 @@ export async function partnerAddMemberByEmailAction(input: unknown): Promise<Add
     const parsed = addPartnerMemberByEmailSchema.parse(input);
     const result = await requirePartnerContext(async (tx, ctx) => {
       requireManageRole(ctx.role);
+      await enforceRateLimit({ key: `member-invite:${ctx.userId}`, limit: 20, windowSeconds: 60 });
       return partnerService.addPartnerMemberByEmail(tx, { actorType: "PARTNER", actorId: ctx.userId }, ctx.partnerId, parsed);
     });
     revalidatePath("/partner/dashboard");
     return { ok: true, invited: result.invited };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
+    return errorResultEmail("partnerAddMemberByEmailAction", err);
   }
 }
 
@@ -159,7 +174,7 @@ export async function partnerAddMemberAction(input: unknown): Promise<ActionResu
     revalidatePath("/partner/dashboard");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("partnerAddMemberAction", err);
   }
 }
 
@@ -179,7 +194,7 @@ export async function partnerUpdateMemberRoleAction(memberUserId: string, role: 
     revalidatePath("/partner/dashboard");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("partnerUpdateMemberRoleAction", err, { memberUserId });
   }
 }
 
@@ -192,6 +207,6 @@ export async function partnerRemoveMemberAction(memberUserId: string): Promise<A
     revalidatePath("/partner/dashboard");
     return { ok: true };
   } catch (err) {
-    return errorResult(err);
+    return errorResult("partnerRemoveMemberAction", err, { memberUserId });
   }
 }

@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { getLocale } from "next-intl/server";
 import { env } from "@/lib/env";
@@ -19,9 +19,28 @@ import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/pl
  * (architecture plan §2, §5). Deliberately has no layout chrome of its own —
  * the root layout is already bare, so this renders truly fullscreen with
  * nothing SaaS-shaped around it.
+ *
+ * Forced dynamic (Phase 2 hardening pass): the "draft"/"active" branches
+ * already call cookies(), which opts them out of caching on their own — but
+ * the "available" branch (a never-before-scanned QR) calls neither cookies()
+ * nor any other dynamic API, so without this it could be picked up by the
+ * Full Route Cache and served stale to the next scan of the same physical
+ * code after its state has already moved on (e.g. after someone else starts
+ * filling it in). This is a staleness/correctness guarantee, not a
+ * cross-tenant leak — the token is already part of the path, so any cache
+ * would be scoped per-token, never shared across different Greetings.
  */
-export default async function QrEntryPage({ params }: { params: Promise<{ token: string }> }) {
+export const dynamic = "force-dynamic";
+
+export default async function QrEntryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<{ step?: string | string[] }>;
+}) {
   const { token } = await params;
+  const { step } = await searchParams;
   const resolution = await resolveQrState(token);
   const locale = await getLocale();
 
@@ -58,6 +77,14 @@ export default async function QrEntryPage({ params }: { params: Promise<{ token:
         const videoRow = draft.content.find((c) => c.type === "video" && c.signedUrl);
         const audioRow = draft.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = draft.content.find((c) => c.type === "text");
+
+        // A message is required before preview/checkout. The server refuses
+        // to create an order without one anyway (lib/payments/eligibility.ts);
+        // this just sends a direct link to those steps back to the message
+        // step instead of showing a checkout that can only fail.
+        if ((step === "preview" || step === "checkout") && !textRow?.textValue?.trim()) {
+          redirect(`/g/${encodeURIComponent(token)}?step=message`);
+        }
 
         const initial: WizardInitialState = {
           greetingId: resolution.greetingId,

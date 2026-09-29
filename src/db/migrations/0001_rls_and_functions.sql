@@ -11,6 +11,16 @@
 -- demo JWT secret, etc). It must be rotated before any non-local deployment —
 -- see README. It is never used to authenticate anything except this local
 -- Postgres instance.
+--
+-- IMPORTANT (audit finding F-01): because this migration is forward-only and
+-- immutable, running `npm run db:migrate` against a FRESH production/staging
+-- database creates app_runtime with this exact, publicly-visible password —
+-- migrations cannot "skip" this line for production. The mandatory step
+-- immediately after the first production migration run is:
+--   ALTER ROLE app_runtime WITH PASSWORD '<fresh output of: openssl rand -base64 32>';
+-- then update that environment's DATABASE_URL secret to match, before any
+-- application traffic is pointed at that database. See
+-- docs/PILOT_LAUNCH_CHECKLIST.md §1/§3 for this as an explicit deploy-runbook step.
 do $$
 begin
   if not exists (select 1 from pg_roles where rolname = 'app_runtime') then

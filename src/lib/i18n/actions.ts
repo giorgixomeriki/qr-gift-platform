@@ -17,5 +17,10 @@ export async function setLocaleAction(locale: string, path: string): Promise<voi
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  revalidatePath(path);
+  // "layout", not the default "page": getLocale() runs in the ROOT layout
+  // (src/app/layout.tsx), not in any page component. revalidatePath(path)
+  // alone only busts the page segment's cache, leaving the layout — and the
+  // messages/locale it hands to NextIntlClientProvider — stale, so a locale
+  // switch would silently do nothing on the very next render.
+  revalidatePath(path, "layout");
 }

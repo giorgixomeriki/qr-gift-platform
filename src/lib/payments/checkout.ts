@@ -3,7 +3,8 @@ import { and, desc, eq } from "drizzle-orm";
 import { withEditableGreeting, withPaymentActivation } from "@/db/client";
 import { orders, payments, qrCodes } from "@/db/schema";
 import { verifyGreetingEditAccess } from "@/lib/greetings/access";
-import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFailed, createPaymentAttempt, verifyAndReconcileOrder } from "./service";
+import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFailed, createPaymentAttempt, verifyAndReconcileOrder, refundIneligiblePayment } from "./service";
+import { assertGreetingPurchasable } from "./eligibility";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { env } from "@/lib/env";
 
@@ -59,6 +60,12 @@ export async function getOrCreateCheckoutOrder(
     }
     return { summary: toSummary(latest), recovered: true };
   }
+
+  // Everything below either opens a payment attempt or creates an order, so
+  // the greeting must be purchasable right now (message present, not
+  // blocked, partner not suspended) — checked server-side, never trusting
+  // that the wizard's own steps were followed (e.g. a direct ?step=checkout).
+  await assertGreetingPurchasable(greetingId);
 
   if (latest?.status === "PENDING_PAYMENT" && qrPublicToken) {
     // Re-entry: for a real (non-TEST) provider, the previous redirect URL may
@@ -131,7 +138,7 @@ export async function simulateTestPayment(
   editToken: string,
   outcome: "success" | "failure",
 ): Promise<{ status: "PAID" | "FAILED"; activated: boolean }> {
-  if (env.PAYMENTS_PROVIDER !== "TEST" || env.NODE_ENV === "production") {
+  if (env.PAYMENTS_PROVIDER !== "TEST" || env.NODE_ENV === "production" || !env.ALLOW_TEST_PAYMENTS) {
     throw new CheckoutEntryError("TEST payment simulation is not available in this environment");
   }
 
@@ -152,13 +159,22 @@ export async function simulateTestPayment(
   );
   if (!pendingPayment?.providerPaymentId) throw new CheckoutEntryError("No pending payment found for this order");
 
-  await confirmPaymentSuccess({
+  // Refuse before "charging" rather than charge-then-refund whenever the
+  // ineligibility is already known; confirmPaymentSuccess re-checks under a
+  // lock for anything that changes in between.
+  await assertGreetingPurchasable(greetingId);
+
+  const confirmation = await confirmPaymentSuccess({
     provider: "TEST",
     providerPaymentId: pendingPayment.providerPaymentId,
     orderId: order.id,
     amountMinor: order.grossAmountMinor,
     currency: order.currency,
   });
+  if (confirmation.outcome === "REFUND_REQUIRED") {
+    await refundIneligiblePayment(order.id);
+    throw new CheckoutEntryError("This greeting can no longer be activated — the payment was returned");
+  }
   await recordAnalyticsEvent({ eventType: "PAYMENT_SUCCEEDED", orderId: order.id, greetingId }, { partnerId: order.partnerId });
 
   const { activated } = await activatePaidOrder(order.id);

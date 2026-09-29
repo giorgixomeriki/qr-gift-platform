@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID, timingSafeEqual } from "node:crypto";
 import type {
   PaymentProvider,
   CreatePaymentInput,
@@ -35,8 +35,19 @@ function decodePaymentId(providerPaymentId: string): { amountMinor: number; curr
   return { amountMinor: Number(match[1]), currency: match[2]! };
 }
 
+/** Header carrying a TEST webhook's signature: hex HMAC-SHA256 of the raw request body. */
+export const TEST_WEBHOOK_SIGNATURE_HEADER = "x-test-webhook-signature";
+
+/** Signs a TEST webhook body — for local tooling and automated tests that play the provider's part. */
+export function signTestWebhook(rawBody: string, secret: string): string {
+  return createHmac("sha256", secret).update(rawBody).digest("hex");
+}
+
 export class TestPaymentProvider implements PaymentProvider {
   readonly key = "TEST" as const;
+
+  /** Without a secret the TEST webhook refuses every call — it is never an open "mark this paid" endpoint. */
+  constructor(private readonly webhookSecret?: string) {}
 
   async createPayment(input: CreatePaymentInput): Promise<CreatePaymentResult> {
     return {
@@ -56,7 +67,14 @@ export class TestPaymentProvider implements PaymentProvider {
     };
   }
 
-  async handleWebhook(rawBody: string): Promise<WebhookResult> {
+  async handleWebhook(rawBody: string, headers: Headers): Promise<WebhookResult> {
+    if (!this.webhookSecret) throw new Error("TEST webhook is disabled (TEST_PAYMENTS_WEBHOOK_SECRET not set)");
+    const presented = Buffer.from(headers.get(TEST_WEBHOOK_SIGNATURE_HEADER) ?? "", "utf8");
+    const expected = Buffer.from(signTestWebhook(rawBody, this.webhookSecret), "utf8");
+    if (presented.length !== expected.length || !timingSafeEqual(presented, expected)) {
+      throw new Error("TEST webhook signature invalid");
+    }
+
     const parsed = JSON.parse(rawBody) as { orderId: string; providerPaymentId: string };
     const { amountMinor, currency } = decodePaymentId(parsed.providerPaymentId);
     return {

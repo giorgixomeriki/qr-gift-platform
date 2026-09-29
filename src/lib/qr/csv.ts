@@ -3,6 +3,8 @@ import { publicQrUrl } from "./asset";
 
 export type QrInventoryCsvRow = {
   publicToken: string;
+  /** Defaults to the card's public URL; "" when the credential isn't released to this viewer. */
+  publicUrl?: string;
   batchLabel: string;
   partnerName: string;
   status: string;
@@ -44,7 +46,7 @@ export function buildQrInventoryCsv(rows: QrInventoryCsvRow[]): string {
     .map((row) =>
       toRow([
         row.publicToken,
-        publicQrUrl(row.publicToken),
+        row.publicUrl ?? publicQrUrl(row.publicToken),
         row.batchLabel,
         row.partnerName,
         row.status,

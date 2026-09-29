@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { getTranslations } from "next-intl/server";
+import { Layers, Store } from "lucide-react";
+import { getLocale, getTranslations } from "next-intl/server";
 import { getSessionUser } from "@/lib/auth/session";
 import {
   listMyPartnerMembershipsWithNames,
@@ -8,23 +9,17 @@ import {
   ACTIVE_PARTNER_COOKIE,
 } from "@/lib/auth/partner-context";
 import { getPartnerMetrics } from "@/lib/dashboard/partner-metrics";
+import { formatMinorAmount } from "@/lib/format/money";
 import { listPartnerMembers, getPartnerById } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
+import { toInventoryRow } from "@/lib/qr/credential-access";
+import { EmptyState, PageHeader, Panel, Stat, StatGroup } from "@/components/dashboard/ui";
 import { PartnerSwitcher } from "@/components/partners/partner-switcher";
 import { MembershipManager } from "@/components/partners/membership-manager";
 import { CreateBatchForm } from "@/components/qr/create-batch-form";
-import { InventoryTable } from "@/components/qr/inventory-table";
+import { BatchBlock } from "@/components/qr/batch-block";
 import { partnerAddMemberByEmailAction, partnerUpdateMemberRoleAction, partnerRemoveMemberAction } from "@/lib/partners/actions";
 import { partnerCreateBatchAction, partnerMarkDistributedAction } from "@/lib/qr/actions";
-
-function Stat({ label, value, testId }: { label: string; value: string | number; testId: string }) {
-  return (
-    <div className="rounded border border-neutral-200 bg-white p-4" data-testid={testId}>
-      <p className="text-xs uppercase text-neutral-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold text-neutral-900">{value}</p>
-    </div>
-  );
-}
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"] as const;
 
@@ -42,12 +37,11 @@ export default async function PartnerDashboardPage() {
   const memberships = await listMyPartnerMembershipsWithNames(user.id);
   if (memberships.length === 0) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-lg font-medium text-neutral-900">{t("dashboard.title")}</h1>
-        <p className="text-sm text-neutral-600">{t("signedInAs", { email: user.email ?? "" })}</p>
-        <p className="text-sm text-neutral-500" data-testid="no-memberships">
-          {t("dashboard.noMemberships")}
-        </p>
+      <div className="flex flex-col gap-8">
+        <PageHeader title={t("dashboard.title")} description={t("signedInAs", { email: user.email ?? "" })} />
+        <Panel>
+          <EmptyState icon={<Store aria-hidden />} title={t("dashboard.noMembershipsTitle")} body={t("dashboard.noMemberships")} testId="no-memberships" />
+        </Panel>
       </div>
     );
   }
@@ -63,7 +57,11 @@ export default async function PartnerDashboardPage() {
     const members = await listPartnerMembers(tx, ctx.partnerId);
     const batches = await listQrBatches(tx, ctx.partnerId);
     const batchesWithCodes = await Promise.all(
-      batches.map(async (batch) => ({ batch, qrCodes: await listQrCodesForBatch(tx, batch.id) })),
+      batches.map(async (batch) => ({
+        batch: { id: batch.id, label: batch.label },
+        // Credentials only for still-unclaimed cards (lib/qr/credential-access.ts).
+        qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "PARTNER")),
+      })),
     );
     return { partner, metrics, members, batchesWithCodes, role: ctx.role };
   }, activePartnerId);
@@ -71,84 +69,88 @@ export default async function PartnerDashboardPage() {
   const canManage = (MANAGE_ROLES as readonly string[]).includes(data.role);
   const td = await getTranslations("partner.dashboard");
   const tRole = await getTranslations("enums.partnerRole");
+  const locale = await getLocale();
+  const currency = data.partner?.currency ?? "GEL";
+  const money = (minor: number) => formatMinorAmount(minor, currency, locale, { fixed: true });
 
   return (
-    <div className="flex flex-col gap-8" data-testid="partner-dashboard-page">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-lg font-medium text-neutral-900">{data.partner?.name ?? td("title")}</h1>
-          <p className="text-xs uppercase tracking-wide text-neutral-400">{td("title")}</p>
-          <p className="mt-1 text-sm text-neutral-600">{td("roleLine", { email: user.email ?? "", role: tRole(data.role as "OWNER" | "ADMIN" | "STAFF" | "VIEWER") })}</p>
-        </div>
-        <PartnerSwitcher memberships={memberships} activePartnerId={activePartnerId} />
-      </div>
+    <div className="flex flex-col gap-10" data-testid="partner-dashboard-page">
+      <PageHeader
+        eyebrow={td("title")}
+        title={data.partner?.name ?? td("title")}
+        description={td("roleLine", { email: user.email ?? "", role: tRole(data.role as "OWNER" | "ADMIN" | "STAFF" | "VIEWER") })}
+        actions={<PartnerSwitcher memberships={memberships} activePartnerId={activePartnerId} />}
+      />
 
       {/* Hierarchy matches the actual business flow (Phase 4 §14): Distributed
           QR → Customer activation → Partner commission — not a flat grid of
           equally-weighted numbers. */}
-      <div className="flex flex-col gap-5">
-        <div>
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">{td("qrCardsTitle")}</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Stat label={td("stats.issued")} value={data.metrics.qrIssued} testId="metric-issued" />
-            <Stat label={td("stats.distributed")} value={data.metrics.qrDistributed} testId="metric-distributed" />
-            <Stat label={td("stats.scanned")} value={data.metrics.qrScanned} testId="metric-scanned" />
-            <Stat label={td("stats.available")} value={data.metrics.qrAvailable} testId="metric-available" />
-          </div>
-        </div>
+      <div className="flex flex-col gap-8">
+        <StatGroup title={td("salesCommissionTitle")}>
+          <Stat label={td("stats.successfulSales")} value={data.metrics.successfulSales} testId="metric-sales" />
+          <Stat label={td("stats.commissionEarned")} value={money(data.metrics.commissionEarnedMinor)} testId="metric-commission-earned" />
+          <Stat label={td("stats.commissionPaid")} value={money(data.metrics.commissionPaidMinor)} testId="metric-commission-paid" />
+          <Stat
+            label={td("stats.unpaidBalance")}
+            value={money(data.metrics.commissionUnpaidMinor)}
+            tone="accent"
+            testId="metric-commission-unpaid"
+          />
+        </StatGroup>
 
-        <div>
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">{td("salesCommissionTitle")}</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Stat label={td("stats.successfulSales")} value={data.metrics.successfulSales} testId="metric-sales" />
-            <Stat label={td("stats.commissionEarned")} value={(data.metrics.commissionEarnedMinor / 100).toFixed(2)} testId="metric-commission-earned" />
-            <Stat label={td("stats.commissionPaid")} value={(data.metrics.commissionPaidMinor / 100).toFixed(2)} testId="metric-commission-paid" />
-            <Stat label={td("stats.unpaidBalance")} value={(data.metrics.commissionUnpaidMinor / 100).toFixed(2)} testId="metric-commission-unpaid" />
-          </div>
-        </div>
+        <StatGroup title={td("qrCardsTitle")}>
+          <Stat label={td("stats.issued")} value={data.metrics.qrIssued} testId="metric-issued" />
+          <Stat label={td("stats.distributed")} value={data.metrics.qrDistributed} testId="metric-distributed" />
+          <Stat label={td("stats.scanned")} value={data.metrics.qrScanned} testId="metric-scanned" />
+          <Stat label={td("stats.available")} value={data.metrics.qrAvailable} testId="metric-available" />
+        </StatGroup>
 
-        <div>
-          <h2 className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-500">{td("otherTitle")}</h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            <Stat label={td("stats.draft")} value={data.metrics.qrDraft} testId="metric-draft" />
-            <Stat label={td("stats.active")} value={data.metrics.qrActive} testId="metric-active" />
-            <Stat label={td("stats.batches")} value={data.metrics.batchCount} testId="metric-batch-count" />
-          </div>
-        </div>
+        <StatGroup title={td("otherTitle")} columns={3}>
+          <Stat label={td("stats.draft")} value={data.metrics.qrDraft} testId="metric-draft" />
+          <Stat label={td("stats.active")} value={data.metrics.qrActive} testId="metric-active" />
+          <Stat label={td("stats.batches")} value={data.metrics.batchCount} testId="metric-batch-count" />
+        </StatGroup>
       </div>
 
+      <section className="flex flex-col gap-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+          <h2 className="text-h2">{td("batchesTitle")}</h2>
+          <span className="text-caption text-ink-3">{td("batchesHint")}</span>
+        </div>
+
+        {canManage && (
+          <Panel title={td("createBatchTitle")}>
+            <CreateBatchForm createAction={partnerCreateBatchAction} />
+          </Panel>
+        )}
+
+        {data.batchesWithCodes.map(({ batch, qrCodes }, index) => (
+          <BatchBlock
+            key={batch.id}
+            batch={batch}
+            qrCodes={qrCodes}
+            countLabel={td("codesCount", { count: qrCodes.length })}
+            defaultOpen={index === 0}
+            markDistributedAction={partnerMarkDistributedAction}
+          />
+        ))}
+        {data.batchesWithCodes.length === 0 && (
+          <Panel>
+            <EmptyState icon={<Layers aria-hidden />} title={td("noBatches")} body={canManage ? td("noBatchesHint") : undefined} />
+          </Panel>
+        )}
+      </section>
+
       {canManage && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-neutral-700">{td("membershipTitle")}</h2>
+        <Panel title={td("membershipTitle")} description={td("membershipHint")} flush>
           <MembershipManager
             members={data.members}
             addAction={partnerAddMemberByEmailAction}
             updateRoleAction={partnerUpdateMemberRoleAction}
             removeAction={partnerRemoveMemberAction}
           />
-        </section>
+        </Panel>
       )}
-
-      {canManage && (
-        <section className="flex flex-col gap-2">
-          <h2 className="text-sm font-medium text-neutral-700">{td("createBatchTitle")}</h2>
-          <CreateBatchForm createAction={partnerCreateBatchAction} />
-        </section>
-      )}
-
-      <section className="flex flex-col gap-4">
-        <h2 className="text-sm font-medium text-neutral-700">{td("batchesTitle")}</h2>
-        {data.batchesWithCodes.map(({ batch, qrCodes }) => (
-          <div key={batch.id} className="rounded border border-neutral-200 bg-white p-4" data-testid="batch-block">
-            <div className="mb-2 flex items-baseline justify-between">
-              <h3 className="text-sm font-medium">{batch.label}</h3>
-              <span className="text-xs text-neutral-500">{td("codesCount", { count: qrCodes.length })}</span>
-            </div>
-            <InventoryTable batchId={batch.id} rows={qrCodes} markDistributedAction={partnerMarkDistributedAction} />
-          </div>
-        ))}
-        {data.batchesWithCodes.length === 0 && <p className="text-xs text-neutral-500">{td("noBatches")}</p>}
-      </section>
     </div>
   );
 }

@@ -31,8 +31,11 @@ npm run dev
 - `npm run verify:phase1` / `verify:phase2` / `verify:phase3` / `verify:phase4`
   — the same pattern, covering each phase's own security invariants (RLS
   tenant isolation, edit-token auth, checkout/payment integrity, moderation
-  authorization). All five `verify:*` scripts load `.env.local` themselves
-  (via `node --env-file`), so `npm run verify:phase4` etc. work standalone.
+  authorization). The `verify:*`, `db:*` and `e2e` scripts load `.env.local`
+  themselves when it exists (`node --env-file-if-exists`, Node >= 22.9), so
+  `npm run verify:phase4` etc. work standalone locally; in CI, where there is
+  no `.env.local`, the same scripts read the job's environment instead.
+  Variables already set in the environment always win over the file.
 - `npm run db:generate` — regenerate a Drizzle migration after a schema change
 - `npm run build && npm start` — production build and serve; see below.
 

@@ -12,3 +12,4 @@ export * from "./partner-ledger";
 export * from "./reports";
 export * from "./audit-log";
 export * from "./analytics";
+export * from "./rate-limit";

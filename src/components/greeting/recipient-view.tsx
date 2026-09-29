@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
+import { CircleCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import { getThemeConfig, type ThemeKey } from "@/lib/themes/registry";
@@ -34,12 +35,15 @@ export function RecipientView({
       senderBanner={
         isOriginalSender ? (
           <div
-            className="flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-xs text-white backdrop-blur"
+            className="flex max-w-md items-start gap-3 rounded-[var(--radius-lg)] bg-surface/95 px-4 py-3 text-left text-ink shadow-md ring-1 ring-black/5 backdrop-blur-md"
             data-testid="sender-success-banner"
             role="status"
           >
-            <span aria-hidden="true">❤️</span>
-            <span>{t("banner")}</span>
+            <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+            <div className="min-w-0">
+              <p className="text-label">{t("title")}</p>
+              <p className="mt-0.5 text-caption text-ink-2">{t("banner")}</p>
+            </div>
           </div>
         ) : undefined
       }

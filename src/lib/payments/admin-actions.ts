@@ -7,8 +7,14 @@ import { recordAnalyticsEvent } from "@/lib/analytics";
 import { withPublicContext } from "@/db/client";
 import { orders, qrCodes } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { logServerError } from "@/lib/log";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
+
+function errorResult(scope: string, err: unknown, context: Record<string, string | number | undefined> = {}): ActionResult<never> {
+  logServerError(scope, err, context);
+  return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
+}
 
 /**
  * Operational reconciliation (Phase 3 §7): finds every PAID order whose
@@ -35,7 +41,7 @@ export async function reconcileActivationsAction(): Promise<ActionResult<{ check
     revalidatePath("/admin/dashboard");
     return { ok: true, data: { checked: stuck.length, activated } };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
+    return errorResult("reconcileActivationsAction", err);
   }
 }
 
@@ -62,6 +68,6 @@ export async function adminReconcilePaymentAction(orderId: string): Promise<Acti
     revalidatePath("/admin/dashboard");
     return { ok: true, data: result };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
+    return errorResult("adminReconcilePaymentAction", err, { orderId });
   }
 }

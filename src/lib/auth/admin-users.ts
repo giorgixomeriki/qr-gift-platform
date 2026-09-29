@@ -25,16 +25,40 @@ export class UserResolutionError extends Error {}
  * (Supabase Auth), not a new invitation system: no new table, no new email
  * templates, no token management of our own.
  *
- * listUsers() is unpaginated here deliberately — fine for a single pilot's
- * user count, and avoids inventing a search-by-email API call that may or
- * may not exist across supabase-js versions; revisit if the user base grows
- * enough that scanning the full list becomes slow.
+ * Audit finding F-03: `listUsers()` is paginated by Supabase (50/page by
+ * default) — a lookup that only ever reads page 1 silently stops finding
+ * existing users once the project passes ~50 total Auth users, at which
+ * point it would start re-inviting people who already have an account
+ * instead of resolving to their existing id. This walks every page (bounded
+ * by MAX_PAGES as a structural safety cap, not an expected real limit) until
+ * a match is found or the list is exhausted.
  */
-export async function resolveOrInviteUserByEmail(email: string): Promise<{ userId: string; invited: boolean }> {
-  const { data: list, error: listError } = await authAdminClient.auth.admin.listUsers();
-  if (listError) throw new UserResolutionError(`Could not look up existing users: ${listError.message}`);
+async function findExistingUserByEmail(email: string, pageSize: number) {
+  const MAX_PAGES = 200; // 200 * pageSize users — far beyond any plausible pilot/near-term user base.
+  const lowerEmail = email.toLowerCase();
 
-  const existing = list.users.find((u) => u.email?.toLowerCase() === email.toLowerCase());
+  for (let page = 1; page <= MAX_PAGES; page++) {
+    const { data: list, error: listError } = await authAdminClient.auth.admin.listUsers({ page, perPage: pageSize });
+    if (listError) throw new UserResolutionError(`Could not look up existing users: ${listError.message}`);
+
+    const match = list.users.find((u) => u.email?.toLowerCase() === lowerEmail);
+    if (match) return match;
+
+    // Fewer users than a full page means this was the last page — no need to
+    // ask for a page that can only come back empty.
+    if (list.users.length < pageSize) return null;
+  }
+  throw new UserResolutionError(`User lookup exceeded ${MAX_PAGES} pages — the Auth user base has grown beyond what this scan is bounded for`);
+}
+
+/**
+ * @param pageSize Page size used while scanning for an existing user.
+ * Production callers should leave this at its default; it's an explicit
+ * parameter only so tests can force multi-page pagination cheaply without
+ * seeding hundreds of fixture users.
+ */
+export async function resolveOrInviteUserByEmail(email: string, pageSize = 200): Promise<{ userId: string; invited: boolean }> {
+  const existing = await findExistingUserByEmail(email, pageSize);
   if (existing) return { userId: existing.id, invited: false };
 
   const { data, error } = await authAdminClient.auth.admin.inviteUserByEmail(email, {

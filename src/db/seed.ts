@@ -57,6 +57,9 @@ async function main() {
       { key: "romantic", name: "Romantic", config: { palette: "rose-dusk", reveal: "envelope" } },
       { key: "birthday", name: "Birthday", config: { palette: "warm-confetti", reveal: "balloon" } },
       { key: "minimal", name: "Minimal", config: { palette: "mono", reveal: "fade" } },
+      { key: "wedding", name: "Wedding", config: { palette: "ivory-sage", reveal: "envelope" } },
+      { key: "celebration", name: "Celebration", config: { palette: "midnight-stars", reveal: "balloon" } },
+      { key: "elegant", name: "Elegant", config: { palette: "noir-gold", reveal: "fade" } },
     ])
     .onConflictDoNothing();
 

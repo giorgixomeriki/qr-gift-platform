@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { control, fieldLabel, table } from "@/components/dashboard/ui";
+import { Button } from "@/components/ui/button";
 
 type Member = { userId: string; role: string };
 type ActionResult = { ok: true } | { ok: false; error: string };
@@ -47,7 +49,7 @@ export function MembershipManager({
     setPending(true);
     setError(null);
     setNotice(null);
-    const result = await addAction({ email, role });
+    const result = await addAction({ email: email.trim(), role });
     setPending(false);
     if (!result.ok) {
       setError(result.error);
@@ -79,74 +81,78 @@ export function MembershipManager({
   }
 
   return (
-    <div className="flex flex-col gap-3" data-testid="membership-manager">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs uppercase text-neutral-500">
-            <th className="py-1">{t("userIdHeader")}</th>
-            <th className="py-1">{t("roleHeader")}</th>
-            <th className="py-1" />
-          </tr>
-        </thead>
-        <tbody>
-          {members.map((m) => (
-            <tr key={m.userId} className="border-t border-neutral-800" data-testid="membership-row">
-              <td className="py-1 font-mono text-xs">{m.userId}</td>
-              <td className="py-1">
-                <select
-                  value={m.role}
-                  onChange={(e) => handleRoleChange(m.userId, e.target.value)}
-                  className="rounded border border-neutral-700 bg-neutral-900 px-1 py-0.5 text-xs"
-                  data-testid="membership-role-select"
-                >
-                  {ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {tRole(r)}
-                    </option>
-                  ))}
-                </select>
-              </td>
-              <td className="py-1">
-                <button
-                  type="button"
-                  onClick={() => handleRemove(m.userId)}
-                  className="text-xs text-red-400 underline"
-                  data-testid="membership-remove"
-                >
-                  {t("remove")}
-                </button>
-              </td>
-            </tr>
-          ))}
-          {members.length === 0 && (
+    <div className="flex flex-col" data-testid="membership-manager">
+      <div className={table.wrap}>
+        <table className={table.table}>
+          <thead className={table.thead}>
             <tr>
-              <td colSpan={3} className="py-2 text-xs text-neutral-500">
-                {t("noMembers")}
-              </td>
+              <th className={table.th}>{t("userIdHeader")}</th>
+              <th className={table.th}>{t("roleHeader")}</th>
+              <th className={table.th}>
+                <span className="sr-only">{t("remove")}</span>
+              </th>
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {members.map((m) => (
+              <tr key={m.userId} className={table.tr} data-testid="membership-row">
+                <td className={`${table.td} max-w-56 truncate font-mono text-caption text-ink-2`} title={m.userId}>
+                  {m.userId}
+                </td>
+                <td className={table.td}>
+                  <select
+                    value={m.role}
+                    onChange={(e) => handleRoleChange(m.userId, e.target.value)}
+                    aria-label={t("roleHeader")}
+                    className={`${control} h-9 w-40`}
+                    data-testid="membership-role-select"
+                  >
+                    {ROLES.map((r) => (
+                      <option key={r} value={r}>
+                        {tRole(r)}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+                <td className={`${table.td} text-right`}>
+                  <Button size="sm" variant="danger" onClick={() => handleRemove(m.userId)} data-testid="membership-remove">
+                    {t("remove")}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+            {members.length === 0 && (
+              <tr>
+                <td colSpan={3} className="px-5 py-6 text-center text-caption text-ink-3">
+                  {t("noMembers")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-      <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2" data-testid="add-member-form">
-        <label className="flex flex-col gap-1 text-xs text-neutral-400">
+      <form onSubmit={handleAdd} className="grid gap-3 border-t border-line p-5 sm:grid-cols-[minmax(0,1fr)_11rem_auto] sm:items-end" data-testid="add-member-form">
+        <label className={fieldLabel}>
           {t("emailLabel")}
           <input
             required
             type="email"
+            inputMode="email"
+            autoCapitalize="none"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t("emailPlaceholder")}
-            className="w-72 rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+            className={control}
             data-testid="add-member-email"
           />
         </label>
-        <label className="flex flex-col gap-1 text-xs text-neutral-400">
+        <label className={fieldLabel}>
           {t("roleLabel")}
           <select
             value={role}
             onChange={(e) => setRole(e.target.value as (typeof ROLES)[number])}
-            className="rounded border border-neutral-700 bg-neutral-900 px-2 py-1 text-xs"
+            className={control}
             data-testid="add-member-role"
           >
             {ROLES.map((r) => (
@@ -156,24 +162,23 @@ export function MembershipManager({
             ))}
           </select>
         </label>
-        <button
-          type="submit"
-          disabled={pending}
-          className="rounded bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-900 disabled:opacity-50"
-          data-testid="add-member-submit"
-        >
-          {pending ? "…" : t("addButton")}
-        </button>
+        <Button type="submit" loading={pending} data-testid="add-member-submit">
+          {t("addButton")}
+        </Button>
       </form>
-      {notice && (
-        <p className="text-xs text-emerald-400" data-testid="membership-notice">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p className="text-xs text-red-400" data-testid="membership-error">
-          {error}
-        </p>
+      {(notice || error) && (
+        <div className="px-5 pb-5">
+          {notice && (
+            <p className="text-caption text-success" role="status" data-testid="membership-notice">
+              {notice}
+            </p>
+          )}
+          {error && (
+            <p className="text-caption text-danger" role="alert" data-testid="membership-error">
+              {error}
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
