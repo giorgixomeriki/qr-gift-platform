@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>QR Starr Type Specimen</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600&family=Noto+Sans+Georgian:wght@300;400;500;600&family=Noto+Serif+Georgian:wght@300;400;500&family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Fraunces:opsz,wght@9..144,300;9..144,400&family=Instrument+Serif&family=Cormorant+Garamond:wght@400;500&family=Pinyon+Script&display=swap">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=gambetta@400,500&f[]=zodiak@400&display=swap">
+<style>
+@font-face { font-family: "FiraGO"; font-weight: 400; src: url(https://cdn.jsdelivr.net/gh/bBoxType/FiraGO@master/Fonts/FiraGO_WEB_1001/Roman/FiraGO-Regular.woff2) format("woff2"); }
+@font-face { font-family: "FiraGO"; font-weight: 500; src: url(https://cdn.jsdelivr.net/gh/bBoxType/FiraGO@master/Fonts/FiraGO_WEB_1001/Roman/FiraGO-Medium.woff2) format("woff2"); }
+@font-face { font-family: "FiraGO"; font-weight: 300; src: url(https://cdn.jsdelivr.net/gh/bBoxType/FiraGO@master/Fonts/FiraGO_WEB_1001/Roman/FiraGO-Book.woff2) format("woff2"); }
+:root { --ink:#1d1916; --ink2:#5a514a; --wine:#5e1f33; --paper:#faf7f2; }
+body { margin:0; background:var(--paper); color:var(--ink); font: 14px/1.4 system-ui, sans-serif; padding: 24px; }
+h2 { font: 600 13px system-ui; letter-spacing:.06em; text-transform:uppercase; color:#8f3c28; margin: 28px 0 10px; }
+.row { display:grid; grid-template-columns: 170px 1fr 1fr; gap: 18px; align-items:start; padding: 14px 0; border-top: 1px solid #e6dfd5; }
+.label { font: 600 12px system-ui; color: var(--ink2); }
+.label small { display:block; font-weight:400; margin-top:4px; }
+.h { font-size: 34px; line-height: 1.12; letter-spacing:-.01em; }
+.b { font-size: 16px; line-height: 1.55; color: var(--ink2); margin-top: 8px; }
+.btn { display:inline-block; margin-top: 10px; padding: 12px 20px; border-radius: 16px; background: linear-gradient(180deg,#7a3244,#5e1f33); color:#fff8f3; font-size: 17px; font-weight: 500; }
+.cap { font-size: 13px; color: var(--ink2); margin-top: 8px; }
+.card { font-size: 22px; line-height: 1.35; color: #5a2a37; background:#fbf6ef; border:1px solid #e8d9cb; border-radius: 4px; padding: 16px 18px; text-align:center; }
+.fb { font: 600 11px system-ui; padding: 2px 6px; border-radius: 6px; margin-left: 6px; }
+.fb.ok { background:#e3f1e7; color:#2f7a4a; } .fb.bad { background:#f7e0de; color:#b3261e; }
+</style>
+</head>
+<body>
+<h1 style="font:500 22px system-ui;margin:0">QR Starr — typography specimen (real localization strings)</h1>
+<p style="color:#5a514a;margin:4px 0 0">Each cell reports whether the named font actually renders the Georgian glyphs (<b>native</b>) or the browser silently falls back (<b>FALLBACK</b>).</p>
+<div id="root"></div>
+<script>
+const KA = { h: "აალაპარაკეთ ეს საჩუქარი", b: "პირადი სიურპრიზი, რომელიც ბარათის დასკანერებისთანავე გაიხსნება.", btn: "მილოცვის შექმნა", cap: "~2 წუთი · 15 ₾ · გადახედვა გადახდამდე", card: "ეს სპეციალურად შენთვის შეიქმნა" };
+const EN = { h: "Make this gift speak", b: "A private surprise that opens the moment they scan the card.", btn: "Create greeting", cap: "~2 min · 15 ₾ · Preview before you pay", card: "Someone made this just for you" };
+const sections = [
+  ["A. UI / functional typeface (KA + EN in one family)", [
+    ["Google Sans", "'Google Sans'", 400, "current UI font · Google Fonts · OFL"],
+    ["Noto Sans Georgian", "'Noto Sans Georgian'", 400, "Google Fonts · OFL"],
+    ["FiraGO", "'FiraGO'", 400, "bBox Type · GitHub · OFL"],
+  ], "ui"],
+  ["B. Display / emotional — Georgian-capable", [
+    ["Noto Serif Georgian 400", "'Noto Serif Georgian'", 400, "current KA display · Google Fonts · OFL"],
+    ["Noto Serif Georgian 300", "'Noto Serif Georgian'", 300, "lighter, more editorial"],
+    ["Google Sans 500 (as display)", "'Google Sans'", 500, "sans heading option"],
+    ["FiraGO 300 (as display)", "'FiraGO'", 300, "sans heading option"],
+  ], "display"],
+  ["C. Latin display (EN) — paired with Noto Serif Georgian for KA", [
+    ["Newsreader", "'Newsreader'", 400, "current EN display · Google Fonts · OFL"],
+    ["Fraunces", "'Fraunces'", 300, "Google Fonts · OFL"],
+    ["Instrument Serif", "'Instrument Serif'", 400, "Google Fonts · OFL"],
+    ["Cormorant Garamond", "'Cormorant Garamond'", 500, "Google Fonts · OFL"],
+    ["Gambetta", "'Gambetta'", 400, "Fontshare · ITF FFL"],
+    ["Zodiak", "'Zodiak'", 400, "Fontshare · ITF FFL"],
+  ], "latin"],
+  ["D. Theme-only script (EN-only candidates)", [
+    ["Pinyon Script", "'Pinyon Script'", 400, "Google Fonts · OFL · no Georgian"],
+  ], "script"],
+];
+function nativeGeorgian(family, weight) {
+  const c = document.createElement("canvas").getContext("2d");
+  const s = "აალაპარაკეთ ეს საჩუქარი მილოცვის";
+  c.font = `${weight} 40px monospace`; const a = c.measureText(s).width;
+  c.font = `${weight} 40px ${family}, monospace`; const b = c.measureText(s).width;
+  c.font = `${weight} 40px serif`; const a2 = c.measureText(s).width;
+  c.font = `${weight} 40px ${family}, serif`; const b2 = c.measureText(s).width;
+  return Math.abs(a - b) > 0.5 && Math.abs(a2 - b2) > 0.5;
+}
+(async () => {
+  const root = document.getElementById("root");
+  for (const [title, fonts, kind] of sections) {
+    const h = document.createElement("h2"); h.textContent = title; root.appendChild(h);
+    for (const [name, fam, w, src] of fonts) {
+      const native = null;
+      const kaFam = kind === "latin" || kind === "script" ? "'Noto Serif Georgian'" : fam;
+      const kaW = kind === "latin" || kind === "script" ? 400 : w;
+      const row = document.createElement("div"); row.className = "row";
+      const isDisplay = kind !== "ui";
+      const cell = (t, lang, f, ww) => `<div lang="${lang}" style="font-family:${f};font-weight:${ww}">
+          <div class="h" style="font-weight:${ww}">${t.h}</div>
+          ${kind === "ui" ? `<div class="b">${t.b}</div><div class="btn">${t.btn}</div><div class="cap">${t.cap}</div>` : `<div class="card" style="margin-top:10px">${t.card}</div>`}
+        </div>`;
+      row.innerHTML = `<div class="label">${name}<span class="fb" data-probe></span><small>${src}${kaFam !== fam ? "<br>KA column: Noto Serif Georgian" : ""}</small></div>` +
+        cell(KA, "ka", kaFam, kaW) + cell(EN, "en", fam, w);
+      root.appendChild(row);
+    }
+  }
+  await document.fonts.ready;
+  await new Promise(r => setTimeout(r, 1500));
+  await document.fonts.ready;
+  document.body.dataset.ready = "1";
+})();
+</script>
+</body>
+</html>

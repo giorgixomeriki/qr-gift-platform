@@ -26,11 +26,9 @@
   "sender": {
     "entry": {
       "title": "Make this gift speak",
-      "subtitle": "Add a message, photos, a video or your voice — a private surprise that opens when they scan the card.",
+      "subtitle": "A private surprise that opens the moment they scan the card.",
       "cta": "Create greeting",
-      "priceLabel": "activation",
       "priceUnavailable": "This card can't be activated right now. Please try again later.",
-      "timeEstimate": "About 2 minutes",
       "afterActivation": "You'll see exactly what they'll see before you pay.",
       "addMessage": "Message",
       "addPhoto": "Photos",
@@ -38,7 +36,12 @@
       "addVoice": "Voice",
       "startError": "We couldn't start your greeting. Please try again.",
       "eyebrow": "This card is waiting for your words",
-      "previewFirst": "preview before you pay"
+      "contentTypesLabel": "Your greeting can hold",
+      "factTimeValue": "~2 min",
+      "factTimeLabel": "to create",
+      "factPriceLabel": "to activate",
+      "factPreviewValue": "Preview",
+      "factPreviewLabel": "before you pay"
     },
     "noAccess": {
       "title": "A greeting is on its way",

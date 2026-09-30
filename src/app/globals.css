@@ -50,9 +50,11 @@
   unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 @font-face {
+  /* The file is a variable font with the full 100–900 wght axis; 200–300 are
+     declared so the customer display voice (.cx-display) can use them. */
   font-family: "Noto Serif Georgian";
   font-style: normal;
-  font-weight: 400 500;
+  font-weight: 200 500;
   font-display: swap;
   src: url(/fonts/noto-serif-georgian.woff2) format("woff2");
   unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31;
@@ -730,4 +732,840 @@ dialog.sheet[open] .sheet-panel {
 }
 .card-arrive {
   animation: card-arrive 760ms var(--ease-out) both;
+}
+
+/* ===========================================================================
+ * Customer design language — seed (Screen #1: available-card entry).
+ *
+ * Opt-in only: nothing here applies unless an element uses a cx-* class, so
+ * later customer screens adopt it deliberately, one screen at a time.
+ * Tokens: wine palette, paper, depth, radii, motion timing. Motion is
+ * transform/opacity only (no layout shift) and collapses under
+ * prefers-reduced-motion via the global rule above.
+ * ======================================================================== */
+:root {
+  --cx-wine-950: #220b13;
+  --cx-wine-900: #2e0f19;
+  --cx-wine-800: #4a1827;
+  --cx-wine-700: #5e1f33;
+  --cx-wine-600: #7a3244;
+  --cx-wine-500: #94435a;
+  --cx-rose-100: #f6e6df;
+  --cx-paper: #fbf6ef;
+  --cx-paper-edge: #e8d9cb;
+  --cx-paper-ink: #5a2a37;
+
+  /* Wax-seal material (components/customer/wax-seal.tsx). Greeting themes
+     will override these to recolour the seal. */
+  --cx-seal-hi: #b04a63;
+  --cx-seal-mid: var(--cx-wine-600);
+  --cx-seal-lo: var(--cx-wine-800);
+  --cx-seal-ink: #f9e3dc;
+
+  --cx-radius-md: 14px;
+  --cx-radius-lg: 18px;
+  --cx-radius-xl: 28px;
+
+  --cx-shadow-object: 0 1px 2px rgb(46 15 25 / 0.08), 0 18px 40px -18px rgb(46 15 25 / 0.45);
+  --cx-shadow-stage: 0 1px 0 rgb(255 255 255 / 0.6) inset, 0 24px 60px -30px rgb(46 15 25 / 0.55), 0 2px 6px rgb(46 15 25 / 0.08);
+
+  --cx-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --cx-ease-soft: cubic-bezier(0.33, 1, 0.68, 1);
+  --cx-dur-quick: 180ms;
+  --cx-dur-base: 560ms;
+  --cx-dur-slow: 1000ms;
+
+  /* Paper tooth for card/envelope surfaces — same noise, much lighter. */
+  --cx-grain-fine: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.25 0 0 0 0 0.22 0 0 0 0.16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+
+  /* Real paper tooth: a 256px seamless tile made from ambientCG Paper001
+     (CC0; see public/customer/LICENSES.md) — fibre + relief lit from the
+     scene's window, stored as grey around 50% for soft-light use. 12 KB. */
+  --cx-paper-tooth: image-set(url(/customer/textures/paper-tooth-256.avif) type("image/avif"), url(/customer/textures/paper-tooth-256.webp) type("image/webp"));
+
+  /* ~3% film grain; inline SVG, no request. */
+  --cx-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.3 0 0 0 0 0.2 0 0 0 0 0.2 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Customer display voice. Georgian large display is set a step lighter
+   (Noto Serif Georgian 300): at 30px+ the regular weight reads heavy next to
+   Newsreader, and 300 is noticeably more editorial.
+   Desktop sets it as an editorial headline: larger (up to 56px — the width
+   at which "აალაპარაკეთ" still holds the 27rem column, so the phrase breaks
+   after the verb) and lighter again, 250, where the thin strokes still hold
+   at that size. Chosen from the v7 study of the real headline
+   (docs/visual-walkthrough/entry-redesign-v7/_v7-typography-study.png):
+   narrower wdth cuts were more elegant but broke the phrase badly. */
+:lang(ka) .cx-display {
+  font-weight: 300;
+}
+@media (min-width: 1024px) {
+  .cx-display {
+    letter-spacing: -0.025em;
+  }
+  :lang(ka) .cx-display {
+    font-size: clamp(2.75rem, 1rem + 2.9vw, 3.5rem);
+    line-height: 1.1;
+    font-weight: 250;
+    letter-spacing: -0.012em;
+  }
+}
+
+/* The lede under the headline: quieter than body copy — a half-step lighter
+   in tone, a little more air between lines. */
+.cx-lede {
+  color: color-mix(in oklab, var(--ink-2) 72%, var(--ink-3));
+}
+@media (min-width: 1024px) {
+  .cx-lede {
+    line-height: 1.65;
+  }
+}
+
+/* Page atmosphere: warm light from above, a faint rose haze, fine grain. */
+.cx-atmosphere {
+  background:
+    radial-gradient(80% 55% at 80% -5%, rgb(255 255 255 / 0.9) 0%, transparent 60%),
+    radial-gradient(70% 45% at 0% 20%, color-mix(in oklab, var(--cx-rose-100) 85%, transparent) 0%, transparent 70%),
+    radial-gradient(90% 60% at 50% 110%, color-mix(in oklab, var(--cx-rose-100) 70%, transparent) 0%, transparent 70%),
+    var(--paper);
+}
+.cx-atmosphere::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--cx-grain);
+  opacity: 0.35;
+  mix-blend-mode: multiply;
+}
+
+/* Entrance: one pass, then calm. Delay comes from --cx-delay per element. */
+@keyframes cx-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cx-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.cx-rise {
+  animation: cx-rise var(--cx-dur-base) var(--cx-ease) both;
+  animation-delay: var(--cx-delay, 0ms);
+}
+.cx-fade {
+  animation: cx-fade var(--cx-dur-slow) var(--cx-ease-soft) both;
+  animation-delay: var(--cx-delay, 0ms);
+}
+
+/* Primary action: deep wine, lit from above, pressed into the page on tap. */
+.cx-cta {
+  position: relative;
+  display: inline-flex;
+  width: 100%;
+  min-height: 3.5rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0.75rem 0.625rem 1.5rem;
+  border-radius: var(--cx-radius-lg);
+  color: #fff8f3;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  line-height: 1.2;
+  text-align: center;
+  background: linear-gradient(180deg, var(--cx-wine-600) 0%, var(--cx-wine-700) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.22),
+    0.5px 1px 1.5px rgb(46 15 25 / 0.2),
+    3px 10px 22px -12px rgb(60 30 30 / 0.55);
+  transition:
+    transform var(--cx-dur-quick) var(--cx-ease),
+    box-shadow var(--cx-dur-quick) var(--cx-ease),
+    background-color var(--cx-dur-quick) var(--cx-ease),
+    filter var(--cx-dur-quick) var(--cx-ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+}
+.cx-cta:hover {
+  filter: brightness(1.07);
+}
+.cx-cta:active {
+  transform: translateY(1px) scale(0.99);
+  filter: brightness(0.96);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.12),
+    inset 0 -1px 0 rgb(0 0 0 / 0.22),
+    0 1px 2px rgb(46 15 25 / 0.2),
+    0 6px 14px -8px rgb(74 24 39 / 0.7);
+}
+.cx-cta:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.cx-cta:disabled,
+.cx-cta[aria-disabled="true"] {
+  background: var(--disabled-bg);
+  color: var(--disabled-ink);
+  box-shadow: none;
+  filter: none;
+  transform: none;
+  cursor: not-allowed;
+}
+.cx-cta__icon {
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  background: rgb(255 255 255 / 0.12);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
+  transition: transform var(--cx-dur-quick) var(--cx-ease);
+}
+.cx-cta:hover .cx-cta__icon {
+  transform: translateX(2px);
+}
+.cx-cta:disabled .cx-cta__icon {
+  background: transparent;
+  box-shadow: none;
+}
+
+/* ---------------------------------------------------------------------------
+ * Entry scene (components/customer/entry-scene.tsx): a real stationery
+ * photograph with live words and the QR Starr seal layered on top.
+ * Overlay positions are % of the displayed crop; the crop switches at 1024px
+ * together with these variables. The photo's edges are masked into the page
+ * so the table reads as the page itself, not a picture in a box.
+ *
+ * One timeline (ms from first paint), then stillness:
+ *     0–500   the scene appears (paper veil lifts) and settles as one piece
+ *   150–1450  a cloud passes the window: the light dims a touch, cool, and
+ *             returns — on paper, kraft and wax alike
+ *   ~160–860  the card lifts out of the envelope and settles home (JS, only
+ *             once its layers are decoded — see entry-scene.tsx)
+ *   420–1070  the card's words are written
+ *   --cx-press  the seal comes down, presses, the impression catches light
+ * The text column is usable from the first frame (its own rise is 0–600).
+ * ------------------------------------------------------------------------ */
+.cx-scene {
+  --cx-scene-aspect: 3318 / 2903;
+  --cx-words-x: 46.5%;
+  --cx-words-y: 64.3%;
+  --cx-words-w: 40%;
+  --cx-seal-x: 50%;
+  --cx-seal-y: 39.3%;
+  --cx-seal-d: 11%;
+  /* The card is clipped just below the flap's edge (it is tucked under it). */
+  --cx-card-clip: polygon(0% -4.75%, 50.27% 39.5%, 100% 7.41%, 100% 100%, 0% 100%);
+  /* When the seal comes down; entry-scene.tsx moves it after the card. */
+  --cx-press: 700ms;
+  /* 0 at rest; 1 while the primary action is hovered/focused (see below). */
+  --cx-attend: 0;
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+  overflow: clip;
+  margin: 0;
+  aspect-ratio: var(--cx-scene-aspect);
+  -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 74%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to bottom, #000 0%, #000 74%, transparent 100%),
+    linear-gradient(to right, transparent 0%, #000 7%, #000 93%, transparent 100%);
+  mask-composite: intersect;
+}
+@media (min-width: 1024px) {
+  .cx-scene {
+    --cx-scene-aspect: 3825 / 3456;
+    --cx-words-x: 41.6%;
+    --cx-words-y: 64%;
+    --cx-words-w: 34.8%;
+    --cx-seal-x: 44.6%;
+    --cx-seal-y: 43%;
+    --cx-seal-d: 9.5%;
+    --cx-card-clip: polygon(0% 5%, 44.81% 43.19%, 100% 8.71%, 100% 100%, 0% 100%);
+    -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 28%),
+      linear-gradient(to bottom, transparent 0%, #000 14%, #000 74%, transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0%, #000 28%),
+      linear-gradient(to bottom, transparent 0%, #000 14%, #000 74%, transparent 100%);
+  }
+}
+/* Everything photographic settles together, so the layers stay registered. */
+.cx-scene__stage {
+  position: absolute;
+  inset: 0;
+  animation: cx-scene-settle 900ms var(--cx-ease) backwards;
+}
+@keyframes cx-scene-settle {
+  from {
+    transform: scale(1.03);
+  }
+}
+.cx-scene__photo,
+.cx-scene__under,
+.cx-scene__card-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+/* The card, cut from the same photograph (with its hidden edge under the
+   flap reconstructed), and what lies under its edges. At rest the two
+   reproduce the photograph exactly; they are only shown once decoded, and
+   never under reduced motion (the photograph alone is the final state). */
+.cx-scene__under,
+.cx-scene__card-photo {
+  visibility: hidden;
+}
+.cx-scene[data-layers="ready"] .cx-scene__card-photo {
+  visibility: visible;
+}
+.cx-scene[data-layers="ready"] .cx-scene__under {
+  visibility: visible;
+  opacity: 0; /* shown only while the card is off its resting place */
+}
+@media (prefers-reduced-motion: reduce) {
+  .cx-scene__under,
+  .cx-scene__card-photo {
+    display: none;
+  }
+}
+.cx-scene__card {
+  position: absolute;
+  inset: 0;
+  clip-path: var(--cx-card-clip);
+}
+.cx-scene__card-move {
+  position: absolute;
+  inset: 0;
+}
+.cx-scene[data-layers="ready"] .cx-scene__card-move {
+  /* Hook for the later Screen #1 → #2 bridge (a view transition from this
+     card into the theme picker). Inert until a transition uses it. */
+  view-transition-name: cx-greeting-card;
+}
+/* Attention from the primary action: the card lifts a hair off the table
+   (its shadow opens toward the light's far side), its words firm up, and the
+   seal catches the window. Transitions only — nothing moves by itself. */
+.cx-scene__card-photo {
+  filter: drop-shadow(
+    calc(var(--cx-attend) * 2px) calc(var(--cx-attend) * 4px) calc(var(--cx-attend) * 9px)
+      rgb(60 35 25 / calc(var(--cx-attend) * 0.24))
+  );
+  transition: filter 420ms var(--cx-ease-soft);
+}
+.cx-entry:has(.cx-cta:not(:disabled):focus-visible) .cx-scene {
+  --cx-attend: 1;
+}
+@media (hover: hover) {
+  .cx-entry:has(.cx-cta:not(:disabled):hover) .cx-scene {
+    --cx-attend: 1;
+  }
+}
+.cx-scene[data-leaving] {
+  --cx-attend: 1.4;
+}
+/* A sheet of paper-coloured light that lifts off the scene (the photo itself
+   is never transparent, so it paints — and counts — immediately). */
+.cx-scene__veil {
+  position: absolute;
+  inset: 0;
+  background: #f1ede5;
+  opacity: 0;
+  animation: cx-veil-lift 500ms var(--cx-ease-soft) backwards;
+  pointer-events: none;
+}
+@keyframes cx-veil-lift {
+  from {
+    opacity: 0.85;
+  }
+}
+/* A cloud past the window: one soft, cool dimming of the whole scene, drifting
+   with the light's direction, then the warm light is back. No edge, no band —
+   the shade is far larger than the scene. Over the seal too: wax, paper and
+   kraft all lose and regain the sun together. */
+.cx-scene__weather {
+  position: absolute;
+  inset: -40%;
+  background: radial-gradient(closest-side at 42% 42%, rgb(64 72 86 / 0.55), rgb(64 72 86 / 0.25) 60%, transparent);
+  mix-blend-mode: multiply;
+  opacity: 0;
+  pointer-events: none;
+  animation: cx-cloud 1300ms cubic-bezier(0.37, 0, 0.3, 1) 150ms both;
+}
+@keyframes cx-cloud {
+  0% {
+    opacity: 0;
+    transform: translate(-6%, -5%);
+  }
+  38% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(5%, 4%);
+  }
+}
+/* The card's words, set live on the photographed card at its own angle.
+   They live inside the card layer, so they travel with it. */
+.cx-scene__words {
+  position: absolute;
+  left: var(--cx-words-x);
+  top: var(--cx-words-y);
+  width: var(--cx-words-w);
+  margin: 0;
+  translate: -50% -50%;
+  rotate: 14.5deg;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 4.1cqw;
+  line-height: 1.3;
+  text-align: center;
+  text-wrap: balance;
+  /* The ink as it sits in the card's paper (what multiply gave over the
+     card), set directly so it reads the same inside the moving card layer. */
+  color: color-mix(in oklab, #552731, #2a0c16 calc(var(--cx-attend) * 35%));
+  transition: color 420ms var(--cx-ease-soft);
+}
+:lang(ka) .cx-scene__words {
+  font-style: normal;
+  font-weight: 300;
+  font-size: 3.55cqw;
+  line-height: 1.45;
+}
+@media (min-width: 1024px) {
+  .cx-scene__words {
+    font-size: 2.95cqw;
+  }
+  :lang(ka) .cx-scene__words {
+    font-size: 2.55cqw;
+  }
+}
+.cx-scene__words > span {
+  display: block;
+  animation: cx-write 650ms cubic-bezier(0.45, 0, 0.25, 1) 420ms both;
+}
+@keyframes cx-write {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+/* The seal: the punctuation at the end of the entrance, ~0.6s. It comes down
+   out of the light (a high, soft shadow), presses (squash; the shadow
+   tightens to contact), and settles. As it lands the wax spreads under it; as
+   the stamp lifts the Starr impression appears; fresh wax catches the light
+   once; three motes of dust stirred by the press drift up in the window light
+   and are gone. Then stillness. Every part ends at rest, so reduced motion
+   (global rule) simply shows the finished seal. */
+.cx-scene__seal {
+  position: absolute;
+  left: var(--cx-seal-x);
+  top: var(--cx-seal-y);
+  width: var(--cx-seal-d);
+  aspect-ratio: 1;
+  translate: -50% -48%;
+  rotate: 11deg;
+  filter: drop-shadow(0 1px 1px rgb(40 20 10 / 0.25));
+  animation: cx-seal-press 560ms var(--cx-ease) var(--cx-press) backwards;
+}
+@keyframes cx-seal-press {
+  0% {
+    opacity: 0;
+    transform: translateY(-6%) scale(1.12);
+    filter: drop-shadow(0 9px 7px rgb(40 20 10 / 0.08));
+  }
+  18% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+    transform: scale(0.975);
+    filter: drop-shadow(0 0.5px 0.5px rgb(40 20 10 / 0.34));
+    animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+    filter: drop-shadow(0 1px 1px rgb(40 20 10 / 0.25));
+  }
+}
+.cx-seal__pool {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: cx-seal-spread 480ms var(--cx-ease) calc(var(--cx-press) + 180ms) backwards;
+}
+@keyframes cx-seal-spread {
+  from {
+    transform: scale(0.84);
+  }
+}
+.cx-seal__impress {
+  animation: cx-fade 320ms var(--cx-ease-soft) calc(var(--cx-press) + 300ms) backwards;
+}
+/* The glint: rests at 0.18; brightens once as the stamp lifts; follows the
+   viewer a few units on pointer devices (a reflection, not a moving object);
+   and catches more of the window while the primary action is attended. */
+.cx-seal__glint {
+  opacity: calc(0.18 + var(--cx-attend) * 0.16);
+  translate: calc(var(--cx-lx, 0) * 3px) calc(var(--cx-ly, 0) * 2.5px);
+  transition:
+    opacity 420ms var(--cx-ease-soft),
+    translate 900ms var(--cx-ease-soft);
+  animation: cx-seal-glint 640ms var(--cx-ease-soft) calc(var(--cx-press) + 340ms) backwards;
+}
+@keyframes cx-seal-glint {
+  0% {
+    opacity: 0.18;
+  }
+  35% {
+    opacity: 0.42;
+  }
+  100% {
+    opacity: 0.18;
+  }
+}
+.cx-seal__mote {
+  opacity: 0;
+  animation: cx-seal-mote 900ms cubic-bezier(0.2, 0.6, 0.35, 1) calc(var(--cx-press) + 280ms) both;
+}
+.cx-seal__mote--b {
+  animation-delay: calc(var(--cx-press) + 360ms);
+  animation-duration: 800ms;
+}
+.cx-seal__mote--c {
+  animation-delay: calc(var(--cx-press) + 320ms);
+  animation-duration: 1000ms;
+}
+@keyframes cx-seal-mote {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0);
+  }
+  25% {
+    opacity: 0.85;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-3px, -7px);
+  }
+}
+
+/* This screen's page ground: the photographed table's own tone, lightening
+   toward paper where the text sits, so the scene's masked edges dissolve
+   into the page. Same fine grain as the rest of the customer surface. */
+.cx-atmosphere--table {
+  background:
+    radial-gradient(70% 45% at 72% 12%, rgb(255 253 247 / 0.7) 0%, transparent 70%),
+    linear-gradient(180deg, #e6e3d8 0%, #ebe8df 38%, #f3efe8 72%, #f6f2ec 100%);
+}
+@media (min-width: 1024px) {
+  .cx-atmosphere--table {
+    background:
+      radial-gradient(60% 70% at 28% 50%, rgb(250 247 241 / 0.5) 0%, transparent 70%),
+      linear-gradient(90deg, #f1ede5 0%, #ece9e1 45%, #e3e0d5 100%);
+  }
+}
+/* The page is paper: the real tooth replaces the synthetic grain, so where
+   the photo dissolves, its paper runs on into the page's. Soft-light around
+   mid-grey: it adds relief without shifting the tone. */
+.cx-atmosphere--table::after {
+  background: var(--cx-paper-tooth) 0 0 / 256px 256px;
+  mix-blend-mode: soft-light;
+  opacity: 0.75;
+}
+
+/* A printed caption with a hairline rule running on from it — a section
+   head on a stationery sheet. The rule is decorative (pseudo-element).
+   Set as an editor's annotation rather than form help: the serif, italic in
+   English (Georgian has no italic; it takes the serif at its book weight),
+   in the wine-tinted grey of the rule. */
+.cx-caption-rule {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.875rem;
+  letter-spacing: 0.01em;
+  color: color-mix(in oklab, var(--cx-wine-900) 55%, var(--ink-3));
+}
+:lang(ka) .cx-caption-rule {
+  font-style: normal;
+  font-size: 0.8125rem;
+  letter-spacing: 0;
+}
+.cx-caption-rule::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(90 42 55 / 0.22), rgb(90 42 55 / 0.04));
+}
+
+/* What the greeting can hold: one strip of heavy card stock lying on the
+   table — real paper tooth, a near-square paper corner, a hairline printed
+   frame that makes it one piece, and a light perforation between its four
+   parts (tiny tear notches at the edges). It reads first as one printed
+   strip, second as four sections. The shadow is a drop-shadow on the
+   wrapper so it follows the notched outline. Informational: nothing here is
+   selectable. */
+.cx-keepsake {
+  filter: drop-shadow(0.75px 1px 0.5px rgb(60 35 25 / 0.12)) drop-shadow(4px 7px 10px rgb(60 35 25 / 0.075));
+}
+.cx-keepsake__sheet {
+  --perf: 2.25px;
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-radius: 2px;
+  background:
+    var(--cx-paper-tooth) 0 0 / 256px 256px,
+    linear-gradient(160deg, #fcf9f3 0%, #f8f3ea 55%, #f2ebe0 100%);
+  background-blend-mode: soft-light, normal;
+  /* Its edges are drawn by the window, not by a border: lit where they face
+     the light (top, left), a breath of shade where they turn away. */
+  box-shadow:
+    inset 1px 1px 0 rgb(255 255 255 / 0.85),
+    inset -1px -1px 0 rgb(120 90 70 / 0.07);
+  /* Tear notches where each perforation meets the top and bottom edges. */
+  mask-image:
+    radial-gradient(circle var(--perf) at 25% 0, #0000 96%, #000),
+    radial-gradient(circle var(--perf) at 50% 0, #0000 96%, #000),
+    radial-gradient(circle var(--perf) at 75% 0, #0000 96%, #000),
+    radial-gradient(circle var(--perf) at 25% 100%, #0000 96%, #000),
+    radial-gradient(circle var(--perf) at 50% 100%, #0000 96%, #000),
+    radial-gradient(circle var(--perf) at 75% 100%, #0000 96%, #000);
+  mask-composite: intersect;
+}
+.cx-keepsake__item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem 0.25rem 0.9rem;
+  color: var(--cx-wine-700);
+}
+@media (max-height: 640px) {
+  .cx-keepsake__item {
+    gap: 0.2rem;
+    padding: 0.6rem 0.25rem 0.5rem;
+  }
+}
+/* The printed frame: one hairline around the whole strip. */
+.cx-keepsake__sheet::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgb(122 50 68 / 0.09);
+  border-radius: 1.5px;
+  pointer-events: none;
+}
+/* Perforation: a column of fine punched holes, showing the table through —
+   kept light and inside the frame so the strip stays one piece. */
+.cx-keepsake__item + .cx-keepsake__item::before {
+  content: "";
+  position: absolute;
+  left: -1.5px;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  background: radial-gradient(circle at 1.5px 1.5px, rgb(95 70 55 / 0.16) 0.8px, rgb(95 70 55 / 0.05) 1.2px, transparent 1.5px) 0 0 / 3px 6px repeat-y;
+}
+/* Letterpress: the ink sits in a faint impression — a lit lip below it. */
+.cx-keepsake__icon {
+  filter: drop-shadow(0 0.75px 0 rgb(255 255 255 / 0.95));
+}
+.cx-keepsake__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-serif);
+  font-size: 0.9375rem;
+  line-height: 1.25;
+  color: var(--cx-wine-900);
+  text-shadow: 0 0.75px 0 rgb(255 255 255 / 0.8);
+}
+:lang(ka) .cx-keepsake__label {
+  font-size: 0.875rem;
+}
+@media (max-width: 359px) {
+  .cx-keepsake__label {
+    font-size: 0.875rem;
+  }
+  :lang(ka) .cx-keepsake__label {
+    font-size: 0.78rem;
+  }
+}
+
+/* Facts under the action: editorial product metadata — a serif value over a
+   small caption, separated by hairlines. Quiet by design. */
+.cx-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.cx-facts__item {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  padding: 0 0.25rem;
+  text-align: center;
+}
+.cx-facts__item + .cx-facts__item::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.2rem;
+  bottom: 0.2rem;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgb(90 42 55 / 0.2) 25%, rgb(90 42 55 / 0.2) 75%, transparent);
+}
+.cx-facts__value {
+  font-family: var(--font-serif);
+  font-size: 1.0625rem;
+  line-height: 1.25;
+  color: var(--ink);
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.cx-facts__label {
+  margin-top: 0.15rem;
+  font-family: var(--font-serif);
+  font-size: 0.8125rem;
+  line-height: 1.3;
+  color: color-mix(in oklab, var(--cx-wine-900) 45%, var(--ink-3));
+}
+:lang(en) .cx-facts__label {
+  font-style: italic;
+  letter-spacing: 0.01em;
+}
+@media (max-width: 359px) {
+  :lang(ka) .cx-facts__label {
+    font-size: 0.71875rem;
+  }
+}
+
+/* The maker's mark (components/customer/starr-emboss.tsx). */
+.cx-maker {
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+}
+/* Short phones: the mark is the one thing below the facts; dropping it lets
+   360×740 fit its viewport (the action stays sticky there regardless). */
+@media (max-width: 1023px) and (max-height: 760px) {
+  .cx-maker {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Editorial framing (Screen #1, desktop): a sprig of dried gypsophila at the
+ * photograph's top-right edge, out of focus — nearer the lens than the table
+ * — and the soft shadow of a plant in the window across the upper paper, so
+ * the scene reads as a styled still life while the centre stays clean.
+ * The sprig is a free Unsplash photograph (public/customer/LICENSES.md)
+ * divided by its own backdrop wall, so what remains is only what the plant
+ * does to the light: the sprite's top half darkens (multiply), its bottom
+ * half brightens (screen). Where the wall was, both are exactly neutral — no
+ * cut-out edge, no halo, and the page's own paper runs through the plant.
+ * Its keep-clear mask is baked into the image, so it never crosses the
+ * stationery.
+ *
+ * The blend lives on the pseudo-elements; the host must never take opacity,
+ * transform or filter (that would isolate the blend from the page). CSS
+ * backgrounds: nothing is fetched below 1024px, where they don't render.
+ * ------------------------------------------------------------------------ */
+.cx-scene__botanical,
+.cx-atmosphere__shadow {
+  position: absolute;
+  display: none;
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  /* Gypsophila: registered to the photograph's top-right corner, above the
+     envelope; it settles and unveils with the rest of the stage. It sits
+     nearer the lens than the envelope, so it is a touch softer than the
+     table plane (depth of field); the faint haze of its own backdrop is
+     lifted out (brightness), and the florets catch the window — brighter on
+     the side facing the light (upper-left), dimmer away from it. */
+  .cx-scene__botanical {
+    display: block;
+    left: 62%;
+    top: -7%;
+    width: 38%;
+    aspect-ratio: 0.75;
+  }
+  .cx-scene__botanical::before,
+  .cx-scene__botanical::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: image-set(url(/customer/illustrations/entry-gypsophila.avif) type("image/avif"), url(/customer/illustrations/entry-gypsophila.webp) type("image/webp")) 0 0 / 100% 200% no-repeat;
+  }
+  .cx-scene__botanical::before {
+    mix-blend-mode: multiply;
+    filter: brightness(1.06) contrast(1.06) saturate(0.85) blur(0.9px);
+  }
+  .cx-scene__botanical::after {
+    background-position: 0 100%;
+    mix-blend-mode: screen;
+    filter: blur(0.9px);
+    mask-image: linear-gradient(125deg, #000 25%, rgb(0 0 0 / 0.55) 85%);
+  }
+  /* The window's plant, as its shadow only: the same gypsophila sprite (no
+     extra request), greyed and blurred by distance, and laid along the
+     photograph's own window light (the diagonal of its light bands), kept
+     in the upper-left corner above the headline. Stems come from the
+     multiply half; the florets — which cast shadow too — from the screen
+     half, inverted. */
+  .cx-atmosphere__shadow {
+    display: block;
+    left: -12vw;
+    top: -26vh;
+    width: min(38vw, 34rem);
+    aspect-ratio: 0.75;
+    rotate: 128deg;
+    scale: -1 1;
+  }
+  .cx-atmosphere__shadow::before,
+  .cx-atmosphere__shadow::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: image-set(url(/customer/illustrations/entry-gypsophila.avif) type("image/avif"), url(/customer/illustrations/entry-gypsophila.webp) type("image/webp")) 0 0 / 100% 200% no-repeat;
+    mix-blend-mode: multiply;
+    filter: grayscale(1) sepia(0.25) blur(6px);
+    opacity: 0.24;
+    animation: cx-shadow-in 500ms var(--cx-ease-soft) backwards;
+  }
+  .cx-atmosphere__shadow::after {
+    background-position: 0 100%;
+    filter: grayscale(1) invert(1) sepia(0.25) blur(6px);
+    opacity: 0.12;
+  }
+}
+@keyframes cx-shadow-in {
+  from {
+    opacity: 0;
+  }
 }
