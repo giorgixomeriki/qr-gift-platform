@@ -51,7 +51,13 @@ export function LocaleSwitcher({ className, tone = "default" }: { className?: st
             disabled={pending}
             aria-pressed={active}
             aria-label={o.name}
-            className={`min-w-11 rounded-full px-3 py-1.5 transition-colors ${
+            // The visible pill stays compact (~30px tall); an invisible
+            // ::before extends the hit area to a full 44px tall (buttons are
+            // already min 44px wide) so the touch target meets 44×44 without
+            // making the header heavier. Being positioned, a later button
+            // would paint over a focused neighbour's ring — focus-visible:z-10
+            // keeps the whole ring on top.
+            className={`relative min-w-11 rounded-full px-3 py-1.5 transition-colors focus-visible:z-10 before:absolute before:inset-x-0 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] ${
               active ? (tone === "inverse" ? "bg-white text-ink shadow-xs" : "bg-surface text-ink shadow-xs") : "hover:text-ink"
             }`}
             data-testid={`locale-${o.locale}`}
