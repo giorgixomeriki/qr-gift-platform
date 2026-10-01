@@ -43,3 +43,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Visual-QA raw captures (regenerable). Curated review sheets are committed
+# as .webp beside a README.md; raw screenshots, recordings and exports stay local.
+/docs/visual-walkthrough/**/*.png
+/docs/visual-walkthrough/**/*.jpg
+/docs/visual-walkthrough/**/*.webm
+/docs/visual-walkthrough/**/*.pdf
+/docs/visual-walkthrough/**/*.csv
+/docs/visual-walkthrough/index.html
+/docs/visual-walkthrough/manifest.json
+# Local review exports
+/docs 2/
+/*.zip
