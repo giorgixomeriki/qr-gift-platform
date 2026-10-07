@@ -3,7 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { withEditableGreeting, withPaymentActivation } from "@/db/client";
 import { orders, payments, qrCodes } from "@/db/schema";
 import { verifyGreetingEditAccess } from "@/lib/greetings/access";
-import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFailed, createPaymentAttempt, verifyAndReconcileOrder, refundIneligiblePayment } from "./service";
+import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFailed, createPaymentAttempt, verifyAndReconcileOrder, settleConfirmedPayment, isUniqueViolation } from "./service";
 import { assertGreetingPurchasable } from "./eligibility";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { env } from "@/lib/env";
@@ -79,9 +79,20 @@ export async function getOrCreateCheckoutOrder(
   // No order yet, or the latest one is terminal (FAILED/CANCELED/REFUNDED) —
   // a genuinely new checkout attempt. productId comes from the Greeting's own
   // row (set at creation, Phase 2) — never accepted as client input here.
-  const { order, redirectUrl } = await startCheckout({ greetingId, editToken, productId: greeting.productId });
-  await recordAnalyticsEvent({ eventType: "CHECKOUT_STARTED", greetingId, orderId: order.id }, { partnerId: order.partnerId });
-  return { summary: toSummary(order, redirectUrl), recovered: false };
+  try {
+    const { order, redirectUrl } = await startCheckout({ greetingId, editToken, productId: greeting.productId });
+    await recordAnalyticsEvent({ eventType: "CHECKOUT_STARTED", greetingId, orderId: order.id }, { partnerId: order.partnerId });
+    return { summary: toSummary(order, redirectUrl), recovered: false };
+  } catch (err) {
+    // A simultaneous request (double tap, second tab) opened the order first —
+    // orders_one_open_per_greeting refused a second one. Continue with theirs.
+    if (!isUniqueViolation(err, "orders_one_open_per_greeting")) throw err;
+    const [open] = await withEditableGreeting(greetingId, (tx) =>
+      tx.select().from(orders).where(and(eq(orders.greetingId, greetingId), eq(orders.status, "PENDING_PAYMENT"))).limit(1),
+    );
+    if (!open) throw err;
+    return { summary: toSummary(open), recovered: false };
+  }
 }
 
 /**
@@ -112,11 +123,9 @@ export async function checkPaymentReturn(
     return { status: latest.status, activated: false };
   }
 
-  const result = await verifyAndReconcileOrder(latest.id);
-  if (result.activated) {
-    await recordAnalyticsEvent({ eventType: "QR_ACTIVATED", qrCodeId: greeting.qrCodeId, greetingId }, { partnerId: latest.partnerId });
-  }
-  return result;
+  // verifyAndReconcileOrder settles through settleConfirmedPayment, which
+  // records PAYMENT_SUCCEEDED / QR_ACTIVATED itself.
+  return verifyAndReconcileOrder(latest.id);
 }
 
 /**
@@ -142,7 +151,8 @@ export async function simulateTestPayment(
     throw new CheckoutEntryError("TEST payment simulation is not available in this environment");
   }
 
-  const greeting = await verifyGreetingEditAccess(greetingId, editToken);
+  // Authorizes the caller for this greeting (edit token) — the result itself is not needed.
+  await verifyGreetingEditAccess(greetingId, editToken);
 
   const [order] = await withEditableGreeting(greetingId, (tx) =>
     tx.select().from(orders).where(and(eq(orders.greetingId, greetingId), eq(orders.status, "PENDING_PAYMENT"))).orderBy(desc(orders.createdAt)).limit(1),
@@ -164,6 +174,8 @@ export async function simulateTestPayment(
   // lock for anything that changes in between.
   await assertGreetingPurchasable(greetingId);
 
+  // Through the same path a webhook takes (settleConfirmedPayment: refunds,
+  // activation, PAYMENT_SUCCEEDED / QR_ACTIVATED analytics).
   const confirmation = await confirmPaymentSuccess({
     provider: "TEST",
     providerPaymentId: pendingPayment.providerPaymentId,
@@ -171,16 +183,9 @@ export async function simulateTestPayment(
     amountMinor: order.grossAmountMinor,
     currency: order.currency,
   });
-  if (confirmation.outcome === "REFUND_REQUIRED") {
-    await refundIneligiblePayment(order.id);
+  const settled = await settleConfirmedPayment(confirmation);
+  if (settled.status !== "PAID") {
     throw new CheckoutEntryError("This greeting can no longer be activated — the payment was returned");
   }
-  await recordAnalyticsEvent({ eventType: "PAYMENT_SUCCEEDED", orderId: order.id, greetingId }, { partnerId: order.partnerId });
-
-  const { activated } = await activatePaidOrder(order.id);
-  if (activated) {
-    await recordAnalyticsEvent({ eventType: "QR_ACTIVATED", qrCodeId: greeting.qrCodeId, greetingId }, { partnerId: order.partnerId });
-  }
-
-  return { status: "PAID", activated };
+  return { status: "PAID", activated: settled.activated };
 }

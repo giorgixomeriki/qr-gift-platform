@@ -39,7 +39,7 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
       })),
     );
 
-    return { greeting, themeKey: (themeRow?.key ?? "minimal") as ThemeKey, content };
+    return { greeting, themeKey: (themeRow?.key ?? "minimal") as ThemeKey, themeVersion: greeting.themeVersion, content };
   });
 }
 

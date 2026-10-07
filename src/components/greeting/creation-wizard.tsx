@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ArrowRight, Check, ChevronLeft, Lock, Pencil, X } from "lucide-react";
+import { ArrowRight, ChevronLeft, Lock, Pencil, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { ActionBar } from "@/components/flow/shell";
 import { Button } from "@/components/ui/button";
@@ -10,8 +10,12 @@ import { Logo, Spark } from "@/components/ui/logo";
 import { Notice } from "@/components/ui/notice";
 import { Spinner } from "@/components/ui/spinner";
 import { formatMinorAmount } from "@/lib/format/money";
-import { SELECTABLE_THEMES, getThemeConfig, themeVars, type ThemeKey } from "@/lib/themes/registry";
-import { updateThemeAction, updateMessageAction, viewPreviewAction } from "@/lib/greetings/actions";
+import type { ThemeKey } from "@/lib/themes/registry";
+import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
+import { getTemplate } from "@/lib/templates/catalog";
+import { roomVars } from "@/lib/templates/room";
+import { ThemeWorld } from "@/components/themes/theme-world";
+import { updateMessageAction, viewPreviewAction } from "@/lib/greetings/actions";
 import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction } from "@/lib/payments/actions";
 import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
 import { greetingMessageSchema, MESSAGE_MAX_LENGTH } from "@/lib/validation/greeting-text";
@@ -20,7 +24,7 @@ import { VoiceRecorder } from "./voice-recorder";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import { LivePreview } from "./live-preview";
 import { LocaleSwitcher } from "./locale-switcher";
-import { ThemeSwatch } from "./theme-swatch";
+import { ThemePicker } from "./theme-picker";
 
 type ExistingItem = { contentId: string; url: string } | null;
 
@@ -80,7 +84,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
     return (
       <PreviewStep
         greetingId={initial.greetingId}
-        theme={getThemeConfig(themeKey)}
+        themeKey={themeKey}
         content={content}
         priceLabel={initial.priceLabel}
         onEdit={() => goToStep("theme")}
@@ -100,7 +104,14 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
       />
 
       <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 sm:px-6">
-        {step === "checkout" ? (
+        {step === "theme" ? (
+          <div className="flex flex-1 flex-col">
+            <div className="lg:max-w-[22rem]">
+              <StepProgress index={wizardStepIndex} step={step} />
+            </div>
+            <ThemePicker greetingId={initial.greetingId} selected={themeKey} onSelect={setThemeKey} onContinue={() => goToStep("message")} />
+          </div>
+        ) : step === "checkout" ? (
           <div className="mx-auto flex w-full max-w-xl flex-1 flex-col">
             <CheckoutStep
               greetingId={initial.greetingId}
@@ -115,14 +126,6 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
           <div className={`grid flex-1 gap-12 lg:gap-16 lg:pt-4 ${step === "message" ? "" : "lg:grid-cols-[minmax(0,1fr)_320px]"}`}>
             <div className="mx-auto flex w-full max-w-xl flex-col">
               <StepProgress index={wizardStepIndex} step={step} />
-              {step === "theme" && (
-                <ThemeStep
-                  greetingId={initial.greetingId}
-                  selected={themeKey}
-                  onSelect={setThemeKey}
-                  onContinue={() => goToStep("message")}
-                />
-              )}
               {step === "message" && (
                 <MessageStep
                   greetingId={initial.greetingId}
@@ -246,86 +249,6 @@ function StepShell({
   );
 }
 
-function ThemeStep({ greetingId, selected, onSelect, onContinue }: { greetingId: string; selected: ThemeKey; onSelect: (k: ThemeKey) => void; onContinue: () => void }) {
-  const t = useTranslations("wizard.theme");
-  const tt = useTranslations("themes");
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(false);
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  async function choose(key: ThemeKey) {
-    const previous = selected;
-    onSelect(key);
-    setSaving(true);
-    setError(false);
-    const result = await updateThemeAction(greetingId, key).catch(() => null);
-    setSaving(false);
-    if (!result?.ok) {
-      if (result) logActionError("updateTheme", result.error);
-      onSelect(previous);
-      setError(true);
-    }
-  }
-
-  // Radiogroup keyboard model: arrows move selection, Tab leaves the group.
-  function onKeyDown(e: React.KeyboardEvent, index: number) {
-    const delta = e.key === "ArrowRight" || e.key === "ArrowDown" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowUp" ? -1 : 0;
-    if (!delta) return;
-    e.preventDefault();
-    const next = (index + delta + SELECTABLE_THEMES.length) % SELECTABLE_THEMES.length;
-    void choose(SELECTABLE_THEMES[next]!.key);
-    refs.current[next]?.focus();
-  }
-
-  return (
-    <StepShell title={t("title")} subtitle={t("subtitle")} onContinue={onContinue} continueDisabled={saving}>
-      {error && (
-        <Notice tone="danger" className="mb-6">
-          {t("saveError")}
-        </Notice>
-      )}
-      <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3" data-testid="theme-step" role="radiogroup" aria-label={t("title")}>
-        {SELECTABLE_THEMES.map((theme, i) => {
-          const active = selected === theme.key;
-          return (
-            <button
-              key={theme.key}
-              ref={(el) => {
-                refs.current[i] = el;
-              }}
-              type="button"
-              onClick={() => choose(theme.key)}
-              onKeyDown={(e) => onKeyDown(e, i)}
-              role="radio"
-              aria-checked={active}
-              tabIndex={active ? 0 : -1}
-              className="group flex flex-col gap-2.5 text-left outline-none"
-              data-testid={`theme-option-${theme.key}`}
-            >
-              <span
-                className={`relative block overflow-hidden rounded-[var(--radius-lg)] transition-[box-shadow,transform] duration-200 group-active:scale-[0.98] group-focus-visible:ring-2 group-focus-visible:ring-ember group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-paper ${
-                  active ? "shadow-md ring-2 ring-ink ring-offset-2 ring-offset-paper" : "shadow-xs ring-1 ring-line group-hover:shadow-sm"
-                }`}
-              >
-                <ThemeSwatch themeKey={theme.key} className="aspect-[4/5]" />
-                {active && (
-                  <span className="animate-pop absolute top-2.5 right-2.5 grid size-7 place-items-center rounded-full bg-ink text-white shadow-sm">
-                    <Check className="size-4" strokeWidth={2.5} aria-hidden />
-                  </span>
-                )}
-              </span>
-              <span className="flex flex-col gap-0.5 px-0.5">
-                <span className="text-label text-ink">{tt(`${theme.key}.name`)}</span>
-                <span className="text-caption leading-snug text-ink-3">{tt(`${theme.key}.tagline`)}</span>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </StepShell>
-  );
-}
-
 function MessageStep({
   greetingId,
   themeKey,
@@ -343,7 +266,8 @@ function MessageStep({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const limit = MESSAGE_MAX_LENGTH;
-  const theme = getThemeConfig(themeKey);
+  const world = getThemeWorld(themeKey);
+  const room = getTemplate(themeKey)?.spec.room;
 
   async function handleContinue() {
     const trimmed = message.trim();
@@ -378,17 +302,21 @@ function MessageStep({
 
   return (
     <StepShell title={t("title")} subtitle={t("subtitle")} onContinue={handleContinue} continueLoading={saving}>
-      {/* Written directly on the card, in the chosen design — what you type is what they'll read. */}
+      {/* Written directly on the card of the chosen world — its card stock, ink and type, in its room: what you type is what they'll read. */}
       <label htmlFor="greeting-message" className="sr-only">
         {t("label")}
       </label>
-      <div className="gift -mx-4 px-4 py-8 sm:mx-0 sm:rounded-[var(--radius-lg)] sm:px-8" style={themeVars(theme)} data-stage="static">
+      <div
+        className="world-desk -mx-4 px-4 py-8 sm:mx-0 sm:rounded-[var(--radius-lg)] sm:px-8"
+        style={{ ...worldVars(world), ...(room && roomVars(room)) }}
+        data-composition={world.composition}
+      >
         <div
-          className={`paper-card mx-auto flex min-h-[22rem] w-full max-w-[26rem] flex-col items-center px-7 pt-9 pb-6 transition-shadow sm:px-9 ${
-            error ? "ring-2 ring-danger ring-offset-2 ring-offset-transparent" : "focus-within:ring-2 focus-within:ring-[var(--g-seal)]/40"
+          className={`world-sheet mx-auto flex min-h-[22rem] w-full max-w-[26rem] flex-col items-center px-7 pt-9 pb-6 transition-shadow sm:px-9 ${
+            error ? "ring-2 ring-danger ring-offset-2 ring-offset-transparent" : "focus-within:ring-2 focus-within:ring-[color-mix(in_oklab,var(--w-ink)_35%,transparent)]"
           }`}
         >
-          <Spark className="size-5 shrink-0 text-[var(--g-seal)]" />
+          <Spark className="world-sheet__mark size-5 shrink-0" />
           <textarea
             id="greeting-message"
             value={message}
@@ -400,7 +328,7 @@ function MessageStep({
             autoCapitalize="sentences"
             aria-invalid={error ? true : undefined}
             aria-describedby={describedBy}
-            className="relative z-10 mt-5 w-full flex-1 resize-none bg-transparent font-serif text-[1.1875rem] leading-[1.6] text-[var(--g-paper-ink)] outline-none focus-visible:outline-none [field-sizing:content] placeholder:text-[var(--g-paper-ink-soft)] placeholder:opacity-70 min-h-[15rem]"
+            className="world-sheet__text relative z-10 mt-5 w-full flex-1 resize-none bg-transparent outline-none focus-visible:outline-none [field-sizing:content] min-h-[15rem]"
             data-testid="message-textarea"
           />
         </div>
@@ -489,14 +417,14 @@ function MediaSection({ title, hint, children }: { title: string; hint: string; 
 
 function PreviewStep({
   greetingId,
-  theme,
+  themeKey,
   content,
   priceLabel,
   onEdit,
   onCheckout,
 }: {
   greetingId: string;
-  theme: ReturnType<typeof getThemeConfig>;
+  themeKey: ThemeKey;
   content: GreetingRenderContent;
   priceLabel: string | null;
   onEdit: () => void;
@@ -535,7 +463,7 @@ function PreviewStep({
         <span className="size-11" aria-hidden />
       </header>
 
-      <GreetingRenderer theme={theme} content={content} mode="preview" embedded onBeatChange={handleBeat} />
+      <GreetingRenderer themeKey={themeKey} content={content} mode="preview" embedded onBeatChange={handleBeat} />
 
       {/* State-driven actions, never competing with the greeting's own control:
           while it's sealed or playing, a single quiet row (the greeting's Open /
@@ -621,6 +549,12 @@ function CheckoutStep({
   const [failed, setFailed] = useState(false);
   const [cancelled, setCancelled] = useState(paymentHint === "cancelled");
   const [succeeded, setSucceeded] = useState(false);
+  /**
+   * Back from the provider, but the outcome is not known yet (still pending
+   * after polling, or the status check itself failed). Never offer to pay
+   * again here — a second charge is exactly the risk — only to check again.
+   */
+  const [uncertain, setUncertain] = useState(false);
   const startedRef = useRef(false);
 
   const loadSummary = useCallback(async () => {
@@ -647,32 +581,37 @@ function CheckoutStep({
       loadSummary();
       return;
     }
-
-    (async () => {
-      for (let attempt = 0; attempt < RETURN_POLL_ATTEMPTS; attempt++) {
-        const result = await checkPaymentReturnAction(greetingId).catch(() => null);
-        if (!result?.ok) {
-          if (result) logActionError("checkPaymentReturn", result.error);
-          setVerifying(false);
-          setError(true);
-          return;
-        }
-        if (result.data.status === "PAID") {
-          window.location.href = window.location.pathname;
-          return;
-        }
-        if (result.data.status === "FAILED" || result.data.status === "CANCELED") {
-          setFailed(true);
-          break;
-        }
-        if (attempt < RETURN_POLL_ATTEMPTS - 1) {
-          await new Promise((resolve) => setTimeout(resolve, RETURN_POLL_INTERVAL_MS));
-        }
-      }
-      setVerifying(false);
-      await loadSummary();
-    })();
+    void verifyReturn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [greetingId, paymentHint, loadSummary]);
+
+  /** Polls the server's own verdict (never the URL) after a provider redirect. */
+  async function verifyReturn() {
+    setUncertain(false);
+    setVerifying(true);
+    for (let attempt = 0; attempt < RETURN_POLL_ATTEMPTS; attempt++) {
+      const result = await checkPaymentReturnAction(greetingId).catch(() => null);
+      if (result?.ok && result.data.status === "PAID") {
+        window.location.href = window.location.pathname;
+        return;
+      }
+      if (result?.ok && (result.data.status === "FAILED" || result.data.status === "CANCELED")) {
+        // Only a definite failure offers paying again.
+        setVerifying(false);
+        setFailed(true);
+        await loadSummary();
+        return;
+      }
+      if (result && !result.ok) logActionError("checkPaymentReturn", result.error);
+      if (attempt < RETURN_POLL_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, RETURN_POLL_INTERVAL_MS));
+      }
+    }
+    // Still pending, or the check kept failing: the payment may have gone
+    // through. Hold here rather than show a Pay button.
+    setVerifying(false);
+    setUncertain(true);
+  }
 
   async function pay(outcome: "success" | "failure") {
     setPaying(true);
@@ -727,7 +666,17 @@ function CheckoutStep({
         <p className="mt-2 text-body text-ink-2">{t("subtitle")}</p>
       </header>
 
-      {verifying ? (
+      {uncertain ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center" data-testid="checkout-still-verifying" role="status" aria-live="polite">
+          <div>
+            <p className="text-h3">{t("stillVerifying")}</p>
+            <p className="mt-1 text-body-sm text-ink-2">{t("stillVerifyingBody")}</p>
+          </div>
+          <Button variant="secondary" size="lg" onClick={() => void verifyReturn()} data-testid="checkout-check-again">
+            {t("checkAgain")}
+          </Button>
+        </div>
+      ) : verifying ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center" data-testid="checkout-verifying" role="status" aria-live="polite">
           <Spinner className="size-8 text-ember" />
           <div>
@@ -751,7 +700,13 @@ function CheckoutStep({
         <>
           {/* What you're paying for: the card itself, not a description of it. */}
           <section aria-labelledby="checkout-summary" className="flex items-center gap-4">
-            <ThemeSwatch themeKey={themeKey} className="aspect-[4/5] w-[4.5rem] shrink-0 rounded-md" />
+            <ThemeWorld
+              themeKey={themeKey}
+              opening={tt(`${themeKey}.opening`)}
+              message={content.message ?? ""}
+              fit
+              className="w-[4.5rem] shrink-0 rounded-md shadow-sm"
+            />
             <div className="min-w-0 flex-1">
               <h2 id="checkout-summary" className="sr-only">
                 {t("summaryTitle")}

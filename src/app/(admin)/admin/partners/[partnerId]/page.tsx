@@ -1,17 +1,20 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChevronLeft, Layers } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { checkIsAdmin } from "@/db/client";
 import { getSessionUser } from "@/lib/auth/session";
 import { requireAdmin } from "@/lib/auth/admin";
 import { getPartnerById, listPartnerMembers } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
 import { toInventoryRow } from "@/lib/qr/credential-access";
-import { getPartnerUnpaidBalance, listPartnerPayouts } from "@/lib/payments/payouts";
+import { getPartnerUnpaidBalance, listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
+import { getBatchPerformance, listPartnerSalesTrace } from "@/lib/dashboard/attribution";
+import { formatMinorAmount } from "@/lib/format/money";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { PartnerStatusToggle } from "@/components/admin/partner-status-toggle";
 import { PayoutManager } from "@/components/admin/payout-manager";
+import { SalesTrace } from "@/components/admin/sales-trace";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/ui";
 import { MembershipManager } from "@/components/partners/membership-manager";
 import { BatchBlock } from "@/components/qr/batch-block";
@@ -22,7 +25,8 @@ import {
   adminRemovePartnerMemberAction,
 } from "@/lib/partners/actions";
 import { adminCreateBatchAction, adminMarkDistributedAction } from "@/lib/qr/actions";
-import { adminRecordPayoutAction } from "@/lib/payments/payout-actions";
+import { adminRecordPayoutAction, adminGetPayoutStatementAction } from "@/lib/payments/payout-actions";
+import { adminRefundPaidOrderAction } from "@/lib/payments/admin-actions";
 
 export default async function AdminPartnerDetailPage({ params }: { params: Promise<{ partnerId: string }> }) {
   const { partnerId } = await params;
@@ -46,13 +50,28 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
       })),
     );
     const unpaidBalanceMinor = await getPartnerUnpaidBalance(tx, partnerId, partner.currency);
-    const payouts = await listPartnerPayouts(tx, partnerId);
-    return { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts };
+    const payouts = await listPartnerPayoutsWithItems(tx, partnerId);
+    const performance = await getBatchPerformance(tx, partnerId);
+    const sales = await listPartnerSalesTrace(tx, partnerId);
+    return { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales };
   });
 
   if (!data) notFound();
-  const { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts } = data;
+  const { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales } = data;
   const td = await getTranslations("admin.partnerDetail");
+  const tPerf = await getTranslations("batchPerformance");
+  const locale = await getLocale();
+  const performanceLabel = (batchId: string) => {
+    const p = performance.find((row) => row.batchId === batchId);
+    if (!p) return undefined;
+    return tPerf("summary", {
+      distributed: p.distributed,
+      scanned: p.scanned,
+      paid: p.paidActivations,
+      conversion: p.conversionPct === null ? "—" : `${p.conversionPct}%`,
+      commission: formatMinorAmount(p.netCommissionMinor, partner.currency, locale, { fixed: true }),
+    });
+  };
   const tNav = await getTranslations("nav");
 
   const markDistributed = adminMarkDistributedAction.bind(null, partnerId);
@@ -82,7 +101,12 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
           unpaidBalanceMinor={unpaidBalanceMinor}
           payouts={payouts}
           recordAction={adminRecordPayoutAction}
+          statementAction={adminGetPayoutStatementAction}
         />
+      </Panel>
+
+      <Panel title={td("salesTitle")} description={td("salesHint")} flush>
+        <SalesTrace rows={sales} refundAction={adminRefundPaidOrderAction} />
       </Panel>
 
       <section className="flex flex-col gap-4">
@@ -96,6 +120,7 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
             batch={batch}
             qrCodes={qrCodes}
             countLabel={td("codesCount", { count: qrCodes.length })}
+            performanceLabel={performanceLabel(batch.id)}
             defaultOpen={index === 0}
             markDistributedAction={markDistributed}
           />

@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/admin";
-import { findOrdersNeedingActivation, activatePaidOrder, verifyAndReconcileOrder } from "./service";
+import { findOrdersNeedingActivation, activatePaidOrder, verifyAndReconcileOrder, refundPaidOrder } from "./service";
+import { enforceRateLimit } from "@/lib/rate-limit";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { withPublicContext } from "@/db/client";
 import { orders, qrCodes } from "@/db/schema";
@@ -69,5 +70,28 @@ export async function adminReconcilePaymentAction(orderId: string): Promise<Acti
     return { ok: true, data: result };
   } catch (err) {
     return errorResult("adminReconcilePaymentAction", err, { orderId });
+  }
+}
+
+/**
+ * Full refund of a PAID order (admin-only): provider refund first, then the
+ * order/payment move to REFUNDED and the partner's commission is reversed
+ * with a COMMISSION_REVERSAL ledger row — never by deleting the original
+ * earning. See refundPaidOrder for the full contract. The provider call is
+ * deliberately outside requireAdmin's transaction.
+ */
+export async function adminRefundPaidOrderAction(orderId: string): Promise<ActionResult<{ alreadyRefunded: boolean }>> {
+  try {
+    const { adminUserId, partnerId } = await requireAdmin(async (tx, adminUserId) => {
+      await enforceRateLimit({ key: `order-refund:${adminUserId}`, limit: 20, windowSeconds: 60 });
+      const [order] = await tx.select({ partnerId: orders.partnerId }).from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) throw new Error(`Order ${orderId} not found`);
+      return { adminUserId, partnerId: order.partnerId };
+    });
+    const result = await refundPaidOrder(adminUserId, orderId);
+    revalidatePath(`/admin/partners/${partnerId}`);
+    return { ok: true, data: result };
+  } catch (err) {
+    return errorResult("adminRefundPaidOrderAction", err, { orderId });
   }
 }

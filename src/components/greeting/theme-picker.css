@@ -1,0 +1,744 @@
+/* ===========================================================================
+ * Screen #2 — theme picker (components/greeting/theme-picker.tsx).
+ * QR Starr application layer: the frame around the worlds. Phones/tablets:
+ * a snap gallery (neighbours peek) + a row of six seals. Desktop: an
+ * editorial list beside one large stage.
+ * ======================================================================== */
+.tp {
+  /* World width on phones: as large as the screen's height allows, so the
+     title, the world, the seals and the action fit without scrolling. 84vw
+     makes the chosen world the hero while the neighbours still peek. */
+  --slide-w: clamp(13.5rem, min(84vw, (100dvh - 26.25rem) * 0.8), 26rem);
+}
+@media (min-height: 761px) and (max-width: 1023px) {
+  .tp {
+    /* Taller phones also show the subtitle (two lines): budget for it. */
+    --slide-w: clamp(13.5rem, min(84vw, (100dvh - 29rem) * 0.8), 26rem);
+  }
+}
+@media (max-width: 1023px) {
+  /* A step under body size on phones: at 390px the Georgian line otherwise
+     filled its box to the pixel, so a fallback face (or another platform's
+     spacing) re-wrapped it to three lines and moved the gallery. */
+  .tp__subtitle {
+    font-size: 0.9375rem;
+  }
+}
+@media (max-height: 760px) and (max-width: 1023px) {
+  .tp__subtitle {
+    display: none;
+  }
+  /* Real phones (browser chrome showing) are height-bound: give the chosen
+     world the room. The mood line goes — the world itself now carries the
+     mood, and each seal still describes it to assistive tech — the gallery
+     tightens, and the world is sized from the chrome actually left. */
+  .tp {
+    --slide-w: clamp(13.5rem, min(84vw, (100dvh - 23.5rem) * 0.8), 26rem);
+  }
+  .tp__now-mood {
+    display: none;
+  }
+  .tp .tp__gallery {
+    padding-block: 0.25rem 0.5rem;
+  }
+}
+@media (max-height: 760px) and (max-width: 379px) {
+  .tp {
+    /* Narrow phones: the Georgian title takes two lines. */
+    --slide-w: clamp(13.5rem, min(84vw, (100dvh - 25.5rem) * 0.8), 26rem);
+  }
+}
+.tp__gallery {
+  /* The slides' offsetParent, so centring a world (theme-picker.tsx) measures
+     from the gallery itself, not from an ancestor its negative margin offsets
+     — otherwise the last world stopped 16px short of the centre. */
+  position: relative;
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  /* Full-bleed below lg, so its width is the viewport's: centre the first
+     and last worlds exactly (a % here would resolve against the parent). */
+  padding: 0.5rem calc(50vw - var(--slide-w) / 2) 0.75rem;
+  -webkit-tap-highlight-color: transparent;
+}
+.tp__gallery::-webkit-scrollbar {
+  display: none;
+}
+/* Server render, before hydration: only the chosen world, centred by the
+   gallery's padding (theme-picker.tsx reveals the rest and scrolls to it). */
+.tp__gallery:not([data-ready]) .tp__slide:not([data-selected]) {
+  display: none;
+}
+.tp__slide {
+  flex: 0 0 var(--slide-w);
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  cursor: pointer;
+  transition:
+    scale 420ms var(--cx-ease),
+    opacity 420ms var(--cx-ease),
+    filter 420ms var(--cx-ease);
+  scale: 0.92;
+  opacity: 0.62;
+  filter: saturate(0.85);
+}
+.tp__slide[data-selected] {
+  scale: 1;
+  opacity: 1;
+  filter: none;
+}
+/* The gallery tracks the finger: while swiping, each world's size and light
+   follow its distance from the centre continuously (a scroll-driven
+   animation on the compositor — no JS on scroll), and its ground drifts a
+   few points slower than its card, so the composition has depth. Where
+   scroll-driven animations are unsupported, the selection transition above
+   stays. Not under reduced motion. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .tp__gallery[data-ready] .tp__slide {
+      view-timeline: --tp-slide inline;
+      transition: none;
+      scale: 1;
+      opacity: 1;
+      filter: none;
+      animation: tp-depth linear both;
+      animation-timeline: --tp-slide;
+      animation-range: cover 0% cover 100%;
+    }
+    .tp__gallery[data-ready] .tp__slide .tw__ground {
+      animation: tp-parallax linear both;
+      animation-timeline: --tp-slide;
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+@keyframes tp-depth {
+  0%,
+  100% {
+    scale: 0.88;
+    opacity: 0.5;
+    filter: saturate(0.85);
+  }
+  50% {
+    scale: 1;
+    opacity: 1;
+    filter: none;
+  }
+}
+@keyframes tp-parallax {
+  0% {
+    transform: translateX(-6cqw) scale(1.12);
+  }
+  50% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: translateX(6cqw) scale(1.12);
+  }
+}
+.tp__world {
+  border-radius: 4px;
+  box-shadow:
+    0 1px 2px rgb(30 20 15 / 0.12),
+    0 18px 36px -18px rgb(30 20 15 / 0.45);
+}
+.tp__slide[data-selected] .tp__world {
+  box-shadow:
+    0 1px 2px rgb(30 20 15 / 0.14),
+    0 26px 48px -20px rgb(30 20 15 / 0.55);
+}
+
+/* The chosen world, named — the mood line printed small beneath. */
+.tp__now {
+  /* Full-width lines, centred text: the name's box never moves when its
+     serif swaps in. */
+  display: flex;
+  flex-direction: column;
+  text-align: center;
+  gap: 0.1rem;
+}
+.tp__now-name {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+:lang(ka) .tp__now-name {
+  font-size: 1.125rem;
+}
+.tp__now-mood {
+  font-size: 0.8125rem;
+  color: var(--ink-3);
+}
+
+/* The radio group: six seals (phones), an editorial list (desktop). */
+.tp__choices {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-top: 0.875rem;
+}
+.tp__choice {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+.tp__seal {
+  display: block;
+  width: 1.875rem;
+  height: 2.375rem;
+  border-radius: 0.3125rem;
+  box-shadow: 0 0 0 1px rgb(30 20 15 / 0.08);
+  transition:
+    scale 260ms var(--cx-ease),
+    box-shadow 260ms var(--cx-ease);
+}
+.tp__choice[aria-checked="true"] .tp__seal {
+  scale: 1.12;
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 3.5px var(--ink),
+    0 6px 12px -6px rgb(30 20 15 / 0.5);
+}
+.tp__choice:focus-visible .tp__seal {
+  box-shadow:
+    0 0 0 2px var(--paper),
+    0 0 0 4px var(--focus);
+}
+/* Press: the seal gives under the finger and springs back. */
+.tp__choice .tp__seal {
+  transition:
+    scale 520ms var(--qs-ease-snap),
+    box-shadow 260ms var(--cx-ease);
+}
+.tp__choice:active .tp__seal {
+  scale: 0.88;
+  transition-duration: 90ms;
+}
+/* On choosing, the seal answers in its world's own gesture — once, ~0.6s:
+   Romantic's light comes up, Wedding's vellum catches a sheen, Birthday's
+   paper shifts into place, Celebration's rays draw out, Elegant's card
+   opens, Minimal's point lands. Not on page load (data-live). */
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--quiet-light .tw-seal__engraving {
+  animation: tp-seal-light 700ms var(--qs-ease-out) backwards;
+}
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--vellum .tw-seal__card::before {
+  content: "";
+  position: absolute;
+  inset: 0 -100%;
+  z-index: 1;
+  background: linear-gradient(100deg, transparent 40%, rgb(255 255 255 / 0.95) 50%, transparent 60%);
+  translate: 60% 0;
+  animation: tp-seal-sheen 800ms var(--qs-ease-inout) backwards;
+}
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--paper-party circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tp-seal-disc 620ms var(--qs-ease-snap) backwards;
+}
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--paper-party path:first-of-type {
+  transform-box: view-box;
+  transform-origin: 0 40px;
+  animation: tp-seal-arc 620ms var(--qs-ease-paper) 60ms backwards;
+}
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--signal line {
+  stroke-dasharray: 40;
+  animation: tp-seal-ray 560ms var(--qs-ease-out) backwards;
+}
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--ink-and-stone rect:first-of-type {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tp-seal-open 560ms var(--qs-ease-aperture) backwards;
+}
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--just-words circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tp-seal-point 600ms var(--qs-ease-snap) 80ms backwards;
+}
+@keyframes tp-seal-light {
+  from {
+    opacity: 0.2;
+    translate: -2px 2px;
+  }
+}
+@keyframes tp-seal-sheen {
+  from {
+    translate: -60% 0;
+  }
+}
+@keyframes tp-seal-disc {
+  from {
+    translate: 6px -4px;
+    scale: 0.5;
+  }
+}
+@keyframes tp-seal-arc {
+  from {
+    rotate: -30deg;
+  }
+}
+@keyframes tp-seal-ray {
+  from {
+    stroke-dashoffset: 40;
+  }
+}
+@keyframes tp-seal-open {
+  from {
+    scale: 0 1;
+  }
+}
+@keyframes tp-seal-point {
+  from {
+    scale: 0;
+  }
+}
+.tp__choice-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (min-width: 1024px) {
+  .tp__now,
+  .tp__gallery {
+    display: none;
+  }
+  .tp__choices {
+    flex-direction: column;
+    justify-content: flex-start;
+    gap: 0;
+    margin-top: 2rem;
+    border-top: 1px solid var(--line);
+  }
+  .tp__choice {
+    display: flex;
+    width: 100%;
+    height: auto;
+    min-height: 3.75rem;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 1rem;
+    padding: 0.625rem 0.75rem 0.625rem 0.25rem;
+    border-radius: 0;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    transition: background-color 200ms var(--cx-ease);
+  }
+  .tp__choice:hover {
+    background: color-mix(in oklab, var(--surface) 70%, transparent);
+  }
+  .tp__choice:focus-visible {
+    outline: 2px solid var(--focus);
+    outline-offset: -2px;
+  }
+  .tp__choice:focus-visible .tp__seal {
+    box-shadow: 0 0 0 1px rgb(30 20 15 / 0.08);
+  }
+  .tp__seal {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2.5rem;
+  }
+  .tp__choice[aria-checked="true"] .tp__seal {
+    scale: 1;
+    box-shadow:
+      0 0 0 2px var(--paper),
+      0 0 0 3.5px var(--ink);
+  }
+  .tp__choice-text {
+    position: static;
+    display: flex;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    flex-direction: column;
+    gap: 0.1rem;
+  }
+  .tp__choice-name {
+    font-family: var(--font-serif);
+    font-size: 1.1875rem;
+    line-height: 1.2;
+    color: var(--ink-2);
+  }
+  :lang(ka) .tp__choice-name {
+    font-size: 1.0625rem;
+  }
+  .tp__choice[aria-checked="true"] .tp__choice-name {
+    color: var(--ink);
+  }
+  .tp__choice-mood {
+    font-size: 0.8125rem;
+    color: var(--ink-3);
+  }
+  /* The chosen row is marked with the Starr. */
+  .tp__choice[aria-checked="true"]::after {
+    content: "";
+    position: absolute;
+    right: 0.75rem;
+    width: 0.875rem;
+    height: 0.875rem;
+    background: var(--cx-wine-600);
+    clip-path: polygon(50% 0, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0 50%, 39% 39%);
+  }
+  @media (max-height: 820px) {
+    /* Short desktops (1024×768): a tighter list keeps the action above the
+       fold when the Georgian title and subtitle take extra lines. */
+    .tp__choices {
+      margin-top: 1.25rem;
+    }
+    .tp__choice {
+      min-height: 3.25rem;
+      padding-block: 0.375rem;
+    }
+  }
+  @media (max-height: 740px) {
+    .tp__subtitle {
+      display: none;
+    }
+  }
+  .tp__stage {
+    position: sticky;
+    top: 4.5rem;
+    flex-direction: column;
+    align-items: center;
+    align-self: start;
+    gap: 0.75rem;
+  }
+  .tp__stage-label {
+    font-size: 0.8125rem;
+    color: var(--ink-3);
+  }
+  .tp__stage-frame {
+    position: relative;
+    display: grid;
+    width: min(100%, calc((100dvh - 10.5rem) * 0.8), 34rem);
+    /* Clicking the chosen world plays it again. */
+    cursor: pointer;
+  }
+  .tp__stage-world {
+    grid-area: 1 / 1;
+    width: 100%;
+    border-radius: 6px;
+    box-shadow:
+      0 1px 2px rgb(30 20 15 / 0.12),
+      0 30px 60px -28px rgb(30 20 15 / 0.55);
+    animation: cx-fade 380ms var(--cx-ease-soft) backwards;
+  }
+  /* The incoming world arrives in its own grammar (below) over the old one,
+     which stays beneath until it is covered. */
+  .tp__stage-world--leaving {
+    z-index: 0;
+    animation: none;
+  }
+  .tp__stage-world--enter {
+    z-index: 1;
+  }
+}
+
+/* ===========================================================================
+ * The room: while the picker is on screen, the whole screen takes on the
+ * chosen world — its colour, its own material, a soft pool of light where
+ * the world sits — so the sender is inside it, not looking at a card. Set on
+ * <body> (painted from the first frame, no JS); the shell's tokens follow, so
+ * header, title, progress, seals and action adapt (three dark rooms switch
+ * the chrome to light ink). Only while .tp is mounted: no other screen is
+ * touched.
+ * ======================================================================== */
+body:has(.tp[data-world]),
+.tp-room__layer {
+  background: var(--room-glow), var(--room-tex), var(--room);
+  background-blend-mode: normal, var(--room-blend, soft-light), normal;
+}
+/* Desktop: the action sits in the left column and never covers scrolling
+   content, so the bar's fade (flat --paper) would only paint a box over the
+   room's texture and light. */
+@media (min-width: 1024px) {
+  .tp__action > div > div[aria-hidden] {
+    display: none;
+  }
+}
+
+/* Each template's room (--room, --room-glow, --room-tex, --room-blend) is
+   generated from its `room` tokens (src/lib/templates/room.ts) and rendered
+   by the picker as an inline <style>. */
+body:has(.tp[data-world]) {
+  --paper: var(--room);
+  --surface: color-mix(in oklab, var(--room) 70%, white 30%);
+  --line: color-mix(in oklab, var(--room) 82%, var(--ink) 18%);
+  --surface-sunken: color-mix(in oklab, var(--room) 90%, black 8%);
+  background-attachment: fixed;
+  transition: color 600ms var(--cx-ease);
+}
+/* Light rooms: the app's caption ink (#776d65, 4.8:1 on paper) falls to
+   3.4:1 on mid-tone rooms such as Wedding's sage; one step darker keeps
+   every caption ≥ 4.5:1 on every light room (verify:templates checks it). */
+body:has(.tp[data-room="light"]) {
+  --ink-3: #625952;
+}
+/* Dark rooms (a template's `room.dark`): light ink (every pairing ≥ 4.5:1 on the room). */
+body:has(.tp[data-room="dark"]) {
+  --ink: #f6efe7;
+  --ink-2: #dcd2c7;
+  --ink-3: #b9aea3;
+  --surface: color-mix(in oklab, var(--room) 80%, white 20%);
+  --line: color-mix(in oklab, var(--room) 74%, white 26%);
+  --surface-sunken: color-mix(in oklab, var(--room) 84%, white 16%);
+  --focus: #f0b49c;
+}
+/* The worlds float a little higher in the room. */
+body:has(.tp[data-world]) .tp__world {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.16),
+    0 26px 50px -18px rgb(0 0 0 / 0.5);
+}
+
+/* Arrival layers (portal on <body>, only during a change): the old room,
+   and the new one revealed over it in the new world's grammar. */
+.tp-room {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.tp-room__layer {
+  position: absolute;
+  inset: 0;
+}
+
+/* ---- Arrival grammar: each world enters through its own material -------
+   Shared by the room and the desktop stage. Romantic through light (from
+   the window), Wedding through vellum (drawn down like a sheet), Birthday
+   through paper (bursting from the card, a little overshoot), Celebration
+   through ignition (from the focal point), Elegant through an aperture,
+   Minimal through a single line of type opening into a page. */
+[data-enter="quiet-light"],
+.tp-enter--quiet-light {
+  animation: tp-arrive-light 1150ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+[data-enter="vellum"],
+.tp-enter--vellum {
+  animation: tp-arrive-vellum 1200ms cubic-bezier(0.55, 0, 0.25, 1) both;
+}
+[data-enter="paper-party"],
+.tp-enter--paper-party {
+  animation: tp-arrive-paper 700ms cubic-bezier(0.34, 1.3, 0.64, 1) both;
+}
+[data-enter="signal"],
+.tp-enter--signal {
+  animation: tp-arrive-ignition 950ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+[data-enter="ink-and-stone"],
+.tp-enter--ink-and-stone {
+  animation: tp-arrive-aperture 1050ms cubic-bezier(0.76, 0, 0.24, 1) both;
+}
+[data-enter="just-words"],
+.tp-enter--just-words {
+  animation: tp-arrive-line 850ms cubic-bezier(0.65, 0, 0.35, 1) both;
+}
+@keyframes tp-arrive-light {
+  from {
+    clip-path: circle(0% at 12% 8%);
+  }
+  to {
+    clip-path: circle(150% at 12% 8%);
+  }
+}
+@keyframes tp-arrive-vellum {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes tp-arrive-paper {
+  from {
+    clip-path: circle(0% at 66% 70%);
+  }
+  to {
+    clip-path: circle(150% at 66% 70%);
+  }
+}
+@keyframes tp-arrive-ignition {
+  from {
+    clip-path: circle(0% at 18% 84%);
+  }
+  to {
+    clip-path: circle(150% at 18% 84%);
+  }
+}
+@keyframes tp-arrive-aperture {
+  from {
+    clip-path: inset(0 50% 0 50%);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes tp-arrive-line {
+  0% {
+    clip-path: inset(49.8% 0 49.8% 0);
+  }
+  35% {
+    clip-path: inset(49.8% 0 49.8% 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ---- Selectors as portals ------------------------------------------------
+   Pressing a seal previews its world's physical behaviour in miniature;
+   choosing it plays the same once. Romantic: light passes. Wedding: the
+   vellum slides. Birthday: the paper jumps. Celebration: the Starr ignites.
+   Elegant: the aperture opens. Minimal: the red point lands. */
+.tw-seal--quiet-light::after {
+  content: "";
+  position: absolute;
+  inset: 0 -120%;
+  background: linear-gradient(110deg, transparent 40%, rgb(255 222 196 / 0.75) 50%, transparent 60%);
+  mix-blend-mode: soft-light;
+  translate: -60% 0;
+  opacity: 0;
+}
+.tp__choice:active .tw-seal--quiet-light::after,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--quiet-light::after {
+  animation: tp-portal-light 900ms var(--qs-ease-out) both;
+}
+.tw-seal--vellum .tw-seal__card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: rgb(255 255 255 / 0.72);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.9);
+  translate: 0 -110%;
+}
+.tp__choice:active .tw-seal--vellum .tw-seal__card::before,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--vellum .tw-seal__card::before {
+  animation: tp-portal-vellum 1000ms var(--qs-ease-inout) both;
+}
+.tp__choice:active .tw-seal--paper-party svg,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--paper-party svg {
+  animation: tp-portal-jump 650ms var(--qs-ease-snap) both;
+}
+.tw-seal--signal path {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.tp__choice:active .tw-seal--signal path,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--signal path {
+  animation: tp-portal-ignite 800ms var(--qs-ease-out) both;
+}
+.tw-seal--ink-and-stone::before,
+.tw-seal--ink-and-stone::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 51%;
+  background: linear-gradient(160deg, var(--w-ground), var(--w-ground-deep));
+  translate: -100% 0;
+}
+.tw-seal--ink-and-stone::before {
+  left: 0;
+}
+.tw-seal--ink-and-stone::after {
+  right: 0;
+  translate: 100% 0;
+}
+.tp__choice:active .tw-seal--ink-and-stone::before,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--ink-and-stone::before {
+  animation: tp-portal-shutter-l 900ms var(--qs-ease-aperture) both;
+}
+.tp__choice:active .tw-seal--ink-and-stone::after,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--ink-and-stone::after {
+  animation: tp-portal-shutter-r 900ms var(--qs-ease-aperture) both;
+}
+.tp__choice:active .tw-seal--just-words circle,
+.tp[data-live] .tp__choice[aria-checked="true"] .tw-seal--just-words circle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tp-portal-point 700ms var(--qs-ease-snap) both;
+}
+@keyframes tp-portal-light {
+  0% {
+    translate: -60% 0;
+    opacity: 1;
+  }
+  100% {
+    translate: 60% 0;
+    opacity: 1;
+  }
+}
+@keyframes tp-portal-vellum {
+  0% {
+    translate: 0 0;
+  }
+  35% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 0 -110%;
+  }
+}
+@keyframes tp-portal-jump {
+  0% {
+    translate: 0 0;
+  }
+  30% {
+    translate: 0 -12%;
+    scale: 1.06;
+  }
+}
+@keyframes tp-portal-ignite {
+  0% {
+    scale: 0;
+    rotate: -90deg;
+  }
+  45% {
+    scale: 2;
+  }
+}
+@keyframes tp-portal-shutter-l {
+  0%,
+  30% {
+    translate: 0 0;
+  }
+  100% {
+    translate: -100% 0;
+  }
+}
+@keyframes tp-portal-shutter-r {
+  0%,
+  30% {
+    translate: 0 0;
+  }
+  100% {
+    translate: 100% 0;
+  }
+}
+@keyframes tp-portal-point {
+  0% {
+    translate: 0 -10px;
+    scale: 0.4;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}

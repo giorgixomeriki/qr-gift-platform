@@ -23,6 +23,8 @@ export const greetings = pgTable("greetings", {
   themeId: uuid("theme_id")
     .notNull()
     .references(() => themes.id, { onDelete: "restrict" }),
+  /** The template version chosen (lib/templates/catalog.ts); frozen at activation — migrations/0017. */
+  themeVersion: integer("theme_version").notNull().default(1),
   productId: uuid("product_id")
     .notNull()
     .references(() => products.id, { onDelete: "restrict" }),

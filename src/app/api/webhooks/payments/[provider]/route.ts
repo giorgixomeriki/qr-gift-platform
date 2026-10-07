@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { getPaymentProvider } from "@/lib/payments/provider-factory";
-import { confirmPaymentSuccess, activatePaidOrder, refundIneligiblePayment, PaymentConfirmationError } from "@/lib/payments/service";
+import { confirmPaymentSuccess, recordProviderFailure, settleConfirmedPayment, PaymentConfirmationError } from "@/lib/payments/service";
 import { paymentProviderKeySchema, ProviderNotImplementedError } from "@/lib/payments/types";
-import { recordAnalyticsEvent } from "@/lib/analytics";
 
 /**
  * Provider webhook/callback endpoint (Phase 5 §6) — the only route a real
@@ -60,7 +59,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   try {
-    const { order, outcome } = await confirmPaymentSuccess({
+    // The provider's own reported outcome decides what happens — a FAILED or
+    // PENDING notification must never be treated as money received.
+    if (webhookResult.status === "FAILED") {
+      await recordProviderFailure({ provider: parsedProvider.data, providerPaymentId: webhookResult.providerPaymentId, orderId: webhookResult.orderId });
+      return NextResponse.json({ received: true });
+    }
+    if (webhookResult.status !== "SUCCEEDED") {
+      // PENDING: nothing has happened yet; the final notification (or
+      // reconciliation) settles it.
+      return NextResponse.json({ received: true });
+    }
+
+    const confirmation = await confirmPaymentSuccess({
       provider: parsedProvider.data,
       providerPaymentId: webhookResult.providerPaymentId,
       orderId: webhookResult.orderId,
@@ -68,28 +79,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       currency: webhookResult.currency,
       metadata: webhookResult.metadata,
     });
-
-    if (outcome === "REFUND_REQUIRED") {
-      // Money was captured for a greeting that can no longer be activated
-      // (blocked / partner suspended / no message). Hand it back rather than
-      // keep it; if the provider can't refund yet the order stays queued in
-      // REFUND_REQUIRED. Still a 200: the notification itself was handled.
-      await refundIneligiblePayment(order.id);
-      return NextResponse.json({ received: true });
-    }
-
-    if (webhookResult.status === "SUCCEEDED") {
-      const { activated } = await activatePaidOrder(webhookResult.orderId);
-      if (activated) {
-        // order comes straight from confirmPaymentSuccess's own return value,
-        // not a fresh SELECT — orders has no public-read RLS policy, so an
-        // unauthenticated re-query here would silently return nothing.
-        await recordAnalyticsEvent(
-          { eventType: "QR_ACTIVATED", qrCodeId: order.qrCodeId, greetingId: order.greetingId },
-          { partnerId: order.partnerId },
-        );
-      }
-    }
+    // Refunds (ineligible greeting, greeting already paid, a duplicate
+    // capture) or activation — the same settlement every path uses. If the
+    // provider cannot refund yet, the money stays queued for a manual refund
+    // (findPaymentAnomalies); the notification itself was still handled.
+    await settleConfirmedPayment(confirmation);
 
     // 200 regardless of "already processed" — a provider's retry of a
     // webhook it already delivered must be treated as a normal success, not

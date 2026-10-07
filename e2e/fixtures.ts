@@ -52,6 +52,18 @@ export async function createAvailableQr() {
 }
 
 /**
+ * The money trail behind a card, for asserting the end-to-end journey: its
+ * orders, their charges and the partner ledger (superuser read; test only).
+ */
+export async function moneyTrailFor(publicToken: string) {
+  const [qr] = await sql`select id, partner_id from qr_codes where public_token = ${publicToken}`;
+  const orders = await sql`select id, status, partner_id, gross_amount_minor, partner_commission_minor, platform_share_minor, currency from orders where qr_code_id = ${qr!.id}`;
+  const payments = await sql`select p.status, p.amount_minor, p.currency from payments p join orders o on o.id = p.order_id where o.qr_code_id = ${qr!.id}`;
+  const ledger = await sql`select l.type, l.amount_minor, l.partner_id from partner_ledger_entries l join orders o on o.id = l.order_id where o.qr_code_id = ${qr!.id}`;
+  return { qrPartnerId: qr!.partner_id as string, orders, payments, ledger };
+}
+
+/**
  * A throwaway batch under the partner `email` OWNS (partner@dev.local -> Dev
  * Partner), holding one unclaimed card and one card with a live greeting —
  * for asserting which credentials the partner surfaces release (QA-01).

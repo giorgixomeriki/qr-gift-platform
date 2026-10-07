@@ -92,6 +92,41 @@
       "when": 1790400180000,
       "tag": "0012_partner_greeting_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1790400240000,
+      "tag": "0013_partner_attribution_integrity",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1790400300000,
+      "tag": "0014_payout_items",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1790400360000,
+      "tag": "0015_half_open_payout_periods",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1790400420000,
+      "tag": "0016_one_open_order_per_greeting",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1790400480000,
+      "tag": "0017_greeting_theme_version",
+      "breakpoints": true
     }
   ]
 }

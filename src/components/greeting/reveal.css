@@ -1,0 +1,519 @@
+/* ===========================================================================
+ * The recipient reveal (greeting-renderer.tsx): the greeting told inside the
+ * template's world, set in its room. Everything here reads world tokens
+ * (--w-*, theme-world.css / lib/themes/worlds.ts) and room tokens (--room*,
+ * lib/templates/room.ts) — no template or composition is named except where
+ * a composition frames media or letters in its own way.
+ *
+ * Motion follows docs/design/QR-STARR-MOTION-LANGUAGE.md: the world's own
+ * scene is the reveal; around it things arrive once and are still.
+ * ======================================================================== */
+.reveal {
+  /* Room chrome ink — light rooms: the app's ink (≥ 4.5:1 on every light room,
+     verify:templates); dark rooms: light ink (below). */
+  --r-ink: #1d1916;
+  --r-ink-soft: #5a514a;
+  --r-line: color-mix(in oklab, var(--room) 78%, #1d1916 22%);
+  --r-btn: #1d1916;
+  --r-btn-ink: #f7f3ec;
+  /* Pieces written for the v1 renderer (VoicePlayer) read --g-*. */
+  --g-ink: var(--r-ink);
+  --g-ink-soft: var(--r-ink-soft);
+  --g-line: var(--r-line);
+  --g-card: color-mix(in oklab, var(--room) 88%, var(--r-ink) 12%);
+  --g-accent: var(--r-btn);
+  --g-on-accent: var(--r-btn-ink);
+  color: var(--r-ink);
+  background: var(--room-glow), var(--room-tex), var(--room);
+  background-blend-mode: normal, var(--room-blend, soft-light), normal;
+}
+.reveal[data-room="dark"] {
+  --r-ink: #f6efe7;
+  --r-ink-soft: #dcd2c7;
+  --r-line: color-mix(in oklab, var(--room) 70%, white 30%);
+  --r-btn: #f6efe7;
+  --r-btn-ink: #1d1916;
+}
+
+/* ---- Chrome --------------------------------------------------------------- */
+.reveal__progress {
+  height: 3px;
+  flex: 1;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--r-ink) 18%, transparent);
+}
+.reveal__progress > span {
+  display: block;
+  height: 100%;
+  background: var(--r-ink);
+  transform-origin: left;
+  transition: transform 500ms var(--qs-ease-out);
+}
+.reveal__primary {
+  min-height: 3.25rem;
+  padding: 0.75rem 1.5rem;
+  border-radius: 12px;
+  background: var(--r-btn);
+  color: var(--r-btn-ink);
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1.25;
+  box-shadow: 0 10px 24px -14px rgb(0 0 0 / 0.55);
+  transition: scale 90ms ease-out;
+}
+.reveal__primary:active {
+  scale: 0.98;
+}
+.reveal__primary:disabled {
+  opacity: 0.85;
+}
+.reveal__ghost {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0 1.25rem;
+  border-radius: 999px;
+  color: var(--r-ink);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  box-shadow: inset 0 0 0 1px var(--r-line);
+}
+.reveal__ghost--square {
+  width: 3.25rem;
+  height: 3.25rem;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 12px;
+}
+:is(.reveal__primary, .reveal__ghost, .reveal__letter):focus-visible {
+  outline: 2px solid var(--r-ink);
+  outline-offset: 3px;
+}
+.reveal__hint {
+  margin: 0;
+  color: var(--r-ink-soft);
+  font-size: 0.8125rem;
+  line-height: 1.4;
+  text-align: center;
+}
+
+/* ---- Stage: the world at the size the screen allows ----------------------
+   A size container, so the world is sized from the space between the chrome
+   (cqh) on every phone height, in the Preview layer as well as full screen.
+   Its height must be definite (the renderer is h-dvh, or a flex child of the
+   Preview layer): under a min-height-only parent the container's units
+   resolve to 0 and the world collapses. Content taller than the stage
+   (the ending with the sender's controls) scrolls inside it. */
+.reveal__stage {
+  container-type: size;
+  min-height: 16rem;
+  overflow-y: auto;
+  padding: 0.5rem 1rem;
+}
+.reveal__frame {
+  position: relative;
+  width: min(calc(100cqw - 0.5rem), calc((100cqh - 1rem) * 0.8), 32rem);
+}
+.reveal__world {
+  width: 100%;
+  border-radius: 6px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.16),
+    0 26px 50px -18px rgb(0 0 0 / 0.5);
+  transition: opacity 700ms var(--qs-ease-out);
+}
+
+/* Sealed: the world's ground, its opening line, a seal in its accent. */
+.reveal__cover {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12cqw;
+  padding: 10cqw;
+  text-align: center;
+  animation: reveal-fade 700ms var(--qs-ease-out) both;
+}
+.reveal__opening {
+  margin: 0;
+  max-width: 18ch;
+  color: var(--w-on-ground);
+  font-family: var(--w-display);
+  font-size: 7.4cqw;
+  line-height: 1.14;
+  text-wrap: balance;
+}
+:lang(ka) .reveal__opening {
+  max-width: 22ch;
+  font-size: 6.2cqw;
+  line-height: 1.32;
+}
+.reveal__seal {
+  display: grid;
+  width: 23cqw;
+  aspect-ratio: 1;
+  place-items: center;
+  border-radius: 50%;
+  color: color-mix(in oklab, var(--w-accent) 35%, black 65%);
+  background: radial-gradient(circle at 36% 30%, color-mix(in oklab, var(--w-accent) 72%, white 28%) 0%, var(--w-accent) 48%, color-mix(in oklab, var(--w-accent) 74%, black 26%) 100%);
+  box-shadow:
+    inset 0 0 0 1.3cqw color-mix(in oklab, var(--w-accent) 86%, black 14%),
+    inset 0 0 0 1.9cqw color-mix(in oklab, var(--w-accent) 80%, white 20%),
+    0 0.6cqw 0 color-mix(in oklab, var(--w-accent) 60%, black 40%),
+    0 3cqw 5cqw -1.5cqw rgb(var(--w-shadow) / 0.6);
+  cursor: pointer;
+  animation: reveal-seal 900ms var(--qs-ease-settle) 250ms both;
+  transition: scale 90ms ease-out;
+}
+.reveal__seal svg {
+  width: 44%;
+  fill: currentColor;
+  opacity: 0.85;
+}
+.reveal__seal:active,
+.reveal__seal[data-pressed] {
+  scale: 0.88;
+}
+
+/* ---- The letter: a message longer than the card ---------------------------
+   Rises over the world once its scene is at rest, in the world's own paper,
+   ink and type; the world steps back behind it. */
+.reveal__frame[data-reading] .reveal__world {
+  opacity: 0.4;
+}
+.reveal__letter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(calc(100cqw - 1rem), 28rem);
+  max-height: calc(100cqh - 1rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  translate: -50% -50%;
+  padding: 2.25rem 1.75rem 2.25rem;
+  border-radius: 3px;
+  color: var(--w-ink);
+  /* Scroll cue without JS: a soft shade at the foot while more of the letter
+     lies below; a strip of card stock attached to the end of the content
+     covers it once the end is reached (background-attachment local/scroll). */
+  background:
+    linear-gradient(to top, var(--w-card) 55%, transparent) bottom / 100% 2.25rem no-repeat local,
+    radial-gradient(farthest-side at 50% 100%, rgb(var(--w-shadow) / 0.3), transparent) bottom / 100% 1.1rem no-repeat scroll,
+    var(--cx-paper-tooth) 0 0 / 256px 256px,
+    var(--w-card);
+  background-blend-mode: normal, normal, soft-light, normal;
+  box-shadow:
+    0 1px 2px rgb(var(--w-shadow) / 0.2),
+    0 34px 70px -28px rgb(var(--w-shadow) / 0.75);
+  animation: reveal-letter 950ms var(--qs-ease-settle) both;
+}
+.reveal__letter p {
+  margin: 0;
+  font-family: var(--w-text);
+  font-size: 1.1875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  text-wrap: pretty;
+}
+:lang(ka) .reveal__letter p {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+.reveal__letter-mark {
+  display: block;
+  width: 1.125rem;
+  height: 1.125rem;
+  margin: 0 auto 1.5rem;
+  color: var(--w-accent);
+}
+/* Each composition's letter keeps one trait of its world. */
+.reveal[data-composition="vellum"] .reveal__letter,
+.reveal[data-composition="ink-and-stone"] .reveal__letter {
+  text-align: center;
+}
+.reveal[data-composition="vellum"] .reveal__letter::before,
+.reveal[data-composition="ink-and-stone"] .reveal__letter::before {
+  /* the world's ruled frame */
+  content: "";
+  position: absolute;
+  inset: 0.625rem;
+  border: 1px solid color-mix(in oklab, var(--w-ink) 22%, transparent);
+  pointer-events: none;
+}
+.reveal[data-composition="paper-party"] .reveal__letter {
+  box-shadow:
+    0.5rem 0.5rem 0 var(--w-accent-3),
+    0 30px 60px -28px rgb(var(--w-shadow) / 0.7);
+}
+.reveal[data-composition="signal"] .reveal__letter {
+  rotate: -1.2deg;
+}
+.reveal[data-composition="just-words"] .reveal__letter-mark {
+  /* Minimal's single vermilion point instead of the Starr */
+  width: 0.45rem;
+  height: 0.45rem;
+  margin: 0 0 1.75rem;
+  border-radius: 50%;
+  background: var(--w-accent);
+  color: transparent;
+}
+
+/* ---- Photos and video, framed as the world frames media ------------------ */
+.reveal__media {
+  display: flex;
+  width: 100%;
+  max-width: 34rem;
+  justify-content: center;
+}
+.reveal__mount {
+  --pad: 0px;
+  position: relative;
+  margin: 0;
+  max-width: 100%;
+  padding: var(--pad);
+}
+.reveal__photo,
+.reveal__video {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100cqh - 4.5rem);
+  object-fit: contain;
+}
+.reveal__photo {
+  min-width: 10rem;
+  min-height: 10rem;
+  opacity: 0;
+  transition: opacity 500ms var(--qs-ease-out);
+}
+.reveal__photo[data-loaded] {
+  min-width: 0;
+  min-height: 0;
+  opacity: 1;
+}
+.reveal__video {
+  width: min(100cqw - 2rem, 32rem);
+  background: #000;
+}
+.reveal__photo-skeleton {
+  position: absolute;
+  inset: var(--pad);
+}
+/* Mounts on the world's card stock */
+.reveal__mount:is([data-frame="vellum-mount"], [data-frame="cut-paper-slip"], [data-frame="deckle-mount"], [data-frame="inset-hairline"]) {
+  background: var(--cx-paper-tooth) 0 0 / 256px 256px, var(--w-card);
+  background-blend-mode: soft-light, normal;
+  box-shadow:
+    0 1px 2px rgb(var(--w-shadow) / 0.2),
+    0 26px 50px -22px rgb(var(--w-shadow) / 0.7);
+}
+/* Romantic: a mounted print with vellum tucked over its corner */
+.reveal__mount[data-frame="vellum-mount"] {
+  --pad: 0.75rem;
+  padding-bottom: 2.75rem;
+}
+.reveal__mount[data-frame="vellum-mount"][data-side="l"] {
+  rotate: -1.6deg;
+}
+.reveal__mount[data-frame="vellum-mount"][data-side="r"] {
+  rotate: 1.4deg;
+}
+.reveal__mount[data-frame="vellum-mount"]::after {
+  content: "";
+  position: absolute;
+  right: -0.75rem;
+  bottom: 1.1rem;
+  width: 46%;
+  height: 2.6rem;
+  rotate: -5deg;
+  background: color-mix(in oklab, var(--w-card) 62%, transparent);
+  box-shadow: 0 1px 3px rgb(var(--w-shadow) / 0.18);
+}
+/* Birthday: a slip of cut paper, offset shadow in the world's colour, a paper tab */
+.reveal__mount[data-frame="cut-paper-slip"] {
+  --pad: 0.6rem;
+  box-shadow: 0.55rem 0.55rem 0 var(--w-accent-3);
+}
+.reveal__mount[data-frame="cut-paper-slip"][data-side="l"] {
+  rotate: -2.5deg;
+}
+.reveal__mount[data-frame="cut-paper-slip"][data-side="r"] {
+  rotate: 2.2deg;
+}
+.reveal__mount[data-frame="cut-paper-slip"]::after {
+  content: "";
+  position: absolute;
+  top: -0.9rem;
+  left: 50%;
+  width: 4.5rem;
+  height: 1.6rem;
+  translate: -50% 0;
+  rotate: -3deg;
+  background: var(--w-accent-2);
+}
+/* Wedding: a deep deckled mount, a ruled frame, square to the page */
+.reveal__mount[data-frame="deckle-mount"] {
+  --pad: 1.6rem;
+}
+.reveal__mount[data-frame="deckle-mount"]::after,
+.reveal__mount[data-frame="inset-hairline"]::after {
+  content: "";
+  position: absolute;
+  inset: 0.6rem;
+  border: 1px solid color-mix(in oklab, var(--w-ink) 24%, transparent);
+  pointer-events: none;
+}
+/* Elegant: a narrow mount, a hairline inset, editorial */
+.reveal__mount[data-frame="inset-hairline"] {
+  --pad: 1.2rem;
+}
+.reveal__mount[data-frame="inset-hairline"]::after {
+  inset: 0.45rem;
+  border-width: 0.5px;
+}
+/* Celebration: the picture is the event — full bleed, a deep shadow */
+.reveal__mount[data-frame="full-bleed"] :is(img, video) {
+  border-radius: 4px;
+  box-shadow:
+    0 0 0 1px color-mix(in oklab, var(--w-accent) 35%, transparent),
+    0 30px 60px -20px rgb(var(--w-shadow) / 0.9);
+}
+/* Minimal: nothing but the picture */
+.reveal__mount[data-frame="plain"] :is(img, video) {
+  border-radius: 2px;
+  box-shadow: 0 18px 40px -24px rgb(var(--w-shadow) / 0.55);
+}
+
+/* ---- Voice and ending ----------------------------------------------------- */
+.reveal__line {
+  margin: 0;
+  max-width: 20ch;
+  font-family: var(--w-display);
+  font-size: clamp(1.875rem, 1.3rem + 2.4vw, 2.75rem);
+  line-height: 1.1;
+  text-align: center;
+  text-wrap: balance;
+}
+:lang(ka) .reveal__line {
+  max-width: 22ch;
+  font-size: clamp(1.5rem, 1.15rem + 1.8vw, 2.25rem);
+  line-height: 1.3;
+}
+.reveal__audio {
+  display: flex;
+  width: min(100%, 26rem);
+  flex-direction: column;
+  align-items: center;
+  gap: 1.75rem;
+}
+.reveal__audio-card {
+  /* the voice player on the world's card stock */
+  --g-ink: var(--w-ink);
+  --g-ink-soft: var(--w-ink-soft);
+  --g-line: color-mix(in oklab, var(--w-ink) 18%, transparent);
+  --g-card: color-mix(in oklab, var(--w-card) 90%, var(--w-ink) 10%);
+  --g-accent: var(--w-ink);
+  --g-on-accent: var(--w-card);
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 6px;
+  color: var(--w-ink);
+  background: var(--cx-paper-tooth) 0 0 / 256px 256px, var(--w-card);
+  background-blend-mode: soft-light, normal;
+  box-shadow: 0 22px 44px -24px rgb(var(--w-shadow) / 0.7);
+}
+
+/* ---- Arrivals: once, then still ------------------------------------------- */
+.reveal-enter {
+  animation: reveal-rise 620ms var(--qs-ease-settle) both;
+}
+@keyframes reveal-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes reveal-rise {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+  }
+}
+@keyframes reveal-seal {
+  from {
+    opacity: 0;
+    scale: 1.25;
+  }
+}
+@keyframes reveal-letter {
+  from {
+    opacity: 0;
+    translate: -50% -42%;
+    scale: 0.97;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal__cover,
+  .reveal__seal,
+  .reveal__letter,
+  .reveal-enter {
+    animation: reveal-fade 240ms ease-out both;
+  }
+  .reveal__world,
+  .reveal__progress > span {
+    transition: none;
+  }
+}
+
+/* ===========================================================================
+ * Writing on the world (the wizard's message step): the chosen world's room,
+ * and its card stock, ink and type — what the sender types is what the
+ * recipient reads.
+ * ======================================================================== */
+.world-desk {
+  background: var(--room-glow), var(--room-tex), var(--room);
+  background-blend-mode: normal, var(--room-blend, soft-light), normal;
+}
+.world-sheet {
+  position: relative;
+  border-radius: 3px;
+  color: var(--w-ink);
+  background: var(--cx-paper-tooth) 0 0 / 256px 256px, var(--w-card);
+  background-blend-mode: soft-light, normal;
+  box-shadow:
+    0 1px 2px rgb(var(--w-shadow) / 0.2),
+    0 28px 56px -26px rgb(var(--w-shadow) / 0.7);
+}
+.world-desk[data-composition="paper-party"] .world-sheet {
+  box-shadow:
+    0.5rem 0.5rem 0 var(--w-accent-3),
+    0 28px 56px -26px rgb(var(--w-shadow) / 0.6);
+}
+.world-desk:is([data-composition="vellum"], [data-composition="ink-and-stone"]) .world-sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0.625rem;
+  border: 1px solid color-mix(in oklab, var(--w-ink) 22%, transparent);
+  pointer-events: none;
+}
+.world-sheet__mark {
+  color: var(--w-accent);
+}
+.world-sheet__text {
+  color: var(--w-ink);
+  font-family: var(--w-text);
+  font-size: 1.1875rem;
+  line-height: 1.6;
+}
+:lang(ka) .world-sheet__text {
+  font-size: 1.0625rem;
+  line-height: 1.75;
+}
+.world-sheet__text::placeholder {
+  color: var(--w-ink-soft);
+  opacity: 0.75;
+}

@@ -4,17 +4,20 @@ import { useCallback } from "react";
 import { CircleCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
-import { getThemeConfig, type ThemeKey } from "@/lib/themes/registry";
+import type { ThemeKey } from "@/lib/themes/registry";
 import { recordContentPlayedAction } from "@/lib/greetings/recipient-actions";
 
 export function RecipientView({
   greetingId,
   themeKey,
+  themeVersion,
   content,
   isOriginalSender,
 }: {
   greetingId: string;
   themeKey: ThemeKey;
+  /** The template version the greeting was made with (greetings.theme_version). */
+  themeVersion?: number;
   content: GreetingRenderContent;
   isOriginalSender: boolean;
 }) {
@@ -28,7 +31,8 @@ export function RecipientView({
 
   return (
     <GreetingRenderer
-      theme={getThemeConfig(themeKey)}
+      themeKey={themeKey}
+      themeVersion={themeVersion}
       content={content}
       mode="recipient"
       onContentPlayed={handlePlayed}

@@ -72,7 +72,13 @@ export interface PaymentProvider {
   verifyPayment(providerPaymentId: string): Promise<PaymentVerificationResult>;
   /** Parses+verifies a raw provider webhook request (signature check belongs here). */
   handleWebhook(rawBody: string, headers: Headers): Promise<WebhookResult>;
-  refundPayment(providerPaymentId: string, amountMinor?: number): Promise<RefundResult>;
+  /**
+   * `idempotencyKey` identifies one refund of one charge (lib/payments/service.ts
+   * refundIdempotencyKey). A real adapter MUST forward it as the provider's
+   * refund idempotency key (or equivalent), so a retried or concurrent refund
+   * request can never return the money twice.
+   */
+  refundPayment(providerPaymentId: string, amountMinor?: number, idempotencyKey?: string): Promise<RefundResult>;
 }
 
 /**

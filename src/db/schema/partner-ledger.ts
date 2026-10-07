@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, uuid, text, integer, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, text, integer, boolean, timestamp, index, uniqueIndex, unique, check, foreignKey } from "drizzle-orm/pg-core";
 import { ledgerEntryTypeEnum, payoutStatusEnum } from "./enums";
 import { partners } from "./partners";
 import { orders } from "./orders";
@@ -25,6 +25,12 @@ import { orders } from "./orders";
  * always just the plain running SUM(amount_minor) — see
  * lib/payments/payouts.ts's getPartnerUnpaidBalance for the one place that
  * computation lives.
+ *
+ * DB-enforced on insert (migrations/0013, trg_partner_ledger_entries_integrity):
+ * COMMISSION_EARNED must match its PAID order's partner/currency/commission
+ * snapshot exactly; COMMISSION_REVERSAL must be the exact negation for a
+ * REFUNDED order that has an earning; a PAYOUT can never take the
+ * partner+currency balance below zero (serialized by an advisory lock).
  */
 export const partnerLedgerEntries = pgTable(
   "partner_ledger_entries",
@@ -54,6 +60,25 @@ export const partnerLedgerEntries = pgTable(
     uniqueIndex("partner_ledger_one_commission_per_order")
       .on(table.orderId)
       .where(sql`${table.type} = 'COMMISSION_EARNED'`),
+    // At most one reversal per order (migrations/0013) — a refund replayed
+    // twice can't claw the same commission back twice.
+    uniqueIndex("partner_ledger_one_reversal_per_order")
+      .on(table.orderId)
+      .where(sql`${table.type} = 'COMMISSION_REVERSAL'`),
+    check(
+      "partner_ledger_entries_sign",
+      sql`(${table.type} = 'COMMISSION_EARNED' and ${table.amountMinor} >= 0) or (${table.type} = 'COMMISSION_REVERSAL' and ${table.amountMinor} <= 0) or (${table.type} = 'PAYOUT' and ${table.amountMinor} < 0) or ${table.type} = 'ADJUSTMENT'`,
+    ),
+    // One PAYOUT ledger row per payout (migrations/0014).
+    uniqueIndex("partner_ledger_one_payout_row_per_payout")
+      .on(table.payoutId)
+      .where(sql`${table.type} = 'PAYOUT'`),
+    // Composite-FK target for partner_payout_items (same partner + currency).
+    unique("partner_ledger_entries_id_partner_currency_unique").on(table.id, table.partnerId, table.currency),
+    check(
+      "partner_ledger_entries_commission_has_order",
+      sql`${table.type} not in ('COMMISSION_EARNED', 'COMMISSION_REVERSAL') or ${table.orderId} is not null`,
+    ),
   ],
 ).enableRLS();
 
@@ -79,8 +104,51 @@ export const partnerPayouts = pgTable(
     // parsed/relied on by app logic, purely a human record of how the
     // out-of-platform transfer actually happened.
     reference: text("reference"),
+    // false = legacy balance-based payout recorded before migrations/0014:
+    // valid, but with no sale-level item breakdown (none is fabricated).
+    itemized: boolean("itemized").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
     paidAt: timestamp("paid_at", { withTimezone: true }),
   },
-  (table) => [index("partner_payouts_partner_id_idx").on(table.partnerId)],
+  (table) => [
+    index("partner_payouts_partner_id_idx").on(table.partnerId),
+    check("partner_payouts_amount_positive", sql`${table.amountMinor} > 0`),
+    unique("partner_payouts_id_partner_currency_unique").on(table.id, table.partnerId, table.currency),
+  ],
+).enableRLS();
+
+/**
+ * Which ledger rows a payout settled (migrations/0014). A pure link — the
+ * money lives on the immutable partner_ledger_entries rows; the payout's
+ * amount must equal the SUM of its items (deferred check at COMMIT).
+ *
+ * ledgerEntryId is the primary key: a commission can be in at most one
+ * payout, ever. partnerId/currency exist only so the two composite foreign
+ * keys can force payout and ledger row to belong to the same partner and
+ * currency. Append-only (no update/delete policy; updates also blocked by
+ * trigger). Eligibility rules live in trg_partner_payout_items_eligibility.
+ */
+export const partnerPayoutItems = pgTable(
+  "partner_payout_items",
+  {
+    ledgerEntryId: uuid("ledger_entry_id").primaryKey(),
+    payoutId: uuid("payout_id").notNull(),
+    partnerId: uuid("partner_id").notNull(),
+    currency: text("currency").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (table) => [
+    foreignKey({
+      name: "partner_payout_items_payout_fk",
+      columns: [table.payoutId, table.partnerId, table.currency],
+      foreignColumns: [partnerPayouts.id, partnerPayouts.partnerId, partnerPayouts.currency],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "partner_payout_items_ledger_fk",
+      columns: [table.ledgerEntryId, table.partnerId, table.currency],
+      foreignColumns: [partnerLedgerEntries.id, partnerLedgerEntries.partnerId, partnerLedgerEntries.currency],
+    }).onDelete("restrict"),
+    index("partner_payout_items_payout_id_idx").on(table.payoutId),
+    index("partner_payout_items_partner_id_idx").on(table.partnerId),
+  ],
 ).enableRLS();

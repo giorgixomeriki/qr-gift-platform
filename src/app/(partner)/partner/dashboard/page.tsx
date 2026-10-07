@@ -9,11 +9,14 @@ import {
   ACTIVE_PARTNER_COOKIE,
 } from "@/lib/auth/partner-context";
 import { getPartnerMetrics } from "@/lib/dashboard/partner-metrics";
+import { getBatchPerformance } from "@/lib/dashboard/attribution";
+import { listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
+import { formatBusinessDate, formatBusinessPeriod } from "@/lib/business-calendar";
 import { formatMinorAmount } from "@/lib/format/money";
 import { listPartnerMembers, getPartnerById } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
 import { toInventoryRow } from "@/lib/qr/credential-access";
-import { EmptyState, PageHeader, Panel, Stat, StatGroup } from "@/components/dashboard/ui";
+import { Badge, EmptyState, PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
 import { PartnerSwitcher } from "@/components/partners/partner-switcher";
 import { MembershipManager } from "@/components/partners/membership-manager";
 import { CreateBatchForm } from "@/components/qr/create-batch-form";
@@ -56,6 +59,18 @@ export default async function PartnerDashboardPage() {
     const metrics = await getPartnerMetrics(tx, ctx.partnerId);
     const members = await listPartnerMembers(tx, ctx.partnerId);
     const batches = await listQrBatches(tx, ctx.partnerId);
+    const performance = await getBatchPerformance(tx, ctx.partnerId);
+    // Counts only: item rows carry card tokens, which partner views mask once claimed.
+    const payouts = (await listPartnerPayoutsWithItems(tx, ctx.partnerId)).map((p) => ({
+      id: p.id,
+      amountMinor: p.amountMinor,
+      status: p.status,
+      periodFrom: p.periodFrom,
+      periodTo: p.periodTo,
+      paidAt: p.paidAt,
+      itemized: p.itemized,
+      paidSalesCount: p.paidSalesCount,
+    }));
     const batchesWithCodes = await Promise.all(
       batches.map(async (batch) => ({
         batch: { id: batch.id, label: batch.label },
@@ -63,7 +78,7 @@ export default async function PartnerDashboardPage() {
         qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "PARTNER")),
       })),
     );
-    return { partner, metrics, members, batchesWithCodes, role: ctx.role };
+    return { partner, metrics, members, batchesWithCodes, performance, payouts, role: ctx.role };
   }, activePartnerId);
 
   const canManage = (MANAGE_ROLES as readonly string[]).includes(data.role);
@@ -72,6 +87,20 @@ export default async function PartnerDashboardPage() {
   const locale = await getLocale();
   const currency = data.partner?.currency ?? "GEL";
   const money = (minor: number) => formatMinorAmount(minor, currency, locale, { fixed: true });
+  const tPerf = await getTranslations("batchPerformance");
+  const tPayoutStatus = await getTranslations("enums.payoutStatus");
+  const day = (d: Date) => formatBusinessDate(d, locale);
+  const performanceLabel = (batchId: string) => {
+    const p = data.performance.find((row) => row.batchId === batchId);
+    if (!p) return undefined;
+    return tPerf("summary", {
+      distributed: p.distributed,
+      scanned: p.scanned,
+      paid: p.paidActivations,
+      conversion: p.conversionPct === null ? "—" : `${p.conversionPct}%`,
+      commission: money(p.netCommissionMinor),
+    });
+  };
 
   return (
     <div className="flex flex-col gap-10" data-testid="partner-dashboard-page">
@@ -86,9 +115,11 @@ export default async function PartnerDashboardPage() {
           QR → Customer activation → Partner commission — not a flat grid of
           equally-weighted numbers. */}
       <div className="flex flex-col gap-8">
-        <StatGroup title={td("salesCommissionTitle")}>
+        <StatGroup title={td("salesCommissionTitle")} columns={3}>
           <Stat label={td("stats.successfulSales")} value={data.metrics.successfulSales} testId="metric-sales" />
+          <Stat label={td("stats.grossSales")} value={money(data.metrics.grossSalesMinor)} testId="metric-gross-sales" />
           <Stat label={td("stats.commissionEarned")} value={money(data.metrics.commissionEarnedMinor)} testId="metric-commission-earned" />
+          <Stat label={td("stats.commissionReversed")} value={money(data.metrics.commissionReversedMinor)} testId="metric-commission-reversed" />
           <Stat label={td("stats.commissionPaid")} value={money(data.metrics.commissionPaidMinor)} testId="metric-commission-paid" />
           <Stat
             label={td("stats.unpaidBalance")}
@@ -112,6 +143,44 @@ export default async function PartnerDashboardPage() {
         </StatGroup>
       </div>
 
+      <Panel title={td("payoutsTitle")} flush testId="partner-payouts">
+        <div className={table.wrap}>
+          <table className={table.table}>
+            <thead className={table.thead}>
+              <tr>
+                <th className={table.th}>{td("payoutPaidOn")}</th>
+                <th className={table.th}>{td("payoutPeriod")}</th>
+                <th className={`${table.th} text-right`}>{td("payoutAmount")}</th>
+                <th className={table.th}>{td("payoutSales")}</th>
+                <th className={table.th}>{td("payoutStatus")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.payouts.map((p) => (
+                <tr key={p.id} className={table.tr} data-testid="partner-payout-row">
+                  <td className={`${table.td} whitespace-nowrap`}>{p.paidAt ? day(p.paidAt) : "—"}</td>
+                  <td className={`${table.td} whitespace-nowrap text-ink-2`}>
+                    {formatBusinessPeriod(p.periodFrom, p.periodTo, locale)}
+                  </td>
+                  <td className={`${table.td} text-right tabular-nums`}>{money(p.amountMinor)}</td>
+                  <td className={`${table.td} tabular-nums`}>{p.itemized ? p.paidSalesCount : td("payoutLegacy")}</td>
+                  <td className={table.td}>
+                    <Badge tone={p.status === "PAID" ? "success" : "neutral"}>{tPayoutStatus(p.status as "PENDING" | "PROCESSING" | "PAID" | "FAILED")}</Badge>
+                  </td>
+                </tr>
+              ))}
+              {data.payouts.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="px-5 py-6 text-center text-caption text-ink-3">
+                    {td("noPayouts")}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Panel>
+
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           <h2 className="text-h2">{td("batchesTitle")}</h2>
@@ -130,6 +199,7 @@ export default async function PartnerDashboardPage() {
             batch={batch}
             qrCodes={qrCodes}
             countLabel={td("codesCount", { count: qrCodes.length })}
+            performanceLabel={performanceLabel(batch.id)}
             defaultOpen={index === 0}
             markDistributedAction={partnerMarkDistributedAction}
           />
