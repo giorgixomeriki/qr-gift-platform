@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { preload } from "react-dom";
 import { ChevronLeft, RotateCcw } from "lucide-react";
-import { useTranslations } from "next-intl";
-import { Spark } from "@/components/ui/logo";
-import { themeVars, type ThemeConfig } from "@/lib/themes/registry";
-import { Envelope } from "./envelope";
-import { Particles } from "./particles";
+import { useLocale, useTranslations } from "next-intl";
+import { prefetchMotion } from "@/components/themes/scenes/runtime";
+import { ThemeWorld } from "@/components/themes/theme-world";
+import { Spark, SPARK_PATH } from "@/components/ui/logo";
+import { DEFAULT_TEMPLATE_ID, getTemplate, restAssets } from "@/lib/templates/catalog";
+import { roomVars } from "@/lib/templates/room";
+import { COMPOSITIONS } from "@/lib/templates/vocabulary";
+import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
 import { VoicePlayer } from "./voice-player";
+import "./reveal.css";
 
 export type GreetingRenderContent = {
   message: string | null;
@@ -24,34 +29,44 @@ type Beat =
   | { kind: "audio" }
   | { kind: "ending" };
 
-/** How long each entrance choreography runs before the first content beat appears (see globals.css). */
-const OPENING_MS: Record<ThemeConfig["entrance"], number> = {
-  envelope: 1700,
-  balloons: 900,
-  fade: 850,
-};
-const REVEAL: Record<ThemeConfig["entrance"], string> = { envelope: "envelope", balloons: "burst", fade: "fade" };
-
-const ACCENT_FOCUS = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--g-accent)]";
+/** The seal gives under the finger before the world opens. */
+const SEAL_PRESS_MS = 180;
+/** If a scene never reports rest (a stalled runtime), the letter still arrives this long after the scene should have ended. */
+const REST_GRACE_MS = 1800;
 
 /**
- * The single renderer both Preview (Phase 2) and the Recipient Experience
- * (Phase 3) use — see architecture note in Phase 2 plan §10/§11. Never fork
- * this into a "simplified preview" version: `mode` only changes what chrome
- * surrounds it (sender controls vs nothing), never the actual
- * opening/reveal/content/ending sequence a recipient will see.
+ * The single renderer both Preview and the Recipient Experience use. Never
+ * fork it into a "simplified preview": `mode` only changes the chrome around
+ * it, never what the recipient sees.
  *
- * Paced as a sequence of full-screen "beats" (sealed envelope → message →
- * each photo → video → voice → ending), so on a phone each moment gets the
- * whole screen and the recipient controls the pace.
+ * The greeting is told inside the template's **world** — the same authored
+ * composition the sender chose on Screen #2 (components/themes/), in its own
+ * room — so what is picked is what is received:
  *
- * Content is passed in fully resolved (signed URLs already generated
- * server-side) — this component does no data fetching or authorization of
- * its own. Theme copy (opening/ending line) is localized here via next-intl,
- * keyed by theme.key — see messages/{locale}.json's `themes` namespace.
+ * - **Opening:** the world, sealed (its ground, the template's opening line,
+ *   a seal in the world's accent). Opening it plays the world's signature
+ *   scene with the sender's own message on the card.
+ * - **Message:** a message that fits the card is read there. A longer one
+ *   (up to 600 characters) keeps its beginning on the card, and once the
+ *   scene comes to rest the whole letter rises in the world's paper, ink and
+ *   type.
+ * - **Photos, video, voice:** one beat each, framed as the composition
+ *   frames media (`mediaFrame`: vellum mount, cut-paper slip, deckle mount,
+ *   full bleed, inset hairline, plain).
+ * - **Ending:** the world returns, the sender's words still on its card, and
+ *   closes with its own **finale** (the template's `finale`: evening falls,
+ *   paper encore, vellum close, afterglow, gallery doors, full stop), the
+ *   template's closing line set in the world's headline. Then replay.
+ *
+ * Paced as full-screen beats so on a phone each moment has the whole screen
+ * and the recipient sets the pace; the world is decorative (aria-hidden), so
+ * every word in it is also present as real text. Reduced motion: no scenes,
+ * worlds and letters fade in at rest. Content arrives fully resolved (signed
+ * URLs generated server-side); this component fetches and authorizes nothing.
  */
 export function GreetingRenderer({
-  theme,
+  themeKey,
+  themeVersion,
   content,
   mode,
   senderControls,
@@ -61,7 +76,9 @@ export function GreetingRenderer({
   onBeatChange,
   onContentPlayed,
 }: {
-  theme: ThemeConfig;
+  themeKey: string;
+  /** The exact template version to render (a sent greeting's frozen version); latest when omitted. */
+  themeVersion?: number;
   content: GreetingRenderContent;
   mode: "preview" | "recipient";
   /** Ending-beat-only, Preview mode only — the Activate CTA and its controls. */
@@ -69,7 +86,7 @@ export function GreetingRenderer({
   /**
    * Persistent top banner shown regardless of beat, independent of `mode` —
    * used for the post-activation "this is your own gift" success banner in
-   * recipient mode (Phase 3 §8), never for a genuine recipient.
+   * recipient mode, never for a genuine recipient.
    */
   senderBanner?: React.ReactNode;
   /** Floating top-left control shown on every beat. */
@@ -78,11 +95,15 @@ export function GreetingRenderer({
   embedded?: boolean;
   /** Notified whenever the visible beat changes (Preview uses it to decide which action leads). */
   onBeatChange?: (kind: Beat["kind"]) => void;
-  /** Fired at most once per beat visit when the recipient actually plays video/audio (Phase 3 §14). */
+  /** Fired at most once per beat visit when the recipient actually plays video/audio. */
   onContentPlayed?: (type: "video" | "audio") => void;
 }) {
   const t = useTranslations("greeting");
   const tt = useTranslations("themes");
+  const locale = useLocale();
+  const template = (themeVersion !== undefined && getTemplate(themeKey, themeVersion)) || getTemplate(themeKey) || getTemplate(DEFAULT_TEMPLATE_ID)!;
+  const world = getThemeWorld(template.id, template.version);
+  const composition = COMPOSITIONS[world.composition];
 
   const beats = useMemo<Beat[]>(() => {
     const list: Beat[] = [{ kind: "opening" }];
@@ -95,8 +116,12 @@ export function GreetingRenderer({
   }, [content]);
 
   const [beatIndex, setBeatIndex] = useState(0);
-  const [opening, setOpening] = useState(false);
+  const [pressing, setPressing] = useState(false);
+  /** Bumped each time the greeting is opened, so the world's scene plays again on replay. */
   const [runId, setRunId] = useState(0);
+  /** The message does not fit the card: it is presented as a letter once the world is at rest. */
+  const [long, setLong] = useState(false);
+  const [atRest, setAtRest] = useState(false);
   const beat = beats[beatIndex] ?? beats[0]!;
   const playedRef = useRef<Set<string>>(new Set());
   const stageRef = useRef<HTMLDivElement>(null);
@@ -108,20 +133,18 @@ export function GreetingRenderer({
     setBeatIndex((i) => Math.max(1, i - 1));
   }
   function open() {
-    if (opening) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setOpening(true);
-    window.setTimeout(
-      () => {
-        setOpening(false);
-        setRunId((n) => n + 1);
-        advance();
-      },
-      reduce ? 50 : OPENING_MS[theme.entrance],
-    );
+    if (pressing) return;
+    setPressing(true);
+    window.setTimeout(() => {
+      setPressing(false);
+      setAtRest(false);
+      setRunId((n) => n + 1);
+      advance();
+    }, SEAL_PRESS_MS);
   }
   function restart() {
     playedRef.current = new Set();
+    setAtRest(false);
     setBeatIndex(0);
   }
   function notifyPlayed(type: "video" | "audio") {
@@ -140,43 +163,49 @@ export function GreetingRenderer({
     if (beatIndex > 0) stageRef.current?.focus({ preventScroll: true });
   }, [beatIndex]);
 
+  // While the world is sealed, fetch the scene runtime so opening it starts at once.
+  useEffect(() => prefetchMotion(), []);
+
+  // Safety: the letter must arrive even if a scene never reports rest.
+  const onMessage = beat.kind === "message";
+  useEffect(() => {
+    if (!onMessage || atRest) return;
+    const timer = window.setTimeout(() => setAtRest(true), composition.sceneMs + REST_GRACE_MS);
+    return () => window.clearTimeout(timer);
+  }, [onMessage, atRest, runId, composition.sceneMs]);
+
+  // The world's rest-state assets and typefaces, asked for up front (its largest paint).
+  for (const { asset, high } of restAssets(template)) {
+    preload(asset.href, { as: "image", type: asset.type, ...(high && { fetchPriority: "high" }), ...("crossOrigin" in asset && { crossOrigin: "anonymous" }) });
+  }
+  preload(world.fontFiles.latin, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+  if (locale === "ka") preload(world.fontFiles.georgian, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
+
   const isOpening = beat.kind === "opening";
   const isEnding = beat.kind === "ending";
-  const endingLine = tt(`${theme.key}.ending`);
+  const openingLine = tt(`${template.id}.opening`);
+  const endingLine = tt(`${template.id}.ending`);
   const contentBeats = beats.length - 1; // everything after the opening
 
   return (
     <div
-      className={`gift relative isolate flex w-full flex-col overflow-hidden ${embedded ? "min-h-0 flex-1" : "min-h-dvh"}`}
-      style={themeVars(theme)}
+      className={`reveal relative isolate flex w-full flex-col overflow-hidden ${embedded ? "min-h-0 flex-1" : "h-dvh"}`}
+      style={{ ...worldVars(world), ...roomVars(template.spec.room) } as CSSProperties}
       data-testid="greeting-renderer"
       data-mode={mode}
       data-beat={beat.kind}
-      data-stage={isOpening ? (opening ? "opening" : "closed") : "open"}
-      data-reveal={REVEAL[theme.entrance]}
+      data-stage={isOpening ? (pressing ? "opening" : "closed") : "open"}
+      data-room={template.spec.room.dark ? "dark" : "light"}
+      data-composition={world.composition}
     >
-      {!isOpening && theme.particle !== "none" && (
-        <Particles
-          key={`drift-${runId}`}
-          kind={theme.particle}
-          colors={theme.palette.particleColors}
-          mode="drift"
-          count={theme.particle === "confetti" ? 16 : 12}
-          seed={runId + 3}
-        />
-      )}
-
       <header className="relative z-20 flex flex-col gap-3 px-4 pt-[max(0.875rem,var(--safe-top))]">
         <div className="flex min-h-9 items-center gap-3">
           {chrome}
           {!isOpening && (
             <div className="flex flex-1 gap-1" role="presentation">
               {Array.from({ length: contentBeats }, (_, i) => (
-                <span key={i} className="h-[3px] flex-1 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--g-ink)_18%,transparent)]">
-                  <span
-                    className="block h-full rounded-full bg-[var(--g-ink)] transition-transform duration-500 ease-out"
-                    style={{ transform: `scaleX(${i < beatIndex ? 1 : 0})`, transformOrigin: "left" }}
-                  />
+                <span key={i} className="reveal__progress">
+                  <span style={{ transform: `scaleX(${i < beatIndex ? 1 : 0})` }} />
                 </span>
               ))}
             </div>
@@ -189,34 +218,56 @@ export function GreetingRenderer({
         )}
       </header>
 
-      <div
-        ref={stageRef}
-        tabIndex={-1}
-        className="relative z-10 mx-auto flex w-full max-w-lg flex-1 flex-col items-center justify-center px-6 py-6 outline-none"
-      >
+      <div ref={stageRef} tabIndex={-1} className="reveal__stage relative z-10 flex flex-1 flex-col items-center justify-center outline-none">
         {isOpening && (
-          <OpeningBeat
-            openingLine={tt(`${theme.key}.opening`)}
-            tapToOpen={t("tapToOpen")}
-            openLabel={t("open")}
-            onOpen={open}
-            disabled={opening}
-          />
+          <div className="reveal__frame">
+            <ThemeWorld key="sealed" themeKey={template.id} version={template.version} opening={openingLine} message={content.message ?? ""} sealed className="reveal__world" />
+            {/* The world's closed state: its opening line and a seal in its accent. The seal is a
+                large pointer target; the labelled Open button below is the accessible control. */}
+            <div className="reveal__cover">
+              <p className="reveal__opening">{openingLine}</p>
+              <button type="button" className="reveal__seal" onClick={open} disabled={pressing} tabIndex={-1} aria-hidden data-pressed={pressing || undefined}>
+                <svg viewBox="0 0 24 24">
+                  <path d={SPARK_PATH} />
+                </svg>
+              </button>
+            </div>
+          </div>
         )}
 
-        {beat.kind === "message" && content.message && <MessageBeat key="message" text={content.message} />}
+        {beat.kind === "message" && content.message && (
+          <div key={`message-${runId}`} className="reveal__frame" data-testid="greeting-message-beat" data-reading={(long && atRest) || undefined}>
+            <ThemeWorld
+              themeKey={template.id}
+              version={template.version}
+              opening={openingLine}
+              message={content.message}
+              active
+              onFit={(fits) => setLong(!fits)}
+              onRest={() => setAtRest(true)}
+              className="reveal__world"
+            />
+            {long ? (
+              atRest && (
+                <article className="reveal__letter" tabIndex={0} aria-label={t("letterLabel")} data-testid="greeting-letter">
+                  <Spark className="reveal__letter-mark" />
+                  <p>{content.message}</p>
+                </article>
+              )
+            ) : (
+              <p className="sr-only">{content.message}</p>
+            )}
+          </div>
+        )}
 
         {beat.kind === "photo" && content.photos[beat.index] && (
-          <PhotoBeat
-            key={`photo-${beat.index}`}
-            url={content.photos[beat.index]!.url}
-            tilt={beat.index % 2 === 0 ? -1.5 : 1.5}
-            alt={t("photoAlt", { n: beat.index + 1, total: content.photos.length })}
-          />
+          <MediaFrame key={`photo-${beat.index}`} frame={world.mediaFrame} index={beat.index} testId="greeting-photo-beat">
+            <Photo url={content.photos[beat.index]!.url} alt={t("photoAlt", { n: beat.index + 1, total: content.photos.length })} />
+          </MediaFrame>
         )}
 
         {beat.kind === "video" && content.video && (
-          <div key="video" className="animate-rise w-full" data-testid="greeting-video-beat">
+          <MediaFrame key="video" frame={world.mediaFrame} index={0} testId="greeting-video-beat" still>
             <video
               src={`${content.video.url}#t=0.1`}
               controls
@@ -224,154 +275,96 @@ export function GreetingRenderer({
               playsInline
               onPlay={() => notifyPlayed("video")}
               aria-label={t("videoLabel")}
-              className="max-h-[62dvh] w-full rounded-[var(--radius-lg)] bg-black shadow-lg ring-1 ring-[var(--g-line)]"
+              className="reveal__video"
             />
-          </div>
+          </MediaFrame>
         )}
 
         {beat.kind === "audio" && content.audio && (
-          <div key="audio" className="animate-rise flex w-full flex-col items-center gap-8 text-center" data-testid="greeting-audio-beat">
-            <p className="font-serif text-[clamp(1.75rem,1.3rem+2vw,2.25rem)] leading-tight">{t("listen")}</p>
-            <div className="w-full text-left">
+          <div key="audio" className="reveal__audio reveal-enter" data-testid="greeting-audio-beat">
+            <p className="reveal__line">{t("listen")}</p>
+            <div className="reveal__audio-card">
               <VoicePlayer src={content.audio.url} durationMs={null} title={t("voiceTitle")} onPlay={() => notifyPlayed("audio")} />
             </div>
           </div>
         )}
 
         {isEnding && (
-          <div key={`ending-${runId}`} className="animate-rise flex w-full flex-col items-center gap-8 text-center" data-testid="greeting-ending-beat">
-            <Spark className="animate-pop size-10 text-[var(--g-accent)]" />
-            {endingLine && <p className="font-serif text-[clamp(2rem,1.4rem+3vw,3rem)] leading-[1.08] [text-wrap:balance]">{endingLine}</p>}
-            <button
-              type="button"
-              onClick={restart}
-              className={`inline-flex h-11 items-center gap-2 rounded-full px-5 text-label text-[var(--g-ink)] ring-1 ring-[var(--g-line)] transition-colors hover:bg-[var(--g-card)] ${ACCENT_FOCUS}`}
-              data-testid="greeting-replay"
-            >
-              <RotateCcw className="size-4" aria-hidden />
-              {t("replay")}
-            </button>
-            {mode === "preview" && senderControls}
+          <div key={`ending-${runId}`} className="reveal__frame" data-testid="greeting-ending-beat" data-finale={template.spec.finale}>
+            <ThemeWorld
+              themeKey={template.id}
+              version={template.version}
+              opening={endingLine}
+              message={content.message ?? ""}
+              finale={template.spec.finale}
+              active
+              fit
+              className="reveal__world"
+            />
+            {endingLine && <p className="sr-only">{endingLine}</p>}
           </div>
         )}
       </div>
 
       <footer className="relative z-20 px-6 pt-2 pb-[max(1.25rem,calc(var(--safe-bottom)+0.75rem))]">
+        {isOpening && (
+          <div className="mx-auto flex max-w-xs flex-col items-center gap-3">
+            <button type="button" onClick={open} disabled={pressing} className="reveal__primary w-full" data-testid="greeting-tap-to-open">
+              {t("open")}
+            </button>
+            <p className="reveal__hint">{t("tapToOpen")}</p>
+          </div>
+        )}
         {!isOpening && !isEnding && (
           <div className="mx-auto flex max-w-sm items-center gap-3">
             {beatIndex > 1 && (
-              <button
-                type="button"
-                onClick={goBack}
-                aria-label={t("previous")}
-                className={`grid size-13 shrink-0 place-items-center rounded-md text-[var(--g-ink)] ring-1 ring-[var(--g-line)] transition-colors hover:bg-[var(--g-card)] ${ACCENT_FOCUS}`}
-              >
+              <button type="button" onClick={goBack} aria-label={t("previous")} className="reveal__ghost reveal__ghost--square">
                 <ChevronLeft className="size-5" aria-hidden />
               </button>
             )}
-            <button
-              type="button"
-              onClick={advance}
-              className={`h-13 flex-1 rounded-md bg-[var(--g-accent)] px-6 text-base font-medium text-[var(--g-on-accent)] shadow-md transition-transform active:scale-[0.98] ${ACCENT_FOCUS}`}
-              data-testid="greeting-continue"
-            >
+            <button type="button" onClick={advance} className="reveal__primary flex-1" data-testid="greeting-continue">
               {t("continue")}
             </button>
           </div>
         )}
-        {isEnding && mode === "recipient" && (
-          <p className="flex items-center justify-center gap-1.5 text-caption text-[var(--g-ink-soft)]">
-            <Spark className="size-3 text-[var(--g-accent)]" />
-            {t("madeWith")}
-          </p>
+        {isEnding && (
+          <div className="reveal-enter mx-auto flex max-w-sm flex-col items-center gap-3">
+            <button type="button" onClick={restart} className="reveal__ghost" data-testid="greeting-replay">
+              <RotateCcw className="size-4" aria-hidden />
+              {t("replay")}
+            </button>
+            {mode === "preview" && senderControls}
+            {mode === "recipient" && (
+              <p className="reveal__hint flex items-center justify-center gap-1.5">
+                <Spark className="size-3 text-[var(--w-accent)]" />
+                {t("madeWith")}
+              </p>
+            )}
+          </div>
         )}
       </footer>
-
-      {opening && theme.entrance === "balloons" && (
-        <Particles kind={theme.particle === "none" ? "confetti" : theme.particle} colors={theme.palette.particleColors} mode="burst" count={46} />
-      )}
     </div>
   );
 }
 
-function OpeningBeat({
-  openingLine,
-  tapToOpen,
-  openLabel,
-  onOpen,
-  disabled,
-}: {
-  openingLine: string;
-  tapToOpen: string;
-  openLabel: string;
-  onOpen: () => void;
-  disabled: boolean;
-}) {
+/** A photo or video, framed the way the world frames media (reveal.css, [data-frame]). */
+function MediaFrame({ frame, index, testId, still = false, children }: { frame: string; index: number; testId: string; still?: boolean; children: React.ReactNode }) {
   return (
-    <div className="flex w-full flex-1 flex-col items-center justify-between gap-8 text-center">
-      <p className="gift-closed-ui animate-fade max-w-xs pt-4 font-serif text-[clamp(1.5rem,1.2rem+1.6vw,2rem)] leading-tight [text-wrap:balance]">
-        {openingLine}
-      </p>
-      {/* The envelope is a large pointer target; the labelled button below is the accessible control. */}
-      <button type="button" onClick={onOpen} disabled={disabled} tabIndex={-1} aria-hidden className="animate-rise [animation-delay:120ms]">
-        <div className="envelope-float">
-          <Envelope />
-        </div>
-      </button>
-      <div className="gift-closed-ui animate-rise flex w-full max-w-xs flex-col items-center gap-3 [animation-delay:240ms]">
-        <button
-          type="button"
-          onClick={onOpen}
-          disabled={disabled}
-          className={`h-13 w-full rounded-md bg-[var(--g-accent)] px-6 text-base font-medium text-[var(--g-on-accent)] shadow-md transition-transform active:scale-[0.98] ${ACCENT_FOCUS}`}
-          data-testid="greeting-tap-to-open"
-        >
-          {openLabel}
-        </button>
-        <p className="text-caption text-[var(--g-ink-soft)]">{tapToOpen}</p>
-      </div>
-    </div>
-  );
-}
-
-function MessageBeat({ text }: { text: string }) {
-  // Short notes read as a centred statement; anything longer reads as a letter.
-  const long = text.length > 100 || text.includes("\n");
-  return (
-    <div className="flex w-full justify-center" data-testid="greeting-message-beat">
-      {/* The message is presented on the card itself — the same paper the envelope held. */}
-      <article className="paper-card card-arrive flex max-h-[68dvh] min-h-[min(52dvh,28rem)] w-full max-w-[26rem] flex-col items-center overflow-y-auto px-8 pt-10 pb-10 sm:px-10">
-        <Spark className="size-5 shrink-0 text-[var(--g-seal)]" />
-        <p
-          className={`mt-6 w-full font-serif whitespace-pre-wrap text-[var(--g-paper-ink)] [text-wrap:pretty] ${
-            long
-              ? "my-auto text-left text-[clamp(1.125rem,1rem+0.5vw,1.3125rem)] leading-[1.62]"
-              : "my-auto text-center text-[clamp(1.5rem,1.2rem+1.4vw,2rem)] leading-[1.32]"
-          }`}
-        >
-          {text}
-        </p>
-      </article>
-    </div>
-  );
-}
-
-function PhotoBeat({ url, tilt, alt }: { url: string; tilt: number; alt: string }) {
-  const [loaded, setLoaded] = useState(false);
-  return (
-    <div className="animate-rise flex w-full justify-center" data-testid="greeting-photo-beat">
-      <figure className="relative rounded-[6px] bg-[#fffdf9] p-2.5 pb-10 shadow-lg" style={{ transform: `rotate(${tilt}deg)` }}>
-        {!loaded && <div className="skeleton absolute inset-2.5 bottom-10 rounded-[3px]" aria-hidden />}
-        {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not eligible for next/image's remote optimizer allowlist */}
-        <img
-          src={url}
-          alt={alt}
-          onLoad={() => setLoaded(true)}
-          className={`block max-h-[58dvh] max-w-full rounded-[3px] object-contain transition-opacity duration-500 ${
-            loaded ? "opacity-100" : "min-h-64 min-w-56 opacity-0"
-          }`}
-        />
+    <div className="reveal__media reveal-enter" data-testid={testId}>
+      <figure className="reveal__mount" data-frame={frame} data-side={still ? undefined : index % 2 === 0 ? "l" : "r"}>
+        {children}
       </figure>
     </div>
+  );
+}
+
+function Photo({ url, alt }: { url: string; alt: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <>
+      {!loaded && <span className="skeleton reveal__photo-skeleton" aria-hidden />}
+      {/* eslint-disable-next-line @next/next/no-img-element -- short-lived signed URL, not eligible for next/image's remote optimizer allowlist */}
+      <img src={url} alt={alt} onLoad={() => setLoaded(true)} className="reveal__photo" data-loaded={loaded || undefined} />
+    </>
   );
 }

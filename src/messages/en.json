@@ -55,9 +55,11 @@
     "continue": "Continue",
     "saving": "Saving…",
     "theme": {
-      "title": "Choose a design",
+      "title": "How should it feel?",
       "subtitle": "This is how your greeting will open for them. You can change it until you activate.",
-      "saveError": "We couldn't save your choice. Please try again."
+      "saveError": "We couldn't save your choice. Please try again.",
+      "selected": "Selected",
+      "previewLabel": "What they'll see"
     },
     "message": {
       "title": "Write your message",
@@ -174,44 +176,51 @@
     "play": "Play",
     "pause": "Pause",
     "seek": "Playback position",
-    "madeWith": "Made with QR Starr"
+    "madeWith": "Made with QR Starr",
+    "letterLabel": "Message"
   },
   "themes": {
     "romantic": {
       "name": "Romantic",
-      "tagline": "Deep rose and falling petals",
+      "tagline": "Intimate, warm, softly lit",
       "opening": "Someone made this just for you",
-      "ending": "With love"
+      "ending": "With love",
+      "sample": "Every ordinary day is better with you."
     },
     "birthday": {
       "name": "Birthday",
-      "tagline": "Warm, bright, confetti",
+      "tagline": "Bright, playful, all about them",
       "opening": "A little celebration, just for you",
-      "ending": "Happy birthday!"
+      "ending": "Happy birthday!",
+      "sample": "Happy birthday! Here's to your best year yet."
     },
     "minimal": {
       "name": "Minimal",
-      "tagline": "Quiet paper — your words first",
+      "tagline": "Just your words, beautifully set",
       "opening": "Someone's thinking of you",
-      "ending": ""
+      "ending": "",
+      "sample": "Thinking of you."
     },
     "wedding": {
       "name": "Wedding",
-      "tagline": "Ivory, sage and white petals",
+      "tagline": "Formal, timeless, quietly grand",
       "opening": "A few words for your big day",
-      "ending": "Wishing you a lifetime of happiness"
+      "ending": "Wishing you a lifetime of happiness",
+      "sample": "May your home always be full of light."
     },
     "celebration": {
       "name": "Celebration",
-      "tagline": "Midnight blue and falling stars",
+      "tagline": "Bold, proud, a moment to mark",
       "opening": "Something to celebrate",
-      "ending": "Congratulations!"
+      "ending": "Congratulations!",
+      "sample": "You did it. We're so proud of you."
     },
     "elegant": {
       "name": "Elegant",
-      "tagline": "Black and soft gold",
+      "tagline": "Restrained and refined",
       "opening": "A few words, just for you",
-      "ending": "With warmest wishes"
+      "ending": "With warmest wishes",
+      "sample": "With admiration, and every good wish."
     }
   },
   "success": {

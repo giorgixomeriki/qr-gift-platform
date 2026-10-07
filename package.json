@@ -28,6 +28,7 @@
     "verify:analytics-funnel": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-analytics-funnel.ts",
     "verify:pilot-protections": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-pilot-protections.ts",
     "verify:partner-privacy": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-privacy.ts",
+    "verify:templates": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-templates.ts",
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test"
   },
   "dependencies": {
@@ -35,6 +36,7 @@
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
     "drizzle-orm": "^0.45.2",
+    "gsap": "3.15.0",
     "lucide-react": "^1.48.0",
     "nanoid": "^6.0.1",
     "next": "15.5.25",

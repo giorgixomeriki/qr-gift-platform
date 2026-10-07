@@ -12,7 +12,9 @@ map, not a second source of truth.
 | Buttons, fields, notices, bottom sheet, spinner, logo/spark | `src/components/ui/*` |
 | Sender-flow shell, sticky action bar, status screens | `src/components/flow/*` |
 | Recipient renderer, envelope, particles, voice player, theme swatch | `src/components/greeting/*` |
-| Themes (palette + entrance + particles), `--g-*` variables | `src/lib/themes/registry.ts` |
+| Templates (catalogue, vocabulary, schema, rooms) | `src/lib/templates/` — see `docs/design/THEME-ENGINE.md` |
+| Renderer views of a template: `--g-*` (v1 renderer), `--w-*` (worlds) | `src/lib/themes/registry.ts`, `src/lib/themes/worlds.ts` |
+| Theme worlds (compositions, scenes) | `src/components/themes/` |
 | Dashboard primitives (page header, panel, stat, badge, table, controls) | `src/components/dashboard/ui.tsx` |
 | Money formatting (client + server) | `src/lib/format/money.ts` |
 
@@ -33,13 +35,14 @@ map, not a second source of truth.
 - **Copy** lives only in `src/messages/{en,ka}.json` — keep keys in parity.
   Consumer screens never show raw server error strings; map them to localized copy.
 
-## Adding a theme
+## Adding a theme (template)
 
-1. Add a key + `ThemeConfig` to `THEME_REGISTRY` and `SELECTABLE_THEMES`.
+1. Add a `TemplateDefinition` in `src/lib/templates/definitions/` and list it in `catalog.ts` (and a collection).
 2. Add a `themes` seed row in `src/db/seed.ts`.
-3. Add `themes.<key>.{name,tagline,opening,ending}` to both message files.
+3. Add `themes.<id>.{name,tagline,opening,ending,sample}` to both message files.
+4. Run `npm run verify:templates`.
 
-The renderer never branches on theme key, so no component changes are needed.
+No component branches on a template id; a template reusing an existing composition needs no component or CSS changes. A new composition is a design pass — see `docs/design/THEME-ENGINE.md` §2.
 
 ## Fonts
 

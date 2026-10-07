@@ -1,0 +1,1142 @@
+/* ===========================================================================
+ * Theme world type (Screen #2 onwards; docs/design/theme-worlds/).
+ *
+ * One family per world, each a Latin file plus a Georgian file under the
+ * same name, so a KA and an EN greeting share one voice. Chosen from
+ * in-composition renders of real greetings (theme-picker-v1/
+ * _typography-finalists.webp). A system, not a collection: Romantic and
+ * Wedding share EB Garamond (italic as Romantic's hand, roman + italic as
+ * Wedding's ceremony); Romantic, Birthday, Wedding and Elegant set Georgian
+ * in Screen #1's own Noto Serif Georgian variable file at their own weights,
+ * so Georgian keeps a serif voice wherever the Latin has one. size-adjust on the
+ * Georgian half matches the two scripts optically (judged from real
+ * renders: docs/visual-walkthrough/theme-picker-v1/_theme-typography-study.webp).
+ * Self-hosted, OFL (licences in public/fonts/themes). Nothing loads until
+ * text in that family is laid out — the picker applies a world's family only
+ * near the viewport. font-display: fallback — a short invisible period, then
+ * the fallback serif, so a world never flashes the wrong script for long.
+ * Where a family has both halves they declare the SAME weight range: browsers group
+ * unicode-range segments by identical descriptors, and with differing ranges
+ * Chrome matched only one half (Latin text fell back to Georgia).
+ * ======================================================================== */
+@font-face {
+  /* The serif worlds' shared Georgian: Screen #1's own variable file, one
+     face for every serif world (each world sets its own weight). One face,
+     not one per family, so a neighbour's typeface arriving never re-resolves
+     the chosen world's Georgian. */
+  font-family: "QS Serif Georgian";
+  font-weight: 100 900;
+  font-display: fallback;
+  size-adjust: 88%;
+  src: url(/fonts/noto-serif-georgian.woff2) format("woff2");
+  unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31;
+}
+@font-face {
+  font-family: "QS Romantic";
+  font-weight: 300 500;
+  font-display: fallback;
+  src: url(/fonts/themes/eb-garamond-italic-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Birthday";
+  font-weight: 500 800;
+  font-display: fallback;
+  src: url(/fonts/themes/fraunces-soft-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Wedding";
+  font-weight: 300 500;
+  font-display: fallback;
+  src: url(/fonts/themes/eb-garamond-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Wedding Italic";
+  font-weight: 300 500;
+  font-display: fallback;
+  src: url(/fonts/themes/eb-garamond-italic-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Celebration";
+  font-weight: 400 700;
+  font-display: fallback;
+  src: url(/fonts/themes/instrument-sans-condensed-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Celebration";
+  font-weight: 400 700;
+  font-display: fallback;
+  size-adjust: 90%;
+  src: url(/fonts/themes/noto-sans-georgian-condensed.woff2) format("woff2");
+  unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31;
+}
+@font-face {
+  font-family: "QS Elegant";
+  font-weight: 200 400;
+  font-display: fallback;
+  src: url(/fonts/themes/gilda-display-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Minimal";
+  font-weight: 300 500;
+  font-display: fallback;
+  src: url(/fonts/themes/instrument-sans-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Minimal";
+  font-weight: 300 500;
+  font-display: fallback;
+  size-adjust: 92%;
+  src: url(/fonts/themes/noto-sans-georgian-light.woff2) format("woff2");
+  unicode-range: U+0589, U+10A0-10FF, U+1C90-1CBA, U+1CBD-1CBF, U+205A, U+2D00-2D2F, U+2E31;
+}
+
+/* ===========================================================================
+ * Theme worlds (components/themes/theme-world.tsx).
+ *
+ * Each world is a 4:5 composition in container-query units (cqw: 1% of the
+ * world's width). Shared skeleton — ground, artwork, opening line, card,
+ * message — composed differently per world: the worlds must stay distinct
+ * by structure (shape, type, composition), not colour alone.
+ *
+ * Motion (docs/design/QR-STARR-MOTION-LANGUAGE.md): inactive worlds are
+ * static. [data-active] plays the world's ONE signature moment once —
+ * Romantic's light, Wedding's vellum, Birthday's cut paper, Celebration's
+ * ignition, Elegant's aperture, Minimal's words — then everything is still.
+ * Every animation starts from an offset state and ends at the world's
+ * natural rest (fill: backwards), so the finished world IS the design.
+ * data-motion="short" (a world already seen, or rapid switching) plays the
+ * same choreography faster via --p. Reduced motion: a short fade, no
+ * movement (end of this file).
+ * ======================================================================== */
+:root {
+  /* Spring easings as linear() curves, precomputed from damped-spring
+     physics (mass 1; stiffness / damping noted) — no runtime library. */
+  --qs-ease-settle: linear(0, 0.004 0.6%, 0.026 1.9%, 0.074 3.5%, 0.159 5.7%, 0.262 8.1%, 0.385 10.9%, 0.504 13.9%, 0.616 17.2%, 0.716 20.8%, 0.797 24.7%, 0.858 28.7%, 0.906 33%, 0.938 37.5%, 0.961 42.2%, 0.976 47.1%, 0.986 52.2%, 0.992 57.6%, 0.995 63.1%, 0.997 68.8%, 0.999 74.7%, 1 87%, 1); /* k120 c22: no overshoot */
+  --qs-ease-paper: linear(0, 0.005 0.6%, 0.039 1.9%, 0.114 3.6%, 0.233 5.6%, 0.397 8.1%, 0.571 10.8%, 0.74 13.9%, 0.881 17.3%, 0.976 20.8%, 1.031 24.6%, 1.051 28.7%, 1.048 33%, 1.034 37.5%, 1.018 42.3%, 1.007 47.1%, 1 52.3%, 0.998 57.6%, 0.998 68.8%, 1 80.8%, 1); /* k260 c22: 5% overshoot */
+  --qs-ease-snap: linear(0, 0.008 0.6%, 0.056 1.9%, 0.161 3.6%, 0.324 5.7%, 0.54 8.2%, 0.745 10.8%, 0.929 14%, 1.044 17.2%, 1.097 20.8%, 1.095 24.7%, 1.065 28.8%, 1.03 33%, 1.003 37.5%, 0.991 42.2%, 0.99 47.2%, 0.994 52.2%, 0.998 57.6%, 1.001 63.1%, 1.001 74.7%, 1); /* k420 c24: 10% overshoot */
+  --qs-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --qs-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --qs-ease-aperture: cubic-bezier(0.76, 0, 0.24, 1);
+}
+.tw {
+  --p: 1;
+  --tooth: var(--cx-paper-tooth);
+  --linen: image-set(url(/customer/textures/linen-rough-256.avif) type("image/avif"), url(/customer/textures/linen-rough-256.webp) type("image/webp"));
+  container-type: inline-size;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  aspect-ratio: 4 / 5;
+  color: var(--w-ink);
+  font-family: Georgia, "Noto Serif Georgian", serif;
+  -webkit-font-smoothing: antialiased;
+}
+.tw[data-motion="short"] {
+  --p: 0.6;
+}
+.tw__ground {
+  position: absolute;
+  inset: 0;
+  background: var(--w-ground);
+}
+.tw__ground::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--tooth) 0 0 / 256px 256px;
+  mix-blend-mode: soft-light;
+  opacity: 0.6;
+}
+.tw__opening,
+.tw__message {
+  margin: 0;
+  text-wrap: balance;
+}
+.tw[data-near] .tw__opening {
+  font-family: var(--w-display);
+}
+.tw[data-near] .tw__message {
+  font-family: var(--w-text);
+}
+/* Artwork masks follow the same rule as type: a world far off-screen
+   fetches neither (they arrive as it nears the viewport). */
+.tw:not([data-near]) :is(.tw__engraving, .tw__light) {
+  visibility: hidden;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+.tw__card {
+  position: absolute;
+  background: var(--w-card);
+}
+.tw__card::before {
+  /* Card stock: the same paper tooth (a relief map around mid-grey), lit
+     through soft-light so it adds tooth without greying the stock. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--tooth) 0 0 / 256px 256px;
+  mix-blend-mode: soft-light;
+  opacity: 0.7;
+  pointer-events: none;
+}
+.tw__mark {
+  position: absolute;
+  fill: currentColor;
+}
+
+/* ---- Romantic: quiet light ---------------------------------------------- */
+.tw--quiet-light .tw__ground {
+  background: radial-gradient(120% 90% at 30% 20%, var(--w-ground) 0%, color-mix(in oklab, var(--w-ground) 55%, var(--w-ground-deep)) 55%, var(--w-ground-deep) 100%);
+}
+.tw--quiet-light .tw__ground::after {
+  background: var(--linen) 0 0 / 192px 192px;
+  opacity: 0.55;
+}
+/* Window light falling across the ground: the light map as a luminance mask
+   over a warm light colour, screened onto the rose. */
+.tw__light {
+  position: absolute;
+  left: -18%;
+  top: -6%;
+  width: 150%;
+  aspect-ratio: 3 / 2;
+  background: var(--w-light);
+  -webkit-mask: image-set(url(/customer/textures/window-light-900.avif) type("image/avif"), url(/customer/textures/window-light-900.webp) type("image/webp")) center / 100% 100% no-repeat;
+  mask: image-set(url(/customer/textures/window-light-900.avif) type("image/avif"), url(/customer/textures/window-light-900.webp) type("image/webp")) center / 100% 100% no-repeat luminance;
+  mix-blend-mode: soft-light;
+  opacity: 0.9;
+  rotate: -4deg;
+}
+.tw--quiet-light .tw__opening {
+  position: absolute;
+  left: 9cqw;
+  top: 9cqw;
+  width: 70cqw;
+  color: var(--w-on-ground);
+  font-size: 8.8cqw;
+  line-height: 1.12;
+  font-weight: 400;
+  text-shadow: 0 0.2cqw 1.6cqw rgb(var(--w-shadow) / 0.25);
+}
+:lang(ka) .tw--quiet-light .tw__opening {
+  font-size: 8.2cqw;
+  font-weight: 340;
+}
+.tw--quiet-light .tw__card {
+  left: 14cqw;
+  top: 47cqw;
+  width: 72cqw;
+  height: 66cqw;
+  rotate: -2.5deg;
+  border-radius: 0.6cqw;
+  box-shadow: 0 0.4cqw 0.6cqw rgb(var(--w-shadow) / 0.18), 0 4cqw 8cqw -2cqw rgb(var(--w-shadow) / 0.45);
+}
+.tw--quiet-light .tw__message {
+  position: absolute;
+  left: 9cqw;
+  right: 9cqw;
+  top: 13cqw;
+  color: var(--w-ink);
+  font-size: 5.9cqw;
+  line-height: 1.4;
+  font-weight: 420;
+}
+:lang(ka) .tw--quiet-light .tw__message {
+  font-size: 5.6cqw;
+  font-weight: 340;
+}
+.tw--quiet-light .tw__mark {
+  left: 9cqw;
+  top: 5.5cqw;
+  width: 3.4cqw;
+  color: var(--w-ink-soft);
+}
+/* A sheet of vellum tucked across the foot of the card, below the message:
+   the layering is physical, and the message itself is never veiled (over the
+   text it washed out the Georgian's second and third lines on phones). */
+.tw--quiet-light .tw__vellum {
+  position: absolute;
+  left: -2cqw;
+  right: -3cqw;
+  bottom: -2cqw;
+  height: 24cqw;
+  rotate: 3.5deg;
+  background: linear-gradient(180deg, color-mix(in oklab, var(--w-card) 58%, transparent), color-mix(in oklab, var(--w-card) 42%, transparent));
+  box-shadow: 0 -0.3cqw 0.8cqw rgb(var(--w-shadow) / 0.12), inset 0 0.2cqw 0 rgb(255 255 255 / 0.6);
+  backdrop-filter: blur(0.5px);
+}
+/* A honeysuckle spray tucked behind the card, printed in the light of the
+   room: a 1775 engraving (Wellcome Collection, CC BY 4.0) used as a mask. */
+.tw--quiet-light .tw__engraving {
+  position: absolute;
+  left: 64cqw;
+  top: 27.5cqw;
+  width: 27cqw;
+  aspect-ratio: 286 / 473;
+  background: var(--w-on-ground);
+  opacity: 0.82;
+  rotate: 7deg;
+  -webkit-mask: image-set(url(/customer/engravings/honeysuckle-440.webp) type("image/webp"), url(/customer/engravings/honeysuckle-440.avif) type("image/avif")) center / contain no-repeat;
+  mask: image-set(url(/customer/engravings/honeysuckle-440.webp) type("image/webp"), url(/customer/engravings/honeysuckle-440.avif) type("image/avif")) center / contain no-repeat;
+}
+/* Scene layers (scenes/scenes.ts, "leaves at the window"). The dusk is a
+   veil of the deep ground that the scene lifts. Leaf shadows: real footage
+   of leaves swaying at a window (Pexels, free licence — public/customer/
+   LICENSES.md) used as a light map, multiplied over everything, warmed to the
+   room. At rest a still of the film's last frame stands in; the film itself
+   loads only when the scene plays, once, then holds. */
+.tw__dusk {
+  position: absolute;
+  inset: 0;
+  background: var(--w-ground-deep);
+  opacity: 0;
+  pointer-events: none;
+}
+.tw__leaves,
+.tw__leaves-film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  filter: sepia(0.5) saturate(1.4) hue-rotate(-12deg);
+}
+.tw__leaves {
+  background: image-set(url(/customer/scenes/romantic-leaves-rest.webp) type("image/webp")) center / cover no-repeat;
+  opacity: 0.42;
+}
+.tw__leaves-film {
+  opacity: 0;
+}
+.tw:not([data-near]) :is(.tw__leaves, .tw__leaves-film, .tw__sky, .tw__sky-film) {
+  display: none;
+}
+
+/* ---- Birthday: paper party --------------------------------------------- */
+.tw--paper-party .tw__ground::after {
+  opacity: 0.9;
+}
+.tw__disc,
+.tw__arc,
+.tw__dot {
+  position: absolute;
+  border-radius: 999px;
+}
+.tw__disc {
+  left: 30cqw;
+  top: 10cqw;
+  width: 80cqw;
+  aspect-ratio: 1;
+  background: var(--tooth) 0 0 / 256px 256px, var(--w-accent);
+  background-blend-mode: soft-light, normal;
+  box-shadow: 0.6cqw 1.2cqw 0 rgb(var(--w-shadow) / 0.22);
+}
+.tw__arc {
+  left: -22cqw;
+  bottom: -26cqw;
+  width: 70cqw;
+  aspect-ratio: 1;
+  border: 11cqw solid var(--w-accent-2);
+  box-shadow: 0.6cqw 1.2cqw 0 rgb(var(--w-shadow) / 0.18), inset 0.6cqw 1.2cqw 0 rgb(var(--w-shadow) / 0.12);
+}
+.tw__streamer {
+  position: absolute;
+  left: -6cqw;
+  top: 3cqw;
+  width: 62cqw;
+  height: 13cqw;
+  rotate: -14deg;
+  fill: var(--w-accent-3);
+  filter: drop-shadow(0.5cqw 1cqw 0 rgb(var(--w-shadow) / 0.3));
+}
+.tw__dot {
+  width: 3.6cqw;
+  aspect-ratio: 1;
+  background: var(--w-card);
+  box-shadow: 0.3cqw 0.6cqw 0 rgb(var(--w-shadow) / 0.22);
+}
+.tw__dot--a {
+  left: 84cqw;
+  top: 7cqw;
+}
+.tw__dot--b {
+  left: 8cqw;
+  top: 74cqw;
+  width: 2.6cqw;
+}
+.tw__dot--c {
+  left: 90cqw;
+  top: 116cqw;
+  width: 2.8cqw;
+}
+.tw--paper-party .tw__opening {
+  position: absolute;
+  left: 8cqw;
+  top: 25cqw;
+  width: 84cqw;
+  color: var(--w-on-ground);
+  font-size: 11.6cqw;
+  line-height: 0.98;
+  font-weight: 800;
+  letter-spacing: -0.015em;
+}
+:lang(ka) .tw--paper-party .tw__opening {
+  font-size: 10.4cqw;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+:lang(ka) .tw--paper-party .tw__message {
+  font-weight: 600;
+}
+.tw--paper-party .tw__card {
+  right: 7cqw;
+  bottom: 9cqw;
+  width: 60cqw;
+  padding: 6cqw 6cqw 7cqw;
+  rotate: 3deg;
+  box-shadow: 0.6cqw 1.2cqw 0 rgb(var(--w-shadow) / 0.25);
+}
+.tw--paper-party .tw__message {
+  position: relative;
+  font-size: 5.2cqw;
+  line-height: 1.3;
+  font-weight: 560;
+  color: var(--w-ink);
+}
+.tw--paper-party .tw__mark {
+  right: 4cqw;
+  top: -2.4cqw;
+  width: 5cqw;
+  color: var(--w-accent-3);
+  rotate: 12deg;
+}
+/* Cut paper pieces: where the scene's burst lands them (theme-world.tsx,
+   BITS). Part of the resting composition — they frame it, never cross the
+   type. */
+.tw__bit {
+  position: absolute;
+  left: var(--bx);
+  top: var(--by);
+  width: var(--bw);
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  rotate: var(--br);
+  background: var(--tooth) 0 0 / 256px 256px, var(--bc);
+  background-blend-mode: soft-light, normal;
+  box-shadow: 0.3cqw 0.6cqw 0 rgb(var(--w-shadow) / 0.25);
+}
+.tw__bit--circle {
+  border-radius: 999px;
+}
+.tw__bit--tri {
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+  box-shadow: none;
+  filter: drop-shadow(0.3cqw 0.6cqw 0 rgb(var(--w-shadow) / 0.25));
+}
+.tw__bit--strip {
+  aspect-ratio: 3.6;
+  border-radius: 0.2cqw;
+}
+
+/* ---- Wedding: vellum & emboss ------------------------------------------ */
+.tw--vellum .tw__ground {
+  background: radial-gradient(100% 80% at 50% 30%, var(--w-ground) 0%, var(--w-ground-deep) 100%);
+}
+.tw--vellum .tw__card {
+  left: 12cqw;
+  top: 10cqw;
+  width: 76cqw;
+  height: 105cqw;
+  box-shadow: 0 0.3cqw 0.5cqw rgb(var(--w-shadow) / 0.14), 0 3cqw 7cqw -3cqw rgb(var(--w-shadow) / 0.42);
+}
+.tw--vellum .tw__card::after {
+  /* The double rule frame. */
+  content: "";
+  position: absolute;
+  inset: 3.6cqw;
+  border: 0.25cqw solid var(--w-rule);
+  outline: 0.18cqw solid var(--w-rule);
+  outline-offset: -1.6cqw;
+}
+/* An olive spray from W. H. Fitch's 1874 plate (public domain), printed
+   letterpress-pale in the world's olive and pressed into the cotton: ink
+   plus a faint impression, bleeding off the card's top corner under the
+   vellum band. */
+.tw__press {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  filter: drop-shadow(-0.1cqw -0.1cqw 0 rgb(255 255 255 / 0.85)) drop-shadow(0.12cqw 0.14cqw 0 rgb(var(--w-shadow) / 0.16));
+}
+.tw--vellum .tw__engraving {
+  position: absolute;
+  right: -15cqw;
+  top: -12cqw;
+  width: 58cqw;
+  aspect-ratio: 614 / 562;
+  background: var(--w-accent);
+  opacity: 0.52;
+  rotate: 172deg;
+  -webkit-mask: image-set(url(/customer/engravings/olive-branch-640.avif) type("image/avif"), url(/customer/engravings/olive-branch-640.webp) type("image/webp")) center / contain no-repeat;
+  mask: image-set(url(/customer/engravings/olive-branch-640.avif) type("image/avif"), url(/customer/engravings/olive-branch-640.webp) type("image/webp")) center / contain no-repeat;
+}
+.tw--vellum .tw__vellum {
+  position: absolute;
+  left: -2.5cqw;
+  right: -2.5cqw;
+  top: 6cqw;
+  height: 24cqw;
+  background: rgb(255 255 255 / 0.5);
+  box-shadow: 0 0.4cqw 0.8cqw rgb(var(--w-shadow) / 0.12), inset 0 -0.15cqw 0 rgb(var(--w-shadow) / 0.06);
+  backdrop-filter: blur(0.6px);
+}
+.tw--vellum .tw__opening {
+  position: absolute;
+  left: 20cqw;
+  right: 20cqw;
+  top: 48cqw;
+  z-index: 1;
+  text-align: center;
+  color: var(--w-ink);
+  font-size: 6.4cqw;
+  line-height: 1.18;
+  font-weight: 400;
+}
+:lang(ka) .tw--vellum .tw__opening {
+  top: 45cqw;
+  font-size: 6.2cqw;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.tw--vellum .tw__message {
+  position: absolute;
+  left: 12cqw;
+  right: 12cqw;
+  top: 72cqw;
+  text-align: center;
+  color: var(--w-ink-soft);
+  font-size: 4.5cqw;
+  line-height: 1.5;
+  font-weight: 400;
+}
+:lang(ka) .tw--vellum .tw__message {
+  font-size: 4.3cqw;
+  /* 300 broke up at phone size (~11px). */
+  font-weight: 380;
+}
+.tw--vellum .tw__mark {
+  left: calc(50% - 1.4cqw);
+  top: 66cqw;
+  width: 2.8cqw;
+  color: var(--w-accent);
+}
+/* Scene layers ("the vellum ritual"): the card is first sealed under a full
+   vellum sheet with a blind-embossed Starr seal; the scene presses the seal
+   and draws the sheet away. A band of light crosses the letterpress once
+   (inside the press, so it never leaves the card). Hidden at rest. */
+.tw__veil {
+  position: absolute;
+  left: -1.2cqw;
+  right: -1.2cqw;
+  top: -1cqw;
+  bottom: -1cqw;
+  z-index: 2;
+  visibility: hidden;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgb(255 255 255 / 0.68), rgb(250 250 246 / 0.6));
+  box-shadow:
+    0 0.3cqw 1cqw rgb(var(--w-shadow) / 0.18),
+    inset 0 0.25cqw 0 rgb(255 255 255 / 0.9),
+    inset 0 -0.2cqw 0 rgb(var(--w-shadow) / 0.08);
+  backdrop-filter: blur(2.2px);
+}
+.tw__seal {
+  position: absolute;
+  left: calc(50% - 7cqw);
+  top: 55cqw;
+  display: grid;
+  place-items: center;
+  width: 14cqw;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  color: rgb(255 255 255 / 0.95);
+  background: rgb(250 250 246 / 0.6);
+  box-shadow:
+    inset 0.25cqw 0.25cqw 0.5cqw rgb(255 255 255 / 0.9),
+    inset -0.25cqw -0.25cqw 0.5cqw rgb(var(--w-shadow) / 0.22),
+    0 0.5cqw 1.4cqw rgb(var(--w-shadow) / 0.22);
+}
+.tw__seal svg {
+  width: 46%;
+  fill: currentColor;
+  filter: drop-shadow(-0.12cqw -0.12cqw 0 rgb(255 255 255 / 0.9)) drop-shadow(0.15cqw 0.15cqw 0 rgb(var(--w-shadow) / 0.35));
+}
+.tw__sheen {
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: -60%;
+  width: 45%;
+  opacity: 0;
+  background: linear-gradient(100deg, transparent, rgb(255 255 255 / 0.75) 50%, transparent);
+  mix-blend-mode: overlay;
+}
+
+/* ---- Celebration: signal ----------------------------------------------- */
+.tw--signal .tw__ground {
+  background: radial-gradient(110% 90% at 15% 85%, var(--w-ground) 0%, var(--w-ground-deep) 100%);
+}
+.tw--signal .tw__ground::after {
+  opacity: 0.35;
+}
+.tw__burst {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.tw__ray {
+  stroke: var(--w-accent);
+  stroke-width: 0.32;
+  stroke-linecap: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  opacity: 0.9;
+}
+.tw__ray--alt {
+  stroke: var(--w-accent-2);
+  opacity: 0.55;
+}
+.tw__spark {
+  position: absolute;
+  fill: var(--w-accent);
+}
+.tw__spark--a {
+  left: 80cqw;
+  top: 12cqw;
+  width: 5cqw;
+}
+.tw__spark--b {
+  left: 70cqw;
+  top: 30cqw;
+  width: 2.6cqw;
+  fill: var(--w-accent-3);
+}
+.tw__spark--c {
+  left: 88cqw;
+  top: 40cqw;
+  width: 3.2cqw;
+  fill: var(--w-accent-2);
+}
+.tw--signal .tw__opening {
+  position: absolute;
+  left: 8cqw;
+  top: 9cqw;
+  width: 70cqw;
+  color: var(--w-on-ground);
+  font-size: 13.4cqw;
+  line-height: 0.94;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+:lang(ka) .tw--signal .tw__opening {
+  font-size: 12cqw;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+.tw--signal .tw__card {
+  right: 7cqw;
+  bottom: 10cqw;
+  width: 54cqw;
+  padding: 6cqw 6cqw 8cqw;
+  rotate: -3deg;
+  box-shadow: 0 2.4cqw 5cqw -1.5cqw rgb(var(--w-shadow) / 0.55);
+}
+.tw--signal .tw__message {
+  position: relative;
+  font-size: 5.1cqw;
+  line-height: 1.3;
+  font-weight: 500;
+}
+.tw--signal .tw__mark {
+  right: 4.5cqw;
+  bottom: 3.5cqw;
+  width: 3.4cqw;
+  color: var(--w-accent);
+}
+/* The burst's focal point: a Starr where the rays begin. */
+.tw__focus {
+  position: absolute;
+  left: 19.6cqw;
+  top: 101.6cqw;
+  width: 4.8cqw;
+  fill: var(--w-accent);
+}
+/* Scene layers ("night of the Starr"). The sky: real night-sky footage
+   (Mixkit, free licence) screened faintly into the midnight ground; at rest a
+   still of its last frame. The flash is the ignition's afterglow — it rests
+   as a faint warmth at the focal point; the streak crosses once. */
+.tw__sky,
+.tw__sky-film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  filter: grayscale(0.6) contrast(1.2);
+}
+.tw__sky {
+  background: image-set(url(/customer/scenes/celebration-sky-rest.webp) type("image/webp")) center / cover no-repeat;
+  opacity: 0.5;
+}
+.tw__sky-film {
+  opacity: 0;
+}
+.tw__flash {
+  position: absolute;
+  left: -8cqw;
+  top: 74cqw;
+  width: 60cqw;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: radial-gradient(closest-side, rgb(255 214 140 / 0.85), rgb(255 190 90 / 0.25) 45%, transparent);
+  mix-blend-mode: screen;
+  opacity: 0.18;
+  pointer-events: none;
+}
+.tw__streak {
+  position: absolute;
+  left: -4cqw;
+  top: 104cqw;
+  width: 26cqw;
+  height: 0.5cqw;
+  rotate: -58deg;
+  transform-origin: 100% 50%;
+  background: linear-gradient(90deg, transparent, rgb(255 243 214));
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ---- Elegant: ink & stone ---------------------------------------------- */
+.tw--ink-and-stone .tw__ground {
+  background: linear-gradient(160deg, var(--w-ground) 0%, var(--w-ground-deep) 100%);
+}
+.tw--ink-and-stone .tw__ground::after {
+  background: var(--linen) 0 0 / 176px 176px;
+  mix-blend-mode: soft-light;
+  opacity: 0.5;
+}
+.tw__rule {
+  position: absolute;
+  left: 18cqw;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--w-rule);
+  transform-origin: top;
+}
+.tw--ink-and-stone .tw__opening {
+  position: absolute;
+  left: 40cqw;
+  right: 20cqw;
+  top: 21cqw;
+  z-index: 1;
+  color: var(--w-ink);
+  font-size: 6.6cqw;
+  line-height: 1.1;
+  font-weight: 400;
+}
+:lang(ka) .tw--ink-and-stone .tw__opening {
+  font-weight: 250;
+  line-height: 1.24;
+}
+.tw--ink-and-stone .tw__card {
+  left: 32cqw;
+  top: 10cqw;
+  width: 56cqw;
+  height: 104cqw;
+  box-shadow: -3cqw 5cqw 9cqw -3cqw rgb(var(--w-shadow) / 0.6), 0 0 0 1px rgb(var(--w-shadow) / 0.2);
+}
+.tw--ink-and-stone .tw__message {
+  position: absolute;
+  left: 8cqw;
+  right: 8cqw;
+  top: 50cqw;
+  padding-top: 5cqw;
+  border-top: 1px solid color-mix(in oklab, var(--w-ink) 28%, transparent);
+  color: var(--w-ink-soft);
+  font-size: 4.3cqw;
+  line-height: 1.5;
+  font-weight: 400;
+}
+:lang(ka) .tw--ink-and-stone .tw__message {
+  font-weight: 380;
+}
+.tw--ink-and-stone .tw__mark {
+  left: calc(50% - 1.6cqw);
+  bottom: 9cqw;
+  width: 3.2cqw;
+  color: color-mix(in oklab, var(--w-ink) 38%, transparent);
+}
+/* Scene layers ("shutters"): two graphite panels hold the world closed; a
+   slit of light; they part. Hidden at rest. The card's frame is drawn edge by
+   edge (four hairlines, so it can be drawn). */
+.tw__shutter {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 5;
+  width: 50.5%;
+  visibility: hidden;
+  background: linear-gradient(160deg, var(--w-ground), var(--w-ground-deep));
+}
+.tw__shutter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--linen) 0 0 / 176px 176px;
+  mix-blend-mode: soft-light;
+  opacity: 0.5;
+}
+.tw__shutter--l {
+  left: 0;
+  box-shadow: inset -1px 0 0 rgb(255 255 255 / 0.08), 3cqw 0 8cqw rgb(0 0 0 / 0.55);
+}
+.tw__shutter--r {
+  right: 0;
+  box-shadow: inset 1px 0 0 rgb(255 255 255 / 0.08), -3cqw 0 8cqw rgb(0 0 0 / 0.55);
+}
+.tw__slit {
+  position: absolute;
+  top: -5%;
+  bottom: -5%;
+  left: calc(50% - 1px);
+  z-index: 6;
+  width: 2px;
+  visibility: hidden;
+  background: linear-gradient(transparent, rgb(255 240 220 / 0.95) 30%, rgb(255 240 220 / 0.95) 70%, transparent);
+  box-shadow: 0 0 3.5cqw 0.5cqw rgb(255 230 200 / 0.45);
+  filter: blur(0.6px);
+}
+.tw__frame {
+  position: absolute;
+  inset: 3cqw;
+  pointer-events: none;
+}
+.tw__frame i {
+  position: absolute;
+  background: color-mix(in oklab, var(--w-ink) 30%, transparent);
+}
+.tw__frame i:nth-child(odd) {
+  left: 0;
+  right: 0;
+  height: 1px;
+}
+.tw__frame i:nth-child(even) {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+.tw__frame i:nth-child(1) {
+  top: 0;
+}
+.tw__frame i:nth-child(2) {
+  right: 0;
+}
+.tw__frame i:nth-child(3) {
+  bottom: 0;
+}
+.tw__frame i:nth-child(4) {
+  left: 0;
+}
+@keyframes tw-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+/* ---- Minimal: just the words ------------------------------------------- */
+.tw--just-words .tw__card {
+  inset: 7cqw;
+  box-shadow: 0 0 0 1px rgb(var(--w-shadow) / 0.07), 0 0.4cqw 1cqw -0.4cqw rgb(var(--w-shadow) / 0.16);
+}
+.tw--just-words .tw__opening {
+  position: absolute;
+  left: 17cqw;
+  top: 14cqw;
+  right: 17cqw;
+  z-index: 1;
+  color: var(--w-ink-soft);
+  font-size: 3.8cqw;
+  line-height: 1.4;
+  font-weight: 500;
+  text-wrap: pretty;
+}
+:lang(ka) .tw--just-words .tw__opening {
+  font-weight: 450;
+}
+.tw--just-words .tw__message {
+  position: absolute;
+  left: 10cqw;
+  right: 10cqw;
+  top: 34cqw;
+  color: var(--w-ink);
+  font-size: 11cqw;
+  line-height: 1.06;
+  font-weight: 400;
+  letter-spacing: -0.025em;
+}
+:lang(ka) .tw--just-words .tw__message {
+  font-size: 9.6cqw;
+  line-height: 1.2;
+  font-weight: 350;
+  letter-spacing: 0;
+}
+.tw__point {
+  position: absolute;
+  left: 4.4cqw;
+  top: 38.6cqw;
+  width: 2cqw;
+  aspect-ratio: 1;
+  border-radius: 999px;
+  background: var(--w-accent);
+}
+.tw--just-words .tw__mark {
+  left: 10cqw;
+  bottom: 8cqw;
+  width: 2.6cqw;
+  color: var(--w-ink);
+}
+/* The top hairline (an element, so the scene can draw it). */
+.tw__hairline {
+  position: absolute;
+  left: 10cqw;
+  right: 10cqw;
+  top: 12cqw;
+  height: 1px;
+  background: var(--w-rule);
+}
+
+/* While the runtime loads for an entrance, the world holds still and quiet
+   (the scene starts from its own first frame); at most 900ms. */
+.tw[data-scene="pending"] > :not(.tw__ground),
+.tw[data-scene="pending"] .tw__card > * {
+  opacity: 0;
+}
+/* Pointer depth: the scene runtime moves --px/--py (-0.5…0.5) with the
+   pointer; each layer travels by its own depth in cqw. */
+.tw [data-depth] {
+  translate: calc(var(--px, 0) * var(--d, 0) * 1cqw) calc(var(--py, 0) * var(--d, 0) * 1cqw);
+}
+.tw [data-depth="2"] {
+  --d: 2.4;
+}
+.tw [data-depth="0.8"] {
+  --d: 1;
+}
+.tw [data-depth="-0.6"] {
+  --d: -0.7;
+}
+
+/* Reduced motion: no movement anywhere — the chosen world simply fades up
+   in its finished state (opacity only, short). Overrides the global
+   collapse rule, which would otherwise make the change instantaneous. */
+@media (prefers-reduced-motion: reduce) {
+  .tw[data-active] *,
+  .tw[data-active] *::before,
+  .tw[data-active] *::after {
+    animation: none !important;
+  }
+  .tw[data-active] {
+    animation: tw-fade 240ms ease-out backwards !important;
+  }
+  .tw__veil {
+    display: none;
+  }
+}
+
+/* ---- Seals: each world's signature in miniature (selectors) ---------------
+   A 4:5 tile of the world's ground carrying its real artwork — engraving,
+   cut paper, burst, frame or point — so the selector previews an identity,
+   not a colour. Small dedicated engraving crops (~3–4 KB) keep the seals
+   from pulling in the full-size artwork. */
+.tw-seal {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: inherit;
+  background: var(--w-ground);
+}
+.tw-seal svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.tw-seal i {
+  position: absolute;
+  display: block;
+}
+.tw-seal--quiet-light {
+  background: radial-gradient(120% 90% at 30% 15%, var(--w-ground), var(--w-ground-deep));
+}
+.tw-seal--quiet-light .tw-seal__engraving {
+  left: 26%;
+  top: 8%;
+  width: 52%;
+  height: 86%;
+  background: var(--w-on-ground);
+  opacity: 0.9;
+  -webkit-mask: image-set(url(/customer/engravings/honeysuckle-seal-112.avif) type("image/avif"), url(/customer/engravings/honeysuckle-seal-112.webp) type("image/webp")) center / contain no-repeat;
+  mask: image-set(url(/customer/engravings/honeysuckle-seal-112.avif) type("image/avif"), url(/customer/engravings/honeysuckle-seal-112.webp) type("image/webp")) center / contain no-repeat;
+}
+.tw-seal--vellum {
+  background: radial-gradient(100% 80% at 50% 30%, var(--w-ground), var(--w-ground-deep));
+}
+.tw-seal--vellum .tw-seal__card {
+  inset: 16% 20%;
+  overflow: hidden;
+  background: var(--w-card);
+  box-shadow: 0 1px 2px rgb(var(--w-shadow) / 0.25);
+}
+.tw-seal--vellum .tw-seal__card::after {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  border: 0.5px solid var(--w-rule);
+}
+.tw-seal--vellum .tw-seal__engraving {
+  right: -30%;
+  top: -14%;
+  width: 120%;
+  aspect-ratio: 122 / 112;
+  background: var(--w-accent);
+  opacity: 0.9;
+  rotate: 180deg;
+  -webkit-mask: image-set(url(/customer/engravings/olive-seal-112.avif) type("image/avif"), url(/customer/engravings/olive-seal-112.webp) type("image/webp")) center / contain no-repeat;
+  mask: image-set(url(/customer/engravings/olive-seal-112.avif) type("image/avif"), url(/customer/engravings/olive-seal-112.webp) type("image/webp")) center / contain no-repeat;
+}
+.tw-seal--signal {
+  background: radial-gradient(110% 90% at 15% 85%, var(--w-ground), var(--w-ground-deep));
+}
+.tw-seal--ink-and-stone {
+  background: linear-gradient(160deg, var(--w-ground), var(--w-ground-deep));
+}
+
+/* ===========================================================================
+ * Recipient reveal (components/greeting/greeting-renderer.tsx)
+ * ======================================================================== */
+/* Sealed: only the world's ground until the recipient opens it. */
+.tw[data-sealed] > :not(.tw__ground),
+.tw[data-sealed] .tw__card > * {
+  visibility: hidden;
+}
+/* A sender's own message keeps its line breaks. */
+.tw__message {
+  white-space: pre-line;
+}
+/* A message longer than the card: the card keeps its beginning, fading out
+   at the foot; the reveal then presents the whole letter. */
+.tw[data-overflow] .tw__message {
+  max-height: var(--msg-max);
+  overflow: hidden;
+  text-wrap: pretty;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent);
+}
+
+/* ===========================================================================
+ * Finales (lib/templates/vocabulary.ts FINALES, scenes/finales.ts): how each
+ * world closes the greeting. These are the finales' resting states. While
+ * the world is held before its finale ("finale-pending") they are off, so it
+ * shows the rest its signature scene left it in; the finale travels from
+ * there to here. Reduced motion shows this state directly (with the world's
+ * fade), so every ending is kept without the movement.
+ * ======================================================================== */
+/* Held: the closing words and any finale artwork wait to be set. */
+.tw[data-scene="finale-pending"] :is(.tw__opening, .tw-finale) {
+  opacity: 0;
+}
+
+/* Romantic — evening falls: dusk over the room, the window light withdrawn;
+   the card (above the dusk) keeps the last of the light. */
+.tw[data-finale="evening-falls"]:not([data-scene="finale-pending"]) .tw__dusk {
+  opacity: 0.62;
+}
+.tw[data-finale="evening-falls"]:not([data-scene="finale-pending"]) .tw__light {
+  opacity: 0.3;
+}
+.tw[data-finale="evening-falls"]:not([data-scene="finale-pending"]) .tw__leaves {
+  opacity: 0.12;
+}
+
+/* Birthday — paper encore: a cut-paper rosette on the card's corner. */
+.tw-finale--rosette {
+  position: absolute;
+  top: -7cqw;
+  right: -6cqw;
+  z-index: 3;
+  width: 17cqw;
+  aspect-ratio: 1;
+  rotate: 12deg;
+  filter: drop-shadow(0.6cqw 1.2cqw 0 rgb(var(--w-shadow) / 0.25));
+}
+.tw-finale--rosette svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Wedding — vellum close: the vellum back over the card, sealed. */
+.tw[data-finale="vellum-close"]:not([data-scene="finale-pending"]) .tw__veil {
+  visibility: visible;
+}
+
+/* Celebration — afterglow: a warm glow remains around the Starr. */
+.tw[data-finale="afterglow"]:not([data-scene="finale-pending"]) .tw__flash {
+  opacity: 0.42;
+}
+/* Its closing line can be one long word: keep it clear of the top-right spark (80cqw). */
+.tw[data-finale="afterglow"] .tw__opening {
+  width: 66cqw;
+}
+
+/* Elegant — gallery doors: the graphite doors stand at the card's edges
+   (the card spans 32–88cqw; each door stops 2cqw short of it). */
+.tw[data-finale="gallery-doors"]:not([data-scene="finale-pending"]) .tw__shutter {
+  visibility: visible;
+}
+.tw[data-finale="gallery-doors"]:not([data-scene="finale-pending"]) .tw__shutter--l {
+  translate: -20.5cqw 0;
+}
+.tw[data-finale="gallery-doors"]:not([data-scene="finale-pending"]) .tw__shutter--r {
+  translate: 40.5cqw 0;
+}
+
+/* Minimal — full stop: the label and the rule withdraw (the point's own
+   journey to the end of the message is measured, so it is motion only). */
+.tw[data-finale="full-stop"]:not([data-scene="finale-pending"]) :is(.tw__hairline, .tw__opening) {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The vellum is hidden during reduced-motion scenes; as a finale it is the ending itself. */
+  .tw[data-finale="vellum-close"] .tw__veil {
+    display: block;
+  }
+}

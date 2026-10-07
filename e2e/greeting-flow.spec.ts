@@ -76,6 +76,8 @@ test.describe("Sender greeting creation -> TEST checkout -> recipient reveal", (
     await expect(recipientPage.getByTestId("greeting-message-beat")).toBeVisible();
     await recipientPage.getByTestId("greeting-continue").click();
     await expect(recipientPage.getByTestId("greeting-ending-beat")).toBeVisible();
+    // The genuine recipient's ending is the chosen world closing with its finale (Minimal: full stop).
+    await expect(recipientPage.getByTestId("greeting-ending-beat")).toHaveAttribute("data-finale", "full-stop");
 
     await recipientContext.close();
   });
