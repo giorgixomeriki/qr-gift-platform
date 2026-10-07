@@ -17,6 +17,11 @@ import { products, prices } from "./products";
  * Changing `prices` or a partner's `commissionRateBps` later must never alter
  * an existing order's numbers — that's the whole point of storing them here
  * instead of joining out to the live price/partner rows.
+ *
+ * DB-enforced (migrations/0013, trg_orders_integrity): on insert, qr_code_id
+ * must be the greeting's own QR and partner_id that QR's partner; afterwards
+ * attribution + financial snapshot columns are immutable, and a PAID order
+ * can only move to a refund status.
  */
 export const orders = pgTable(
   "orders",
@@ -43,6 +48,10 @@ export const orders = pgTable(
     grossAmountMinor: integer("gross_amount_minor").notNull(),
     partnerCommissionMinor: integer("partner_commission_minor").notNull(),
     platformShareMinor: integer("platform_share_minor").notNull(),
+    // The partner's rate at checkout, kept so "why is this commission X" is
+    // answerable from the order alone. Null only on orders created before
+    // migrations/0013 (the rate can't be recovered from rounded amounts).
+    commissionRateBps: integer("commission_rate_bps"),
     status: orderStatusEnum("status").notNull().default("PENDING_PAYMENT"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
     paidAt: timestamp("paid_at", { withTimezone: true }),
@@ -55,9 +64,17 @@ export const orders = pgTable(
     uniqueIndex("orders_one_paid_per_greeting")
       .on(table.greetingId)
       .where(sql`${table.status} = 'PAID'`),
+    // migrations/0016: two simultaneous checkouts can't open two orders.
+    uniqueIndex("orders_one_open_per_greeting")
+      .on(table.greetingId)
+      .where(sql`${table.status} = 'PENDING_PAYMENT'`),
     check(
       "orders_amounts_reconcile",
       sql`${table.grossAmountMinor} = ${table.partnerCommissionMinor} + ${table.platformShareMinor}`,
+    ),
+    check(
+      "orders_commission_rate_bps_range",
+      sql`${table.commissionRateBps} is null or (${table.commissionRateBps} >= 0 and ${table.commissionRateBps} <= 10000)`,
     ),
     check("orders_amounts_non_negative", sql`${table.grossAmountMinor} >= 0 and ${table.partnerCommissionMinor} >= 0 and ${table.platformShareMinor} >= 0`),
   ],

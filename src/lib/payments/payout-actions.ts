@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/auth/admin";
-import { recordPayoutSchema } from "@/lib/validation/payouts";
-import { recordManualPayout, listPartnerPayouts, getPartnerUnpaidBalance } from "./payouts";
+import { recordPayoutSchema, payoutStatementSchema } from "@/lib/validation/payouts";
+import { businessDayRange } from "@/lib/business-calendar";
+import { recordManualPayout, listPartnerPayouts, getPartnerUnpaidBalance, getPartnerPayoutStatement, type PayoutStatement } from "./payouts";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logServerError } from "@/lib/log";
 
@@ -27,7 +28,7 @@ export async function adminRecordPayoutAction(partnerId: string, input: unknown)
     const parsed = recordPayoutSchema.parse(input);
     const payout = await requireAdmin(async (tx, adminUserId) => {
       await enforceRateLimit({ key: `payout-record:${adminUserId}`, limit: 20, windowSeconds: 60 });
-      return recordManualPayout(tx, adminUserId, { partnerId, ...parsed });
+      return recordManualPayout(tx, adminUserId, { partnerId, ...parsed, ...businessDayRange(parsed.periodFrom, parsed.periodTo) });
     });
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true, data: { payoutId: payout.id } };
@@ -42,4 +43,23 @@ export async function adminListPartnerPayoutsAction(partnerId: string) {
 
 export async function adminGetPartnerUnpaidBalanceAction(partnerId: string, currency: string): Promise<number> {
   return requireAdmin((tx) => getPartnerUnpaidBalance(tx, partnerId, currency));
+}
+
+/**
+ * Period statement shown while recording a payout — what was sold and earned
+ * on business days periodFrom..periodTo (inclusive, business timezone) and how much of it is still
+ * payable, with the exact candidate ledger rows. Read-only; the payout itself
+ * is adminRecordPayoutAction, which must be sent this statement's
+ * payableMinor + eligibleLedgerEntryIds back as its expectation.
+ */
+export async function adminGetPayoutStatementAction(partnerId: string, input: unknown): Promise<ActionResult<PayoutStatement>> {
+  try {
+    const parsed = payoutStatementSchema.parse(input);
+    const statement = await requireAdmin((tx) =>
+      getPartnerPayoutStatement(tx, { partnerId, currency: parsed.currency, ...businessDayRange(parsed.periodFrom, parsed.periodTo) }),
+    );
+    return { ok: true, data: statement };
+  } catch (err) {
+    return errorResult("adminGetPayoutStatementAction", err, { partnerId });
+  }
 }

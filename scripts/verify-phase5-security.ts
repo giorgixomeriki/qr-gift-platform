@@ -20,7 +20,7 @@ const { getOrCreateCheckoutOrder, checkPaymentReturn } = require("../src/lib/pay
 const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
 const { signTestWebhook, TEST_WEBHOOK_SIGNATURE_HEADER } = require("../src/lib/payments/providers/test-provider") as typeof import("../src/lib/payments/providers/test-provider");
 const { confirmPaymentSuccess, verifyAndReconcileOrder, markPaymentFailed } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
-const { recordManualPayout, getPartnerUnpaidBalance } = require("../src/lib/payments/payouts") as typeof import("../src/lib/payments/payouts");
+const { recordManualPayout, getPartnerUnpaidBalance, getPartnerPayoutStatement } = require("../src/lib/payments/payouts") as typeof import("../src/lib/payments/payouts");
 const { withAdminContext, withPartnerContext, withPublicContext } = require("../src/db/client") as typeof import("../src/db/client");
 const { partnerLedgerEntries } = require("../src/db/schema") as typeof import("../src/db/schema");
 const { eq } = require("drizzle-orm") as typeof import("drizzle-orm");
@@ -337,16 +337,23 @@ async function main() {
     const unpaidBalance = await withAdminContext(adminUserId, (tx) => getPartnerUnpaidBalance(tx, partnerA, summary.currency));
     check("   (fixture) Partner A has a real unpaid commission balance to test against", unpaidBalance > 0);
 
+    // Itemized payouts (migrations/0014): a closed period covering this run's
+    // commission, and the server's own statement as the confirmed expectation.
+    const period = { periodFrom: new Date(Date.now() - 6 * 3600_000), periodTo: new Date() };
+    const statement = await withAdminContext(adminUserId, (tx) => getPartnerPayoutStatement(tx, { partnerId: partnerA, currency: summary.currency, ...period }));
+    const expected = { expectedAmountMinor: statement.payableMinor, expectedLedgerEntryIds: statement.eligibleLedgerEntryIds };
+    check("   (fixture) the statement has payable commission rows", statement.blocker === null && statement.payableMinor > 0, JSON.stringify({ blocker: statement.blocker, payable: statement.payableMinor }));
+
     check(
       "19. A partner member (even OWNER of the target partner) cannot create a payout — admin-only by RLS",
       await expectThrows(() =>
-        withPartnerContext(userA, partnerA, (tx) => recordManualPayout(tx, userA, { partnerId: partnerA, currency: summary.currency, amountMinor: 1, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31") })),
+        withPartnerContext(userA, partnerA, (tx) => recordManualPayout(tx, userA, { partnerId: partnerA, currency: summary.currency, ...period, ...expected })),
       ),
     );
     check(
       "20. An anonymous/unauthenticated context cannot create a payout",
       await expectThrows(() =>
-        withPublicContext((tx) => recordManualPayout(tx, crypto.randomUUID(), { partnerId: partnerA, currency: summary.currency, amountMinor: 1, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31") })),
+        withPublicContext((tx) => recordManualPayout(tx, crypto.randomUUID(), { partnerId: partnerA, currency: summary.currency, ...period, ...expected })),
       ),
     );
 
@@ -362,37 +369,37 @@ async function main() {
     );
 
     check(
-      "21. A payout exceeding the unpaid balance is rejected",
-      await expectThrows(() => withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, amountMinor: unpaidBalance + 1_000_000, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31") }))),
+      "21. A payout claiming more than the server-computed amount is rejected",
+      await expectThrows(() => withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, ...period, ...expected, expectedAmountMinor: unpaidBalance + 1_000_000 }))),
     );
     check(
       "22. A zero-amount payout is rejected",
-      await expectThrows(() => withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, amountMinor: 0, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31") }))),
+      await expectThrows(() => withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, ...period, ...expected, expectedAmountMinor: 0 }))),
     );
     check(
       "    A negative-amount payout is rejected",
-      await expectThrows(() => withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, amountMinor: -500, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31") }))),
+      await expectThrows(() => withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, ...period, ...expected, expectedAmountMinor: -500 }))),
     );
 
     const realPayout = await withAdminContext(adminUserId, (tx) =>
-      recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, amountMinor: 100, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31"), reference: "phase5-security-test" }),
+      recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, ...period, ...expected, reference: "phase5-security-test" }),
     );
-    check("23. A valid payout within balance succeeds and is recorded PAID", realPayout.status === "PAID");
+    check("23. A valid payout of the statement's exact rows succeeds and is recorded PAID", realPayout.status === "PAID" && realPayout.amountMinor === statement.payableMinor);
 
     const balanceAfter = await withAdminContext(adminUserId, (tx) => getPartnerUnpaidBalance(tx, partnerA, summary.currency));
-    check("24. Unpaid balance decreases by exactly the payout amount", balanceAfter === unpaidBalance - 100);
+    check("24. Unpaid balance decreases by exactly the payout amount", balanceAfter === unpaidBalance - statement.payableMinor);
 
     check(
       "25. Duplicate payout for the same (partner, currency, overlapping period) is rejected",
       await expectThrows(() =>
-        withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, amountMinor: 50, periodFrom: new Date("2026-01-15"), periodTo: new Date("2026-02-15") })),
+        withAdminContext(adminUserId, (tx) => recordManualPayout(tx, adminUserId, { partnerId: partnerA, currency: summary.currency, periodFrom: new Date(period.periodFrom.getTime() + 60_000), periodTo: new Date(), ...expected })),
       ),
     );
 
     check(
       "26. Cross-partner payout targeting (Partner A's own user context, but a partnerId argument of Partner B) is still rejected — admin-only RLS doesn't care whose id was passed",
       await expectThrows(() =>
-        withPartnerContext(userA, partnerA, (tx) => recordManualPayout(tx, userA, { partnerId: partnerB, currency: summary.currency, amountMinor: 1, periodFrom: new Date("2026-01-01"), periodTo: new Date("2026-01-31") })),
+        withPartnerContext(userA, partnerA, (tx) => recordManualPayout(tx, userA, { partnerId: partnerB, currency: summary.currency, ...period, ...expected })),
       ),
     );
 
@@ -413,6 +420,7 @@ async function main() {
     await admin`delete from analytics_events where qr_code_id in ${admin(qrIds)}`;
   }
   await admin`delete from audit_logs where actor_id = ${adminUserId} and action = 'PARTNER_PAYOUT_RECORDED'`;
+  await admin`delete from partner_payout_items where partner_id in (${partnerA}, ${partnerB})`;
   await admin`delete from partner_ledger_entries where partner_id in (${partnerA}, ${partnerB})`;
   await admin`delete from partner_payouts where partner_id in (${partnerA}, ${partnerB})`;
   await admin`delete from payments where order_id in (select id from orders where partner_id in (${partnerA}, ${partnerB}))`;

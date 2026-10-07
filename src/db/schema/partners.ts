@@ -7,6 +7,7 @@ import {
   jsonb,
   timestamp,
   unique,
+  check,
 } from "drizzle-orm/pg-core";
 import { partnerRoleEnum, partnerStatusEnum } from "./enums";
 
@@ -22,7 +23,9 @@ export const partners = pgTable("partners", {
   status: partnerStatusEnum("status").notNull().default("ACTIVE"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
-}).enableRLS();
+}, (table) => [
+  check("partners_commission_rate_bps_range", sql`${table.commissionRateBps} >= 0 and ${table.commissionRateBps} <= 10000`),
+]).enableRLS();
 
 /**
  * User <-> Partner many-to-many. A user may belong to multiple partners with a

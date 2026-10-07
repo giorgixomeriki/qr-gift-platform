@@ -549,6 +549,12 @@ function CheckoutStep({
   const [failed, setFailed] = useState(false);
   const [cancelled, setCancelled] = useState(paymentHint === "cancelled");
   const [succeeded, setSucceeded] = useState(false);
+  /**
+   * Back from the provider, but the outcome is not known yet (still pending
+   * after polling, or the status check itself failed). Never offer to pay
+   * again here — a second charge is exactly the risk — only to check again.
+   */
+  const [uncertain, setUncertain] = useState(false);
   const startedRef = useRef(false);
 
   const loadSummary = useCallback(async () => {
@@ -575,32 +581,37 @@ function CheckoutStep({
       loadSummary();
       return;
     }
-
-    (async () => {
-      for (let attempt = 0; attempt < RETURN_POLL_ATTEMPTS; attempt++) {
-        const result = await checkPaymentReturnAction(greetingId).catch(() => null);
-        if (!result?.ok) {
-          if (result) logActionError("checkPaymentReturn", result.error);
-          setVerifying(false);
-          setError(true);
-          return;
-        }
-        if (result.data.status === "PAID") {
-          window.location.href = window.location.pathname;
-          return;
-        }
-        if (result.data.status === "FAILED" || result.data.status === "CANCELED") {
-          setFailed(true);
-          break;
-        }
-        if (attempt < RETURN_POLL_ATTEMPTS - 1) {
-          await new Promise((resolve) => setTimeout(resolve, RETURN_POLL_INTERVAL_MS));
-        }
-      }
-      setVerifying(false);
-      await loadSummary();
-    })();
+    void verifyReturn();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [greetingId, paymentHint, loadSummary]);
+
+  /** Polls the server's own verdict (never the URL) after a provider redirect. */
+  async function verifyReturn() {
+    setUncertain(false);
+    setVerifying(true);
+    for (let attempt = 0; attempt < RETURN_POLL_ATTEMPTS; attempt++) {
+      const result = await checkPaymentReturnAction(greetingId).catch(() => null);
+      if (result?.ok && result.data.status === "PAID") {
+        window.location.href = window.location.pathname;
+        return;
+      }
+      if (result?.ok && (result.data.status === "FAILED" || result.data.status === "CANCELED")) {
+        // Only a definite failure offers paying again.
+        setVerifying(false);
+        setFailed(true);
+        await loadSummary();
+        return;
+      }
+      if (result && !result.ok) logActionError("checkPaymentReturn", result.error);
+      if (attempt < RETURN_POLL_ATTEMPTS - 1) {
+        await new Promise((resolve) => setTimeout(resolve, RETURN_POLL_INTERVAL_MS));
+      }
+    }
+    // Still pending, or the check kept failing: the payment may have gone
+    // through. Hold here rather than show a Pay button.
+    setVerifying(false);
+    setUncertain(true);
+  }
 
   async function pay(outcome: "success" | "failure") {
     setPaying(true);
@@ -655,7 +666,17 @@ function CheckoutStep({
         <p className="mt-2 text-body text-ink-2">{t("subtitle")}</p>
       </header>
 
-      {verifying ? (
+      {uncertain ? (
+        <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center" data-testid="checkout-still-verifying" role="status" aria-live="polite">
+          <div>
+            <p className="text-h3">{t("stillVerifying")}</p>
+            <p className="mt-1 text-body-sm text-ink-2">{t("stillVerifyingBody")}</p>
+          </div>
+          <Button variant="secondary" size="lg" onClick={() => void verifyReturn()} data-testid="checkout-check-again">
+            {t("checkAgain")}
+          </Button>
+        </div>
+      ) : verifying ? (
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center" data-testid="checkout-verifying" role="status" aria-live="polite">
           <Spinner className="size-8 text-ember" />
           <div>

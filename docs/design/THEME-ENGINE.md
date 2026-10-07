@@ -226,12 +226,15 @@ exact version when asked and never substitutes a different one;
   migrated by a pure function under test.
 - Compositions referenced by retired versions are not deleted.
 
-**Not yet persisted (next step):** add `greetings.theme_version` written
-when the theme is chosen and frozen at activation; the recipient passes it
-to `GreetingRenderer` / `ThemeWorld` (which already accept a version). It
-must land after the payment-hardening migrations (0013–0015). For
-creator/custom templates, snapshot the full validated spec onto the
-greeting at activation.
+**Persisted (migration 0017):** `greetings.theme_version` (int, not null,
+default 1 — every greeting before it was made with version 1) is written at
+creation and whenever the theme is chosen (`updateGreetingTheme`), and
+freezes at activation (greetings are editable only while DRAFT). The
+recipient loader returns it and `GreetingRenderer` / `ThemeWorld` /
+`getThemeWorld` render that exact version, falling back to the latest only
+if a version were ever missing from the catalogue. Tested in
+`verify:payment-integrity` §12. For creator/custom templates (future),
+snapshot the full validated spec onto the greeting at activation.
 
 ## 5. Create your own (future)
 
@@ -293,7 +296,7 @@ list + stage on desktop. The model already supports more:
 
 1. ~~Picked ≠ received~~ — done (§3.1); per-world finales — done (§3.2).
    The Theme Picker / Recipient Worlds design phase is closed (2026-10-06).
-2. Persist `theme_version` (§4).
+2. ~~Persist `theme_version`~~ — done (§4, migration 0017).
 3. Move room-contrast validation into `parseTemplateSpec` (§5).
 4. Retire the stale `themes.config` jsonb seed values (harmless; unused).
 5. Server-side catalogue once the library passes ~20 templates (§8).

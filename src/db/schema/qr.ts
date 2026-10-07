@@ -28,6 +28,11 @@ export const qrBatches = pgTable(
  * physical card (see architecture plan section 5). Generated with nanoid(24) at
  * batch-creation time: not sequential, not practically enumerable.
  *
+ * Ownership: partner_id is denormalized from the batch for query/RLS speed,
+ * but the DB guarantees it equals qr_batches.partner_id, and public_token /
+ * batch_id / partner_id can never change after insert (migrations/0013,
+ * trg_qr_codes_attribution) — a sold card's attribution is permanent.
+ *
  * No `greeting_id` column here on purpose: `greetings.qr_code_id` is the single
  * FK direction, so QR<->greeting state can't desync into two disagreeing rows.
  */

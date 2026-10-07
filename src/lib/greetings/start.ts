@@ -4,6 +4,7 @@ import { withPublicContext, withClaimableQr, type Tx } from "@/db/client";
 import { qrCodes, greetings, themes, products } from "@/db/schema";
 import { generateEditToken, hashEditToken } from "@/lib/security/edit-token";
 import { DEFAULT_THEME_KEY } from "@/lib/themes/registry";
+import { getTemplate } from "@/lib/templates/catalog";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { DEFAULT_PRODUCT_KEY } from "./constants";
 
@@ -76,6 +77,7 @@ export async function startGreeting(publicToken: string): Promise<{ greetingId: 
       .values({
         qrCodeId: qr.id,
         themeId: defaultTheme.id,
+        themeVersion: getTemplate(DEFAULT_THEME_KEY)!.version,
         productId: defaultProduct.id,
         status: "DRAFT",
         editTokenHash,

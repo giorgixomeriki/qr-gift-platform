@@ -8,12 +8,15 @@ export function BatchBlock({
   batch,
   qrCodes,
   countLabel,
+  performanceLabel,
   defaultOpen,
   markDistributedAction,
 }: {
   batch: { id: string; label: string };
   qrCodes: InventoryQrRow[];
   countLabel: string;
+  /** Pre-formatted batch funnel (distributed · scanned · paid · conversion · commission), when the page provides one. */
+  performanceLabel?: string;
   defaultOpen: boolean;
   markDistributedAction: (input: unknown) => Promise<ActionResult>;
 }) {
@@ -23,6 +26,11 @@ export function BatchBlock({
         <span className="min-w-0">
           <span className="block truncate text-h3">{batch.label}</span>
           <span className="text-caption text-ink-3">{countLabel}</span>
+          {performanceLabel && (
+            <span className="block text-caption text-ink-2" data-testid="batch-performance">
+              {performanceLabel}
+            </span>
+          )}
         </span>
         <ChevronDown className="size-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" aria-hidden />
       </summary>

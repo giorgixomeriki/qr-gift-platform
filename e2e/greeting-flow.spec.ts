@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { createAvailableQr } from "./fixtures";
+import { createAvailableQr, moneyTrailFor } from "./fixtures";
 
 /**
  * The core money-path scenario: scan -> wizard -> TEST checkout -> recipient
@@ -60,6 +60,21 @@ test.describe("Sender greeting creation -> TEST checkout -> recipient reveal", (
     // now resolves as ACTIVE and renders the recipient experience.
     await expect(page.getByTestId("greeting-renderer")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByTestId("sender-banner")).toBeVisible();
+
+    // The money behind it, confirmed server-side: one PAID order attributed to
+    // the card's partner, one succeeded charge for the order's amount, exactly
+    // one commission booked to that partner, and the split adds up (30%).
+    const trail = await moneyTrailFor(publicToken);
+    expect(trail.orders).toHaveLength(1);
+    const [order] = trail.orders;
+    expect(order!.status).toBe("PAID");
+    expect(order!.partner_id).toBe(trail.qrPartnerId);
+    expect(order!.partner_commission_minor + order!.platform_share_minor).toBe(order!.gross_amount_minor);
+    // The fixture partner's rate is 3000 bps; the split floors the commission (lib/payments/pricing.ts).
+    expect(order!.partner_commission_minor).toBe(Math.floor((order!.gross_amount_minor * 3000) / 10000));
+    expect(trail.payments.filter((p) => p.status === "SUCCEEDED")).toHaveLength(1);
+    expect(trail.payments[0]!.amount_minor).toBe(order!.gross_amount_minor);
+    expect(trail.ledger).toEqual([{ type: "COMMISSION_EARNED", amount_minor: order!.partner_commission_minor, partner_id: trail.qrPartnerId }]);
   });
 
   test("a genuine recipient (no edit-token cookie) sees the reveal but not the sender's own banner", async ({ browser }) => {

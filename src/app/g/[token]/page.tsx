@@ -135,6 +135,7 @@ export default async function QrEntryPage({
           <RecipientView
             greetingId={resolution.greetingId}
             themeKey={data.themeKey}
+            themeVersion={data.themeVersion}
             isOriginalSender={isSender}
             content={{
               message: textRow?.textValue ?? null,

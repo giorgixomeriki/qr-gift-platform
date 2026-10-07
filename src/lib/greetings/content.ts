@@ -4,6 +4,7 @@ import { db, withEditableGreeting } from "@/db/client";
 import { greetings, greetingContent, qrCodes, themes } from "@/db/schema";
 import { verifyGreetingEditAccess, InvalidEditTokenError } from "./access";
 import { isThemeKey, type ThemeKey } from "@/lib/themes/registry";
+import { getTemplate } from "@/lib/templates/catalog";
 import { greetingMessageSchema } from "@/lib/validation/greeting-text";
 import { validateMediaUpload, allowedMimeTypesFor, type SupportedContentType } from "@/lib/validation/content-types";
 import { buildStorageKey, createSignedUploadUrl, createSignedReadUrl, deleteStorageObject } from "@/lib/storage/media";
@@ -79,7 +80,8 @@ export async function updateGreetingTheme(greetingId: string, editToken: string,
   if (!themeRow) throw new ContentActionError("Theme not found");
 
   await withEditableGreeting(greetingId, (tx) =>
-    tx.update(greetings).set({ themeId: themeRow.id, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId)),
+    // The version chosen now is the version the recipient will see (frozen once ACTIVE).
+    tx.update(greetings).set({ themeId: themeRow.id, themeVersion: getTemplate(themeKey)!.version, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId)),
   );
 
   const partnerId = await getOwningPartnerId(greetingId);

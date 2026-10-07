@@ -106,6 +106,17 @@ export function withPaymentActivation<T>(orderId: string, fn: (tx: Tx) => Promis
 }
 
 /**
+ * An admin acting on one order's payment records: refunding a PAID order
+ * (lib/payments/service.ts refundPaidOrder). The admin half authorizes the
+ * order update and the COMMISSION_REVERSAL ledger insert (app_is_admin()
+ * policies); the order half is what payments_update_by_payment_service keys
+ * off, scoped to this one order. Callers must have run requireAdmin first.
+ */
+export function withAdminPaymentContext<T>(adminUserId: string, orderId: string, fn: (tx: Tx) => Promise<T>): Promise<T> {
+  return withContext({ "app.user_id": adminUserId, "app.payment_activation_order_id": orderId }, fn);
+}
+
+/**
  * No elevated context. Relies solely on the public-read RLS policies (e.g.
  * ACTIVE greetings, AVAILABLE/ACTIVE QR status) — this is what the recipient
  * experience and QR state lookup use.

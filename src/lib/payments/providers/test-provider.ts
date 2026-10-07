@@ -13,10 +13,14 @@ import type {
  * NODE_ENV=production — see provider-factory.ts's hard guard, which is the
  * actual enforcement point; this file being importable is not itself a risk.
  *
- * Simulates an always-succeeds redirect-based flow: createPayment mints a
- * fake provider id immediately in SUCCEEDED state (no real async gap), which
- * is enough to exercise the full order/payment/ledger/activation pipeline in
- * tests without a real provider integration.
+ * Simulates a redirect-based flow: createPayment mints a fake provider id;
+ * verifyPayment reports it SUCCEEDED. Its signed webhook plays the provider's
+ * part and may report any outcome a real provider can — SUCCEEDED (default),
+ * FAILED or PENDING — so failure, pending, out-of-order, duplicate and
+ * concurrent notifications run through the same webhook route and payment
+ * service a real provider's would. The amount/currency are always the ones
+ * encoded in the charge id (what "the provider" charged), never the caller's.
+ * Refunds are idempotent per idempotency key, like a real provider's.
  */
 // This adapter has no backing store of its own — it's stateless by design.
 // A real provider's verify/webhook endpoints return the amount THEY actually
@@ -75,19 +79,28 @@ export class TestPaymentProvider implements PaymentProvider {
       throw new Error("TEST webhook signature invalid");
     }
 
-    const parsed = JSON.parse(rawBody) as { orderId: string; providerPaymentId: string };
+    const parsed = JSON.parse(rawBody) as { orderId: string; providerPaymentId: string; status?: WebhookResult["status"] };
     const { amountMinor, currency } = decodePaymentId(parsed.providerPaymentId);
+    const status = parsed.status ?? "SUCCEEDED";
+    if (!["SUCCEEDED", "FAILED", "PENDING"].includes(status)) throw new Error(`TEST webhook status not recognised: ${status}`);
     return {
       orderId: parsed.orderId,
       providerPaymentId: parsed.providerPaymentId,
-      status: "SUCCEEDED",
+      status,
       amountMinor,
       currency,
       metadata: { paymentMethodType: "test" },
     };
   }
 
-  async refundPayment(providerPaymentId: string, amountMinor = 0): Promise<RefundResult> {
-    return { providerPaymentId, refundedAmountMinor: amountMinor, status: "REFUNDED" };
+  /** Refunds already performed in this process, by idempotency key — a repeated key returns the first result, as a real provider's would. */
+  private static readonly refunds = new Map<string, RefundResult>();
+
+  async refundPayment(providerPaymentId: string, amountMinor = 0, idempotencyKey?: string): Promise<RefundResult> {
+    const done = idempotencyKey ? TestPaymentProvider.refunds.get(idempotencyKey) : undefined;
+    if (done) return done;
+    const result: RefundResult = { providerPaymentId, refundedAmountMinor: amountMinor, status: "REFUNDED" };
+    if (idempotencyKey) TestPaymentProvider.refunds.set(idempotencyKey, result);
+    return result;
   }
 }

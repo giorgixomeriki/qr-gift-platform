@@ -10,7 +10,7 @@ ModuleInternals._load = function (request: string, ...rest: unknown[]) {
 };
 
 const postgres = require("postgres") as typeof import("postgres");
-const { recordManualPayout, getPartnerUnpaidBalance } = require("../src/lib/payments/payouts") as typeof import("../src/lib/payments/payouts");
+const { recordManualPayout, getPartnerUnpaidBalance, getPartnerPayoutStatement } = require("../src/lib/payments/payouts") as typeof import("../src/lib/payments/payouts");
 const { withAdminContext, withPartnerContext, withPublicContext } = require("../src/db/client") as typeof import("../src/db/client");
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -56,19 +56,27 @@ async function main() {
   await admin`insert into partner_members (partner_id, user_id, role) values (${partnerA}, ${userA}, 'OWNER')`;
   await admin`insert into admin_users (user_id) values (${adminUserId})`;
 
-  // A large COMMISSION_EARNED credit, unrelated to any real order, purely so
-  // this script can exercise payout recording in isolation from checkout.
-  await admin`insert into partner_ledger_entries (partner_id, type, amount_minor, currency) values (${partnerA}, 'COMMISSION_EARNED', 100000, ${currency})`;
+  // Positive ADJUSTMENT credits, unrelated to any real order, one booked inside
+  // each month this script pays out — payouts are itemized (migrations/0014),
+  // so each period needs its own ledger rows to settle. Backdated by the
+  // superuser fixture only. (COMMISSION_EARNED must reference a PAID order.)
+  for (const day of ["2026-01-10", "2026-02-12", "2026-02-25", "2026-03-05", "2026-03-20", "2026-04-10", "2026-04-25", "2026-06-10"]) {
+    await admin`insert into partner_ledger_entries (partner_id, type, amount_minor, currency, created_at) values (${partnerA}, 'ADJUSTMENT', 100, ${currency}, ${day + "T12:00:00Z"})`;
+  }
 
-  function payout(periodFrom: string, periodTo: string, amountMinor = 100) {
+  /** Pays exactly what the server's statement for the period shows (what the admin UI sends). */
+  async function payout(periodFrom: string, periodTo: string, override: { expectedAmountMinor?: number } = {}) {
+    const period = { periodFrom: new Date(periodFrom), periodTo: new Date(periodTo) };
+    const statement = await withAdminContext(adminUserId, (tx) => getPartnerPayoutStatement(tx, { partnerId: partnerA, currency, ...period }));
     return withAdminContext(adminUserId, (tx) =>
       recordManualPayout(tx, adminUserId, {
         partnerId: partnerA,
         currency,
-        amountMinor,
-        periodFrom: new Date(periodFrom),
-        periodTo: new Date(periodTo),
+        ...period,
+        expectedAmountMinor: statement.payableMinor,
+        expectedLedgerEntryIds: statement.eligibleLedgerEntryIds,
         reference: "concurrency-test",
+        ...override,
       }),
     );
   }
@@ -112,12 +120,12 @@ async function main() {
     check("4. A sequential overlapping payout is rejected with the existing friendly PayoutError message", messageOk);
   }
 
-  console.log("\n--- Insufficient balance ---");
+  console.log("\n--- Client-supplied amount is never authoritative ---");
   {
     const unpaidBalance = await withAdminContext(adminUserId, (tx) => getPartnerUnpaidBalance(tx, partnerA, currency));
     check(
-      "5. A payout exceeding the unpaid balance is rejected",
-      await expectThrows(() => payout("2026-06-01", "2026-06-30", unpaidBalance + 1_000_000)),
+      "5. A payout claiming more than the server-computed amount is rejected",
+      await expectThrows(() => payout("2026-06-01", "2026-06-30", { expectedAmountMinor: unpaidBalance + 1_000_000 })),
     );
   }
 
@@ -127,7 +135,7 @@ async function main() {
       "6. A partner member cannot create a payout — admin-only by RLS",
       await expectThrows(() =>
         withPartnerContext(userA, partnerA, (tx) =>
-          recordManualPayout(tx, userA, { partnerId: partnerA, currency, amountMinor: 1, periodFrom: new Date("2026-07-01"), periodTo: new Date("2026-07-31") }),
+          recordManualPayout(tx, userA, { partnerId: partnerA, currency, periodFrom: new Date("2026-06-01"), periodTo: new Date("2026-06-30"), expectedAmountMinor: 100, expectedLedgerEntryIds: [crypto.randomUUID()] }),
         ),
       ),
     );
@@ -135,15 +143,16 @@ async function main() {
       "7. An anonymous/unauthenticated context cannot create a payout",
       await expectThrows(() =>
         withPublicContext((tx) =>
-          recordManualPayout(tx, crypto.randomUUID(), { partnerId: partnerA, currency, amountMinor: 1, periodFrom: new Date("2026-07-01"), periodTo: new Date("2026-07-31") }),
+          recordManualPayout(tx, crypto.randomUUID(), { partnerId: partnerA, currency, periodFrom: new Date("2026-06-01"), periodTo: new Date("2026-06-30"), expectedAmountMinor: 100, expectedLedgerEntryIds: [crypto.randomUUID()] }),
         ),
       ),
     );
   }
 
   console.log("\nCleaning up fixtures...");
-  await admin`delete from partner_payouts where partner_id = ${partnerA}`;
+  await admin`delete from partner_payout_items where partner_id = ${partnerA}`;
   await admin`delete from partner_ledger_entries where partner_id = ${partnerA}`;
+  await admin`delete from partner_payouts where partner_id = ${partnerA}`;
   await admin`delete from partner_members where partner_id = ${partnerA}`;
   await admin`delete from admin_users where user_id = ${adminUserId}`;
   await admin`delete from partners where id = ${partnerA}`;

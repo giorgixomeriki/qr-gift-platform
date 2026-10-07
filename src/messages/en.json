@@ -141,7 +141,10 @@
       "testMode": "Test mode — no real payment is taken.",
       "errorTitle": "Checkout isn't available",
       "errorGeneric": "Something went wrong on our side. You haven't been charged — please try again.",
-      "secureNote": "Secure payment"
+      "secureNote": "Secure payment",
+      "stillVerifying": "We're still confirming your payment",
+      "stillVerifyingBody": "If you paid, it will be confirmed shortly — please don't pay again. Check again in a moment.",
+      "checkAgain": "Check again"
     },
     "preview": {
       "edit": "Back to editing",
@@ -248,7 +251,9 @@
         "unpaidBalance": "Unpaid balance",
         "draft": "Draft",
         "active": "Active",
-        "batches": "Batches"
+        "batches": "Batches",
+        "grossSales": "Gross sales",
+        "commissionReversed": "Commission reversed"
       },
       "membershipTitle": "Members",
       "createBatchTitle": "Create QR batch",
@@ -258,7 +263,15 @@
       "noMembershipsTitle": "No shop linked yet",
       "batchesHint": "Print cards, then mark them distributed as they go out with gifts.",
       "noBatchesHint": "Create your first batch to print cards.",
-      "membershipHint": "People who can see this dashboard."
+      "membershipHint": "People who can see this dashboard.",
+      "payoutsTitle": "Payouts",
+      "payoutPaidOn": "Paid on",
+      "payoutPeriod": "Period",
+      "payoutAmount": "Amount",
+      "payoutSales": "Sales paid",
+      "payoutStatus": "Status",
+      "payoutLegacy": "—",
+      "noPayouts": "No payouts yet."
     }
   },
   "admin": {
@@ -326,7 +339,9 @@
       "noBatches": "No batches yet.",
       "suspend": "Suspend",
       "reactivate": "Reactivate",
-      "suspendConfirm": "Suspend? Their cards will stop working until reactivated."
+      "suspendConfirm": "Suspend? Their cards will stop working until reactivated.",
+      "salesTitle": "Sales attribution",
+      "salesHint": "Every paid activation traced QR → batch → order → payment → commission. No greeting content."
     },
     "moderation": {
       "title": "Moderation",
@@ -443,6 +458,12 @@
       "ADMIN": "Admin",
       "STAFF": "Staff",
       "VIEWER": "Viewer"
+    },
+    "payoutStatus": {
+      "PENDING": "Pending",
+      "PROCESSING": "Processing",
+      "PAID": "Paid",
+      "FAILED": "Failed"
     }
   },
   "membershipManager": {
@@ -460,21 +481,52 @@
   "payoutManager": {
     "unpaidBalance": "Unpaid balance",
     "recordButton": "Record a payout",
-    "amountLabel": "Amount ({currency}) — max {max}",
     "periodFrom": "Period from",
     "periodTo": "Period to",
     "referenceLabel": "Reference / note (how was this actually paid?)",
     "referencePlaceholder": "e.g. bank transfer #1234, cash on 2026-01-15",
-    "confirmButton": "Confirm payout",
+    "confirmButton": "Create payout",
     "periodHeader": "Period",
     "amountHeader": "Amount",
     "referenceHeader": "Reference",
     "paidHeader": "Paid",
     "noPayouts": "No payouts recorded yet.",
     "noReference": "—",
-    "explainer": "Record a payout you've already made outside QR Starr (bank transfer, cash). This doesn't move money.",
-    "useFullBalance": "Use full balance",
-    "overBalance": "The amount is more than the unpaid balance."
+    "explainer": "Pick a closed period. The payout pays exactly the commissions listed below — whole sales only, computed by the server. Record it after you have paid the partner outside QR Starr.",
+    "statementActivations": "Paid activations in period",
+    "statementGross": "Gross sales",
+    "statementEarned": "Commission earned",
+    "statementReversed": "Reversed (refunds)",
+    "statementPayable": "This payout",
+    "statementRows": "Rows",
+    "statementRowsValue": "{eligible} to pay · {reversed} refunded · {paid} already paid",
+    "confirmButtonAmount": "Create payout — {amount}",
+    "colBooked": "Date",
+    "colQr": "QR / batch",
+    "colOrder": "Order",
+    "colGross": "Sale",
+    "colAmount": "Commission",
+    "colState": "Status",
+    "colLaterRefund": "Refunded later",
+    "stateEligible": "Will be paid",
+    "stateClawback": "Refund deduction",
+    "stateReversed": "Refunded — excluded",
+    "statePaid": "Already paid",
+    "typeCommission": "Commission",
+    "typeReversal": "Refund deduction",
+    "typeAdjustment": "Adjustment",
+    "itemsHeader": "Sales paid",
+    "itemsCount": "{sales} sales · {items} rows",
+    "legacy": "Legacy — no sale breakdown",
+    "laterRefundOpen": "−{amount}, deducted from the next payout",
+    "laterRefundSettled": "−{amount}, deducted in a later payout",
+    "blocker": {
+      "PERIOD_INVALID": "The start date must be before the end date.",
+      "PERIOD_NOT_CLOSED": "Choose a period that has ended (up to yesterday) — sales can still arrive in an open period.",
+      "PERIOD_OVERLAPS_PAYOUT": "This period overlaps an existing payout.",
+      "NOTHING_PAYABLE": "Nothing to pay for this period.",
+      "EXCEEDS_BALANCE": "These commissions exceed the unpaid balance (an older payout has no sale breakdown). Resolve manually."
+    }
   },
   "createBatchForm": {
     "labelField": "Label",
@@ -505,5 +557,26 @@
     "body": "QR Starr adds a personal message, photos, video and a voice note to flowers, cakes and gifts — revealed with a single scan.",
     "partnerCta": "Partner sign in",
     "adminCta": "Admin"
+  },
+  "batchPerformance": {
+    "summary": "{distributed} distributed · {scanned} scanned · {paid} paid · {conversion} conversion · {commission} commission"
+  },
+  "salesTrace": {
+    "paidHeader": "Paid",
+    "qrHeader": "QR / batch",
+    "orderHeader": "Order",
+    "paymentHeader": "Payment",
+    "grossHeader": "Gross",
+    "commissionHeader": "Commission",
+    "statusHeader": "Commission status",
+    "actionsHeader": "Actions",
+    "rate": "{pct}% rate",
+    "statusEarned": "Earned",
+    "statusReversed": "Reversed",
+    "statusRefundRequired": "Refund required",
+    "statusNoCommission": "No commission",
+    "refund": "Refund",
+    "refundConfirm": "Confirm full refund",
+    "empty": "No paid activations yet."
   }
 }

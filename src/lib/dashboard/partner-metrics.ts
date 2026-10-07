@@ -13,7 +13,11 @@ export type PartnerMetrics = {
   qrScanned: number;
   batchCount: number;
   successfulSales: number;
+  /** Sum of gross amounts of still-PAID orders (refunded sales excluded). */
+  grossSalesMinor: number;
   commissionEarnedMinor: number;
+  /** Commission clawed back by refunds (COMMISSION_REVERSAL), as a positive number. */
+  commissionReversedMinor: number;
   commissionPaidMinor: number;
   commissionUnpaidMinor: number;
   currency: string;
@@ -49,12 +53,15 @@ export async function getPartnerMetrics(tx: Tx, partnerId: string): Promise<Part
     .where(and(eq(analyticsEvents.partnerId, partnerId), eq(analyticsEvents.eventType, "QR_SCANNED")));
 
   const [salesRow] = await tx
-    .select({ count: sql<number>`count(*)::int` })
+    .select({
+      count: sql<number>`count(*)::int`,
+      gross: sql<number>`coalesce(sum(${orders.grossAmountMinor}), 0)::int`,
+    })
     .from(orders)
     .where(and(eq(orders.partnerId, partnerId), eq(orders.status, "PAID")));
 
   // Sign convention (see schema/partner-ledger.ts): COMMISSION_EARNED positive,
-  // PAYOUT negative. Unpaid balance is a plain SUM(amount_minor) — NOT
+  // COMMISSION_REVERSAL and PAYOUT negative. Unpaid balance is a plain SUM(amount_minor) — NOT
   // filtered by payout_id IS NULL, since partner_ledger_entries has no
   // UPDATE RLS policy at all (append-only, by design), so nothing can ever
   // retroactively mark an earning row's payout_id — see
@@ -64,6 +71,7 @@ export async function getPartnerMetrics(tx: Tx, partnerId: string): Promise<Part
   const [ledgerRow] = await tx
     .select({
       earned: sql<number>`coalesce(sum(${partnerLedgerEntries.amountMinor}) filter (where ${partnerLedgerEntries.type} = 'COMMISSION_EARNED'), 0)::int`,
+      reversed: sql<number>`coalesce(-sum(${partnerLedgerEntries.amountMinor}) filter (where ${partnerLedgerEntries.type} = 'COMMISSION_REVERSAL'), 0)::int`,
       paidOut: sql<number>`coalesce(-sum(${partnerLedgerEntries.amountMinor}) filter (where ${partnerLedgerEntries.type} = 'PAYOUT'), 0)::int`,
       unpaid: sql<number>`coalesce(sum(${partnerLedgerEntries.amountMinor}), 0)::int`,
       currency: sql<string | null>`min(${partnerLedgerEntries.currency})`,
@@ -81,7 +89,9 @@ export async function getPartnerMetrics(tx: Tx, partnerId: string): Promise<Part
     qrScanned: scannedRow?.count ?? 0,
     batchCount: batchRow?.count ?? 0,
     successfulSales: salesRow?.count ?? 0,
+    grossSalesMinor: salesRow?.gross ?? 0,
     commissionEarnedMinor: ledgerRow?.earned ?? 0,
+    commissionReversedMinor: ledgerRow?.reversed ?? 0,
     commissionPaidMinor: ledgerRow?.paidOut ?? 0,
     commissionUnpaidMinor: ledgerRow?.unpaid ?? 0,
     currency: ledgerRow?.currency ?? "GEL",
