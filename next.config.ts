@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.join(__dirname),
   },
+  // The dev-tools badge sits bottom-left over the phone layout: it covered the
+  // left edge of the sticky Continue/Pay bar and the reveal's Previous button,
+  // so taps there opened the dev menu instead. Runtime errors still surface.
+  devIndicators: false,
   async headers() {
     if (process.env.NODE_ENV !== "production") return [];
     return [{ source: "/:path*", headers: securityHeaders }];
