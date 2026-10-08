@@ -8,12 +8,15 @@ import { Notice } from "@/components/ui/notice";
 import { requestUploadAction, finalizeUploadAction, deleteContentAction } from "@/lib/greetings/actions";
 import { uploadToSignedUrl } from "@/lib/client/upload-to-signed-url";
 import { sizeLimitFor } from "@/lib/validation/content-types";
+import { tick } from "@/lib/client/haptics";
 import { VoicePlayer } from "./voice-player";
 
 type ExistingItem = { contentId: string; url: string } | null;
 
 const MAX_DURATION_SECONDS = 60;
 const METER_BARS = 28;
+/** The meter takes a new reading this often: a readable scroll (~1.4 s across), and 20 renders a second instead of 60 on a mid-range phone. */
+const METER_INTERVAL_MS = 50;
 
 /**
  * MediaRecorder support and its preferred mimeType vary a lot across
@@ -23,7 +26,10 @@ const METER_BARS = 28;
  */
 function pickSupportedMimeType(): string | null {
   if (typeof MediaRecorder === "undefined") return null;
-  const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
+  // AAC in MP4 first, where the recorder offers it: the one voice format every
+  // recipient's phone plays (an Android-made WebM/Opus note is not playable
+  // on every iPhone still in use). Then the previous order, unchanged.
+  const candidates = ["audio/mp4;codecs=mp4a.40.2", "audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg;codecs=opus"];
   for (const candidate of candidates) {
     if (MediaRecorder.isTypeSupported?.(candidate)) return candidate;
   }
@@ -52,6 +58,7 @@ export function VoiceRecorder({ greetingId, existing, onChanged }: { greetingId:
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const rafRef = useRef<number | null>(null);
+  const startedAtRef = useRef(0);
 
   function stopMeter() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
@@ -85,6 +92,10 @@ export function VoiceRecorder({ greetingId, existing, onChanged }: { greetingId:
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
+      // Interrupted — a phone call, Siri, another app taking the microphone, the
+      // screen locking: the OS ends the track. Stop cleanly and keep what was
+      // recorded, rather than leaving a timer running over silence.
+      stream.getAudioTracks().forEach((track) => track.addEventListener("ended", () => stopRecording(), { once: true }));
       recorder.onstop = () => {
         // Store the base MIME type only: Chrome/Android report e.g.
         // "audio/webm;codecs=opus", which the server allowlist (exact match
@@ -96,18 +107,22 @@ export function VoiceRecorder({ greetingId, existing, onChanged }: { greetingId:
         stopMeter();
       };
       recorder.start();
+      tick();
       mediaRecorderRef.current = recorder;
       setRecording(true);
       setSeconds(0);
+      // Elapsed time from the clock, not from counting ticks: timers are
+      // throttled while a phone is busy, and the display must match the audio.
+      startedAtRef.current = performance.now();
       timerRef.current = setInterval(() => {
-        setSeconds((s) => {
-          if (s + 1 >= MAX_DURATION_SECONDS) {
-            stopRecording();
-            return MAX_DURATION_SECONDS;
-          }
-          return s + 1;
-        });
-      }, 1000);
+        const elapsed = Math.floor((performance.now() - startedAtRef.current) / 1000);
+        if (elapsed >= MAX_DURATION_SECONDS) {
+          setSeconds(MAX_DURATION_SECONDS);
+          stopRecording();
+          return;
+        }
+        setSeconds(elapsed);
+      }, 250);
 
       // Live input level, so people can see they're being heard. Decorative:
       // recording proceeds normally if the Web Audio API is unavailable.
@@ -118,13 +133,17 @@ export function VoiceRecorder({ greetingId, existing, onChanged }: { greetingId:
         analyser.fftSize = 64;
         ctx.createMediaStreamSource(stream).connect(analyser);
         const data = new Uint8Array(analyser.frequencyBinCount);
-        const tick = () => {
-          analyser.getByteFrequencyData(data);
-          const avg = data.reduce((a, b) => a + b, 0) / data.length / 255;
-          setLevels((prev) => [...prev.slice(1), Math.max(0.08, Math.min(1, avg * 2.6))]);
-          rafRef.current = requestAnimationFrame(tick);
+        let last = 0;
+        const sample = (now: number) => {
+          if (now - last >= METER_INTERVAL_MS) {
+            last = now;
+            analyser.getByteFrequencyData(data);
+            const avg = data.reduce((a, b) => a + b, 0) / data.length / 255;
+            setLevels((prev) => [...prev.slice(1), Math.max(0.08, Math.min(1, avg * 2.6))]);
+          }
+          rafRef.current = requestAnimationFrame(sample);
         };
-        rafRef.current = requestAnimationFrame(tick);
+        rafRef.current = requestAnimationFrame(sample);
       } catch {
         /* no meter */
       }
@@ -135,9 +154,27 @@ export function VoiceRecorder({ greetingId, existing, onChanged }: { greetingId:
 
   function stopRecording() {
     if (timerRef.current) clearInterval(timerRef.current);
-    mediaRecorderRef.current?.stop();
+    timerRef.current = null;
+    const recorder = mediaRecorderRef.current;
+    mediaRecorderRef.current = null;
+    if (recorder && recorder.state !== "inactive") {
+      recorder.stop();
+      tick();
+    }
     setRecording(false);
   }
+
+  // Leaving the browser mid-recording (app switch, lock screen) ends the take
+  // there: iOS suspends the microphone in the background anyway, and the
+  // sender returns to a playable recording instead of a silent tail.
+  useEffect(() => {
+    if (!recording) return;
+    const onHide = () => {
+      if (document.visibilityState === "hidden") stopRecording();
+    };
+    document.addEventListener("visibilitychange", onHide);
+    return () => document.removeEventListener("visibilitychange", onHide);
+  }, [recording]);
 
   function discardPreview() {
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -311,7 +348,7 @@ export function VoiceRecorder({ greetingId, existing, onChanged }: { greetingId:
 
       <label
         htmlFor="voice-file-input"
-        className="inline-flex w-fit cursor-pointer items-center gap-1.5 text-label text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ember"
+        className="relative inline-flex w-fit cursor-pointer items-center gap-1.5 text-label before:absolute before:-inset-x-2 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ember"
         data-testid="voice-file-fallback-label"
       >
         <Upload className="size-4" aria-hidden />

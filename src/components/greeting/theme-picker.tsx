@@ -13,6 +13,7 @@ import type { ThemeKey } from "@/lib/themes/registry";
 import { getThemeWorld } from "@/lib/themes/worlds";
 import { getCollection, getTemplate, restAssets } from "@/lib/templates/catalog";
 import { roomCss } from "@/lib/templates/room";
+import { useChromeTint } from "@/lib/client/use-chrome-tint";
 import "./theme-picker.css";
 
 /** The curated collection the picker offers, in its order (src/lib/templates/catalog.ts). */
@@ -290,7 +291,10 @@ export function ThemePicker({
 
   const name = tt(`${selected}.name`);
   const composition = getThemeWorld(selected).composition;
-  const roomDark = getTemplate(selected)!.spec.room.dark;
+  const room = getTemplate(selected)!.spec.room;
+  const roomDark = room.dark;
+  // The whole screen is the chosen world's room — the browser's toolbar and overscroll too.
+  useChromeTint(room.base);
 
   return (
     <div

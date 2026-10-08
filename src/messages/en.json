@@ -85,7 +85,10 @@
       "errorGeneric": "Upload failed. Check your connection and try again.",
       "photosHint": "Up to 3",
       "videoHint": "One clip",
-      "voiceHint": "Up to 1 minute"
+      "voiceHint": "Up to 1 minute",
+      "replacing": "Replacing…",
+      "keptCurrent": "Your current photo is kept.",
+      "keptCurrentVideo": "Your current video is kept."
     },
     "voice": {
       "tapToRecord": "Tap to record",

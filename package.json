@@ -33,6 +33,7 @@
     "verify:business-calendar": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-business-calendar.ts",
     "verify:templates": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-templates.ts",
     "verify:payment-integrity": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payment-integrity.ts",
+    "verify:media-replacement": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-media-replacement.ts",
     "payments:reconcile": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/payments-reconcile.ts",
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test"
   },

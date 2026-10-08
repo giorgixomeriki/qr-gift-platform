@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useTranslations } from "next-intl";
 
 function fmt(ms: number) {
@@ -15,6 +16,13 @@ const BARS = 36;
 /**
  * Themed voice-note player. Seeking uses a real <input type=range> laid over
  * the waveform, so it's keyboard- and screen-reader-operable.
+ *
+ * The control shows the audio's real state, never a guess: the tap is
+ * answered at once (`pending`), a spinner shows while the audio is actually
+ * buffering (the first play over mobile data, or a stall), Pause only once it
+ * is really playing. While playing, the waveform follows `currentTime` every
+ * frame — `timeupdate` alone arrives only ~4 times a second, so the bars
+ * stepped behind the voice.
  */
 export function VoicePlayer({
   src,
@@ -32,6 +40,8 @@ export function VoicePlayer({
   const t = useTranslations("greeting");
   const audioRef = useRef<HTMLAudioElement>(null);
   const [playing, setPlaying] = useState(false);
+  /** Asked to play, not yet audibly playing (starting, or buffering mid-way). */
+  const [pending, setPending] = useState(false);
   const [position, setPosition] = useState(0);
   const [mediaDuration, setMediaDuration] = useState<number | null>(null);
   const total = durationMs ?? mediaDuration ?? 0;
@@ -69,17 +79,29 @@ export function VoicePlayer({
     };
     const onEnd = () => {
       setPlaying(false);
+      setPending(false);
       setPosition(0);
     };
-    const onPause = () => setPlaying(false);
-    const onPlaying = () => setPlaying(true);
+    const onPause = () => {
+      setPlaying(false);
+      setPending(false);
+    };
+    const onPlaying = () => {
+      setPlaying(true);
+      setPending(false);
+    };
+    const onWaiting = () => {
+      if (!a.paused) setPending(true);
+    };
     a.addEventListener("timeupdate", onTime);
     a.addEventListener("loadedmetadata", onMeta);
     a.addEventListener("durationchange", onMeta);
     a.addEventListener("ended", onEnd);
     a.addEventListener("pause", onPause);
     a.addEventListener("playing", onPlaying);
+    a.addEventListener("waiting", onWaiting);
     return () => {
+      a.removeEventListener("waiting", onWaiting);
       a.removeEventListener("timeupdate", onTime);
       a.removeEventListener("loadedmetadata", onMeta);
       a.removeEventListener("durationchange", onMeta);
@@ -89,13 +111,28 @@ export function VoicePlayer({
     };
   }, []);
 
+  // Frame-accurate progress while audible.
+  useEffect(() => {
+    const a = audioRef.current;
+    if (!playing || !a) return;
+    let frame = 0;
+    const follow = () => {
+      setPosition(a.currentTime * 1000);
+      frame = requestAnimationFrame(follow);
+    };
+    frame = requestAnimationFrame(follow);
+    return () => cancelAnimationFrame(frame);
+  }, [playing]);
+
   const progress = total > 0 ? Math.min(1, position / total) : 0;
 
   function toggle() {
     const a = audioRef.current;
     if (!a) return;
     if (a.paused) {
-      void a.play();
+      setPending(true);
+      // A refused play (autoplay policy, a decode error) must not leave the control saying "loading".
+      a.play().catch(() => setPending(false));
       onPlay?.();
     } else a.pause();
   }
@@ -112,12 +149,19 @@ export function VoicePlayer({
       <button
         type="button"
         onClick={toggle}
-        aria-label={playing ? t("pause") : t("play")}
-        className={`grid size-14 shrink-0 place-items-center rounded-full shadow-sm transition-transform active:scale-95 ${
+        aria-label={playing || pending ? t("pause") : t("play")}
+        aria-busy={pending || undefined}
+        className={`grid size-14 shrink-0 place-items-center rounded-full shadow-sm transition-transform duration-150 active:scale-90 ${
           themed ? "bg-[var(--g-accent)] text-[var(--g-on-accent)]" : "bg-primary text-ink-inverse"
         }`}
       >
-        {playing ? <Pause className="size-6" fill="currentColor" strokeWidth={0} /> : <Play className="ml-0.5 size-6" fill="currentColor" strokeWidth={0} />}
+        {pending ? (
+          <Spinner className="size-6" />
+        ) : playing ? (
+          <Pause className="size-6" fill="currentColor" strokeWidth={0} />
+        ) : (
+          <Play className="ml-0.5 size-6" fill="currentColor" strokeWidth={0} />
+        )}
       </button>
       <div className="min-w-0 flex-1">
         <p className={`line-clamp-2 text-label ${themed ? "text-[var(--g-ink)]" : "text-ink"}`}>{title}</p>

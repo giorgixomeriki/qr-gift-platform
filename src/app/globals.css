@@ -115,6 +115,10 @@
 
   --safe-bottom: env(safe-area-inset-bottom, 0px);
   --safe-top: env(safe-area-inset-top, 0px);
+  /* Landscape phones: viewport-fit=cover lets the page run under the notch /
+     Dynamic Island side and the Android cutout — content keeps clear of them. */
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
 
   color-scheme: light;
 }
@@ -234,6 +238,18 @@
 :lang(ka) .text-h1 {
   font-size: clamp(1.5rem, 1.3rem + 1.1vw, 2.125rem);
   line-height: 1.2;
+}
+
+/* The consumer page gutter: 16px on phones, 24px from sm, and never less than
+   the side safe area (landscape notch). Full-bleed children still bleed with
+   -mx-4 / sm:-mx-6; in landscape they stop at the safe area instead. */
+@utility px-page {
+  padding-left: max(1rem, var(--safe-left));
+  padding-right: max(1rem, var(--safe-right));
+  @media (width >= 40rem) {
+    padding-left: max(1.5rem, var(--safe-left));
+    padding-right: max(1.5rem, var(--safe-right));
+  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -898,8 +914,11 @@ dialog.sheet[open] .sheet-panel {
   touch-action: manipulation;
   user-select: none;
 }
-.cx-cta:hover {
-  filter: brightness(1.07);
+/* Hover only where there is one: on touch screens :hover sticks after the tap. */
+@media (hover: hover) {
+  .cx-cta:hover {
+    filter: brightness(1.07);
+  }
 }
 .cx-cta:active {
   transform: translateY(1px) scale(0.99);
@@ -934,8 +953,10 @@ dialog.sheet[open] .sheet-panel {
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.14);
   transition: transform var(--cx-dur-quick) var(--cx-ease);
 }
-.cx-cta:hover .cx-cta__icon {
-  transform: translateX(2px);
+@media (hover: hover) {
+  .cx-cta:hover .cx-cta__icon {
+    transform: translateX(2px);
+  }
 }
 .cx-cta:disabled .cx-cta__icon {
   background: transparent;

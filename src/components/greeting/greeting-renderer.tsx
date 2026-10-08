@@ -11,6 +11,8 @@ import { DEFAULT_TEMPLATE_ID, getTemplate, restAssets } from "@/lib/templates/ca
 import { roomVars } from "@/lib/templates/room";
 import { COMPOSITIONS } from "@/lib/templates/vocabulary";
 import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
+import { tick } from "@/lib/client/haptics";
+import { useChromeTint } from "@/lib/client/use-chrome-tint";
 import { VoicePlayer } from "./voice-player";
 import "./reveal.css";
 
@@ -33,6 +35,16 @@ type Beat =
 const SEAL_PRESS_MS = 180;
 /** If a scene never reports rest (a stalled runtime), the letter still arrives this long after the scene should have ended. */
 const REST_GRACE_MS = 1800;
+/**
+ * A beat ignores Continue/Previous for this long after it arrives. The Open
+ * button and Continue share one spot under the thumb: without this, the
+ * second tap of a double-tap on Open lands on Continue and skips the message
+ * — the one beat the whole greeting exists for. Longer than a double-tap,
+ * shorter than any deliberate reading.
+ */
+const BEAT_GUARD_MS = 450;
+/** The ending's controls arrive when its finale comes to rest — or after this long if a finale never reports rest. */
+const FINALE_CAP_MS = 5200;
 
 /**
  * The single renderer both Preview and the Recipient Experience use. Never
@@ -75,6 +87,7 @@ export function GreetingRenderer({
   embedded = false,
   onBeatChange,
   onContentPlayed,
+  onEndingSettled,
 }: {
   themeKey: string;
   /** The exact template version to render (a sent greeting's frozen version); latest when omitted. */
@@ -97,6 +110,8 @@ export function GreetingRenderer({
   onBeatChange?: (kind: Beat["kind"]) => void;
   /** Fired at most once per beat visit when the recipient actually plays video/audio. */
   onContentPlayed?: (type: "video" | "audio") => void;
+  /** True once the ending's finale has come to rest (the greeting is complete); false on any other beat. */
+  onEndingSettled?: (settled: boolean) => void;
 }) {
   const t = useTranslations("greeting");
   const tt = useTranslations("themes");
@@ -122,24 +137,39 @@ export function GreetingRenderer({
   /** The message does not fit the card: it is presented as a letter once the world is at rest. */
   const [long, setLong] = useState(false);
   const [atRest, setAtRest] = useState(false);
+  /** The ending's finale has come to rest: only then do its controls (replay, the sender's Activate) arrive. */
+  const [endingRest, setEndingRest] = useState(false);
   const beat = beats[beatIndex] ?? beats[0]!;
   const playedRef = useRef<Set<string>>(new Set());
   const stageRef = useRef<HTMLDivElement>(null);
+  const beatAtRef = useRef(0);
 
+  // Full screen, the browser around the greeting takes the room's colour.
+  useChromeTint(embedded ? null : template.spec.room.base);
+
+  /** Mirrors the guard as `disabled` on Continue/Previous (the ref is the synchronous check). */
+  const [guard, setGuard] = useState(false);
+  const guarded = () => performance.now() - beatAtRef.current < BEAT_GUARD_MS;
   function advance() {
+    if (guarded()) return;
+    beatAtRef.current = performance.now();
     setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
   }
   function goBack() {
+    if (guarded()) return;
+    beatAtRef.current = performance.now();
     setBeatIndex((i) => Math.max(1, i - 1));
   }
   function open() {
     if (pressing) return;
+    tick();
     setPressing(true);
     window.setTimeout(() => {
       setPressing(false);
       setAtRest(false);
       setRunId((n) => n + 1);
-      advance();
+      beatAtRef.current = performance.now();
+      setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
     }, SEAL_PRESS_MS);
   }
   function restart() {
@@ -157,6 +187,26 @@ export function GreetingRenderer({
   useEffect(() => {
     onBeatChange?.(beat.kind);
   }, [beat.kind, onBeatChange]);
+
+  // Each beat starts its own input guard (see BEAT_GUARD_MS).
+  useEffect(() => {
+    if (beatIndex === 0) return;
+    setGuard(true);
+    const timer = window.setTimeout(() => setGuard(false), Math.max(0, BEAT_GUARD_MS - (performance.now() - beatAtRef.current)));
+    return () => window.clearTimeout(timer);
+  }, [beatIndex]);
+
+  // The ending is complete when its finale rests; never wait longer than the cap.
+  const onEnding = beat.kind === "ending";
+  useEffect(() => {
+    setEndingRest(false);
+    if (!onEnding) return;
+    const timer = window.setTimeout(() => setEndingRest(true), FINALE_CAP_MS);
+    return () => window.clearTimeout(timer);
+  }, [onEnding, runId]);
+  useEffect(() => {
+    onEndingSettled?.(onEnding && endingRest);
+  }, [onEnding, endingRest, onEndingSettled]);
 
   // Move focus to each new beat so keyboard and screen-reader users follow the story.
   useEffect(() => {
@@ -198,7 +248,7 @@ export function GreetingRenderer({
       data-room={template.spec.room.dark ? "dark" : "light"}
       data-composition={world.composition}
     >
-      <header className="relative z-20 flex flex-col gap-3 px-4 pt-[max(0.875rem,var(--safe-top))]">
+      <header className="px-page relative z-20 flex flex-col gap-3 pt-[max(0.875rem,var(--safe-top))]">
         <div className="flex min-h-9 items-center gap-3">
           {chrome}
           {!isOpening && (
@@ -268,15 +318,7 @@ export function GreetingRenderer({
 
         {beat.kind === "video" && content.video && (
           <MediaFrame key="video" frame={world.mediaFrame} index={0} testId="greeting-video-beat" still>
-            <video
-              src={`${content.video.url}#t=0.1`}
-              controls
-              preload="metadata"
-              playsInline
-              onPlay={() => notifyPlayed("video")}
-              aria-label={t("videoLabel")}
-              className="reveal__video"
-            />
+            <Video url={content.video.url} label={t("videoLabel")} onPlay={() => notifyPlayed("video")} />
           </MediaFrame>
         )}
 
@@ -298,6 +340,7 @@ export function GreetingRenderer({
               message={content.message ?? ""}
               finale={template.spec.finale}
               active
+              onRest={() => setEndingRest(true)}
               fit
               className="reveal__world"
             />
@@ -306,7 +349,7 @@ export function GreetingRenderer({
         )}
       </div>
 
-      <footer className="relative z-20 px-6 pt-2 pb-[max(1.25rem,calc(var(--safe-bottom)+0.75rem))]">
+      <footer className="relative z-20 pt-2 pr-[max(1.5rem,var(--safe-right))] pb-[max(1.25rem,calc(var(--safe-bottom)+0.75rem))] pl-[max(1.5rem,var(--safe-left))]">
         {isOpening && (
           <div className="mx-auto flex max-w-xs flex-col items-center gap-3">
             <button type="button" onClick={open} disabled={pressing} className="reveal__primary w-full" data-testid="greeting-tap-to-open">
@@ -316,18 +359,22 @@ export function GreetingRenderer({
           </div>
         )}
         {!isOpening && !isEnding && (
-          <div className="mx-auto flex max-w-sm items-center gap-3">
+          <div className="reveal-enter mx-auto flex max-w-sm items-center gap-3">
             {beatIndex > 1 && (
-              <button type="button" onClick={goBack} aria-label={t("previous")} className="reveal__ghost reveal__ghost--square">
+              <button type="button" onClick={goBack} disabled={guard} data-guard={guard || undefined} aria-label={t("previous")} className="reveal__ghost reveal__ghost--square">
                 <ChevronLeft className="size-5" aria-hidden />
               </button>
             )}
-            <button type="button" onClick={advance} className="reveal__primary flex-1" data-testid="greeting-continue">
+            <button type="button" onClick={advance} disabled={guard} data-guard={guard || undefined} className="reveal__primary flex-1" data-testid="greeting-continue">
               {t("continue")}
             </button>
           </div>
         )}
-        {isEnding && (
+        {isEnding && !endingRest && (
+          // Holds the footer's height while the finale plays, so the world doesn't shift when the controls arrive.
+          <div className="mx-auto min-h-11" aria-hidden />
+        )}
+        {isEnding && endingRest && (
           <div className="reveal-enter mx-auto flex max-w-sm flex-col items-center gap-3">
             <button type="button" onClick={restart} className="reveal__ghost" data-testid="greeting-replay">
               <RotateCcw className="size-4" aria-hidden />
@@ -355,6 +402,42 @@ function MediaFrame({ frame, index, testId, still = false, children }: { frame: 
         {children}
       </figure>
     </div>
+  );
+}
+
+/**
+ * The video at its own shape: a portrait phone clip stands as a portrait in
+ * the mount instead of a strip inside a black letterbox. Hidden (skeleton
+ * held) until its first frame's size is known, so it never jumps from the
+ * default 2:1 box to its real proportions; shown anyway after a moment where
+ * a browser won't preload metadata.
+ */
+function Video({ url, label, onPlay }: { url: string; label: string; onPlay: () => void }) {
+  const [ratio, setRatio] = useState<number | null>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShown(true), 1500);
+    return () => window.clearTimeout(timer);
+  }, []);
+  return (
+    <>
+      {!(ratio || shown) && <span className="skeleton reveal__photo-skeleton" aria-hidden />}
+      <video
+        src={`${url}#t=0.1`}
+        controls
+        preload="metadata"
+        playsInline
+        onPlay={onPlay}
+        onLoadedMetadata={(e) => {
+          const v = e.currentTarget;
+          if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
+        }}
+        aria-label={label}
+        className="reveal__video"
+        style={ratio ? ({ "--ar": ratio } as CSSProperties) : undefined}
+        data-loaded={ratio || shown || undefined}
+      />
+    </>
   );
 }
 

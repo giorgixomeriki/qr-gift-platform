@@ -13,22 +13,58 @@ import { publicEnv } from "@/lib/env.public";
  * write THIS object comes from the one-time `token` already embedded in
  * `uploadUrl` by the server (lib/storage/media.ts's createSignedUploadUrl).
  */
-export function uploadToSignedUrl(uploadUrl: string, file: File | Blob, onProgress?: (fraction: number) => void): Promise<void> {
+/** No upload progress for this long means the connection is gone (a phone switching networks often leaves the request hanging rather than failing). */
+const STALL_MS = 30_000;
+
+export class UploadAbortedError extends Error {
+  constructor() {
+    super("Upload cancelled");
+  }
+}
+
+export function uploadToSignedUrl(
+  uploadUrl: string,
+  file: File | Blob,
+  onProgress?: (fraction: number) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   return new Promise((resolve, reject) => {
+    if (signal?.aborted) return reject(new UploadAbortedError());
     const xhr = new XMLHttpRequest();
+    let stall = 0;
+    const armStall = () => {
+      window.clearTimeout(stall);
+      stall = window.setTimeout(() => xhr.abort(), STALL_MS);
+    };
+    const settle = () => {
+      window.clearTimeout(stall);
+      signal?.removeEventListener("abort", onAbort);
+    };
+    const onAbort = () => xhr.abort();
+    signal?.addEventListener("abort", onAbort);
     xhr.open("PUT", uploadUrl);
     xhr.setRequestHeader("apikey", publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
     xhr.setRequestHeader("Authorization", `Bearer ${publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY}`);
     xhr.setRequestHeader("x-upsert", "false");
 
     xhr.upload.onprogress = (event) => {
+      armStall();
       if (event.lengthComputable && onProgress) onProgress(event.loaded / event.total);
     };
     xhr.onload = () => {
+      settle();
       if (xhr.status >= 200 && xhr.status < 300) resolve();
       else reject(new Error(`Upload failed (${xhr.status})`));
     };
-    xhr.onerror = () => reject(new Error("Upload failed — check your connection"));
+    xhr.onerror = () => {
+      settle();
+      reject(new Error("Upload failed — check your connection"));
+    };
+    xhr.onabort = () => {
+      settle();
+      reject(signal?.aborted ? new UploadAbortedError() : new Error("Upload stalled — check your connection"));
+    };
+    armStall();
 
     const form = new FormData();
     form.append("cacheControl", "3600");
