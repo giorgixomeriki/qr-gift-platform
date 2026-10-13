@@ -26,6 +26,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   themeColor: "#faf7f2",
+  // Android Chrome: the on-screen keyboard resizes the layout viewport (as it
+  // did before Chrome 108), so dvh shrinks and the sticky Continue sits just
+  // above the keyboard instead of behind it. iOS Safari ignores this and
+  // overlays the keyboard; its accessory bar's Done restores the layout.
+  interactiveWidget: "resizes-content",
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

@@ -23,7 +23,7 @@ export function CreatePartnerForm() {
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [name, setName] = useState("");
-  const [commissionPct, setCommissionPct] = useState("10");
+  const [commissionPct, setCommissionPct] = useState("30");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 

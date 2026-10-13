@@ -134,17 +134,11 @@ export async function requestMediaUpload(
   const extension = validated.mimeType.split("/")[1]?.replace("quicktime", "mov") ?? "bin";
 
   return withEditableGreeting(greetingId, async (tx) => {
-    // Replacing this slot: the client calls deleteContent before requesting
-    // a replacement, but clear any stale row defensively so this can never
-    // violate a future unique-slot constraint.
-    const existing = await tx
-      .select({ id: greetingContent.id })
-      .from(greetingContent)
-      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, validated.type), eq(greetingContent.slot, validated.slot)));
-    for (const row of existing) {
-      await tx.delete(greetingContent).where(eq(greetingContent.id, row.id));
-    }
-
+    // A replacement never touches what the slot already holds: the new row is
+    // PENDING (never signed, never shown — loaders only sign READY rows) and
+    // the slot's current READY item stays active until finalizeMediaUpload
+    // commits the replacement. A failed, cancelled or abandoned upload leaves
+    // the greeting exactly as it was.
     const [created] = await tx
       .insert(greetingContent)
       .values({
@@ -190,9 +184,46 @@ export async function finalizeMediaUpload(greetingId: string, editToken: string,
     throw err;
   }
 
-  await withEditableGreeting(greetingId, (tx) =>
-    tx.update(greetingContent).set({ status: "READY", updatedAt: sql`now()` }).where(eq(greetingContent.id, contentId)),
-  );
+  // Commit: this upload becomes the slot's item and everything it replaces is
+  // retired, atomically. Serialized per slot (advisory lock), so overlapping
+  // replacements resolve deterministically: the most recently *requested*
+  // upload wins. An older upload that finishes after a newer one has already
+  // committed is stale — discarded, never shown — so a slow response can
+  // never put an earlier photo back over a later one.
+  const outcome = await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-slot:${greetingId}:${row.type}:${row.slot}`}))`);
+    const slotRows = await tx
+      .select({ id: greetingContent.id, status: greetingContent.status, storageKey: greetingContent.storageKey, createdAt: greetingContent.createdAt })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, row.type), eq(greetingContent.slot, row.slot)));
+    const self = slotRows.find((r) => r.id === contentId);
+    if (!self || self.status !== "PENDING") return { kind: "gone" as const };
+    // Requested earlier than this upload (ties broken by id: deterministic).
+    const isOlder = (r: { id: string; createdAt: Date }) => r.createdAt < self.createdAt || (r.createdAt.getTime() === self.createdAt.getTime() && r.id < self.id);
+    const newerCommitted = slotRows.some((r) => r.id !== contentId && r.status === "READY" && !isOlder(r));
+    if (newerCommitted) {
+      await tx.delete(greetingContent).where(eq(greetingContent.id, contentId));
+      return { kind: "stale" as const };
+    }
+    await tx.update(greetingContent).set({ status: "READY", updatedAt: sql`now()` }).where(eq(greetingContent.id, contentId));
+    // Retire what this replaces: the previous item and any older upload still pending.
+    const retired = slotRows.filter((r) => r.id !== contentId && isOlder(r));
+    for (const r of retired) await tx.delete(greetingContent).where(eq(greetingContent.id, r.id));
+    return { kind: "committed" as const, retiredKeys: retired.map((r) => r.storageKey).filter((k): k is string => !!k) };
+  });
+
+  if (outcome.kind === "gone") throw new ContentActionError("Upload not found");
+  if (outcome.kind === "stale") {
+    await deleteStorageObject(row.storageKey).catch(() => {});
+    throw new ContentActionError("Upload superseded by a newer upload for this slot");
+  }
+
+  // Only now — the replacement durably committed — are the old files removed.
+  // A failed delete leaves an unreferenced object behind (never a broken
+  // greeting); it is logged so it can be swept.
+  for (const key of outcome.retiredKeys) {
+    await deleteStorageObject(key).catch((err) => console.warn("[media] replaced object not deleted; needs cleanup", { greetingId, key, err: String(err) }));
+  }
 
   const partnerId = await getOwningPartnerId(greetingId);
   await recordAnalyticsEvent({ eventType: "MEDIA_UPLOADED", greetingId, contentType: row.type as "photo" | "video" | "audio" }, { partnerId });

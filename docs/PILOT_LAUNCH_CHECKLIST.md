@@ -36,6 +36,9 @@ explains what each one means for a *production* deploy specifically.
       first production migration run:
       `ALTER ROLE app_runtime WITH PASSWORD '<fresh output of: openssl rand -base64 32>';`
       then set this env var to match, before any traffic reaches that database.
+      `scripts/rotate-app-runtime-password.ts` does this without ever printing
+      the password (`docs/PRODUCTION_DEPLOYMENT.md` §2), and the app refuses to
+      start against a non-local database still using the public password.
 - [ ] `MIGRATIONS_DATABASE_URL` — superuser connection, used only by
       `npm run db:migrate` at deploy time. Not needed by the running app
       server itself — do not expose it to application runtime if the

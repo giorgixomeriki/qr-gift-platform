@@ -40,6 +40,8 @@ jobs:
         # why a hardcoded NODE_ENV broke a production build previously).
         run: npm run build
         env:
+          # Production builds require an explicit origin (lib/env-guards.ts).
+          NEXT_PUBLIC_APP_URL: "https://ci-placeholder.example"
           NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
           NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
           SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
@@ -86,6 +88,11 @@ jobs:
 
       - name: Seed reference data
         run: npm run db:seed
+
+      - name: Check launch pricing (10.00 GEL, 30% partner commission)
+        # Read-only. A fresh, freshly seeded database must come out at the
+        # launch price — the same check an operator runs against production.
+        run: npm run ops:check-launch-pricing
 
       - name: Run all verify:* integration suites
         # GitHub Actions' documented default shell for `run:` steps is

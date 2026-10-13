@@ -21,7 +21,7 @@ export function FlowShell({
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-20 bg-paper/85 pt-[var(--safe-top)] backdrop-blur-md supports-[backdrop-filter]:bg-paper/75">
         <div
-          className={`mx-auto flex h-14 w-full items-center justify-between gap-3 px-4 sm:px-6 ${
+          className={`px-page mx-auto flex h-14 w-full items-center justify-between gap-3 ${
             width === "wide" ? "max-w-5xl" : "max-w-xl"
           }`}
         >
@@ -30,7 +30,7 @@ export function FlowShell({
         </div>
       </header>
       <main
-        className={`mx-auto flex w-full flex-1 flex-col px-4 sm:px-6 ${width === "wide" ? "max-w-5xl" : "max-w-xl"}`}
+        className={`px-page mx-auto flex w-full flex-1 flex-col ${width === "wide" ? "max-w-5xl" : "max-w-xl"}`}
       >
         {children}
       </main>

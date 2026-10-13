@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import { ArrowRight, ChevronLeft, Lock, Pencil, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { ActionBar } from "@/components/flow/shell";
@@ -49,8 +49,36 @@ function logActionError(scope: string, error: string) {
   console.error(`[${scope}]`, error);
 }
 
+/**
+ * The message as typed, kept on the device until the server has it. Phones
+ * discard background tabs freely — a sender who switches to Photos or a chat
+ * to copy a line can come back to a reloaded page; what they typed must
+ * still be there. Cleared once the message is saved (MessageStep).
+ */
+const draftKey = (greetingId: string) => `qrs:message:${greetingId}`;
+function readMessageBackup(greetingId: string): string | null {
+  try {
+    return window.localStorage.getItem(draftKey(greetingId));
+  } catch {
+    return null;
+  }
+}
+function writeMessageBackup(greetingId: string, value: string) {
+  try {
+    window.localStorage.setItem(draftKey(greetingId), value);
+  } catch {
+    /* storage unavailable (private mode, quota): the server copy still saves on Continue */
+  }
+}
+function clearMessageBackup(greetingId: string) {
+  try {
+    window.localStorage.removeItem(draftKey(greetingId));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function CreationWizard({ initial }: { initial: WizardInitialState }) {
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -62,15 +90,48 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
   const [video, setVideo] = useState<ExistingItem>(initial.video);
   const [audio, setAudio] = useState<ExistingItem>(initial.audio);
 
+  // Steps are one client-side screen each: the URL changes through the native
+  // History API (which Next's router follows — useSearchParams updates, and
+  // Back/Android's back gesture restores the previous step), not router.push,
+  // which would wait on a server render of this force-dynamic page — re-reading
+  // the draft and re-signing every media URL — before the tap visibly did
+  // anything. Everything a step needs is already here.
   const goToStep = useCallback(
     (next: Step) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(window.location.search);
       params.set("step", next);
       params.delete("payment");
-      router.push(`${pathname}?${params.toString()}`);
-      window.scrollTo({ top: 0 });
+      window.history.pushState(null, "", `${pathname}?${params.toString()}`);
     },
-    [pathname, router, searchParams],
+    [pathname],
+  );
+
+  // Each step is a new screen: start it at the top.
+  const firstStepRef = useRef(true);
+  useEffect(() => {
+    if (firstStepRef.current) {
+      firstStepRef.current = false;
+      return;
+    }
+    window.scrollTo({ top: 0 });
+  }, [step]);
+
+  // A message typed but never saved (the tab was discarded while the sender
+  // was in another app) comes back from the device's copy — only before the
+  // message step, whose Continue saves it. From Media on, the server's copy is
+  // what Preview shows and checkout activates, so the two can never differ.
+  useEffect(() => {
+    if (step !== "theme" && step !== "message") return;
+    const backup = readMessageBackup(initial.greetingId);
+    if (backup !== null && backup !== initial.message) setMessage(backup);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const changeMessage = useCallback(
+    (value: string) => {
+      setMessage(value);
+      writeMessageBackup(initial.greetingId, value);
+    },
+    [initial.greetingId],
   );
 
   const content: GreetingRenderContent = {
@@ -103,7 +164,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
         onBack={() => (step === "checkout" ? goToStep("preview") : wizardStepIndex > 0 && goToStep(WIZARD_STEPS[wizardStepIndex - 1]!))}
       />
 
-      <main className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-4 sm:px-6">
+      <main className="px-page mx-auto flex w-full max-w-5xl flex-1 flex-col">
         {step === "theme" ? (
           <div className="flex flex-1 flex-col">
             <div className="lg:max-w-[22rem]">
@@ -131,7 +192,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
                   greetingId={initial.greetingId}
                   themeKey={themeKey}
                   message={message}
-                  onChange={setMessage}
+                  onChange={changeMessage}
                   onContinue={() => goToStep("media")}
                 />
               )}
@@ -165,12 +226,12 @@ function WizardHeader({ step, wizardStepIndex, onBack }: { step: Step; wizardSte
   const showBack = step === "checkout" || wizardStepIndex > 0;
   return (
     <header className="sticky top-0 z-20 bg-paper/85 pt-[var(--safe-top)] backdrop-blur-md supports-[backdrop-filter]:bg-paper/75">
-      <div className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
+      <div className="px-page mx-auto flex h-14 w-full max-w-5xl items-center justify-between gap-3">
         {showBack ? (
           <button
             type="button"
             onClick={onBack}
-            className="-ml-2 inline-flex h-10 items-center gap-1 rounded-md pr-3 pl-1.5 text-label text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
+            className="-ml-2 inline-flex h-11 items-center gap-1 rounded-md pr-3 pl-1.5 text-label text-ink-2 transition-[color,background-color,scale] duration-150 hover:bg-sunken hover:text-ink active:scale-[0.97] active:bg-sunken"
             data-testid={step === "checkout" ? "checkout-back-to-preview" : "wizard-back"}
           >
             <ChevronLeft className="size-5" aria-hidden />
@@ -294,6 +355,7 @@ function MessageStep({
       setError(t("errorSave"));
       return;
     }
+    clearMessageBackup(greetingId);
     onContinue();
   }
 
@@ -433,8 +495,8 @@ function PreviewStep({
   const t = useTranslations("wizard.preview");
   // One primary action at a time: while the greeting plays, its own controls
   // lead and Activate waits quietly; at the ending, Activate takes the lead.
+  // Activate takes the lead once the greeting is complete — its finale at rest — never over the finale.
   const [atEnding, setAtEnding] = useState(false);
-  const handleBeat = useCallback((kind: string) => setAtEnding(kind === "ending"), []);
   // Guards against React StrictMode's dev-only double-invoke and any
   // remount while this step stays mounted — PREVIEW_VIEWED must fire once
   // per genuine "sender opened Preview" action, not once per render/effect
@@ -450,25 +512,29 @@ function PreviewStep({
   // greeting — exactly as the recipient gets it — in between, untouched.
   return (
     <div className="flex h-dvh w-full flex-col bg-surface">
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-2 pt-[var(--safe-top)] sm:px-4">
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label={t("edit")}
-          className="grid size-11 place-items-center rounded-md text-ink-2 transition-colors hover:bg-sunken hover:text-ink"
-        >
-          <X className="size-5" aria-hidden />
-        </button>
-        <p className="flex-1 text-center text-label text-ink">{t("viewingAs")}</p>
-        <span className="size-11" aria-hidden />
+      {/* The safe-area inset pads the header; the 56px bar sits below it (an
+          h-14 box with the inset inside it would crush the bar under a notch). */}
+      <header className="shrink-0 border-b border-line pt-[var(--safe-top)] pr-[max(0.5rem,var(--safe-right))] pl-[max(0.5rem,var(--safe-left))] sm:pr-[max(1rem,var(--safe-right))] sm:pl-[max(1rem,var(--safe-left))]">
+        <div className="flex h-14 items-center gap-3">
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={t("edit")}
+            className="grid size-11 place-items-center rounded-md text-ink-2 transition-[color,background-color,scale] duration-150 hover:bg-sunken hover:text-ink active:scale-95 active:bg-sunken"
+          >
+            <X className="size-5" aria-hidden />
+          </button>
+          <p className="flex-1 text-center text-label text-ink">{t("viewingAs")}</p>
+          <span className="size-11" aria-hidden />
+        </div>
       </header>
 
-      <GreetingRenderer themeKey={themeKey} content={content} mode="preview" embedded onBeatChange={handleBeat} />
+      <GreetingRenderer themeKey={themeKey} content={content} mode="preview" embedded onEndingSettled={setAtEnding} />
 
       {/* State-driven actions, never competing with the greeting's own control:
           while it's sealed or playing, a single quiet row (the greeting's Open /
           Continue is the one primary); at the ending, Activate becomes the primary. */}
-      <footer className="shrink-0 border-t border-line bg-surface px-4 pb-[max(0.5rem,var(--safe-bottom))]" data-testid="preview-sender-controls">
+      <footer className="px-page shrink-0 border-t border-line bg-surface pb-[max(0.5rem,var(--safe-bottom))]" data-testid="preview-sender-controls">
         {!priceLabel ? (
           <div className="mx-auto flex max-w-md flex-col gap-2 py-3">
             <Notice tone="danger">
@@ -711,13 +777,29 @@ function CheckoutStep({
               <h2 id="checkout-summary" className="sr-only">
                 {t("summaryTitle")}
               </h2>
-              <p className="line-clamp-2 font-serif text-[1.0625rem] leading-snug text-ink">{content.message}</p>
-              <p className="mt-1 text-caption text-ink-3">{items.join(" · ")}</p>
+              {/* Two lines, cleanly. A colour emoji is taller than this line box: on the
+                  first line it rose above the clip (cropped), and Safari paints the
+                  clamped third line, whose emoji tops showed under the second. The
+                  0.15em of headroom (cancelled by the margin, so nothing moves) keeps
+                  the first line whole; the 0.08em clip band at the foot — larger than
+                  an emoji's rise (≤0.0625em), smaller than the second line's lowest
+                  ink — hides the third line's fragments. Type and spacing unchanged. */}
+              <p className="line-clamp-2 -mt-[0.15em] pt-[0.15em] font-serif text-[1.0625rem] leading-snug text-ink [clip-path:inset(0_0_0.08em_0)]">{content.message}</p>
+              {/* Each item keeps its separator, so a wrap never starts a line with "·". */}
+              <p className="mt-1 text-caption text-ink-3">
+                {items.map((item, i) => (
+                  <span key={item} className="whitespace-nowrap">
+                    {i > 0 && <span aria-hidden> · </span>}
+                    {item}
+                    {i < items.length - 1 && " "}
+                  </span>
+                ))}
+              </p>
             </div>
             <button
               type="button"
               onClick={onEdit}
-              className="shrink-0 self-start text-label text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+              className="relative before:absolute before:-inset-x-2 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] shrink-0 self-start text-label text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink active:text-ink"
             >
               {t("edit")}
             </button>
@@ -757,14 +839,14 @@ function CheckoutStep({
             <button
               type="button"
               onClick={onBackToPreview}
-              className="text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink"
+              className="relative before:absolute before:-inset-x-2 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] text-left text-ink-2 underline decoration-line-strong underline-offset-4 hover:text-ink active:text-ink"
               data-testid="checkout-back-link"
             >
               {t("backToPreview")}
             </button>
             {isTestPayments && !failed && (
               <details className="text-right text-caption text-ink-3">
-                <summary className="cursor-pointer list-none underline decoration-line-strong underline-offset-4" data-testid="checkout-testing-toggle">
+                <summary className="relative before:absolute before:-inset-x-2 before:top-1/2 before:h-11 before:-translate-y-1/2 before:content-[''] cursor-pointer list-none underline decoration-line-strong underline-offset-4" data-testid="checkout-testing-toggle">
                   {t("testingOptions")}
                 </summary>
                 <button

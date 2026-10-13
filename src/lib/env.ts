@@ -1,5 +1,6 @@
 import "server-only";
 import { z } from "zod";
+import { appUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "./env-guards";
 
 /**
  * Single validated source of truth for SERVER-SIDE environment variables,
@@ -73,6 +74,23 @@ function loadEnv(): Env {
   }
 
   const data = parsed.data;
+
+  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means running on
+  // Vercel (build or runtime, preview or production) — never a dev machine.
+  const production = data.NODE_ENV === "production";
+  const hosted = process.env.VERCEL === "1";
+  const problems = [
+    ...appUrlProblems(process.env.NEXT_PUBLIC_APP_URL, { production, hosted }),
+    ...databaseUrlProblems(data.DATABASE_URL, { production, hosted }),
+    ...supabaseUrlProblems(data.NEXT_PUBLIC_SUPABASE_URL, { hosted }),
+  ];
+  if (production && data.EDIT_TOKEN_SECRET.length < 32) {
+    problems.push("EDIT_TOKEN_SECRET must be at least 32 characters in production (openssl rand -hex 32)");
+  }
+  if (problems.length > 0) {
+    throw new Error(`Unsafe environment configuration:\n- ${problems.join("\n- ")}`);
+  }
+
   if (data.PAYMENTS_PROVIDER === "BOG") {
     const required = {
       BOG_CLIENT_ID: data.BOG_CLIENT_ID,
