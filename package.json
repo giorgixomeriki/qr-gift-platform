@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=22.9.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -34,6 +34,8 @@
     "verify:templates": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-templates.ts",
     "verify:payment-integrity": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payment-integrity.ts",
     "verify:media-replacement": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-media-replacement.ts",
+    "ops:check-launch-pricing": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/check-launch-pricing.ts",
+    "verify:env-guards": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-env-guards.ts",
     "payments:reconcile": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/payments-reconcile.ts",
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test"
   },
@@ -45,7 +47,7 @@
     "gsap": "3.15.0",
     "lucide-react": "^1.48.0",
     "nanoid": "^6.0.1",
-    "next": "15.5.25",
+    "next": "15.5.27",
     "next-intl": "^4.14.5",
     "postgres": "^3.4.9",
     "qrcode": "^1.5.4",
@@ -64,9 +66,14 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
-    "eslint-config-next": "15.5.25",
+    "eslint-config-next": "15.5.27",
     "tailwindcss": "^4",
     "tsx": "^4.23.13",
     "typescript": "^5"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "^8.5.28"
+    }
   }
 }

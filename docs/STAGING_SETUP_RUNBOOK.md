@@ -47,9 +47,9 @@ pilot dry run.
 
 ## 3. Configure the hosting platform
 
-1. Deploy the Next.js app to whatever hosting platform is chosen (this
-   codebase makes no platform-specific assumption — no `vercel.json`, no
-   platform SDK is used anywhere in `src/`).
+1. Deploy the Next.js app to the chosen platform. Vercel is the chosen
+   platform: `vercel.json` only pins the region (`fra1`), and no platform SDK is
+   used in `src/`. See `docs/PRODUCTION_DEPLOYMENT.md` for the Vercel setup.
 2. Set every variable from `docs/ENVIRONMENT_MATRIX.md` in that platform's
    environment configuration, scoped to the **staging** environment
    specifically (most platforms support per-environment variable scoping —

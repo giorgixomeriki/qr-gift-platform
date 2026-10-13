@@ -77,7 +77,9 @@ async function main() {
   const defaultPricesMinor: Record<string, number> = {
     PHOTO_GREETING: 500,
     VIDEO_GREETING: 1000,
-    PREMIUM_GREETING: 1500,
+    // Launch price: 10.00 GEL. Seed data only — prices are rows, and an
+    // order snapshots its own amount, so this never reprices an existing order.
+    PREMIUM_GREETING: 1000,
     GROUP_GREETING: 2000,
   };
 

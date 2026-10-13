@@ -21,7 +21,8 @@ export const createPartnerSchema = z.object({
   currency: z.string().trim().length(3).default("GEL"),
   // Basis points (1/100 of a percent): 3000 = 30%. Bounded well inside
   // [0, 10000] — a commission rate above 100% of gross is never legitimate.
-  commissionRateBps: z.number().int().min(0).max(10000).default(0),
+  // Defaults to the launch rate: 30% of the 10.00 GEL price = 3.00 GEL.
+  commissionRateBps: z.number().int().min(0).max(10000).default(3000),
 });
 export type CreatePartnerInput = z.infer<typeof createPartnerSchema>;
 
