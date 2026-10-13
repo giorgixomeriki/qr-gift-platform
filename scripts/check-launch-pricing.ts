@@ -11,8 +11,11 @@ import { DEFAULT_PRODUCT_KEY } from "../src/lib/greetings/constants";
  * Pricing is data, not code (prices rows + partners.commission_rate_bps), so
  * this verifies the data actually in the target database:
  *  1. Exactly one active platform-default price for the default product: 1000 GEL minor units.
- *  2. No active partner-specific price override for that product.
- *  3. Every ACTIVE partner is at 3000 bps.
+ *  2. Partner-specific price overrides (Super Admin–configured, migrations/0018)
+ *     are listed for review, and each must be in the partner's own currency.
+ *     Not a failure by themselves — custom partner pricing is a feature.
+ *  3. ACTIVE partners not at the 3000 bps launch rate are listed for review
+ *     (also configurable per partner); every rate must be in [0, 10000].
  *  4. The split arithmetic yields 300 / 700 for that price and rate.
  *
  * Uses MIGRATIONS_DATABASE_URL because the app_runtime role cannot see other
@@ -27,6 +30,9 @@ function list(items: string[]): string | undefined {
   if (items.length === 0) return undefined;
   const shown = items.slice(0, 10).join(", ");
   return items.length > 10 ? `${shown} … and ${items.length - 10} more` : shown;
+}
+function info(label: string, detail?: string) {
+  console.log(`INFO  ${label}${detail ? ` — ${detail}` : ""}`);
 }
 function check(label: string, ok: boolean, detail?: string) {
   console.log(`${ok ? "PASS" : "FAIL"}  ${label}${detail ? ` — ${detail}` : ""}`);
@@ -56,26 +62,32 @@ async function main() {
         price ? `found ${price.amount_minor} ${price.currency}` : "none",
       );
 
-      const overrides = await tx<{ slug: string; amount_minor: number }[]>`
-        select pa.slug, pr.amount_minor
+      const overrides = await tx<{ slug: string; amount_minor: number; currency: string; partner_currency: string }[]>`
+        select pa.slug, pr.amount_minor, pr.currency, pa.currency as partner_currency
         from prices pr
         join products p on p.id = pr.product_id
         join partners pa on pa.id = pr.partner_id
         where p.key = ${DEFAULT_PRODUCT_KEY} and pr.active`;
+      info(
+        `${overrides.length} partner-specific price override(s)`,
+        list(overrides.map((o) => `${o.slug}=${o.amount_minor} ${o.currency}`)),
+      );
+      const wrongCurrency = overrides.filter((o) => o.currency !== o.partner_currency);
       check(
-        "no active partner-specific price overrides",
-        overrides.length === 0,
-        list(overrides.map((o) => `${o.slug}=${o.amount_minor}`)),
+        "every price override is in its partner's currency",
+        wrongCurrency.length === 0,
+        list(wrongCurrency.map((o) => `${o.slug}: ${o.currency} vs ${o.partner_currency}`)),
       );
 
       const offRate = await tx<{ slug: string; commission_rate_bps: number }[]>`
         select slug, commission_rate_bps from partners
         where status = 'ACTIVE' and commission_rate_bps <> ${LAUNCH_COMMISSION_BPS}`;
-      check(
-        `every ACTIVE partner is at ${LAUNCH_COMMISSION_BPS} bps`,
-        offRate.length === 0,
+      info(
+        `${offRate.length} ACTIVE partner(s) not at the ${LAUNCH_COMMISSION_BPS} bps launch rate`,
         list(offRate.map((p) => `${p.slug}=${p.commission_rate_bps}`)),
       );
+      const outOfRange = offRate.filter((p) => p.commission_rate_bps < 0 || p.commission_rate_bps > 10000);
+      check("every commission rate is within 0–10000 bps", outOfRange.length === 0, list(outOfRange.map((p) => p.slug)));
     });
   } finally {
     await sql.end();

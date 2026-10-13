@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { control, fieldLabel } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
 import { adminCreatePartnerAction } from "@/lib/partners/actions";
+import { parsePercentToBps } from "@/lib/payments/split";
 
 /** Lowercase, hyphenated identifier derived from the name until the admin edits it by hand. */
 function slugify(value: string) {
@@ -29,12 +30,17 @@ export function CreatePartnerForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    const commissionRateBps = parsePercentToBps(commissionPct);
+    if (commissionRateBps === null) {
+      setError(t("commissionInvalid"));
+      return;
+    }
     setPending(true);
     setError(null);
     const result = await adminCreatePartnerAction({
       slug: slug.trim(),
       name: name.trim(),
-      commissionRateBps: Math.round(Number(commissionPct) * 100),
+      commissionRateBps,
     });
     setPending(false);
     if (!result.ok) {
@@ -87,7 +93,7 @@ export function CreatePartnerForm() {
             inputMode="decimal"
             min={0}
             max={100}
-            step="0.1"
+            step="0.01"
             value={commissionPct}
             onChange={(e) => setCommissionPct(e.target.value)}
             className={`${control} tabular-nums`}

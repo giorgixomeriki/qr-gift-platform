@@ -2,6 +2,10 @@ import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { prices } from "@/db/schema";
 import type { Tx } from "@/db/client";
 
+// Re-exported so existing server callers keep one import site; the definition
+// (and its rounding rule) lives in the client-safe module.
+export { splitCommission } from "./split";
+
 /**
  * Server-authoritative pricing resolution (Phase 0.5 §6). The client may
  * display a price but never dictates it — this is the only place a checkout
@@ -29,12 +33,6 @@ export async function resolveActivePrice(tx: Tx, productId: string, partnerId: s
     throw new Error(`No active price found for product ${productId} (partner ${partnerId})`);
   }
   return price;
-}
-
-export function splitCommission(grossAmountMinor: number, commissionRateBps: number) {
-  const partnerCommissionMinor = Math.floor((grossAmountMinor * commissionRateBps) / 10000);
-  const platformShareMinor = grossAmountMinor - partnerCommissionMinor;
-  return { partnerCommissionMinor, platformShareMinor };
 }
 
 /**

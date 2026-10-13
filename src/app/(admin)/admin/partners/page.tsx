@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Store } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { checkIsAdmin } from "@/db/client";
 import { getSessionUser } from "@/lib/auth/session";
 import { requireAdmin } from "@/lib/auth/admin";
 import { listPartners } from "@/lib/partners/service";
 import { CreatePartnerForm } from "@/components/admin/create-partner-form";
+import { DefaultPriceForm } from "@/components/admin/default-price-form";
+import { getDefaultPricing, listPartnerPriceOverrides } from "@/lib/payments/pricing-admin";
+import { formatMinorAmount } from "@/lib/format/money";
+import { formatBpsAsPercent } from "@/lib/payments/split";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { Badge, EmptyState, PageHeader, Panel, table } from "@/components/dashboard/ui";
 
@@ -21,13 +25,23 @@ export default async function AdminPartnersPage() {
   const isAdmin = await checkIsAdmin(user.id);
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
-  const partners = await requireAdmin((tx) => listPartners(tx));
+  const { partners, defaultPricing, overrides } = await requireAdmin(async (tx) => ({
+    partners: await listPartners(tx),
+    defaultPricing: await getDefaultPricing(tx),
+    overrides: await listPartnerPriceOverrides(tx),
+  }));
   const tp = await getTranslations("admin.partnersPage");
+  const tPricing = await getTranslations("admin.pricing");
+  const locale = await getLocale();
   const tStatus = await getTranslations("enums.partnerStatus");
 
   return (
     <div className="flex flex-col gap-8" data-testid="admin-partners-page">
       <PageHeader title={tp("title")} description={tp("total", { count: partners.length })} />
+
+      <Panel title={tPricing("defaultPriceTitle")}>
+        <DefaultPriceForm amountMinor={defaultPricing.amountMinor} currency={defaultPricing.currency} />
+      </Panel>
 
       <Panel title={tp("createTitle")}>
         <CreatePartnerForm />
@@ -43,6 +57,7 @@ export default async function AdminPartnersPage() {
                 <tr>
                   <th className={table.th}>{tp("tableName")}</th>
                   <th className={table.th}>{tp("tableSlug")}</th>
+                  <th className={`${table.th} text-right`}>{tp("tablePrice")}</th>
                   <th className={`${table.th} text-right`}>{tp("tableCommission")}</th>
                   <th className={table.th}>{tp("tableStatus")}</th>
                 </tr>
@@ -56,7 +71,14 @@ export default async function AdminPartnersPage() {
                       </Link>
                     </td>
                     <td className={`${table.td} font-mono text-caption text-ink-3`}>{p.slug}</td>
-                    <td className={`${table.td} text-right tabular-nums`}>{(p.commissionRateBps / 100).toFixed(1)}%</td>
+                    <td className={`${table.td} text-right tabular-nums`}>
+                      {overrides.has(p.id) ? (
+                        formatMinorAmount(overrides.get(p.id)!, p.currency, locale, { fixed: true })
+                      ) : (
+                        <span className="text-ink-3">{tPricing("defaultShort")}</span>
+                      )}
+                    </td>
+                    <td className={`${table.td} text-right tabular-nums`}>{formatBpsAsPercent(p.commissionRateBps)}%</td>
                     <td className={table.td}>
                       <Badge tone={p.status === "ACTIVE" ? "success" : "danger"}>{tStatus(p.status)}</Badge>
                     </td>

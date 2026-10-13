@@ -29,7 +29,10 @@ export type CreatePartnerInput = z.infer<typeof createPartnerSchema>;
 export const updatePartnerSchema = z.object({
   name: z.string().trim().min(1).max(200).optional(),
   defaultLocale: z.enum(["ka", "en"]).optional(),
-  commissionRateBps: z.number().int().min(0).max(10000).optional(),
+  // No commissionRateBps here on purpose: a commission change goes only
+  // through lib/payments/pricing-admin.ts setPartnerCommission (Super Admin,
+  // optimistic, audited with old and new value). z.object strips unknown
+  // keys, so a commissionRateBps sent to this schema is dropped, not applied.
 });
 export type UpdatePartnerInput = z.infer<typeof updatePartnerSchema>;
 
