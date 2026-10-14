@@ -9,10 +9,12 @@ import { getPartnerById, listPartnerMembers } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
 import { toInventoryRow } from "@/lib/qr/credential-access";
 import { getPartnerUnpaidBalance, listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
+import { getPartnerPricing, listPricingAuditLog } from "@/lib/payments/pricing-admin";
 import { getBatchPerformance, listPartnerSalesTrace } from "@/lib/dashboard/attribution";
 import { formatMinorAmount } from "@/lib/format/money";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { PartnerStatusToggle } from "@/components/admin/partner-status-toggle";
+import { PartnerPricingManager } from "@/components/admin/partner-pricing-manager";
 import { PayoutManager } from "@/components/admin/payout-manager";
 import { SalesTrace } from "@/components/admin/sales-trace";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/ui";
@@ -53,11 +55,13 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
     const payouts = await listPartnerPayoutsWithItems(tx, partnerId);
     const performance = await getBatchPerformance(tx, partnerId);
     const sales = await listPartnerSalesTrace(tx, partnerId);
-    return { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales };
+    const pricing = await getPartnerPricing(tx, partnerId);
+    const pricingHistory = await listPricingAuditLog(tx, partnerId);
+    return { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory };
   });
 
   if (!data) notFound();
-  const { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales } = data;
+  const { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory } = data;
   const td = await getTranslations("admin.partnerDetail");
   const tPerf = await getTranslations("batchPerformance");
   const locale = await getLocale();
@@ -93,6 +97,10 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
           actions={<PartnerStatusToggle partnerId={partner.id} status={partner.status} />}
         />
       </div>
+
+      <Panel title={td("pricingTitle")} description={td("pricingHint")}>
+        <PartnerPricingManager partnerId={partner.id} pricing={pricing} history={pricingHistory} />
+      </Panel>
 
       <Panel title={td("payoutsTitle")} flush>
         <PayoutManager

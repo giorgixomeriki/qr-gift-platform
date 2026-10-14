@@ -35,7 +35,7 @@ export async function createPartner(tx: Tx, adminUserId: string, input: CreatePa
     action: "PARTNER_CREATED",
     targetType: "partner",
     targetId: created.id,
-    metadata: { slug: created.slug, name: created.name },
+    metadata: { slug: created.slug, name: created.name, commissionRateBps: created.commissionRateBps },
   });
 
   return created;

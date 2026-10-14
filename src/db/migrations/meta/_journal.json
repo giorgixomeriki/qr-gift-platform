@@ -127,6 +127,13 @@
       "when": 1790400480000,
       "tag": "0017_greeting_theme_version",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1790400540000,
+      "tag": "0018_partner_pricing_controls",
+      "breakpoints": true
     }
   ]
 }

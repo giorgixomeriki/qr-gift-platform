@@ -331,7 +331,9 @@
       "tableCommission": "Commission",
       "tableStatus": "Status",
       "empty": "No partners yet.",
-      "createTitle": "Add a partner"
+      "createTitle": "Add a partner",
+      "tablePrice": "Price",
+      "commissionInvalid": "Enter a commission between 0 and 100% (up to two decimals)."
     },
     "partnerDetail": {
       "membershipTitle": "Members",
@@ -344,7 +346,9 @@
       "reactivate": "Reactivate",
       "suspendConfirm": "Suspend? Their cards will stop working until reactivated.",
       "salesTitle": "Sales attribution",
-      "salesHint": "Every paid activation traced QR → batch → order → payment → commission. No greeting content."
+      "salesHint": "Every paid activation traced QR → batch → order → payment → commission. No greeting content.",
+      "pricingTitle": "Pricing",
+      "pricingHint": "Activation price and commission for this partner's QR cards. Super Admin only."
     },
     "moderation": {
       "title": "Moderation",
@@ -384,6 +388,42 @@
       "button": "Reconcile stuck activations",
       "running": "Checking…",
       "result": "Checked {checked} paid-but-unactivated order(s), activated {activated}."
+    },
+    "pricing": {
+      "defaultPriceTitle": "Default activation price",
+      "defaultPriceLabel": "Default price ({currency})",
+      "defaultPriceHint": "Charged for every partner without a custom price. Orders already created keep the price they were created with.",
+      "effectivePrice": "Activation price",
+      "source": {
+        "PARTNER": "Custom",
+        "DEFAULT": "Default",
+        "NONE": "No price"
+      },
+      "partnerAmount": "Partner gets ({rate}%)",
+      "platformAmount": "Platform gets",
+      "priceLabel": "Custom price ({currency})",
+      "priceHint": "Leave as default to charge the platform price ({price}).",
+      "noDefault": "No platform default price is configured.",
+      "savePrice": "Save price",
+      "useDefault": "Use default price",
+      "commissionLabel": "Commission %",
+      "commissionHint": "Partner share of each activation, rounded down to a whole tetri; the platform keeps the rest.",
+      "saveCommission": "Save commission",
+      "preview": "Next checkout: {price} → partner {partner}, platform {platform}",
+      "priceInvalid": "Enter a price between {min} and {max} (up to two decimals).",
+      "commissionInvalid": "Enter a commission between 0 and 100% (up to two decimals).",
+      "snapshotNote": "Changes apply to new checkouts only. Existing orders, including unpaid ones already open, keep the price and commission they were created with.",
+      "defaultShort": "Default",
+      "historyWhen": "When",
+      "historyChange": "Change",
+      "historyValues": "Old → new",
+      "historyActor": "By",
+      "history": {
+        "PRICING_DEFAULT_PRICE_UPDATED": "Default price",
+        "PRICING_PARTNER_PRICE_SET": "Custom price set",
+        "PRICING_PARTNER_PRICE_CLEARED": "Custom price removed",
+        "PRICING_PARTNER_COMMISSION_UPDATED": "Commission"
+      }
     }
   },
   "print": {
