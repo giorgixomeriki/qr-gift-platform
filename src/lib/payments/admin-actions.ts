@@ -9,6 +9,9 @@ import { withPublicContext } from "@/db/client";
 import { orders, qrCodes } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { logServerError } from "@/lib/log";
+import { recordChargeback } from "./refunds";
+import { getDisputeEvidence, type DisputeEvidence } from "./dispute-evidence";
+import { recordChargebackSchema } from "@/lib/validation/chargebacks";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -93,5 +96,40 @@ export async function adminRefundPaidOrderAction(orderId: string): Promise<Actio
     return { ok: true, data: result };
   } catch (err) {
     return errorResult("adminRefundPaidOrderAction", err, { orderId });
+  }
+}
+
+/**
+ * Records a chargeback the bank has already executed (no provider call):
+ * the order is refunded in the books and its commission reversed once — see
+ * recordChargeback. Admin-only, rate-limited, audited.
+ */
+export async function adminRecordChargebackAction(
+  orderId: string,
+  input: unknown,
+): Promise<ActionResult<{ commissionReversedMinor: number }>> {
+  try {
+    const parsed = recordChargebackSchema.parse(input);
+    const { adminUserId, partnerId } = await requireAdmin(async (tx, adminUserId) => {
+      await enforceRateLimit({ key: `order-chargeback:${adminUserId}`, limit: 20, windowSeconds: 60 });
+      const [order] = await tx.select({ partnerId: orders.partnerId }).from(orders).where(eq(orders.id, orderId)).limit(1);
+      if (!order) throw new Error(`Order ${orderId} not found`);
+      return { adminUserId, partnerId: order.partnerId };
+    });
+    const { commissionReversedMinor } = await recordChargeback(adminUserId, orderId, parsed);
+    revalidatePath(`/admin/partners/${partnerId}`);
+    return { ok: true, data: { commissionReversedMinor } };
+  } catch (err) {
+    return errorResult("adminRecordChargebackAction", err, { orderId });
+  }
+}
+
+/** Dispute evidence pack for one order (no greeting content). Admin-only. */
+export async function adminDisputeEvidenceAction(orderId: string): Promise<ActionResult<DisputeEvidence>> {
+  try {
+    const adminUserId = await requireAdmin(async (_tx, adminUserId) => adminUserId);
+    return { ok: true, data: await getDisputeEvidence(adminUserId, orderId) };
+  } catch (err) {
+    return errorResult("adminDisputeEvidenceAction", err, { orderId });
   }
 }

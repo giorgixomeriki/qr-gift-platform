@@ -28,7 +28,7 @@ import {
 } from "@/lib/partners/actions";
 import { adminCreateBatchAction, adminMarkDistributedAction } from "@/lib/qr/actions";
 import { adminRecordPayoutAction, adminGetPayoutStatementAction } from "@/lib/payments/payout-actions";
-import { adminRefundPaidOrderAction } from "@/lib/payments/admin-actions";
+import { adminRefundPaidOrderAction, adminRecordChargebackAction, adminDisputeEvidenceAction } from "@/lib/payments/admin-actions";
 
 export default async function AdminPartnerDetailPage({ params }: { params: Promise<{ partnerId: string }> }) {
   const { partnerId } = await params;
@@ -114,7 +114,7 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
       </Panel>
 
       <Panel title={td("salesTitle")} description={td("salesHint")} flush>
-        <SalesTrace rows={sales} refundAction={adminRefundPaidOrderAction} />
+        <SalesTrace rows={sales} refundAction={adminRefundPaidOrderAction} chargebackAction={adminRecordChargebackAction} evidenceAction={adminDisputeEvidenceAction} />
       </Panel>
 
       <section className="flex flex-col gap-4">

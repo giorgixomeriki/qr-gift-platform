@@ -23,6 +23,7 @@ type SaleRow = {
   providerPaymentId: string | null;
   commissionEarnedMinor: number | null;
   commissionReversedMinor: number | null;
+  chargedBack?: boolean;
 };
 
 type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
@@ -35,9 +36,13 @@ type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: s
 export function SalesTrace({
   rows,
   refundAction,
+  chargebackAction,
+  evidenceAction,
 }: {
   rows: SaleRow[];
   refundAction: (orderId: string) => Promise<ActionResult<{ alreadyRefunded: boolean; pending?: boolean }>>;
+  chargebackAction: (orderId: string, input: { reference: string; disputedOn: string }) => Promise<ActionResult<{ commissionReversedMinor: number }>>;
+  evidenceAction: (orderId: string) => Promise<ActionResult<unknown>>;
 }) {
   const t = useTranslations("salesTrace");
   const tCommon = useTranslations("common");
@@ -50,6 +55,39 @@ export function SalesTrace({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Chargeback: which row's form is open, and its two fields.
+  const [chargeback, setChargeback] = useState<{ orderId: string; reference: string; disputedOn: string; confirm: boolean } | null>(null);
+
+  async function recordChargeback() {
+    if (!chargeback) return;
+    setPending(true);
+    setError(null);
+    setNotice(null);
+    const result = await chargebackAction(chargeback.orderId, { reference: chargeback.reference, disputedOn: chargeback.disputedOn });
+    setPending(false);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    setChargeback(null);
+    setNotice(t("chargebackRecorded"));
+    router.refresh();
+  }
+
+  async function downloadEvidence(orderId: string) {
+    setError(null);
+    const result = await evidenceAction(orderId);
+    if (!result.ok) {
+      setError(result.error);
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([JSON.stringify(result.data, null, 2)], { type: "application/json" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `dispute-evidence-${orderId}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function refund(orderId: string) {
     setPending(true);
@@ -119,7 +157,9 @@ export function SalesTrace({
                   {r.commissionRateBps !== null && <span className="block text-caption text-ink-3">{t("rate", { pct: r.commissionRateBps / 100 })}</span>}
                 </td>
                 <td className={table.td}>
-                  {r.commissionReversedMinor !== null ? (
+                  {r.chargedBack ? (
+                    <Badge tone="danger">{t("statusChargedBack")}</Badge>
+                  ) : r.commissionReversedMinor !== null ? (
                     <Badge tone="warning">{t("statusReversed")}</Badge>
                   ) : r.commissionEarnedMinor !== null ? (
                     <Badge tone="success">{t("statusEarned")}</Badge>
@@ -130,6 +170,56 @@ export function SalesTrace({
                   )}
                 </td>
                 <td className={`${table.td} whitespace-nowrap text-right`}>
+                  {chargeback?.orderId === r.orderId ? (
+                    <span className="inline-flex flex-wrap items-center justify-end gap-2" data-testid="sales-trace-chargeback-form">
+                      <input
+                        aria-label={t("chargebackReference")}
+                        placeholder={t("chargebackReference")}
+                        value={chargeback.reference}
+                        maxLength={100}
+                        onChange={(e) => setChargeback({ ...chargeback, reference: e.target.value, confirm: false })}
+                        className="h-9 w-40 rounded-md border border-line px-2 text-caption"
+                        data-testid="sales-trace-chargeback-reference"
+                      />
+                      <input
+                        type="date"
+                        aria-label={t("chargebackDate")}
+                        value={chargeback.disputedOn}
+                        onChange={(e) => setChargeback({ ...chargeback, disputedOn: e.target.value, confirm: false })}
+                        className="h-9 rounded-md border border-line px-2 text-caption"
+                        data-testid="sales-trace-chargeback-date"
+                      />
+                      {chargeback.confirm ? (
+                        <Button size="sm" variant="danger" loading={pending} onClick={recordChargeback} data-testid="sales-trace-chargeback-confirm">
+                          {t("chargebackConfirm")}
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          variant="danger"
+                          disabled={!chargeback.reference.trim() || !chargeback.disputedOn}
+                          onClick={() => setChargeback({ ...chargeback, confirm: true })}
+                          data-testid="sales-trace-chargeback-next"
+                        >
+                          {t("chargebackRecord")}
+                        </Button>
+                      )}
+                      <Button size="sm" variant="secondary" onClick={() => setChargeback(null)}>
+                        {tCommon("cancel")}
+                      </Button>
+                    </span>
+                  ) : (
+                  <span className="inline-flex gap-2">
+                  {(r.orderStatus === "PAID" || r.orderStatus === "REFUNDED") && (
+                    <Button size="sm" variant="secondary" onClick={() => downloadEvidence(r.orderId)} data-testid="sales-trace-evidence">
+                      {t("evidence")}
+                    </Button>
+                  )}
+                  {r.orderStatus === "PAID" && confirming !== r.orderId && (
+                    <Button size="sm" variant="secondary" onClick={() => setChargeback({ orderId: r.orderId, reference: "", disputedOn: "", confirm: false })} data-testid="sales-trace-chargeback">
+                      {t("chargeback")}
+                    </Button>
+                  )}
                   {r.orderStatus === "PAID" &&
                     (confirming === r.orderId ? (
                       <span className="inline-flex gap-2">
@@ -145,6 +235,8 @@ export function SalesTrace({
                         {t("refund")}
                       </Button>
                     ))}
+                  </span>
+                  )}
                 </td>
               </tr>
             ))}

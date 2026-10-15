@@ -623,6 +623,14 @@
     "refund": "Refund",
     "refundConfirm": "Confirm full refund",
     "refundRequested": "Refund requested. It completes, and the commission is reversed, once the bank confirms it.",
+    "chargeback": "Chargeback",
+    "chargebackReference": "Bank case reference",
+    "chargebackDate": "Date of chargeback",
+    "chargebackRecord": "Record",
+    "chargebackConfirm": "Confirm: money already returned by the bank",
+    "chargebackRecorded": "Chargeback recorded. The order is refunded in the books and the partner's commission reversed.",
+    "statusChargedBack": "Charged back",
+    "evidence": "Evidence",
     "empty": "No paid activations yet."
   }
 }

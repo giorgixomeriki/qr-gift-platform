@@ -1,7 +1,7 @@
 import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Tx } from "@/db/client";
-import { qrBatches, qrCodes, orders, payments, partnerLedgerEntries } from "@/db/schema";
+import { qrBatches, qrCodes, orders, payments, partnerLedgerEntries, paymentRefunds } from "@/db/schema";
 
 export type BatchPerformance = {
   batchId: string;
@@ -67,6 +67,8 @@ export type SaleTraceRow = {
   paymentStatus: string | null;
   commissionEarnedMinor: number | null;
   commissionReversedMinor: number | null;
+  /** Returned through a recorded bank chargeback (not a refund we issued). */
+  chargedBack: boolean;
 };
 
 /**
@@ -110,6 +112,11 @@ export async function listPartnerSalesTrace(tx: Tx, partnerId: string, limit = 1
     .from(partnerLedgerEntries)
     .where(inArray(partnerLedgerEntries.orderId, orderIds));
 
+  const chargebackRows = await tx
+    .select({ orderId: paymentRefunds.orderId })
+    .from(paymentRefunds)
+    .where(and(inArray(paymentRefunds.orderId, orderIds), eq(paymentRefunds.reason, "CHARGEBACK"), eq(paymentRefunds.status, "COMPLETED")));
+
   return base.map((row) => {
     const payment = paymentRows.find((p) => p.orderId === row.orderId);
     const earned = ledgerRows.find((l) => l.orderId === row.orderId && l.type === "COMMISSION_EARNED");
@@ -121,6 +128,7 @@ export async function listPartnerSalesTrace(tx: Tx, partnerId: string, limit = 1
       paymentStatus: payment?.status ?? null,
       commissionEarnedMinor: earned?.amountMinor ?? null,
       commissionReversedMinor: reversal ? -reversal.amountMinor : null,
+      chargedBack: chargebackRows.some((c) => c.orderId === row.orderId),
     };
   });
 }
