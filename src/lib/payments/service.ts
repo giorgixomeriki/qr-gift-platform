@@ -691,8 +691,8 @@ export type PaymentAnomalyKind =
  *                         (pending/failed/canceled) — re-run confirmation
  * - DUPLICATE_CAPTURE     a settled order holding a second unrefunded charge
  *                         — refundCapturedPayment
- * - REFUND_PENDING        REFUND_REQUIRED orders: money to return (manual
- *                         queue while the provider refund API is missing)
+ * - REFUND_PENDING        REFUND_REQUIRED orders with no refund at the
+ *                         provider: money to return (manual queue)
  * - PAID_WITHOUT_CHARGE   a PAID order with no SUCCEEDED/REFUNDED charge — investigate
  * - PAID_NOT_ACTIVATED    PAID, greeting still DRAFT — activatePaidOrder
  * - COMMISSION_MISSING    PAID without its COMMISSION_EARNED — investigate
@@ -720,11 +720,16 @@ export async function findPaymentAnomalies(adminUserId: string): Promise<{ kind:
       select 'DUPLICATE_CAPTURE', o.id::text, count(*) || ' unrefunded charges on a ' || o.status || ' order'
         from orders o join payments p on p.order_id = o.id and p.status = 'SUCCEEDED'
        where o.status in ('PAID', 'REFUNDED')
+         -- a charge whose refund is already with the provider is not "unrefunded"
+         and not exists (select 1 from payment_refunds r where r.payment_id = p.id and r.status <> 'REJECTED')
        group by o.id, o.status
       having (o.status = 'PAID' and count(*) > 1) or o.status = 'REFUNDED'
       union all
       select 'REFUND_PENDING', o.id::text, o.gross_amount_minor || ' ' || o.currency || ' to return'
         from orders o where o.status = 'REFUND_REQUIRED'
+         -- not while a refund is with the provider: returning it by hand too
+         -- would refund twice (that case is REFUND_AWAITING_PROVIDER)
+         and not exists (select 1 from payment_refunds r where r.order_id = o.id and r.status <> 'REJECTED')
       union all
       select 'PAID_WITHOUT_CHARGE', o.id::text, 'no SUCCEEDED/REFUNDED charge recorded'
         from orders o

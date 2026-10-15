@@ -44,6 +44,11 @@ const postgres = require("postgres") as typeof import("postgres");
  * 14. Scheduled reconciliation (/api/cron/payments-reconcile): absent unless
  *     configured, refuses a wrong secret, settles a missed callback from
  *     BOG's receipt.
+ * 15. A late success on a FAILED order is refunded through BOG; while BOG
+ *     holds that refund the order is NOT listed for a manual refund
+ *     (REFUND_PENDING) — that would return the money twice.
+ * 16. A second capture on a PAID order is refunded through BOG; while in
+ *     flight it is not listed as an unrefunded DUPLICATE_CAPTURE.
  */
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -462,6 +467,43 @@ async function main() {
     check("14c. A missed callback is settled from BOG's receipt (PAID, activated, one commission)", r.status === 200 && body.repaired >= 1 && (await orderRow(o.orderId)).status === "PAID" && (await greetingStatus(o.greetingId)) === "ACTIVE" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300", JSON.stringify(body));
     mutableEnv.CRON_SECRET = undefined;
     mutableEnv.RECONCILE_ADMIN_USER_ID = undefined;
+  }
+
+  console.log("\n--- 15. Late success refunded through BOG ---");
+  {
+    const o = await newOrder();
+    reject(o.bogId);
+    await callback(callbackBody(o.bogId));
+    complete(o.bogId); // BOG later reports the same attempt as paid
+    const r = await callback(callbackBody(o.bogId));
+    const rows = await refundRows(o.orderId);
+    check("15a. Refund requested at BOG (INELIGIBLE), order REFUND_REQUIRED, no commission", r.status === 200 && rows[0]?.status === "REQUESTED" && rows[0]?.reason === "INELIGIBLE" && (await orderRow(o.orderId)).status === "REFUND_REQUIRED" && (await ledger(o.orderId)) === "", JSON.stringify({ r, rows, order: (await orderRow(o.orderId)).status }));
+    const anomalies = await findPaymentAnomalies(adminUserId);
+    check("15b. Not listed for a manual refund while BOG holds it", !anomalies.some((a) => a.kind === "REFUND_PENDING" && a.orderId === o.orderId));
+    settleRefund(o.bogId, "completed");
+    await callback(callbackBody(o.bogId));
+    check("15c. BOG confirms → order REFUNDED, still no commission", (await orderRow(o.orderId)).status === "REFUNDED" && (await ledger(o.orderId)) === "");
+  }
+
+  console.log("\n--- 16. Second capture on a PAID order ---");
+  {
+    const o = await newOrder();
+    const again = await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry: a second BOG attempt
+    const [second] = await admin`select provider_payment_id from payments where order_id = ${again.summary.orderId} and status = 'PENDING' and provider_payment_id <> ${o.bogId}`;
+    const bog2 = second!.provider_payment_id as string;
+    complete(o.bogId);
+    complete(bog2);
+    await callback(callbackBody(o.bogId));
+    await callback(callbackBody(bog2));
+    const [p2] = await admin`select id, status from payments where provider_payment_id = ${bog2}`;
+    const [rf] = await admin`select status, reason from payment_refunds where payment_id = ${p2!.id}`;
+    check("16a. Order PAID once, one commission; the second charge's refund is with BOG", (await orderRow(o.orderId)).status === "PAID" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300" && rf?.status === "REQUESTED" && rf?.reason === "DUPLICATE_CAPTURE", JSON.stringify({ p2, rf }));
+    const anomalies = await findPaymentAnomalies(adminUserId);
+    check("16b. Not listed as an unrefunded DUPLICATE_CAPTURE while in flight", !anomalies.some((a) => a.kind === "DUPLICATE_CAPTURE" && a.orderId === o.orderId));
+    settleRefund(bog2, "completed");
+    await callback(callbackBody(bog2));
+    const [p2after] = await admin`select status from payments where provider_payment_id = ${bog2}`;
+    check("16c. BOG confirms → that charge REFUNDED; order stays PAID, commission untouched", p2after?.status === "REFUNDED" && (await orderRow(o.orderId)).status === "PAID" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300");
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);
