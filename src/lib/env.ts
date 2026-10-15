@@ -82,6 +82,13 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+
+  // Scheduled payment reconciliation (/api/cron/payments-reconcile). Both
+  // must be set for the endpoint to exist: the bearer secret a scheduler
+  // (Vercel Cron) sends, and the admin_users.user_id the job acts as (the
+  // reconciliation report and refund bookkeeping run in an admin context).
+  CRON_SECRET: z.string().min(32).optional(),
+  RECONCILE_ADMIN_USER_ID: z.string().uuid().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

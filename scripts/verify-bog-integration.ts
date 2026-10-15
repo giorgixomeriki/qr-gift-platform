@@ -41,6 +41,9 @@ const postgres = require("postgres") as typeof import("postgres");
  * 12. A refund QR Starr never asked for is recorded, never applied.
  * 13. Refunds switched off (BOG_REFUNDS_ENABLED=false): nothing sent, order
  *     stays PAID, the refund row is closed as NOT_SENT.
+ * 14. Scheduled reconciliation (/api/cron/payments-reconcile): absent unless
+ *     configured, refuses a wrong secret, settles a missed callback from
+ *     BOG's receipt.
  */
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -230,6 +233,7 @@ async function main() {
   const { refundPaidOrder, findPaymentAnomalies } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
   const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
+  const { GET: cronReconcile } = require("../src/app/api/cron/payments-reconcile/route") as typeof import("../src/app/api/cron/payments-reconcile/route");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mutableEnv = env as any;
 
@@ -440,6 +444,24 @@ async function main() {
     check("13a. Admin refund refused, nothing sent to BOG", !r.ok && bog.calls.length === before, r.ok ? "accepted" : undefined);
     check("13b. Order PAID, commission untouched, request closed as NOT_SENT", (await orderRow(o.orderId)).status === "PAID" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300" && rows[0]?.status === "REJECTED" && rows[0]?.provider_code === "NOT_SENT");
     mutableEnv.BOG_REFUNDS_ENABLED = true;
+  }
+
+  console.log("\n--- 14. Scheduled reconciliation ---");
+  {
+    const cron = (auth?: string) => cronReconcile(new Request("http://localhost/api/cron/payments-reconcile", { headers: auth ? { Authorization: auth } : {} }));
+    check("14a. Not configured → the endpoint does not exist (404)", (await cron("Bearer anything")).status === 404);
+    const secret = "cron-secret-for-the-bog-integration-suite";
+    mutableEnv.CRON_SECRET = secret;
+    mutableEnv.RECONCILE_ADMIN_USER_ID = adminUserId;
+    check("14b. Missing or wrong secret → 401", (await cron()).status === 401 && (await cron(`Bearer ${secret}x`)).status === 401);
+    const o = await newOrder();
+    complete(o.bogId);
+    await admin`update payments set created_at = now() - interval '1 hour' where provider_payment_id = ${o.bogId}`;
+    const r = await cron(`Bearer ${secret}`);
+    const body = (await r.json()) as { anomalies: number; repaired: number };
+    check("14c. A missed callback is settled from BOG's receipt (PAID, activated, one commission)", r.status === 200 && body.repaired >= 1 && (await orderRow(o.orderId)).status === "PAID" && (await greetingStatus(o.greetingId)) === "ACTIVE" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300", JSON.stringify(body));
+    mutableEnv.CRON_SECRET = undefined;
+    mutableEnv.RECONCILE_ADMIN_USER_ID = undefined;
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);
