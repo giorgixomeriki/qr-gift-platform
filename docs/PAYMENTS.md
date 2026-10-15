@@ -102,8 +102,8 @@ runs through the same route and service as a real provider.
 ### Merchant activation checklist
 
 1. Receive sandbox credentials and the provider's current API + webhook documentation.
-2. Implement `BOGPaymentProvider` (create, verify, handleWebhook with the documented signature check, refund forwarding the idempotency key) — no other code changes.
-3. Set `PAYMENTS_PROVIDER=BOG`, `BOG_CLIENT_ID`, `BOG_CLIENT_SECRET`, `BOG_API_BASE_URL` (sandbox), `BOG_WEBHOOK_SIGNING_KEY`, `NEXT_PUBLIC_APP_URL` (return URLs derive from it). Startup fails closed if any is missing.
+2. `BOGPaymentProvider` is implemented against BOG's public docs (`providers/bog-provider.ts`, `providers/bog/*`; design in `docs/integration/BOG_PAYMENT_MANAGER_PLAN.md`). Confirm the items marked **[confirm with BOG]** there (signature encoding + a signed sample, redirect hosts, idempotency-key retention, test environment) and adjust only the adapter. Offline and DB-backed suites: `verify:bog-adapter`, `verify:bog-integration`.
+3. Set `PAYMENTS_PROVIDER=BOG`, `BOG_CLIENT_ID`, `BOG_CLIENT_SECRET`, `BOG_API_BASE_URL`, `BOG_WEBHOOK_SIGNING_KEY` (BOG's public key, PEM), `NEXT_PUBLIC_APP_URL` (return and callback URLs derive from it). Startup fails closed if any is missing or the key isn't an RSA public key. Keep `CHECKOUT_ENABLED=false` and `BOG_REFUNDS_ENABLED=false` until each is approved (`docs/ENVIRONMENT_MATRIX.md`).
 4. Register the webhook URL `https://<app>/api/webhooks/payments/BOG` in the provider dashboard.
 5. Sandbox: unsigned / wrong-signature webhook → 400; correct → 200.
 6. Sandbox: pay a test order end to end; confirm order PAID, one COMMISSION_EARNED, greeting ACTIVE, recipient world + finale.
@@ -113,7 +113,7 @@ runs through the same route and service as a real provider.
 10. Refund from admin → provider refund, order REFUNDED, one COMMISSION_REVERSAL; click twice → one refund.
 11. `npm run payments:reconcile` → no anomalies.
 12. Production credentials + production webhook registration; one small real payment and its refund; reconcile.
-13. Schedule reconciliation.
+13. Schedule reconciliation: set `CRON_SECRET` + `RECONCILE_ADMIN_USER_ID` and add a Vercel Cron entry for `/api/cron/payments-reconcile` (frequency is an owner decision: Hobby allows daily only).
 
 ## Real-device smoke test (before pilot, by a person)
 
