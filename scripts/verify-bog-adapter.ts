@@ -274,8 +274,8 @@ async function main() {
     check("7c. A genuine callback re-reads the receipt (GET …/receipt/bog-1)", bog.calls.length === 1 && bog.calls[0]!.method === "GET" && bog.calls[0]!.url.endsWith("/receipt/bog-1"));
     check("7d. State comes from the receipt, not the body (body said completed/9999 → PENDING/1000)", result.status === "PENDING" && result.amountMinor === 1000);
     check("7e. Our order id comes from the receipt's external_order_id", result.orderId === "11111111-1111-4111-8111-111111111111");
-    const other = JSON.stringify({ event: "something_else", body: { order_id: "bog-1" } });
-    check("7f. An unhandled event type is rejected", !!(await rejects(() => p.handleWebhook(other, h(signBody(other))))));
+    const otherEvent = JSON.stringify({ event: "something_else", body: { order_id: "bog-1" } });
+    check("7f. An unhandled event type is rejected", !!(await rejects(() => p.handleWebhook(otherEvent, h(signBody(otherEvent))))));
     const mismatch = provider(() => ({ status: 200, json: receipt({ order_id: "bog-OTHER" }) }));
     check("7g. A receipt for a different BOG order than asked is refused", !!(await rejects(() => mismatch.p.handleWebhook(raw, h(signBody(raw))))));
     const noExternal = provider(() => ({ status: 200, json: receipt({ external_order_id: null }) }));
