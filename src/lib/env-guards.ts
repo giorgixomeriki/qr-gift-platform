@@ -98,3 +98,25 @@ export function supabaseUrlProblems(value: string, opts: { hosted: boolean }): s
   if (isLoopbackHost(url.hostname)) problems.push("NEXT_PUBLIC_SUPABASE_URL points at a local Supabase on a hosted deployment");
   return problems;
 }
+
+/**
+ * On a hosted deployment the BOG adapter may only talk to Bank of Georgia
+ * itself over https — never a stub, a local server or a look-alike host.
+ */
+export function bogUrlProblems(input: { apiBaseUrl: string; tokenUrl: string; hosted: boolean }): string[] {
+  if (!input.hosted) return [];
+  const problems: string[] = [];
+  for (const [name, value] of [["BOG_API_BASE_URL", input.apiBaseUrl], ["BOG_OAUTH_TOKEN_URL", input.tokenUrl]] as const) {
+    let url: URL;
+    try {
+      url = new URL(value);
+    } catch {
+      problems.push(`${name} is not a valid URL`);
+      continue;
+    }
+    const host = url.hostname.toLowerCase();
+    if (url.protocol !== "https:") problems.push(`${name} must use https on a hosted deployment`);
+    if (host !== "bog.ge" && !host.endsWith(".bog.ge")) problems.push(`${name} must be a bog.ge host on a hosted deployment`);
+  }
+  return problems;
+}

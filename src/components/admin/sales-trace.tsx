@@ -37,7 +37,7 @@ export function SalesTrace({
   refundAction,
 }: {
   rows: SaleRow[];
-  refundAction: (orderId: string) => Promise<ActionResult<{ alreadyRefunded: boolean }>>;
+  refundAction: (orderId: string) => Promise<ActionResult<{ alreadyRefunded: boolean; pending?: boolean }>>;
 }) {
   const t = useTranslations("salesTrace");
   const tCommon = useTranslations("common");
@@ -49,10 +49,12 @@ export function SalesTrace({
   const [confirming, setConfirming] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   async function refund(orderId: string) {
     setPending(true);
     setError(null);
+    setNotice(null);
     const result = await refundAction(orderId);
     setPending(false);
     if (!result.ok) {
@@ -60,6 +62,9 @@ export function SalesTrace({
       return;
     }
     setConfirming(null);
+    // An asynchronous provider (BOG) confirms the refund later; until then the
+    // order stays PAID and nothing is reversed.
+    if (result.data.pending) setNotice(t("refundRequested"));
     router.refresh();
   }
 
@@ -68,6 +73,11 @@ export function SalesTrace({
       {error && (
         <p className="px-5 pt-4 text-caption text-danger" role="alert" data-testid="sales-trace-error">
           {error}
+        </p>
+      )}
+      {notice && (
+        <p className="px-5 pt-4 text-caption text-ink-2" role="status" data-testid="sales-trace-notice">
+          {notice}
         </p>
       )}
       <div className={table.wrap}>

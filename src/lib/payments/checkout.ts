@@ -7,6 +7,7 @@ import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFai
 import { assertGreetingPurchasable } from "./eligibility";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { env } from "@/lib/env";
+import { assertCheckoutOpen } from "./checkout-gate";
 
 export class CheckoutEntryError extends Error {}
 
@@ -60,6 +61,10 @@ export async function getOrCreateCheckoutOrder(
     }
     return { summary: toSummary(latest), recovered: true };
   }
+
+  // Real-money checkout may be switched off (CHECKOUT_ENABLED) — nothing
+  // below runs then: no order, no provider call.
+  assertCheckoutOpen();
 
   // Everything below either opens a payment attempt or creates an order, so
   // the greeting must be purchasable right now (message present, not

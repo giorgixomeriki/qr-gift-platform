@@ -147,7 +147,9 @@
       "secureNote": "Secure payment",
       "stillVerifying": "We're still confirming your payment",
       "stillVerifyingBody": "If you paid, it will be confirmed shortly — please don't pay again. Check again in a moment.",
-      "checkAgain": "Check again"
+      "checkAgain": "Check again",
+      "closedTitle": "Payments open soon",
+      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged."
     },
     "preview": {
       "edit": "Back to editing",
@@ -620,6 +622,7 @@
     "statusNoCommission": "No commission",
     "refund": "Refund",
     "refundConfirm": "Confirm full refund",
+    "refundRequested": "Refund requested. It completes, and the commission is reversed, once the bank confirms it.",
     "empty": "No paid activations yet."
   }
 }

@@ -1,6 +1,7 @@
 import "server-only";
+import { createPublicKey } from "node:crypto";
 import { z } from "zod";
-import { appUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "./env-guards";
+import { appUrlProblems, bogUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "./env-guards";
 
 /**
  * Single validated source of truth for SERVER-SIDE environment variables,
@@ -61,7 +62,33 @@ const envSchema = z.object({
   BOG_CLIENT_ID: z.string().min(1).optional(),
   BOG_CLIENT_SECRET: z.string().min(1).optional(),
   BOG_API_BASE_URL: z.string().url().optional(),
+  // OAuth2 token endpoint (BOG docs: Authentication Method).
+  BOG_OAUTH_TOKEN_URL: z.string().url().default("https://oauth2.bog.ge/auth/realms/bog/protocol/openid-connect/token"),
+  // BOG's callback-signing PUBLIC key (PEM; "\n" escapes accepted). Public by
+  // nature — pinned through config so a key rotation needs no code change.
   BOG_WEBHOOK_SIGNING_KEY: z.string().min(1).optional(),
+
+  // Kill switch for real-money checkout. While false, a non-TEST provider
+  // opens no order and makes no provider call (lib/payments/checkout-gate.ts).
+  // Turning it on in production is an explicit owner approval.
+  CHECKOUT_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
+  // BOG refunds are built but off: while false, refundPayment sends nothing
+  // and refunds stay queued for a person (REFUND_REQUIRED / anomalies).
+  BOG_REFUNDS_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
+  // Scheduled payment reconciliation (/api/cron/payments-reconcile). Both
+  // must be set for the endpoint to exist: the bearer secret a scheduler
+  // (Vercel Cron) sends, and the admin_users.user_id the job acts as (the
+  // reconciliation report and refund bookkeeping run in an admin context).
+  CRON_SECRET: z.string().min(32).optional(),
+  RECONCILE_ADMIN_USER_ID: z.string().uuid().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -106,6 +133,16 @@ function loadEnv(): Env {
         `PAYMENTS_PROVIDER=BOG requires ${missing.join(", ")} to be set. ` +
           "Configuration must fail closed here rather than fall back to TEST.",
       );
+    }
+    const bogProblems = bogUrlProblems({ apiBaseUrl: data.BOG_API_BASE_URL!, tokenUrl: data.BOG_OAUTH_TOKEN_URL, hosted });
+    try {
+      const key = createPublicKey({ key: data.BOG_WEBHOOK_SIGNING_KEY!.replace(/\\n/g, "\n"), format: "pem" });
+      if (key.asymmetricKeyType !== "rsa") bogProblems.push("BOG_WEBHOOK_SIGNING_KEY must be an RSA public key");
+    } catch {
+      bogProblems.push("BOG_WEBHOOK_SIGNING_KEY is not a PEM public key");
+    }
+    if (bogProblems.length > 0) {
+      throw new Error(`Unsafe BOG configuration:\n- ${bogProblems.join("\n- ")}`);
     }
   }
 

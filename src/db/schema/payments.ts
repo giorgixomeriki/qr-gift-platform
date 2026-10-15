@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { pgTable, uuid, text, integer, jsonb, timestamp, index, uniqueIndex } from "drizzle-orm/pg-core";
-import { paymentStatusEnum } from "./enums";
+import { paymentRefundReasonEnum, paymentRefundStatusEnum, paymentStatusEnum } from "./enums";
 import { orders } from "./orders";
 
 /**
@@ -42,5 +42,36 @@ export const payments = pgTable(
     uniqueIndex("payments_provider_payment_id_unique")
       .on(table.provider, table.providerPaymentId)
       .where(sql`${table.providerPaymentId} is not null`),
+  ],
+).enableRLS();
+
+/**
+ * One refund of one charge, from request to its provider-confirmed outcome
+ * (migrations/0019). Payment/order status and the commission reversal change
+ * only when a refund is COMPLETED — see lib/payments/refunds.ts.
+ */
+export const paymentRefunds = pgTable(
+  "payment_refunds",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    paymentId: uuid("payment_id")
+      .notNull()
+      .references(() => payments.id, { onDelete: "cascade" }),
+    orderId: uuid("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    amountMinor: integer("amount_minor").notNull(),
+    currency: text("currency").notNull(),
+    reason: paymentRefundReasonEnum("reason").notNull(),
+    status: paymentRefundStatusEnum("status").notNull().default("REQUESTED"),
+    requestedBy: uuid("requested_by"),
+    providerActionId: text("provider_action_id"),
+    providerCode: text("provider_code"),
+    requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().default(sql`now()`),
+    resolvedAt: timestamp("resolved_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("payment_refunds_order_id_idx").on(table.orderId),
+    uniqueIndex("payment_refunds_one_open_per_payment").on(table.paymentId).where(sql`status <> 'REJECTED'`),
   ],
 ).enableRLS();

@@ -25,7 +25,7 @@ const validation = require("../src/lib/validation/pricing") as typeof import("..
 const { updatePartnerSchema } = require("../src/lib/validation/partners") as typeof import("../src/lib/validation/partners");
 
 /**
- * Super Admin partner pricing (migrations/0018, lib/payments/pricing-admin.ts):
+ * Super Admin partner pricing (migrations/0019, lib/payments/pricing-admin.ts):
  *
  *  1. Global default: a partner with no custom price checks out at the
  *     platform default; changing the default reprices new checkouts only.

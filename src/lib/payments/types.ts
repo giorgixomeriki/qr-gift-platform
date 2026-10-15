@@ -26,6 +26,10 @@ export type CreatePaymentInput = {
   currency: string;
   /** Where the provider should send the browser back after success/cancel — a redirect-based provider needs these at session-creation time. Never treated as proof of payment when the browser lands there; see checkout.ts. */
   returnUrls: { success: string; cancel: string };
+  /** The order's product (orders.product_id), for providers that itemise the purchase. */
+  productId?: string;
+  /** Language for a hosted payment page, when the provider has one. */
+  locale?: "ka" | "en";
 };
 
 export type CreatePaymentResult = {
@@ -41,6 +45,16 @@ export type PaymentVerificationResult = {
   amountMinor: number;
   currency: string;
   metadata: Record<string, unknown>;
+  /**
+   * Refund state of this charge as the provider reports it, for providers
+   * whose refunds complete asynchronously (BOG). Absent = no refund info.
+   * `rejectedActionIds` are refund actions the provider declined.
+   */
+  refund?: {
+    status: "NONE" | "REQUESTED" | "COMPLETED" | "PARTIAL";
+    refundedAmountMinor: number;
+    rejectedActionIds: string[];
+  };
 };
 
 export type WebhookResult = PaymentVerificationResult & { orderId: string };
@@ -48,7 +62,14 @@ export type WebhookResult = PaymentVerificationResult & { orderId: string };
 export type RefundResult = {
   providerPaymentId: string;
   refundedAmountMinor: number;
-  status: "REFUNDED" | "FAILED";
+  /**
+   * REFUNDED: the provider confirms the money is returned (TEST, synchronous).
+   * PENDING: the provider accepted the request and confirms completion later,
+   * by callback and in its payment status (BOG). FAILED: refused.
+   */
+  status: "REFUNDED" | "PENDING" | "FAILED";
+  /** The provider's id for this refund action, when it issues one. */
+  providerActionId?: string;
 };
 
 /**

@@ -7,8 +7,10 @@ import { verifyGreetingEditAccess } from "@/lib/greetings/access";
 import { publicEnv } from "@/lib/env.public";
 import { resolveActivePrice, splitCommission, getPartnerCommissionRateBps } from "./pricing";
 import { getPaymentProvider } from "./provider-factory";
-import { sanitizeProviderMetadata, ProviderNotImplementedError, type PaymentProviderKey } from "./types";
+import { sanitizeProviderMetadata, type PaymentProviderKey } from "./types";
 import { getPurchaseBlocker, type PurchaseBlocker } from "./eligibility";
+import { assertCheckoutOpen } from "./checkout-gate";
+import { requestChargeRefund } from "./refunds";
 import { logServerError } from "@/lib/log";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 
@@ -67,6 +69,7 @@ export async function startCheckout(input: {
   editToken: string;
   productId: string;
 }): Promise<{ order: Order; redirectUrl?: string }> {
+  assertCheckoutOpen();
   const greeting = await verifyGreetingEditAccess(input.greetingId, input.editToken);
 
   const { order, qrPublicToken } = await withEditableGreeting(input.greetingId, async (tx) => {
@@ -118,13 +121,19 @@ export async function startCheckout(input: {
  * outside any DB transaction — an external network call has no business
  * holding a Postgres transaction open.
  */
-export async function createPaymentAttempt(order: Order, qrPublicToken: string): Promise<string | undefined> {
+export async function createPaymentAttempt(order: Order, qrPublicToken: string, locale?: "ka" | "en"): Promise<string | undefined> {
+  assertCheckoutOpen();
   const provider = getPaymentProvider();
+  // Amount and currency are the order's own snapshot (gross_amount_minor,
+  // resolved once at order creation, partner overrides included) — never a
+  // price looked up again here.
   const paymentAttempt = await provider.createPayment({
     orderId: order.id,
     amountMinor: order.grossAmountMinor,
     currency: order.currency,
     returnUrls: buildReturnUrls(qrPublicToken),
+    productId: order.productId,
+    locale,
   });
 
   await withPaymentActivation(order.id, (tx) =>
@@ -375,30 +384,15 @@ export async function refundIneligiblePayment(orderId: string): Promise<{ status
   const [payment] = await withPaymentActivation(orderId, (tx) =>
     tx.select().from(payments).where(and(eq(payments.orderId, orderId), eq(payments.status, "SUCCEEDED"))).limit(1),
   );
-  const provider = getPaymentProvider();
-  if (!payment?.providerPaymentId || payment.provider !== provider.key) {
-    logServerError("refundIneligiblePayment", new Error("No refundable payment through the configured provider"), { orderId });
+  if (!payment?.providerPaymentId) {
+    logServerError("refundIneligiblePayment", new Error("No refundable payment recorded"), { orderId });
     return { status: "REFUND_REQUIRED" };
   }
 
-  try {
-    const result = await provider.refundPayment(payment.providerPaymentId, payment.amountMinor, refundIdempotencyKey(payment.id));
-    if (result.status !== "REFUNDED" || result.refundedAmountMinor !== payment.amountMinor) {
-      logServerError("refundIneligiblePayment", new Error(`Provider refund ${result.status} for ${result.refundedAmountMinor}`), { orderId });
-      return { status: "REFUND_REQUIRED" };
-    }
-  } catch (err) {
-    // ProviderNotImplementedError: the real provider's refund API isn't
-    // integrated yet — the order stays queued for a manual refund.
-    logServerError("refundIneligiblePayment", err, { orderId, notImplemented: err instanceof ProviderNotImplementedError });
-    return { status: "REFUND_REQUIRED" };
-  }
-
-  await withPaymentActivation(orderId, async (tx) => {
-    await tx.update(payments).set({ status: "REFUNDED" }).where(and(eq(payments.id, payment.id), eq(payments.status, "SUCCEEDED")));
-    await tx.update(orders).set({ status: "REFUNDED" }).where(and(eq(orders.id, orderId), eq(orders.status, "REFUND_REQUIRED")));
-  });
-  return { status: "REFUNDED" };
+  // Two-phase (lib/payments/refunds.ts): the order becomes REFUNDED only once
+  // the provider confirms — at once for TEST, later by callback for BOG.
+  const outcome = await requestChargeRefund({ orderId, payment, reason: "INELIGIBLE" });
+  return { status: outcome === "COMPLETED" ? "REFUNDED" : "REFUND_REQUIRED" };
 }
 
 export class RefundError extends Error {}
@@ -422,7 +416,7 @@ export class RefundError extends Error {}
  * The greeting/QR lifecycle is deliberately untouched — refunding money and
  * taking a greeting offline are separate decisions (moderation does the latter).
  */
-export async function refundPaidOrder(adminUserId: string, orderId: string): Promise<{ alreadyRefunded: boolean }> {
+export async function refundPaidOrder(adminUserId: string, orderId: string): Promise<{ alreadyRefunded: boolean; pending?: boolean }> {
   const { order, payment } = await withAdminPaymentContext(adminUserId, orderId, async (tx) => {
     const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
     const [p] = await tx
@@ -443,48 +437,14 @@ export async function refundPaidOrder(adminUserId: string, orderId: string): Pro
   if (!payment?.providerPaymentId || payment.provider !== provider.key) {
     throw new RefundError(`Order ${orderId} has no succeeded payment through the configured provider`);
   }
-  const result = await provider.refundPayment(payment.providerPaymentId, payment.amountMinor, refundIdempotencyKey(payment.id));
-  if (result.status !== "REFUNDED" || result.refundedAmountMinor !== payment.amountMinor) {
-    throw new RefundError(`Provider refund ${result.status} for ${result.refundedAmountMinor} of ${payment.amountMinor}`);
-  }
 
-  return withAdminPaymentContext(adminUserId, orderId, async (tx) => {
-    const [locked] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update").limit(1);
-    if (!locked) throw new RefundError(`Order ${orderId} not found`);
-    if (locked.status === "REFUNDED") return { alreadyRefunded: true };
-    if (locked.status !== "PAID") throw new RefundError(`Order ${orderId} is ${locked.status}, only a PAID order can be refunded`);
-
-    await tx.update(payments).set({ status: "REFUNDED" }).where(and(eq(payments.id, payment.id), eq(payments.status, "SUCCEEDED")));
-    await tx.update(orders).set({ status: "REFUNDED" }).where(eq(orders.id, orderId));
-    await tx
-      .insert(partnerLedgerEntries)
-      .values({
-        partnerId: locked.partnerId,
-        orderId: locked.id,
-        type: "COMMISSION_REVERSAL",
-        amountMinor: -locked.partnerCommissionMinor,
-        currency: locked.currency,
-      })
-      .onConflictDoNothing();
-    await recordAuditLog(tx, {
-      actorType: "ADMIN",
-      actorId: adminUserId,
-      action: "ORDER_REFUNDED",
-      targetType: "order",
-      targetId: locked.id,
-      metadata: { partnerId: locked.partnerId, grossAmountMinor: locked.grossAmountMinor, commissionReversedMinor: locked.partnerCommissionMinor, currency: locked.currency },
-    });
-    return { alreadyRefunded: false };
-  });
-}
-
-/**
- * One refund per charge: the key a provider adapter forwards as its refund
- * idempotency key, so two concurrent or retried refund requests for the same
- * charge can never return the money twice at the provider.
- */
-function refundIdempotencyKey(paymentId: string): string {
-  return `refund-${paymentId}`;
+  // Two-phase (lib/payments/refunds.ts): the order turns REFUNDED and the
+  // commission is reversed only once the provider confirms the money is
+  // back — at once for TEST, later by callback for BOG ("pending").
+  const outcome = await requestChargeRefund({ orderId, payment, reason: "ADMIN", requestedBy: adminUserId });
+  if (outcome === "COMPLETED") return { alreadyRefunded: false };
+  if (outcome === "REQUESTED") return { alreadyRefunded: false, pending: true };
+  throw new RefundError(`The provider did not accept the refund for order ${orderId} (${outcome})`);
 }
 
 /**
@@ -504,26 +464,11 @@ export async function refundCapturedPayment(orderId: string, paymentId: string):
   if (payment.status !== "SUCCEEDED" || !payment.providerPaymentId) {
     throw new PaymentConfirmationError(`Payment ${paymentId} is ${payment.status}, nothing to refund`);
   }
-  const provider = getPaymentProvider();
-  if (payment.provider !== provider.key) {
-    logServerError("refundCapturedPayment", new Error("Charge was taken by a provider that is not configured"), { orderId, paymentId });
-    return { status: "REFUND_PENDING" };
-  }
-  try {
-    const result = await provider.refundPayment(payment.providerPaymentId, payment.amountMinor, refundIdempotencyKey(payment.id));
-    if (result.status !== "REFUNDED" || result.refundedAmountMinor !== payment.amountMinor) {
-      logServerError("refundCapturedPayment", new Error(`Provider refund ${result.status} for ${result.refundedAmountMinor}`), { orderId, paymentId });
-      return { status: "REFUND_PENDING" };
-    }
-  } catch (err) {
-    logServerError("refundCapturedPayment", err, { orderId, paymentId, notImplemented: err instanceof ProviderNotImplementedError });
-    return { status: "REFUND_PENDING" };
-  }
-  await withPaymentActivation(orderId, async (tx) => {
-    await tx.update(payments).set({ status: "REFUNDED" }).where(and(eq(payments.id, payment.id), eq(payments.status, "SUCCEEDED")));
-    await recordAuditLog(tx, { actorType: "SYSTEM", action: "PAYMENT_DUPLICATE_REFUNDED", targetType: "order", targetId: orderId, metadata: { paymentId, amountMinor: payment.amountMinor, currency: payment.currency } });
-  });
-  return { status: "REFUNDED" };
+  // Two-phase (lib/payments/refunds.ts): the charge is marked REFUNDED only
+  // once the provider confirms; until then it is REFUND_PENDING and listed by
+  // findPaymentAnomalies.
+  const outcome = await requestChargeRefund({ orderId, payment, reason: "DUPLICATE_CAPTURE" });
+  return { status: outcome === "COMPLETED" ? "REFUNDED" : "REFUND_PENDING" };
 }
 
 /**
@@ -732,7 +677,10 @@ export type PaymentAnomalyKind =
   | "COMMISSION_MISSING"
   | "COMMISSION_NOT_REVERSED"
   | "STALE_PENDING"
-  | "AMOUNT_MISMATCH";
+  | "AMOUNT_MISMATCH"
+  | "REFUND_AWAITING_PROVIDER"
+  | "REFUND_REJECTED"
+  | "EXTERNAL_REFUND";
 
 /**
  * Reconciliation report (provider-independent): every place where money and
@@ -743,8 +691,8 @@ export type PaymentAnomalyKind =
  *                         (pending/failed/canceled) — re-run confirmation
  * - DUPLICATE_CAPTURE     a settled order holding a second unrefunded charge
  *                         — refundCapturedPayment
- * - REFUND_PENDING        REFUND_REQUIRED orders: money to return (manual
- *                         queue while the provider refund API is missing)
+ * - REFUND_PENDING        REFUND_REQUIRED orders with no refund at the
+ *                         provider: money to return (manual queue)
  * - PAID_WITHOUT_CHARGE   a PAID order with no SUCCEEDED/REFUNDED charge — investigate
  * - PAID_NOT_ACTIVATED    PAID, greeting still DRAFT — activatePaidOrder
  * - COMMISSION_MISSING    PAID without its COMMISSION_EARNED — investigate
@@ -752,6 +700,12 @@ export type PaymentAnomalyKind =
  * - STALE_PENDING         an attempt pending > 30 min (missed webhook?) —
  *                         verifyAndReconcileOrder asks the provider
  * - AMOUNT_MISMATCH       a provider success refused for amount/currency (30 days)
+ * - REFUND_AWAITING_PROVIDER  a refund requested > 1 h ago, not yet confirmed —
+ *                         reconcileOrderRefunds asks the provider (re-sends if unknown)
+ * - REFUND_REJECTED       the provider refused a refund; the charge is still
+ *                         captured — contact the customer / bank
+ * - EXTERNAL_REFUND       the provider reports a refund QR Starr never asked
+ *                         for (e.g. from the bank's portal) — reconcile by hand (30 days)
  *
  * What the provider itself recorded (a charge QR Starr never heard of) needs
  * the provider's transaction listing — see docs/PAYMENTS.md.
@@ -766,11 +720,16 @@ export async function findPaymentAnomalies(adminUserId: string): Promise<{ kind:
       select 'DUPLICATE_CAPTURE', o.id::text, count(*) || ' unrefunded charges on a ' || o.status || ' order'
         from orders o join payments p on p.order_id = o.id and p.status = 'SUCCEEDED'
        where o.status in ('PAID', 'REFUNDED')
+         -- a charge whose refund is already with the provider is not "unrefunded"
+         and not exists (select 1 from payment_refunds r where r.payment_id = p.id and r.status <> 'REJECTED')
        group by o.id, o.status
       having (o.status = 'PAID' and count(*) > 1) or o.status = 'REFUNDED'
       union all
       select 'REFUND_PENDING', o.id::text, o.gross_amount_minor || ' ' || o.currency || ' to return'
         from orders o where o.status = 'REFUND_REQUIRED'
+         -- not while a refund is with the provider: returning it by hand too
+         -- would refund twice (that case is REFUND_AWAITING_PROVIDER)
+         and not exists (select 1 from payment_refunds r where r.order_id = o.id and r.status <> 'REJECTED')
       union all
       select 'PAID_WITHOUT_CHARGE', o.id::text, 'no SUCCEEDED/REFUNDED charge recorded'
         from orders o
@@ -799,6 +758,19 @@ export async function findPaymentAnomalies(adminUserId: string): Promise<{ kind:
       select 'AMOUNT_MISMATCH', a.target_id, coalesce(a.metadata->>'reportedAmountMinor', '?') || ' ' || coalesce(a.metadata->>'reportedCurrency', '?') || ' reported, ' || coalesce(a.metadata->>'expectedAmountMinor', '?') || ' ' || coalesce(a.metadata->>'expectedCurrency', '?') || ' expected'
         from audit_logs a
        where a.action = 'PAYMENT_AMOUNT_MISMATCH' and a.target_type = 'order' and a.created_at > now() - interval '30 days'
+      union all
+      select 'REFUND_AWAITING_PROVIDER', r.order_id::text, lower(r.reason::text) || ' refund of ' || r.amount_minor || ' ' || r.currency || ' requested ' || to_char(r.requested_at at time zone 'Asia/Tbilisi', 'YYYY-MM-DD HH24:MI')
+        from payment_refunds r
+       where r.status = 'REQUESTED' and r.requested_at < now() - interval '1 hour'
+      union all
+      select 'REFUND_REJECTED', r.order_id::text, lower(r.reason::text) || ' refund rejected by the provider (' || coalesce(r.provider_code, '?') || ')'
+        from payment_refunds r join payments p on p.id = r.payment_id
+       where r.status = 'REJECTED' and r.provider_code <> 'NOT_SENT' and p.status = 'SUCCEEDED'
+         and not exists (select 1 from payment_refunds r2 where r2.payment_id = r.payment_id and r2.status <> 'REJECTED')
+      union all
+      select 'EXTERNAL_REFUND', a.target_id, 'provider reports ' || coalesce(a.metadata->>'refundedAmountMinor', '?') || ' refunded outside QR Starr'
+        from audit_logs a
+       where a.action = 'PAYMENT_EXTERNAL_REFUND' and a.target_type = 'order' and a.created_at > now() - interval '30 days'
     `);
     return [...rows].map((r) => ({ kind: r.kind, orderId: r.order_id, detail: r.detail }));
   });

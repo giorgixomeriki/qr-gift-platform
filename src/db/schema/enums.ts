@@ -88,6 +88,10 @@ export const paymentStatusEnum = pgEnum("payment_status", [
   "REFUNDED",
 ]);
 
+/** payment_refunds (migrations/0019): REQUESTED → COMPLETED | REJECTED, both terminal. */
+export const paymentRefundStatusEnum = pgEnum("payment_refund_status", ["REQUESTED", "COMPLETED", "REJECTED"]);
+export const paymentRefundReasonEnum = pgEnum("payment_refund_reason", ["ADMIN", "INELIGIBLE", "DUPLICATE_CAPTURE", "CHARGEBACK"]);
+
 /**
  * Signed ledger entry types — see partner-ledger.ts for the sign convention.
  * COMMISSION_EARNED/ADJUSTMENT(credit) are positive, PAYOUT/COMMISSION_REVERSAL/

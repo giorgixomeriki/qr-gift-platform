@@ -11,7 +11,7 @@ import { DEFAULT_PRODUCT_KEY } from "../src/lib/greetings/constants";
  * Pricing is data, not code (prices rows + partners.commission_rate_bps), so
  * this verifies the data actually in the target database:
  *  1. Exactly one active platform-default price for the default product: 1000 GEL minor units.
- *  2. Partner-specific price overrides (Super Admin–configured, migrations/0018)
+ *  2. Partner-specific price overrides (Super Admin–configured, migrations/0019)
  *     are listed for review, and each must be in the partner's own currency.
  *     Not a failure by themselves — custom partner pricing is a feature.
  *  3. ACTIVE partners not at the 3000 bps launch rate are listed for review

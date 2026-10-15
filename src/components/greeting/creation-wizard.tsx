@@ -18,6 +18,7 @@ import { ThemeWorld } from "@/components/themes/theme-world";
 import { updateMessageAction, viewPreviewAction } from "@/lib/greetings/actions";
 import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction } from "@/lib/payments/actions";
 import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
+import { CHECKOUT_CLOSED } from "@/lib/payments/checkout-codes";
 import { greetingMessageSchema, MESSAGE_MAX_LENGTH } from "@/lib/validation/greeting-text";
 import { MediaUploadField } from "./media-upload-field";
 import { VoiceRecorder } from "./voice-recorder";
@@ -612,6 +613,8 @@ function CheckoutStep({
   const [verifying, setVerifying] = useState(paymentHint === "return");
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState(false);
+  /** Real-money checkout is switched off on this deployment (CHECKOUT_ENABLED). */
+  const [closed, setClosed] = useState(false);
   const [failed, setFailed] = useState(false);
   const [cancelled, setCancelled] = useState(paymentHint === "cancelled");
   const [succeeded, setSucceeded] = useState(false);
@@ -627,6 +630,10 @@ function CheckoutStep({
     const result = await startCheckoutAction(greetingId).catch(() => null);
     setLoading(false);
     if (!result?.ok) {
+      if (result?.error === CHECKOUT_CLOSED) {
+        setClosed(true);
+        return;
+      }
       if (result) logActionError("startCheckout", result.error);
       setError(true);
       return;
@@ -902,6 +909,15 @@ function CheckoutStep({
         <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center" role="status" aria-live="polite">
           <Spinner className="size-8 text-success" />
           <p className="text-h3">{t("activating")}</p>
+        </div>
+      ) : closed ? (
+        <div className="flex flex-col gap-4" data-testid="checkout-closed">
+          <Notice tone="info" title={t("closedTitle")}>
+            {t("closedBody")}
+          </Notice>
+          <Button variant="secondary" size="lg" block onClick={onBackToPreview}>
+            {t("backToPreview")}
+          </Button>
         </div>
       ) : (
         <div className="flex flex-col gap-4">

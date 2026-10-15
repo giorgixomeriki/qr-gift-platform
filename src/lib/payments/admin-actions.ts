@@ -80,7 +80,7 @@ export async function adminReconcilePaymentAction(orderId: string): Promise<Acti
  * earning. See refundPaidOrder for the full contract. The provider call is
  * deliberately outside requireAdmin's transaction.
  */
-export async function adminRefundPaidOrderAction(orderId: string): Promise<ActionResult<{ alreadyRefunded: boolean }>> {
+export async function adminRefundPaidOrderAction(orderId: string): Promise<ActionResult<{ alreadyRefunded: boolean; pending?: boolean }>> {
   try {
     const { adminUserId, partnerId } = await requireAdmin(async (tx, adminUserId) => {
       await enforceRateLimit({ key: `order-refund:${adminUserId}`, limit: 20, windowSeconds: 60 });
