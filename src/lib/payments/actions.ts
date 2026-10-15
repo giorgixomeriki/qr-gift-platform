@@ -4,6 +4,8 @@ import { getEditToken } from "@/lib/greetings/edit-token-cookie";
 import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, type CheckoutOrderSummary } from "./checkout";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logServerError } from "@/lib/log";
+import { CheckoutUnavailableError } from "./checkout-gate";
+import { CHECKOUT_CLOSED } from "./checkout-codes";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -20,6 +22,9 @@ export async function startCheckoutAction(greetingId: string): Promise<ActionRes
     const result = await getOrCreateCheckoutOrder(greetingId, token);
     return { ok: true, data: result };
   } catch (err) {
+    // Real-money checkout switched off (CHECKOUT_ENABLED): an expected state,
+    // not a failure — the UI shows "payments open soon", nothing is logged.
+    if (err instanceof CheckoutUnavailableError) return { ok: false, error: CHECKOUT_CLOSED };
     return errorResult("startCheckoutAction", err, { greetingId });
   }
 }
