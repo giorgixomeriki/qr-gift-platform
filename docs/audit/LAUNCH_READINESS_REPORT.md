@@ -108,7 +108,7 @@ on a freshly migrated throwaway database:
 | `verify:*` suites | **23/23 ✅**, 0 failed checks |
 | Playwright | **93 passed, 0 failed, 3 skipped by design.** 4 failed on the throwaway DB for an environmental reason (`auth.users` absent) and passed 4/4 when rerun on the Supabase DB |
 
-CI on PR #5: green. CI on #6: started at publication (see the PR).
+CI (GitHub Actions, fresh Supabase, all `verify:*`): PR #5 green; PR #6 green (4 m 8 s).
 
 **Not executed:**
 
