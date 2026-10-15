@@ -620,6 +620,7 @@
     "statusNoCommission": "No commission",
     "refund": "Refund",
     "refundConfirm": "Confirm full refund",
+    "refundRequested": "Refund requested. It completes, and the commission is reversed, once the bank confirms it.",
     "empty": "No paid activations yet."
   }
 }

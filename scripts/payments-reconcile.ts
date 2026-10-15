@@ -11,6 +11,7 @@ ModuleInternals._load = function (request: string, ...rest: unknown[]) {
 
 const { findPaymentAnomalies, verifyAndReconcileOrder, activatePaidOrder, refundCapturedPayment } =
   require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
+const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
 const { withAdminContext } = require("../src/db/client") as typeof import("../src/db/client");
 const { payments, orders } = require("../src/db/schema") as typeof import("../src/db/schema");
 const { and, asc, eq } = require("drizzle-orm") as typeof import("drizzle-orm");
@@ -27,6 +28,7 @@ const { and, asc, eq } = require("drizzle-orm") as typeof import("drizzle-orm");
  *   STALE_PENDING       → verifyAndReconcileOrder (asks the PROVIDER; never assumes)
  *   PAID_NOT_ACTIVATED  → activatePaidOrder (idempotent)
  *   DUPLICATE_CAPTURE   → refundCapturedPayment for each extra charge (provider-confirmed)
+ *   REFUND_AWAITING_PROVIDER → reconcileOrderRefunds (asks the PROVIDER; completes only what it confirms)
  * Everything else is reported for a person to decide. Run it on a schedule
  * (e.g. every 15 minutes) once the real provider is live.
  */
@@ -53,6 +55,9 @@ async function main() {
       if (a.kind === "STALE_PENDING") {
         const r = await verifyAndReconcileOrder(a.orderId);
         console.log(`  ${a.orderId} re-verified with the provider → ${r.status}${r.activated ? ", activated" : ""}`);
+      } else if (a.kind === "REFUND_AWAITING_PROVIDER") {
+        const r = await reconcileOrderRefunds(a.orderId);
+        console.log(`  ${a.orderId} refunds → ${r.completed} completed, ${r.rejected} rejected, ${r.pending} still pending`);
       } else if (a.kind === "PAID_NOT_ACTIVATED") {
         const r = await activatePaidOrder(a.orderId);
         console.log(`  ${a.orderId} activation → ${r.activated ? "activated" : "already active"}`);

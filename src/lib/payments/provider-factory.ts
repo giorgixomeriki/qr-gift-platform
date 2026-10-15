@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { publicEnv } from "@/lib/env.public";
 import type { PaymentProvider } from "./types";
 import { TestPaymentProvider } from "./providers/test-provider";
 import { BOGPaymentProvider } from "./providers/bog-provider";
@@ -33,7 +34,10 @@ export function getPaymentProvider(): PaymentProvider {
       clientId: env.BOG_CLIENT_ID!,
       clientSecret: env.BOG_CLIENT_SECRET!,
       apiBaseUrl: env.BOG_API_BASE_URL!,
-      webhookSigningKey: env.BOG_WEBHOOK_SIGNING_KEY!,
+      tokenUrl: env.BOG_OAUTH_TOKEN_URL,
+      callbackPublicKey: env.BOG_WEBHOOK_SIGNING_KEY!,
+      callbackUrl: `${publicEnv.NEXT_PUBLIC_APP_URL}/api/webhooks/payments/BOG`,
+      refundsEnabled: env.BOG_REFUNDS_ENABLED,
     });
   }
 

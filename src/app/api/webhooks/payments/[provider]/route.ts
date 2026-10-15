@@ -1,105 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
-import { env } from "@/lib/env";
-import { getPaymentProvider } from "@/lib/payments/provider-factory";
-import { confirmPaymentSuccess, recordProviderFailure, settleConfirmedPayment, PaymentConfirmationError } from "@/lib/payments/service";
-import { paymentProviderKeySchema, ProviderNotImplementedError } from "@/lib/payments/types";
+import { handleProviderWebhook, webhookEndpointExists } from "@/lib/payments/webhook";
+import { enforceRateLimit, getClientIp, RateLimitedError } from "@/lib/rate-limit";
 
 /**
- * Provider webhook/callback endpoint (Phase 5 §6) — the only route a real
- * payment provider's server calls directly. Deliberately generic per-provider
- * (`[provider]` segment) rather than one route per provider: the actual
- * signature/authentication verification lives inside each provider adapter's
- * own handleWebhook (see types.ts's PaymentProvider interface doc comment
- * and bog-provider.ts) — this route's job is transport plumbing and
- * cross-validation, never trusting the payload's own claims on their own.
- *
- * No client authority anywhere in this path: the browser never calls this
- * route, and nothing here is reachable by a session cookie or edit token —
- * it's authenticated purely by the provider's own signature (whatever that
- * turns out to be), verified inside handleWebhook.
+ * Provider webhook/callback endpoint — the only route a payment provider's
+ * server calls directly. Authenticated purely by the provider's own
+ * signature, verified inside each adapter's handleWebhook; nothing here is
+ * reachable by a session cookie or edit token. The handling itself lives in
+ * lib/payments/webhook.ts.
  */
 export async function POST(request: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
-  const { provider: providerParam } = await params;
-  const parsedProvider = paymentProviderKeySchema.safeParse(providerParam);
+  const { provider } = await params;
+  if (!webhookEndpointExists(provider)) return new NextResponse("Unknown provider", { status: 404 });
 
-  // Only the currently-configured provider is ever accepted — a webhook
-  // addressed to a provider this deployment isn't using is rejected outright,
-  // never routed to a provider adapter that isn't actually active.
-  if (!parsedProvider.success || parsedProvider.data !== env.PAYMENTS_PROVIDER) {
-    return new NextResponse("Unknown provider", { status: 404 });
+  // Generous per-IP cap: a provider's real callback volume is tiny; this only
+  // bounds a flood of unsigned requests (each costs a signature check).
+  try {
+    await enforceRateLimit({ key: `webhook:${getClientIp(request.headers)}`, limit: 300, windowSeconds: 60 });
+  } catch (err) {
+    if (err instanceof RateLimitedError) {
+      return new NextResponse("Too many requests", { status: 429, headers: { "Retry-After": String(err.retryAfterSeconds) } });
+    }
+    throw err;
   }
 
-  // The TEST webhook only exists where fake payments were explicitly enabled
-  // AND a signing secret is configured; the signature itself is checked in
-  // TestPaymentProvider.handleWebhook. Anywhere else it is simply absent.
-  if (parsedProvider.data === "TEST" && (!env.ALLOW_TEST_PAYMENTS || !env.TEST_PAYMENTS_WEBHOOK_SECRET || env.NODE_ENV === "production")) {
-    return new NextResponse("Unknown provider", { status: 404 });
-  }
-
-  // Raw body FIRST, before any parsing — a real provider's signature is
-  // computed over the exact bytes sent, not over a re-serialized JSON object,
-  // which could differ (key order, whitespace, number formatting).
+  // Raw body FIRST, before any parsing — a provider's signature is computed
+  // over the exact bytes sent, not over a re-serialised JSON object.
   const rawBody = await request.text();
-
-  let webhookResult;
-  try {
-    const provider = getPaymentProvider();
-    webhookResult = await provider.handleWebhook(rawBody, request.headers);
-  } catch (err) {
-    if (err instanceof ProviderNotImplementedError) {
-      // Safe logging only — never the raw body (which could carry pseudo
-      // card-holder data even if truncated) and never headers verbatim.
-      console.error(`[webhook] ${parsedProvider.data} handleWebhook not implemented`);
-      return new NextResponse("Provider not implemented", { status: 501 });
-    }
-    // Any other failure inside handleWebhook (signature mismatch, malformed
-    // payload) is treated as "not a genuine webhook" — 400, no detail leaked.
-    console.error(`[webhook] ${parsedProvider.data} verification failed:`, err instanceof Error ? err.message : err);
-    return new NextResponse("Invalid webhook", { status: 400 });
-  }
-
-  try {
-    // The provider's own reported outcome decides what happens — a FAILED or
-    // PENDING notification must never be treated as money received.
-    if (webhookResult.status === "FAILED") {
-      await recordProviderFailure({ provider: parsedProvider.data, providerPaymentId: webhookResult.providerPaymentId, orderId: webhookResult.orderId });
-      return NextResponse.json({ received: true });
-    }
-    if (webhookResult.status !== "SUCCEEDED") {
-      // PENDING: nothing has happened yet; the final notification (or
-      // reconciliation) settles it.
-      return NextResponse.json({ received: true });
-    }
-
-    const confirmation = await confirmPaymentSuccess({
-      provider: parsedProvider.data,
-      providerPaymentId: webhookResult.providerPaymentId,
-      orderId: webhookResult.orderId,
-      amountMinor: webhookResult.amountMinor,
-      currency: webhookResult.currency,
-      metadata: webhookResult.metadata,
-    });
-    // Refunds (ineligible greeting, greeting already paid, a duplicate
-    // capture) or activation — the same settlement every path uses. If the
-    // provider cannot refund yet, the money stays queued for a manual refund
-    // (findPaymentAnomalies); the notification itself was still handled.
-    await settleConfirmedPayment(confirmation);
-
-    // 200 regardless of "already processed" — a provider's retry of a
-    // webhook it already delivered must be treated as a normal success, not
-    // an error, or the provider will keep retrying forever (idempotent
-    // duplicate delivery safety, Phase 5 §6/§10).
-    return NextResponse.json({ received: true });
-  } catch (err) {
-    if (err instanceof PaymentConfirmationError) {
-      // Order not found / wrong status / amount-currency mismatch / payment-
-      // order mismatch — a real, specific rejection, not a transient error.
-      // 400 tells a well-behaved provider "don't retry this one," rather than
-      // 5xx's "try again," since retrying won't change the outcome.
-      console.error(`[webhook] ${parsedProvider.data} rejected:`, err.message);
-      return new NextResponse("Rejected", { status: 400 });
-    }
-    console.error(`[webhook] ${parsedProvider.data} internal error:`, err instanceof Error ? err.message : err);
-    return new NextResponse("Internal error", { status: 500 });
-  }
+  const result = await handleProviderWebhook(provider, rawBody, request.headers);
+  return typeof result.body === "string"
+    ? new NextResponse(result.body, { status: result.status })
+    : NextResponse.json(result.body, { status: result.status });
 }

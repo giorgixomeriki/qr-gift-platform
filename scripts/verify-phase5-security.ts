@@ -97,26 +97,14 @@ function checkMissingBogCredentialsFailClosed(): boolean {
   return output.includes("REJECTED:") && output.includes("BOG_CLIENT_ID");
 }
 
-function checkBogWebhookReturns501WhenSelected(): boolean {
-  // A fresh process with PAYMENTS_PROVIDER=BOG and dummy-but-present
-  // credentials (env.ts only checks presence, not validity) — confirms the
-  // webhook route boundary itself (not just the adapter class in isolation)
-  // correctly surfaces "not implemented" as an HTTP response rather than an
-  // unhandled crash or, worse, a silent 200.
-  const routePath = join(__dirname, "../src/app/api/webhooks/payments/[provider]/route").replace(/\\/g, "/");
-  // Resolved by absolute path, not the bare specifier "next/server" — the
-  // subprocess's check.ts file lives in a scratch tmp dir outside the
-  // project tree, so Node's own module resolution (walking up from that
-  // file's location) would never find node_modules/next otherwise.
-  const nextServerPath = join(__dirname, "../node_modules/next/server").replace(/\\/g, "/");
+function checkBogInvalidSigningKeyFailsClosed(): boolean {
+  // The BOG adapter is implemented (providers/bog-provider.ts); its callback
+  // authentication depends on BOG's RSA public key. A key that is not a PEM
+  // public key must stop the app at env load — never reach a webhook that
+  // could not verify anything.
+  const modulePath = join(__dirname, "../src/lib/env").replace(/\\/g, "/");
   const output = runInSubprocess(
-    `const { POST } = require("${routePath}");\n` +
-      `const { NextRequest } = require("${nextServerPath}");\n` +
-      `(async () => {\n` +
-      `  const req = new NextRequest("http://localhost/api/webhooks/payments/BOG", { method: "POST", body: "{}" });\n` +
-      `  const res = await POST(req, { params: Promise.resolve({ provider: "BOG" }) });\n` +
-      `  console.log("STATUS:" + res.status);\n` +
-      `})();\n`,
+    `try { require("${modulePath}"); console.log("LOADED_OK"); } catch (e) { console.log("REJECTED:" + e.message); }\n`,
     {
       NODE_ENV: "development",
       PAYMENTS_PROVIDER: "BOG",
@@ -126,7 +114,7 @@ function checkBogWebhookReturns501WhenSelected(): boolean {
       BOG_WEBHOOK_SIGNING_KEY: "dummy",
     },
   );
-  return output.includes("STATUS:501");
+  return output.includes("REJECTED:") && output.includes("BOG_WEBHOOK_SIGNING_KEY");
 }
 
 /** Grep-based structural check: no "use client" file imports the server secrets module directly. */
@@ -324,7 +312,7 @@ async function main() {
   console.log("\n--- Production configuration safety ---");
   check("15. TEST provider refuses to construct when NODE_ENV=production", checkTestProviderBlockedInProduction());
   check("16. PAYMENTS_PROVIDER=BOG with missing credentials fails closed at env load, never falls back to TEST", checkMissingBogCredentialsFailClosed());
-  check("17. The webhook route returns 501 (not a crash, not a silent 200) when the configured provider's handleWebhook is unimplemented", checkBogWebhookReturns501WhenSelected());
+  check("17. PAYMENTS_PROVIDER=BOG with a signing key that is not a PEM public key fails closed at env load", checkBogInvalidSigningKeyFailsClosed());
   check("18. No client component imports the server-only secrets module (@/lib/env) directly", checkNoClientComponentImportsServerEnv());
 
   console.log("\n--- Manual payout security (Phase 5 §17) ---");
