@@ -137,6 +137,12 @@ for the failure modes most likely to actually come up, before escalating.
   (manually confirmed handed out) before assuming a data bug — this is the
   single most common point of partner confusion about the funnel.
 
+- **Chargeback notice from the bank**: record it on the order (Admin →
+  Partners → partner → Sales trace → Chargeback, with the bank's case
+  reference) — `docs/PAYMENTS.md` "Chargebacks". Download **Evidence** for
+  the bank if the dispute is to be contested. Never refund an order by hand
+  while it shows REFUND_AWAITING_PROVIDER in reconciliation.
+
 ## 5. Incident response
 
 ### Severity levels
