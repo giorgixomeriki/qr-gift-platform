@@ -257,7 +257,9 @@ async function main() {
     }
     return { partnerId, batchId };
   }
-  const standard = await newPartner(3000);
+  // Explicit 10.00 GEL for the "standard" partner, so the suite does not
+  // depend on the database's platform default (a long-lived dev DB may differ).
+  const standard = await newPartner(3000, 1000);
   const custom = await newPartner(2500, 1500);
 
   async function newGreeting(p = standard) {
