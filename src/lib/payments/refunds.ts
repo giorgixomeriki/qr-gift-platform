@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { withAdminPaymentContext, withPaymentActivation, type Tx } from "@/db/client";
 import { orders, payments, paymentRefunds, partnerLedgerEntries } from "@/db/schema";
 import { recordAuditLog } from "@/lib/audit";
@@ -153,6 +153,82 @@ export async function requestChargeRefund(input: {
 }
 
 /**
+ * The money is back with the customer: the refund row turns COMPLETED and the
+ * reason's bookkeeping is applied, inside the caller's transaction (which must
+ * carry the order's payment context, and an admin context for ADMIN and
+ * CHARGEBACK). A row that is no longer REQUESTED is left alone, so a
+ * concurrent completion can never book twice.
+ */
+async function applyRefundCompletion(tx: Tx, refund: Refund): Promise<void> {
+  const marked = await tx
+    .update(paymentRefunds)
+    .set({ status: "COMPLETED", resolvedAt: new Date() })
+    .where(and(eq(paymentRefunds.id, refund.id), eq(paymentRefunds.status, "REQUESTED")))
+    .returning({ id: paymentRefunds.id });
+  if (marked.length === 0) return; // a concurrent completion won
+  await tx
+    .update(payments)
+    .set({ status: "REFUNDED" })
+    .where(and(eq(payments.id, refund.paymentId), eq(payments.status, "SUCCEEDED")));
+
+  if (refund.reason === "DUPLICATE_CAPTURE") {
+    await recordAuditLog(tx, {
+      actorType: "SYSTEM",
+      action: "PAYMENT_DUPLICATE_REFUNDED",
+      targetType: "order",
+      targetId: refund.orderId,
+      metadata: { paymentId: refund.paymentId, refundId: refund.id, amountMinor: refund.amountMinor, currency: refund.currency },
+    });
+    return;
+  }
+  if (refund.reason === "INELIGIBLE") {
+    await tx
+      .update(orders)
+      .set({ status: "REFUNDED" })
+      .where(and(eq(orders.id, refund.orderId), eq(orders.status, "REFUND_REQUIRED")));
+    await recordAuditLog(tx, {
+      actorType: "SYSTEM",
+      action: "PAYMENT_REFUND_COMPLETED",
+      targetType: "order",
+      targetId: refund.orderId,
+      metadata: { refundId: refund.id, paymentId: refund.paymentId, reason: refund.reason },
+    });
+    return;
+  }
+  // ADMIN / CHARGEBACK: a PAID order is refunded and its commission
+  // reversed (the ledger trigger requires the order to be REFUNDED first).
+  const [locked] = await tx.select().from(orders).where(eq(orders.id, refund.orderId)).for("update").limit(1);
+  if (!locked) throw new RefundWorkflowError(`Order ${refund.orderId} not found`);
+  if (locked.status === "PAID") {
+    await tx.update(orders).set({ status: "REFUNDED" }).where(eq(orders.id, locked.id));
+  }
+  await tx
+    .insert(partnerLedgerEntries)
+    .values({
+      partnerId: locked.partnerId,
+      orderId: locked.id,
+      type: "COMMISSION_REVERSAL",
+      amountMinor: -locked.partnerCommissionMinor,
+      currency: locked.currency,
+    })
+    .onConflictDoNothing();
+  await recordAuditLog(tx, {
+    actorType: "ADMIN",
+    actorId: refund.requestedBy ?? undefined,
+    action: refund.reason === "CHARGEBACK" ? "ORDER_CHARGED_BACK" : "ORDER_REFUNDED",
+    targetType: "order",
+    targetId: locked.id,
+    metadata: {
+      refundId: refund.id,
+      partnerId: locked.partnerId,
+      grossAmountMinor: locked.grossAmountMinor,
+      commissionReversedMinor: locked.partnerCommissionMinor,
+      currency: locked.currency,
+    },
+  });
+}
+
+/**
  * The money is back with the customer: mark the row COMPLETED and apply the
  * reason's bookkeeping in the same transaction. Idempotent: a COMPLETED row
  * returns without touching anything.
@@ -165,82 +241,13 @@ export async function completeRefund(refundId: string, orderId: string): Promise
   if (refund.status === "COMPLETED") return;
   if (refund.status === "REJECTED") throw new RefundWorkflowError(`Refund ${refundId} was rejected`);
 
-  const finalize = async (tx: Tx) => {
-    const marked = await tx
-      .update(paymentRefunds)
-      .set({ status: "COMPLETED", resolvedAt: new Date() })
-      .where(and(eq(paymentRefunds.id, refund.id), eq(paymentRefunds.status, "REQUESTED")))
-      .returning({ id: paymentRefunds.id });
-    if (marked.length === 0) return; // a concurrent completion won
-    await tx
-      .update(payments)
-      .set({ status: "REFUNDED" })
-      .where(and(eq(payments.id, refund.paymentId), eq(payments.status, "SUCCEEDED")));
-
-    if (refund.reason === "DUPLICATE_CAPTURE") {
-      await recordAuditLog(tx, {
-        actorType: "SYSTEM",
-        action: "PAYMENT_DUPLICATE_REFUNDED",
-        targetType: "order",
-        targetId: refund.orderId,
-        metadata: { paymentId: refund.paymentId, refundId: refund.id, amountMinor: refund.amountMinor, currency: refund.currency },
-      });
-      return;
-    }
-    if (refund.reason === "INELIGIBLE") {
-      await tx
-        .update(orders)
-        .set({ status: "REFUNDED" })
-        .where(and(eq(orders.id, refund.orderId), eq(orders.status, "REFUND_REQUIRED")));
-      await recordAuditLog(tx, {
-        actorType: "SYSTEM",
-        action: "PAYMENT_REFUND_COMPLETED",
-        targetType: "order",
-        targetId: refund.orderId,
-        metadata: { refundId: refund.id, paymentId: refund.paymentId, reason: refund.reason },
-      });
-      return;
-    }
-    // ADMIN: a PAID order is refunded and its commission reversed (the
-    // ledger trigger requires the order to be REFUNDED first).
-    const [locked] = await tx.select().from(orders).where(eq(orders.id, refund.orderId)).for("update").limit(1);
-    if (!locked) throw new RefundWorkflowError(`Order ${refund.orderId} not found`);
-    if (locked.status === "PAID") {
-      await tx.update(orders).set({ status: "REFUNDED" }).where(eq(orders.id, locked.id));
-    }
-    await tx
-      .insert(partnerLedgerEntries)
-      .values({
-        partnerId: locked.partnerId,
-        orderId: locked.id,
-        type: "COMMISSION_REVERSAL",
-        amountMinor: -locked.partnerCommissionMinor,
-        currency: locked.currency,
-      })
-      .onConflictDoNothing();
-    await recordAuditLog(tx, {
-      actorType: "ADMIN",
-      actorId: refund.requestedBy ?? undefined,
-      action: "ORDER_REFUNDED",
-      targetType: "order",
-      targetId: locked.id,
-      metadata: {
-        refundId: refund.id,
-        partnerId: locked.partnerId,
-        grossAmountMinor: locked.grossAmountMinor,
-        commissionReversedMinor: locked.partnerCommissionMinor,
-        currency: locked.currency,
-      },
-    });
-  };
-
   if (refund.reason === "ADMIN" || refund.reason === "CHARGEBACK") {
     // The commission reversal needs an admin context (ledger RLS): it is booked
     // on behalf of the admin who asked for this refund.
     if (!refund.requestedBy) throw new RefundWorkflowError(`Refund ${refund.id} has no requesting admin`);
-    await withAdminPaymentContext(refund.requestedBy, refund.orderId, finalize);
+    await withAdminPaymentContext(refund.requestedBy, refund.orderId, (tx) => applyRefundCompletion(tx, refund));
   } else {
-    await withPaymentActivation(refund.orderId, finalize);
+    await withPaymentActivation(refund.orderId, (tx) => applyRefundCompletion(tx, refund));
   }
 }
 
@@ -307,5 +314,96 @@ export async function recordExternalRefund(orderId: string, providerPaymentId: s
       targetId: orderId,
       metadata: { providerPaymentId, refundedAmountMinor },
     });
+  });
+}
+
+export class ChargebackError extends Error {
+  constructor(
+    readonly code: "ORDER_NOT_FOUND" | "ORDER_NOT_PAID" | "NO_CHARGE" | "REFUND_OPEN" | "ALREADY_RETURNED",
+    message: string,
+  ) {
+    super(message);
+    this.name = "ChargebackError";
+  }
+}
+
+/**
+ * Records a chargeback the bank has already executed (BOG plan §3.7,
+ * recommended decision B5): the money has left through the card scheme, so
+ * nothing is sent to the provider. In ONE admin transaction the order's
+ * paying charge gets a CHARGEBACK refund row, which completes at once with the
+ * same bookkeeping as an admin refund: charge + order REFUNDED, the order's
+ * own snapshot commission reversed exactly once. A reversal of commission
+ * already paid out is netted into the partner's next payout (CLAWBACK,
+ * payouts.ts) — recommended decision B6. The greeting stays live.
+ *
+ * Refused when the order is not PAID, or the charge already has a refund open
+ * or completed (returning the money twice is a dispute to contest with the
+ * bank, not to book). Full amount only (payment_refunds_integrity).
+ */
+export async function recordChargeback(
+  adminUserId: string,
+  orderId: string,
+  input: { reference: string; disputedOn: string; note?: string },
+): Promise<{ refundId: string; commissionReversedMinor: number }> {
+  return withAdminPaymentContext(adminUserId, orderId, async (tx) => {
+    // The payment context alone would let this transaction open a refund row;
+    // only a platform admin may book a chargeback (the ledger RLS backs this up).
+    const [{ is_admin }] = (await tx.execute(sql`select app_is_admin() as is_admin`)) as unknown as [{ is_admin: boolean }];
+    if (!is_admin) throw new RefundWorkflowError("Only a platform admin can record a chargeback");
+    const [order] = await tx.select().from(orders).where(eq(orders.id, orderId)).for("update").limit(1);
+    if (!order) throw new ChargebackError("ORDER_NOT_FOUND", `Order ${orderId} not found`);
+    if (order.status !== "PAID") throw new ChargebackError("ORDER_NOT_PAID", `Order ${orderId} is ${order.status}; only a PAID order can be charged back`);
+
+    // The charge that paid the order: the first confirmed SUCCEEDED one.
+    const [payment] = await tx
+      .select()
+      .from(payments)
+      .where(and(eq(payments.orderId, orderId), eq(payments.status, "SUCCEEDED")))
+      .orderBy(sql`confirmed_at asc nulls last`)
+      .limit(1);
+    if (!payment) throw new ChargebackError("NO_CHARGE", `Order ${orderId} has no succeeded charge`);
+
+    const [existing] = await tx
+      .select({ status: paymentRefunds.status })
+      .from(paymentRefunds)
+      .where(and(eq(paymentRefunds.paymentId, payment.id), ne(paymentRefunds.status, "REJECTED")))
+      .limit(1);
+    if (existing?.status === "REQUESTED") {
+      throw new ChargebackError("REFUND_OPEN", "A refund for this charge is already with the provider: resolve it with the bank before recording a chargeback");
+    }
+    if (existing) throw new ChargebackError("ALREADY_RETURNED", "This charge has already been refunded");
+
+    const [refund] = await tx
+      .insert(paymentRefunds)
+      .values({
+        paymentId: payment.id,
+        orderId,
+        amountMinor: payment.amountMinor,
+        currency: payment.currency,
+        reason: "CHARGEBACK",
+        requestedBy: adminUserId,
+        providerActionId: input.reference,
+        providerCode: "CHARGEBACK",
+      })
+      .returning();
+    await recordAuditLog(tx, {
+      actorType: "ADMIN",
+      actorId: adminUserId,
+      action: "PAYMENT_CHARGEBACK_RECORDED",
+      targetType: "order",
+      targetId: orderId,
+      metadata: {
+        refundId: refund!.id,
+        paymentId: payment.id,
+        reference: input.reference,
+        disputedOn: input.disputedOn,
+        ...(input.note ? { note: input.note } : {}),
+        amountMinor: payment.amountMinor,
+        currency: payment.currency,
+      },
+    });
+    await applyRefundCompletion(tx, refund!);
+    return { refundId: refund!.id, commissionReversedMinor: order.partnerCommissionMinor };
   });
 }

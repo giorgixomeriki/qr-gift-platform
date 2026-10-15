@@ -57,7 +57,7 @@ returned). A SUCCEEDED charge is never downgraded by a later FAILED notification
 | Amount/currency = order snapshot | `AmountMismatchError` (audited, never applied) | snapshot immutable (0013) |
 | Attribution from the QR, immutable | resolved server-side at checkout | 0013 triggers (QR ↔ batch ↔ partner ↔ order) |
 | Refund keeps history | reversal entry, nothing deleted | `partner_ledger_one_reversal_per_order`; reversal requires REFUNDED |
-| No double refund | provider refund idempotency key `refund-<payment id>`; DB re-check under lock | one reversal per order |
+| No double refund | `payment_refunds`: one open-or-completed refund per charge; provider Idempotency-Key derived from the refund row (`idempotencyKeyFor`); money-side effects only on provider confirmation | `payment_refunds_one_open_per_payment` (0019); one reversal per order |
 | Payouts: exact rows, no overdraw, no overlap | statement must match server-side | advisory lock per partner+currency; exclusion constraint on `[from, to)` |
 
 Duplicate webhook, browser return + webhook race, concurrent identical
@@ -68,7 +68,11 @@ one `PAYMENT_SUCCEEDED` event (`verify:payment-integrity` §5, §8; `verify:phas
 
 `findPaymentAnomalies` (admin) lists: CAPTURED_NOT_APPLIED, DUPLICATE_CAPTURE,
 REFUND_PENDING, PAID_WITHOUT_CHARGE, PAID_NOT_ACTIVATED, COMMISSION_MISSING,
-COMMISSION_NOT_REVERSED, STALE_PENDING (> 30 min), AMOUNT_MISMATCH (30 days).
+COMMISSION_NOT_REVERSED, STALE_PENDING (> 30 min), AMOUNT_MISMATCH (30 days),
+REFUND_AWAITING_PROVIDER (> 1 h), REFUND_REJECTED, EXTERNAL_REFUND (30 days).
+A charge whose refund is already with the provider is never listed as
+REFUND_PENDING / DUPLICATE_CAPTURE: **never return money by hand for an order
+that shows REFUND_AWAITING_PROVIDER** — that would refund twice.
 
 ```
 npm run payments:reconcile -- --admin <admin user id>            # report
@@ -76,9 +80,29 @@ npm run payments:reconcile -- --admin <admin user id> --apply    # re-verify sta
                                                                  # activate paid-not-active, refund duplicates
 ```
 
-Schedule it every 15 minutes once a real provider is live. The direction it
+Scheduled: `vercel.json` calls `/api/cron/payments-reconcile` (the same
+`--apply` rules) once a day at 03:15 UTC, the most Vercel Hobby allows; on Pro
+change the schedule to `*/10 * * * *`. It does nothing until `CRON_SECRET` and
+`RECONCILE_ADMIN_USER_ID` are set (404). Each run that finds anomalies logs
+one `"scope":"paymentReconcile"` warning — alert on it (OBSERVABILITY.md). The direction it
 cannot see without the provider — a charge the provider holds that QR Starr
 never heard of — needs the provider's transaction listing (BLOCKED, below).
+
+## Chargebacks
+
+BOG has no dispute API: a chargeback arrives through the bank (email /
+Business Manager). Admin → Partners → the partner → Sales trace → **Chargeback**
+on the PAID order: enter the bank's case reference and date, then confirm.
+In one transaction the charge and order become REFUNDED and the partner's
+commission for that order (its own snapshot) is reversed once; if that
+commission was already paid out, the reversal is netted into the partner's
+next payout (CLAWBACK). Nothing is sent to BOG and the greeting stays live.
+Refused when the order isn't PAID or a refund for the charge is open or done
+(contest that with the bank instead). **Evidence** on the same row downloads a
+dispute pack (order, charge reference, card brand/last 4, activation times,
+recipient views, refunds) with no greeting content. Policy: BOG plan decisions
+B5/B6 (recommended options, pending owner confirmation). Tests:
+`verify:chargebacks`, `e2e/admin-chargeback.spec.ts`.
 
 ## Test provider (no merchant needed)
 

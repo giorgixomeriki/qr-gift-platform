@@ -57,7 +57,16 @@ Each log line looks like:
 `adminCreateBatchAction`, `partnerCreateBatchAction`,
 `partnerMarkDistributedAction`, `adminMarkDistributedAction`,
 `lookupGreetingAction`, `listModerationOverviewAction`,
-`blockGreetingAction`, `unblockGreetingAction`.
+`blockGreetingAction`, `unblockGreetingAction`, `adminRefundPaidOrderAction`,
+`adminRecordChargebackAction`, `adminDisputeEvidenceAction`,
+`requestChargeRefund`, `refundIneligiblePayment`, `refundCapturedPayment`,
+`providerWebhook`, `paymentReconcile`.
+
+**Payment alerts to configure** (any log drain or the Vercel log search):
+`"scope":"paymentReconcile"` at `warn` (the scheduled reconciliation found
+anomalies — each line lists them) or `error` (the run failed);
+`"scope":"providerWebhook"` (a callback we could not process; BOG will retry);
+`"scope":"requestChargeRefund"` (a refund could not be sent).
 
 The rate-limit store (`src/lib/rate-limit/store.ts`) also logs its own
 `[rate-limit] store check failed for key "..." — failing open` line directly

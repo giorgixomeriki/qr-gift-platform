@@ -152,6 +152,10 @@ pilot scale):
   (`docs/OBSERVABILITY.md`); filter by `scope`. Alert on repeated
   `"scope":"healthCheck"` errors and on 5xx from `/api/webhooks/payments/*`
   once a real provider exists.
+- **Payment reconciliation**: once `CRON_SECRET` and `RECONCILE_ADMIN_USER_ID`
+  are set, Vercel Cron runs `/api/cron/payments-reconcile` (daily on Hobby;
+  every 10 minutes on Pro — edit `vercel.json`). Alert on any
+  `"scope":"paymentReconcile"` warning and on `level: "error"` lines.
 - **Supabase**: Reports and Logs for the production project; also enable its
   email alerts for disk and CPU.
 - **Errors** (optional, recommended before scaling past the pilot): Sentry's free
@@ -177,8 +181,11 @@ pilot scale):
 Against the production URL (and first against a preview on staging):
 golden path (scan → create → theme → message/photo/video/voice → preview →
 checkout fails closed in production), partner login + dashboard, admin login,
-password reset (real email), `/api/health`, security headers, and
-`npm run ops:check-launch-pricing` against the production database (read-only).
+password reset (real email), `/api/health`, security headers, and, against
+the production database with production's variables exported (both read-only):
+`npm run ops:preflight` (every migration applied and none skippable, env
+combinations, admins, private bucket) and `npm run ops:check-launch-pricing`.
+Run `ops:preflight` after every migration on staging and production.
 
 ## 9. Rollback
 
