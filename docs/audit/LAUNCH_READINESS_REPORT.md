@@ -165,3 +165,30 @@ See `UNFINISHED_WORK_REGISTER.md` → "Open business decisions". The ones that b
 | H1 | Commission holding period |
 | CRON | Reconcile frequency (determines Vercel Pro need) |
 | PP-a…e | Partner-pricing policies (PR #5) |
+
+---
+
+## Update 2026-10-16
+
+| Item | Result |
+|---|---|
+| Independent review of #5 | No blockers. Review posted on the PR |
+| Independent review of #6 | **1 finding fixed** (`05d2d66`): a refund already with BOG was still listed for a manual refund, a double-refund risk. Regression checks 15b/16b fail without the fix. Review posted on the PR |
+| Merging #5 / #6 | **Not done.** The merge was blocked by the session's permission policy (no human review yet). It is left to the owner. CI is green on both |
+| Original uncommitted BOG work vs #6 | Every file is identical, or differs only in the `0018`→`0019` references. Every added line is present. The original is kept untouched |
+| Shared local dev DB | Diagnosed read-only: `0018_partner_pricing_controls` will be silently skipped. A non-destructive repair was **rehearsed on a copy** (schema identical to a fresh migrate; suites green). **Not applied**; it awaits approval (`docs/ops/SHARED_DEV_DB_REPAIR.md`, #6) |
+| PAY-8 Chargebacks | **Built** (#9): admin recording, booked as a refund, reversal once, CLAWBACK after payout, evidence pack. `verify:chargebacks` 22/22, E2E 2/2. Implements recommended B5/B6, pending confirmation |
+| PAY-10 Reconcile schedule | **Built** (#9): daily `vercel.json` cron (Hobby limit), inert until env is set |
+| Ops safeguard | **Built** (#9): read-only `ops:preflight`, which catches skipped migrations, unsafe env combinations, missing admins and a public bucket. 13/13 |
+| OPS-6 Legal pages | **Drafts** (ka/en) for owner and lawyer review (#8). Not published |
+| Test totals (branch #9 = main + #5 + #6 + #9, fresh DB) | 25/25 `verify:*` suites pass. Build, tsc and lint pass. E2E: 91 passed, 4 flaked, all passed on rerun |
+
+Readiness scores that changed *(estimates)*:
+
+| Area | Before | Now |
+|---|---|---|
+| Chargebacks and settlement | 15 | 45 (chargebacks built; settlement matching not) |
+| Monitoring | 30 | 40 |
+| Legal | 0 | 15 (drafts only) |
+
+The verdict is unchanged: **NO-GO for paid checkout; CONDITIONAL GO for a soft launch with checkout closed** once #5, #6 and #9 are merged and the infrastructure exists.
