@@ -53,16 +53,23 @@ export async function handleProviderWebhook(providerParam: string, rawBody: stri
   }
 
   try {
-    // A refund callback (asynchronous providers): settle our own refund
-    // requests against the provider's state; a refund we never asked for is
-    // recorded for a person, never applied automatically.
+    // Asynchronous refunds: our own open refund requests are settled against
+    // the provider's state on every callback, not only when it reports a
+    // refund state (a REJECTED refund leaves the charge "completed"; only its
+    // refund action says rejected). A refund we never asked for is recorded
+    // for a person, never applied automatically.
     const refund = webhookResult.refund;
-    if (refund && refund.status !== "NONE") {
+    if (refund) {
       const counts = await reconcileOrderRefunds(webhookResult.orderId);
-      if (counts.completed + counts.rejected + counts.pending === 0) {
-        await recordExternalRefund(webhookResult.orderId, webhookResult.providerPaymentId, refund.refundedAmountMinor);
+      const ours = counts.completed + counts.rejected + counts.pending;
+      if (refund.status !== "NONE") {
+        if (ours === 0) {
+          await recordExternalRefund(webhookResult.orderId, webhookResult.providerPaymentId, refund.refundedAmountMinor);
+        }
+        return { status: 200, body: { received: true } };
       }
-      return { status: 200, body: { received: true } };
+      // No refund on THIS charge: continue below. The open refund may be for
+      // another charge of the same order, and settling this one is idempotent.
     }
 
     // The provider's own reported outcome decides what happens — a FAILED or
