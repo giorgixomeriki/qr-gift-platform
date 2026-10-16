@@ -1,7 +1,14 @@
 import "server-only";
 import { createPublicKey } from "node:crypto";
 import { z } from "zod";
-import { appUrlProblems, bogUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "./env-guards";
+import {
+  appUrlProblems,
+  bogUrlProblems,
+  clientIpConfigProblems,
+  databaseUrlProblems,
+  isHostedEnvironment,
+  supabaseUrlProblems,
+} from "./env-guards";
 
 /**
  * Single validated source of truth for SERVER-SIDE environment variables,
@@ -89,6 +96,18 @@ const envSchema = z.object({
   // reconciliation report and refund bookkeeping run in an admin context).
   CRON_SECRET: z.string().min(32).optional(),
   RECONCILE_ADMIN_USER_ID: z.string().uuid().optional(),
+
+  // Where the trusted proxy puts the caller's IP (lib/rate-limit/client-ip.ts).
+  // Format-checked, and required outside Vercel, by clientIpConfigProblems
+  // (blank counts as unset).
+  CLIENT_IP_HEADER: z.string().optional(),
+  TRUSTED_PROXY_COUNT: z.string().optional(),
+  // "true" exposes /api/ops/client-ip for verifying the two settings above on
+  // a new host. Turn it off again once verified.
+  CLIENT_IP_DIAGNOSTICS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -102,14 +121,21 @@ function loadEnv(): Env {
 
   const data = parsed.data;
 
-  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means running on
-  // Vercel (build or runtime, preview or production) — never a dev machine.
+  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means a real
+  // deployment on Vercel, Render or an APP_HOSTED=true platform (build or
+  // runtime), never a dev machine.
   const production = data.NODE_ENV === "production";
-  const hosted = process.env.VERCEL === "1";
+  const hosted = isHostedEnvironment(process.env);
   const problems = [
     ...appUrlProblems(process.env.NEXT_PUBLIC_APP_URL, { production, hosted }),
     ...databaseUrlProblems(data.DATABASE_URL, { production, hosted }),
     ...supabaseUrlProblems(data.NEXT_PUBLIC_SUPABASE_URL, { hosted }),
+    ...clientIpConfigProblems({
+      hosted,
+      vercel: process.env.VERCEL === "1",
+      header: process.env.CLIENT_IP_HEADER || undefined,
+      proxyCount: process.env.TRUSTED_PROXY_COUNT || undefined,
+    }),
   ];
   if (production && data.EDIT_TOKEN_SECRET.length < 32) {
     problems.push("EDIT_TOKEN_SECRET must be at least 32 characters in production (openssl rand -hex 32)");

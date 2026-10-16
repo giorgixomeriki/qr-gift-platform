@@ -2,6 +2,7 @@ import postgres from "postgres";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { createClient } from "@supabase/supabase-js";
 import { contentTypes, themes, products, prices } from "./schema";
+import { MAX_MEDIA_BYTES } from "../lib/validation/content-types";
 
 async function ensureStorageBucket() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,16 +14,27 @@ async function ensureStorageBucket() {
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+  const settings = {
+    public: false, // private: all reads/writes go through signed URLs we issue server-side
+    // The app's own largest per-type limit (lib/validation/content-types.ts),
+    // within Supabase Free's 50 MB per-file cap.
+    fileSizeLimit: MAX_MEDIA_BYTES,
+  };
   const { data: existing } = await supabase.storage.getBucket(bucketName);
   if (existing) {
-    console.log(`Storage bucket "${bucketName}" already exists.`);
+    if (existing.public || existing.file_size_limit !== MAX_MEDIA_BYTES) {
+      // Re-aligns a bucket created by an older seed (100MB). Also forces it
+      // private: a public bucket would bypass the signed-URL model.
+      const { error } = await supabase.storage.updateBucket(bucketName, settings);
+      if (error) throw error;
+      console.log(`Storage bucket "${bucketName}" aligned: private, ${MAX_MEDIA_BYTES} bytes per file.`);
+    } else {
+      console.log(`Storage bucket "${bucketName}" already exists.`);
+    }
     return;
   }
 
-  const { error } = await supabase.storage.createBucket(bucketName, {
-    public: false, // private: all reads/writes go through signed URLs we issue server-side
-    fileSizeLimit: "100MB",
-  });
+  const { error } = await supabase.storage.createBucket(bucketName, settings);
   if (error) throw error;
   console.log(`Created private storage bucket "${bucketName}".`);
 }

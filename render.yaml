@@ -1,0 +1,61 @@
+# Render Blueprint: QR Starr owner review at https://qrapp.ge, checkout disabled.
+# Procedure, env checklist and IP verification: docs/RENDER_DEPLOYMENT.md.
+#
+# Values marked `sync: false` are entered in the Render dashboard when the
+# Blueprint is first applied; they never live in this file. `generateValue`
+# makes Render create a random secret (visible to the owner in the dashboard).
+services:
+  - type: web
+    name: qr-starr
+    runtime: node
+    plan: starter # 512 MB, always on. "free" also works but sleeps after 15 min idle (~1 min cold start).
+    region: frankfurt # next to Supabase eu-central-1
+    branch: feat/render-low-cost-hosting
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start # next start listens on $PORT, which Render sets
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://qrapp.ge
+
+      # Supabase (project settings → API / Database). DATABASE_URL is the
+      # rotated app_runtime transaction-pooler URL, never the postgres user.
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: greeting-media
+
+      - key: EDIT_TOKEN_SECRET
+        generateValue: true
+
+      # Checkout disabled: TEST is refused in production, so checkout is closed
+      # ("Payments open soon") and no BOG variable exists to call a bank.
+      - key: PAYMENTS_PROVIDER
+        value: TEST
+      - key: ALLOW_TEST_PAYMENTS
+        value: "false"
+      - key: CHECKOUT_ENABLED
+        value: "false"
+
+      # Render may append to a client-supplied X-Forwarded-For. 1 = trust only
+      # the entry Render's proxy added; verify with /api/ops/client-ip, then
+      # set CLIENT_IP_DIAGNOSTICS back to false.
+      - key: TRUSTED_PROXY_COUNT
+        value: "1"
+      - key: CLIENT_IP_DIAGNOSTICS
+        value: "true"
+
+      # Owner-review gate: site-wide Basic auth. Remove the password to open
+      # the site (public launch is a separate, approved step).
+      - key: OWNER_REVIEW_GATE_USER
+        value: owner
+      - key: OWNER_REVIEW_GATE_PASSWORD
+        generateValue: true

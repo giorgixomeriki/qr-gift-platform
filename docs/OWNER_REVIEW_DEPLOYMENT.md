@@ -7,9 +7,13 @@ is replaced (or upgraded in place) before any real customer traffic.
 
 | Piece | Choice | Cost |
 |---|---|---|
-| App | Vercel project `qr-starr` (Hobby), region fra1, deployed from `release/owner-review` | free |
+| App | Render web service `qr-starr` (Starter), Frankfurt, from `render.yaml` | about $7/month |
 | Database / Auth / Storage | Supabase project `qr-starr-review` in its own org `QR Starr` (Free), eu-central-1 | free |
-| Domain | `qrapp.ge` primary, `www.qrapp.ge` → 308 to apex | already owned |
+| Domain | `qrapp.ge` primary, `www.qrapp.ge` → redirect to apex | already owned |
+
+Step-by-step setup, the env checklist and DNS records are in
+`docs/RENDER_DEPLOYMENT.md`. Vercel works too: the same variables minus
+`TRUSTED_PROXY_COUNT` (Vercel overwrites X-Forwarded-For).
 
 ## Safety settings
 
@@ -30,10 +34,9 @@ is replaced (or upgraded in place) before any real customer traffic.
 ## Free-tier limits to know
 
 - Supabase Free pauses after 7 days without activity; resume it from the
-  dashboard. It has no backups. Its file cap is 50 MB, while the app allows
-  100 MB video, so uploads over 50 MB fail on review.
-- Vercel Hobby is for non-commercial use, which covers review. Move to Pro (and
-  Supabase Pro) before opening to customers.
+  dashboard. It has no backups. Its 50 MB per-file cap matches the app's video
+  limit and the bucket limit (`MAX_MEDIA_BYTES`).
+- Move to Supabase Pro (backups) before opening to customers.
 
 ## Going public later
 

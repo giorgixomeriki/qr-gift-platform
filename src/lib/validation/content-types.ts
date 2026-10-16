@@ -22,11 +22,17 @@ const MIME_ALLOWLIST: Record<Exclude<SupportedContentType, "text">, readonly str
   audio: ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg"],
 };
 
+// Video is capped at 50 MB because that is the largest single file Supabase
+// Free stores (its global per-file limit; Pro allows more). The storage bucket
+// is created with MAX_MEDIA_BYTES (db/seed.ts) so app and bucket always agree.
 const SIZE_LIMIT_BYTES: Record<Exclude<SupportedContentType, "text">, number> = {
   photo: 15 * 1024 * 1024,
-  video: 100 * 1024 * 1024,
+  video: 50 * 1024 * 1024,
   audio: 20 * 1024 * 1024,
 };
+
+/** The largest file any content type accepts: the storage bucket's per-file limit. */
+export const MAX_MEDIA_BYTES = Math.max(...Object.values(SIZE_LIMIT_BYTES));
 
 export function allowedMimeTypesFor(type: Exclude<SupportedContentType, "text">): readonly string[] {
   return MIME_ALLOWLIST[type];
