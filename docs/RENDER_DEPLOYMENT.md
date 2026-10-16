@@ -73,7 +73,12 @@ sets it).
    **Central EU (Frankfurt)**. Click **Generate a password**, save it in your
    password manager, then create the project.
 3. **Authentication → Sign In / Providers**: turn **off** "Allow new users to
-   sign up". Then go to **Authentication → URL Configuration**:
+   sign up", and keep the **Email provider enabled** (it is what demo and partner
+   logins use). If you set this via `supabase config push`, note the trap:
+   `[auth] enable_signup = false` blocks sign-ups, but
+   `[auth.email] enable_signup = false` disables the email provider and every
+   email/password login (`email_provider_disabled`). Also, `config push` applies
+   immediately, without asking, and pushes defaults for unlisted keys. Then go to **Authentication → URL Configuration**:
    - Site URL: `https://qrapp.ge`
    - Redirect URLs: add `https://qrapp.ge/**` and `https://qr-starr.onrender.com/**`
 4. **Project Settings → API**: copy the Project URL, the anon key and the
@@ -144,6 +149,17 @@ sets it).
    `https://qrapp.ge/`).
 
 ## 4. Confirm the client-IP setting (once, about 2 minutes)
+
+**Measured on Render (Frankfurt, 2026-10-16):**
+- `X-Forwarded-For` arrives as `client, Cloudflare edge, Render internal`.
+  A client-supplied value is **kept** in front, so the first entry can be forged.
+- `CF-Connecting-IP` holds the real client IP. Cloudflare rejects any
+  request that tries to supply it (error 1000).
+- `True-Client-IP` is overwritten by Cloudflare.
+
+The resulting setting is `CLIENT_IP_HEADER=cf-connecting-ip` with
+`TRUSTED_PROXY_COUNT=3` as the fallback (`render.yaml`). Re-check with the
+steps below after any change of host or region.
 
 With `CLIENT_IP_DIAGNOSTICS=true`, run:
 

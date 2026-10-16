@@ -8,7 +8,7 @@ services:
   - type: web
     name: qr-starr
     runtime: node
-    plan: starter # 512 MB, always on. "free" also works but sleeps after 15 min idle (~1 min cold start).
+    plan: free # $0; sleeps after 15 min idle (~1 min cold start). "starter" (~$7/mo) stays on.
     region: frankfurt # next to Supabase eu-central-1
     branch: feat/render-low-cost-hosting
     buildCommand: npm ci && npm run build
@@ -45,13 +45,17 @@ services:
       - key: CHECKOUT_ENABLED
         value: "false"
 
-      # Render may append to a client-supplied X-Forwarded-For. 1 = trust only
-      # the entry Render's proxy added; verify with /api/ops/client-ip, then
-      # set CLIENT_IP_DIAGNOSTICS back to false.
+      # Verified on Render 2026-10-16 (docs/RENDER_DEPLOYMENT.md §4): Render
+      # APPENDS to a client-supplied X-Forwarded-For ("client, Cloudflare edge,
+      # Render internal"). Cloudflare sets CF-Connecting-IP and rejects
+      # requests that try to supply it (error 1000), so it is the trusted
+      # source; 3 hops is the fallback. Diagnostics stay off once verified.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
       - key: TRUSTED_PROXY_COUNT
-        value: "1"
+        value: "3"
       - key: CLIENT_IP_DIAGNOSTICS
-        value: "true"
+        value: "false"
 
       # Owner-review gate: site-wide Basic auth. Remove the password to open
       # the site (public launch is a separate, approved step).
