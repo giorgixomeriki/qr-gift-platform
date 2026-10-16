@@ -41,6 +41,7 @@
     "verify:chargebacks": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-chargebacks.ts",
     "ops:preflight": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/ops-preflight.ts",
     "ops:check-launch-pricing": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/check-launch-pricing.ts",
+    "verify:low-cost-hosting": "node ./node_modules/.bin/tsx scripts/verify-low-cost-hosting.ts",
     "verify:env-guards": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-env-guards.ts",
     "payments:reconcile": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/payments-reconcile.ts",
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test"
