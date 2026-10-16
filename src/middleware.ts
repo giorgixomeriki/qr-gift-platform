@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { publicEnv } from "@/lib/env.public";
 import { buildContentSecurityPolicy, createNonce } from "@/lib/security/csp";
+import { ownerGateAllows, ownerGateChallenge } from "@/lib/security/owner-gate";
 
 /**
  * Two jobs:
@@ -16,8 +17,23 @@ import { buildContentSecurityPolicy, createNonce } from "@/lib/security/csp";
  * 2. Standard @supabase/ssr session refresh, only on partner/admin routes —
  *    the sender/recipient surfaces have no Supabase session, so /g/* never
  *    pays for an auth round-trip.
+ *
+ * Plus, before either: the optional owner-review gate (lib/security/owner-gate.ts).
+ * When OWNER_REVIEW_GATE_PASSWORD is set, every request except the static
+ * bundle, /api/health and /api/cron/* needs HTTP Basic credentials.
  */
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (!ownerGateAllows(request)) return ownerGateChallenge();
+
+  // The matcher is broad so the gate also covers API routes, media and
+  // prefetches; CSP and the session refresh keep their original scope.
+  const isPrefetch =
+    request.headers.has("next-router-prefetch") || request.headers.get("purpose") === "prefetch";
+  const isDashboard = pathname.startsWith("/partner") || pathname.startsWith("/admin");
+  const isPage = !/^\/(api|_next\/image|fonts\/|customer\/)/.test(pathname);
+  if (!isDashboard && (!isPage || isPrefetch)) return NextResponse.next();
+
   const csp =
     process.env.NODE_ENV === "production" ? buildContentSecurityPolicy(createNonce(), publicEnv.NEXT_PUBLIC_SUPABASE_URL) : null;
 
@@ -31,8 +47,7 @@ export async function middleware(request: NextRequest) {
 
   let response = forward();
 
-  const { pathname } = request.nextUrl;
-  if (pathname.startsWith("/partner") || pathname.startsWith("/admin")) {
+  if (isDashboard) {
     const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
       cookies: {
         getAll() {
@@ -57,20 +72,9 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    {
-      // Every page. Skips static files and API routes (JSON/CSV/SVG
-      // responses execute no scripts), and prefetches (they reuse the
-      // nonce-bearing document that triggered them).
-      source: "/((?!api|_next/static|_next/image|fonts/|customer/|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-    // Partner/admin keep the session refresh on every request, prefetches
-    // included — exactly as before the CSP moved here.
-    "/partner/:path*",
-    "/admin/:path*",
-  ],
+  // Everything but the static bundle and the favicon: the owner-review gate
+  // must cover API routes, media and prefetches too. The branches at the top
+  // of middleware() give CSP and the session refresh their original scope
+  // (pages, not API/static/media/prefetches; partner/admin always).
+  matcher: ["/((?!_next/static|favicon.ico).*)"],
 };
