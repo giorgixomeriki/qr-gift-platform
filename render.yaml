@@ -26,6 +26,15 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SUPABASE_URL
         sync: false
+      # API keys: the new publishable/secret pair (Settings → API Keys). The
+      # publishable key is inlined into the browser bundle at BUILD time, so a
+      # change needs a redeploy. The legacy anon/service_role JWT keys are a
+      # temporary fallback during the key migration — removed in its Stage 4
+      # (docs/security/SUPABASE_API_KEY_MIGRATION.md).
+      - key: NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
       - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY

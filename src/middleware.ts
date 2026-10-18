@@ -48,7 +48,7 @@ export async function middleware(request: NextRequest) {
   let response = forward();
 
   if (isDashboard) {
-    const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.SUPABASE_PUBLISHABLE_KEY, {
       cookies: {
         getAll() {
           return request.cookies.getAll();
