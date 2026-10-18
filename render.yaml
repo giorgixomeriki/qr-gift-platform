@@ -57,9 +57,3 @@ services:
       - key: CLIENT_IP_DIAGNOSTICS
         value: "false"
 
-      # Owner-review gate: site-wide Basic auth. Remove the password to open
-      # the site (public launch is a separate, approved step).
-      - key: OWNER_REVIEW_GATE_USER
-        value: owner
-      - key: OWNER_REVIEW_GATE_PASSWORD
-        generateValue: true

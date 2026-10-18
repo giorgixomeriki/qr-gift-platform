@@ -5,8 +5,7 @@ import { clientIpDiagnostics } from "@/lib/rate-limit/client-ip";
  * Verifies CLIENT_IP_HEADER / TRUSTED_PROXY_COUNT on a new host
  * (docs/RENDER_DEPLOYMENT.md): echoes the caller's OWN forwarding headers and
  * the IP the rate limiter would key on. Exists only while
- * CLIENT_IP_DIAGNOSTICS=true, and sits behind the owner-review gate when that
- * is on. Never cached.
+ * CLIENT_IP_DIAGNOSTICS=true. Never cached.
  */
 export const dynamic = "force-dynamic";
 

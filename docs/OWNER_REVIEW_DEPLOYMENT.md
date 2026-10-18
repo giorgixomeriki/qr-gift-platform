@@ -20,10 +20,10 @@ Step-by-step setup, the env checklist and DNS records are in
 - `PAYMENTS_PROVIDER=TEST` with `ALLOW_TEST_PAYMENTS` unset. Production refuses
   TEST, so checkout is closed and senders see "Payments open soon". No `BOG_*`
   variables exist on the project, so no bank call is possible.
-- `OWNER_REVIEW_GATE_USER` / `OWNER_REVIEW_GATE_PASSWORD`: a site-wide HTTP
-  Basic gate (`src/lib/security/owner-gate.ts`). Only `/api/health` (it returns
-  ok or unavailable) and `/api/cron/*` (bearer-protected, and absent without
-  `CRON_SECRET`) stay open. Every 401 carries `X-Robots-Tag: noindex`.
+- The site-wide HTTP Basic gate (`OWNER_REVIEW_GATE_USER` /
+  `OWNER_REVIEW_GATE_PASSWORD`) has been **removed** from the code. See
+  `docs/security/SEC-02_PUBLIC_ACCESS.md` for what replaced it and the launch
+  preconditions.
 - Supabase Auth: sign-ups **off**. There is no public registration page in the
   app; partners are invited by an admin.
 - Demo logins come from `scripts/ops/seed-owner-review.ts` and use random
@@ -40,6 +40,7 @@ Step-by-step setup, the env checklist and DNS records are in
 
 ## Going public later
 
-1. Remove `OWNER_REVIEW_GATE_PASSWORD` and redeploy.
+1. Complete `docs/security/SEC-02_PUBLIC_ACCESS.md` (preconditions, then
+   deploy this change and delete the gate variables).
 2. Follow `docs/PRODUCTION_DEPLOYMENT.md` (Pro plans, SMTP, backups).
 3. Delete the demo users and the demo partner.

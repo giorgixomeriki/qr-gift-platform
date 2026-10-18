@@ -30,7 +30,7 @@ table must stay consistent with.
 | `TRUSTED_PROXY_COUNT` / `CLIENT_IP_HEADER` | Where the trusted proxy puts the caller's IP for rate limiting (`lib/rate-limit/client-ip.ts`): the N-th `X-Forwarded-For` entry from the right, or a single-IP header. **Required on any hosted platform other than Vercel** (startup refuses otherwise), because e.g. Render appends to a client-supplied header. | No | Outside Vercel | Unset (first entry) | Unset on Vercel; `1` on Render (verify: docs/RENDER_DEPLOYMENT.md §4) | Same |
 | `CLIENT_IP_DIAGNOSTICS` | `true` exposes `/api/ops/client-ip` (echoes the caller's own forwarding headers) to verify the setting above on a new host. | No | No (defaults to `false`) | Unset | `true` only while verifying | `false` |
 | `RENDER` / `APP_HOSTED` | Hosted detection (`isHostedEnvironment`): `VERCEL=1` and `RENDER=true` are set by those platforms; any other host sets `APP_HOSTED=true` so the hosted guards (https, no local DB/Supabase, IP config) apply. | No | Set by the platform | Unset | Set by the platform | Set by the platform |
-| `OWNER_REVIEW_GATE_USER` / `OWNER_REVIEW_GATE_PASSWORD` | Site-wide HTTP Basic gate for a review deployment (`lib/security/owner-gate.ts`); off while the password is unset. `/api/health` and `/api/cron/*` stay open. | Password: **Yes** | No | Unset | Optional | Owner review only; unset at public launch |
+| `OWNER_REVIEW_GATE_USER` / `OWNER_REVIEW_GATE_PASSWORD` | **Removed** (docs/security/SEC-02_PUBLIC_ACCESS.md). The code no longer reads them; delete both from the host at public launch. | | | | | |
 
 ## Notes
 
