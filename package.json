@@ -34,6 +34,8 @@
     "verify:templates": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-templates.ts",
     "verify:payment-integrity": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payment-integrity.ts",
     "verify:media-replacement": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-media-replacement.ts",
+    "verify:site-content": "node ./node_modules/.bin/tsx scripts/verify-site-content.ts",
+    "ops:check-merchant-info": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/check-merchant-info.ts",
     "ops:check-launch-pricing": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/check-launch-pricing.ts",
     "verify:env-guards": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-env-guards.ts",
     "payments:reconcile": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/payments-reconcile.ts",
