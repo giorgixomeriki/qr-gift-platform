@@ -26,6 +26,10 @@ export default getRequestConfig(async () => {
     if (isLocale(preferred)) locale = preferred;
   }
 
-  const messages = (await import(`../../messages/${locale}.json`)).default;
-  return { locale, messages };
+  // messages/site/<locale>.json holds the public information pages' copy
+  // (site, about, service, pricing, contact, refunds, privacy, terms): long
+  // form, so kept apart from the app's UI strings. Namespaces never overlap
+  // (scripts/verify-site-content.ts).
+  const [app, site] = await Promise.all([import(`../../messages/${locale}.json`), import(`../../messages/site/${locale}.json`)]);
+  return { locale, messages: { ...app.default, ...site.default } };
 });
