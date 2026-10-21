@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { Locale } from "@/lib/i18n/config";
+import { DEMO_MERCHANT_ENV } from "./demo";
 
 /**
  * The merchant's own identity and contact details, shown on the public
@@ -86,6 +87,13 @@ export type MerchantInfo = {
   /** Fields that were set but rejected, with the reason. Their value is null. */
   invalid: { field: MerchantField; env: string; reason: string }[];
   complete: boolean;
+  /**
+   * "demo" when the fictional preview profile is in use (MERCHANT_PROFILE=demo):
+   * every value then carries a visible DEMO notice. "configured" otherwise.
+   */
+  mode: "configured" | "demo";
+  /** Why a requested profile was not applied (e.g. demo on production); logged by the server loader. */
+  profileRefused?: string;
 };
 
 export function parseMerchantInfo(env: Record<string, string | undefined>): MerchantInfo {
@@ -109,7 +117,43 @@ export function parseMerchantInfo(env: Record<string, string | undefined>): Merc
   }
 
   const missing = MERCHANT_FIELD_NAMES.filter((f) => MERCHANT_FIELDS[f].required && values[f] === null);
-  return { values, missing, invalid, complete: missing.length === 0 };
+  return { values, missing, invalid, complete: missing.length === 0, mode: "configured" };
+}
+
+/** Production hosts the demo profile is never allowed on. */
+const PRODUCTION_HOSTS = new Set(["qrapp.ge", "www.qrapp.ge"]);
+
+/**
+ * Is this the production deployment? Either the hosting platform says so
+ * (Vercel's VERCEL_ENV=production) or the app's public origin is the
+ * production domain. NODE_ENV alone can't tell: preview deployments run with
+ * NODE_ENV=production too.
+ */
+export function isProductionDeployment(env: Record<string, string | undefined>): boolean {
+  if (env.VERCEL_ENV === "production") return true;
+  try {
+    return PRODUCTION_HOSTS.has(new URL(env.NEXT_PUBLIC_APP_URL ?? "").hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The merchant details a deployment shows. Normally the MERCHANT_* variables
+ * (parseMerchantInfo). With MERCHANT_PROFILE=demo, the fictional preview
+ * profile (./demo.ts) replaces them entirely, so demo and real values never
+ * mix, and every value is shown with a DEMO notice. The demo profile is
+ * refused on production: there, MERCHANT_PROFILE is ignored and the real
+ * variables, with their missing-information safeguards, apply as usual.
+ */
+export function loadMerchantInfo(env: Record<string, string | undefined>): MerchantInfo {
+  const profile = env.MERCHANT_PROFILE?.trim();
+  if (!profile) return parseMerchantInfo(env);
+  if (profile !== "demo") return { ...parseMerchantInfo(env), profileRefused: `Unknown MERCHANT_PROFILE "${profile}" ignored (only "demo" exists)` };
+  if (isProductionDeployment(env)) {
+    return { ...parseMerchantInfo(env), profileRefused: "MERCHANT_PROFILE=demo is not allowed on the production deployment; using the real MERCHANT_* variables" };
+  }
+  return { ...parseMerchantInfo(DEMO_MERCHANT_ENV), mode: "demo" };
 }
 
 /** Fields that exist once per language; the rest are language-neutral. */

@@ -25,6 +25,61 @@ Project → Settings → Environment Variables), per environment.
 | `MERCHANT_PRIVACY_EMAIL` | no | Email address | Privacy contact; falls back to the support email |
 | `LEGAL_EFFECTIVE_DATE` | no | `YYYY-MM-DD` | "In effect from …" on the three policies. **Set only after legal approval.** |
 
+## Previewing with fictional demo data
+
+Before the real details exist, a preview or staging deployment can show the
+pages complete with **fictional** details:
+
+```sh
+MERCHANT_PROFILE=demo
+```
+
+- The values are fixed in `src/lib/merchant/demo.ts` ("შპს ქიუარ სტარ დემო" /
+  "QR Starr Demo LLC", ID 000000000, `demo@example.com`, `+995 555 00 00 00`, …).
+  None of them identifies a real business.
+- With the profile on, the real `MERCHANT_*` variables are **ignored**, so
+  demo and real values never mix. The environment's real variables aren't
+  read, changed or overwritten.
+- Every page shows a "DEMO / სატესტო მონაცემები" notice at the top, in the
+  footer and on the contact card, and every individual fictional value
+  carries a DEMO tag.
+- The demo profile sets **no effective date**, and the review and decision
+  markers stay, so the policies remain drafts.
+- **It is refused on production.** If `VERCEL_ENV=production`, or
+  `NEXT_PUBLIC_APP_URL` is `https://qrapp.ge` / `https://www.qrapp.ge`, the
+  profile is ignored, an error is logged, and the real variables, with their
+  missing-information markers, apply as usual. A stray `MERCHANT_PROFILE`
+  can't put fictional data on the live site.
+- `npm run ops:check-merchant-info` reports the demo profile and exits 1:
+  demo data never counts as merchant information.
+
+Local preview: `npm run dev:demo`, then open http://localhost:3000/about.
+
+On a hosted preview (for example Vercel): add `MERCHANT_PROFILE=demo` to the
+**Preview** environment only, never to **Production**, and redeploy the
+preview.
+
+## Replacing the demo data with the real information
+
+1. Collect the real details in the checklist below. Copy them exactly as they
+   appear in the registry extract.
+2. In the hosting provider's environment settings, set every **required**
+   `MERCHANT_*` variable (table above) for each environment that should show
+   real data. Staging and production are set separately.
+3. In those environments, **remove** `MERCHANT_PROFILE` (or leave it unset).
+   Production ignores it anyway, but it should not linger.
+4. Redeploy, or restart the app, so the new environment is read.
+5. Run `npm run ops:check-merchant-info` with that environment's variables.
+   It must exit 0 with "All required merchant details are set" and no DEMO line.
+6. Open `/contact` and the footer in both languages. No DEMO notice, no
+   "Not yet published" marker; the email and phone links work.
+7. Only after legal approval: remove the review and decision markers from
+   `src/messages/site/*.json` (in a reviewed PR), then set
+   `LEGAL_EFFECTIVE_DATE`. The draft banners disappear only when both are done.
+
+`src/lib/merchant/demo.ts` can stay in the code base. It only ever applies
+where `MERCHANT_PROFILE=demo` is set outside production.
+
 ## What happens when something is missing
 
 - Nothing is invented. A required value that is unset, or set but invalid

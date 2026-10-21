@@ -4,6 +4,7 @@ import { Logo } from "@/components/ui/logo";
 import { SITE_GROUPS, SITE_PAGES } from "@/lib/site/routes";
 import { getSiteContext } from "./context";
 import { MerchantDetails } from "./merchant-details";
+import { DemoNotice } from "./demo";
 
 /**
  * The site-wide footer for the public pages: links to every information page
@@ -43,6 +44,11 @@ export async function SiteFooter() {
         <div className="mx-auto grid w-full max-w-6xl gap-6 px-page py-8 text-body-sm text-ink-2 md:grid-cols-[1fr_auto] md:items-end">
           <section aria-label={t("footer.merchantHeading")}>
             <p className="text-eyebrow text-ink-3">{t("footer.merchantHeading")}</p>
+            {ctx.merchant.mode === "demo" && (
+              <div className="mt-3 max-w-2xl">
+                <DemoNotice notice={ctx.labels.demo.notice} body={ctx.labels.demo.body} compact />
+              </div>
+            )}
             <div className="mt-3">
               {ctx.merchant.complete ? (
                 <MerchantDetails ctx={ctx} compact />

@@ -4,6 +4,7 @@ import { formatMinorAmount } from "@/lib/format/money";
 import { resolveMerchantToken } from "@/lib/merchant/info";
 import { parseInline, type InlineNode } from "@/lib/site/inline";
 import { Pending } from "./pending";
+import { DemoTag } from "./demo";
 import type { SiteContext } from "./context";
 
 const linkClass = "font-medium text-ink underline decoration-ember/50 decoration-1 underline-offset-[3px] transition-colors hover:decoration-ember";
@@ -41,22 +42,35 @@ function renderNode(node: InlineNode, ctx: SiteContext, key: number): ReactNode 
     case "merchant": {
       const { field, value } = resolveMerchantToken(ctx.merchant, node.name, ctx.locale);
       if (value === null) return <Pending key={key} name={field} label={ctx.labels.pending} hint={ctx.labels.pendingHint} />;
-      if (node.name === "entityType") return ctx.labels.entityTypes[value] ?? value;
-      if (node.name === "supportEmail" || node.name === "privacyEmail")
-        return (
-          <a key={key} href={`mailto:${value}`} className={linkClass}>
-            {value}
-          </a>
-        );
-      if (node.name === "phone")
-        return (
-          <a key={key} href={`tel:${value.replace(/[\s-]/g, "")}`} className={`${linkClass} whitespace-nowrap`}>
-            {value}
-          </a>
-        );
-      return value;
+      const shown = renderMerchantValue(node.name, value, ctx, key);
+      // Fictional preview data is tagged at every occurrence, not just once per page.
+      return ctx.merchant.mode === "demo" ? (
+        <span key={key} data-merchant={field} className="whitespace-normal">
+          {shown}
+          <DemoTag label={ctx.labels.demo.tag} title={ctx.labels.demo.notice} />
+        </span>
+      ) : (
+        shown
+      );
     }
   }
+}
+
+function renderMerchantValue(token: string, value: string, ctx: SiteContext, key: number): ReactNode {
+  if (token === "entityType") return ctx.labels.entityTypes[value] ?? value;
+  if (token === "supportEmail" || token === "privacyEmail")
+    return (
+      <a key={key} href={`mailto:${value}`} className={linkClass}>
+        {value}
+      </a>
+    );
+  if (token === "phone")
+    return (
+      <a key={key} href={`tel:${value.replace(/[\s-]/g, "")}`} className={`${linkClass} whitespace-nowrap`}>
+        {value}
+      </a>
+    );
+  return value;
 }
 
 function renderNodes(nodes: InlineNode[], ctx: SiteContext): ReactNode[] {

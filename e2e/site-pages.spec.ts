@@ -10,7 +10,8 @@ import { DEFAULT_PRODUCT_KEY } from "../src/lib/greetings/constants";
 /**
  * The public information pages: both languages, the footer, the mobile menu,
  * the pricing page against the pricing data, and the "not yet published"
- * state when no merchant details are configured (the e2e server has none).
+ * state when no merchant details are configured (the default e2e server has
+ * none). Run with MERCHANT_PROFILE=demo to test the fictional demo profile.
  * Static checks of the copy itself: scripts/verify-site-content.ts.
  */
 type Locale = "ka" | "en";
@@ -32,7 +33,9 @@ async function expectNoRawPlaceholders(page: Page) {
   expect(text).not.toMatch(/\{\{|\}\}|\[\[|\]\]|undefined|NaN/);
 }
 
-const merchantConfigured = !!process.env.MERCHANT_SUPPORT_EMAIL;
+/** The server under test inherits this process's environment (playwright.config.ts webServer). */
+const demoMode = process.env.MERCHANT_PROFILE === "demo";
+const merchantConfigured = !!process.env.MERCHANT_SUPPORT_EMAIL || demoMode;
 
 for (const locale of ["ka", "en"] as const) {
   test.describe(`information pages (${locale})`, () => {
@@ -224,4 +227,76 @@ test.describe("missing merchant information", () => {
       expect(await page.locator('[data-marker="review"], [data-marker="decision"]').count()).toBeGreaterThan(0);
     }
   });
+});
+
+test.describe("demo merchant profile (MERCHANT_PROFILE=demo)", () => {
+  test.skip(!demoMode, "run the suite with MERCHANT_PROFILE=demo to cover the demo profile");
+  const DEMO = {
+    name: { ka: "შპს ქიუარ სტარ დემო", en: "QR Starr Demo LLC" },
+    address: { ka: "საქართველო, თბილისი, დემო ქუჩა №1", en: "1 Demo Street, Tbilisi, Georgia" },
+    hours: { ka: "ორშაბათი–პარასკევი, 10:00–18:00", en: "Monday–Friday, 10:00–18:00" },
+    email: "demo@example.com",
+    privacyEmail: "privacy@example.com",
+    phone: "+995 555 00 00 00",
+    idCode: "000000000",
+  };
+  const NOTICE = "DEMO / სატესტო მონაცემები";
+
+  for (const locale of ["ka", "en"] as const) {
+    test.describe(locale, () => {
+      test.beforeEach(async ({ context }) => useLocale(context, locale));
+
+      test("every information page carries the demo notice, and every fictional value is tagged", async ({ page }) => {
+        for (const p of SITE_PAGES) {
+          await page.goto(p.href);
+          await expect(page.getByTestId("demo-ribbon")).toContainText(NOTICE);
+          await expect(page.getByTestId("site-footer").getByTestId("demo-notice")).toContainText(NOTICE);
+          const values = page.locator("[data-merchant]");
+          const tagged = page.locator("[data-merchant]:has([data-demo])");
+          expect(await values.count(), `${p.href}: fictional values shown`).toBeGreaterThan(0);
+          expect(await tagged.count(), `${p.href}: every fictional value carries a DEMO tag`).toBe(await values.count());
+          await expect(page.locator('[data-pending]:not([data-pending="price"])')).toHaveCount(0);
+          await expectNoRawPlaceholders(page);
+        }
+      });
+
+      test("the footer shows the demo company details with working email and phone links", async ({ page }) => {
+        await page.goto("/");
+        const footer = page.getByTestId("site-footer");
+        await expect(footer.getByTestId("demo-notice")).toContainText(NOTICE);
+        const details = footer.getByTestId("merchant-details");
+        await expect(details).toContainText(DEMO.name[locale]);
+        await expect(details).toContainText(DEMO.idCode);
+        await expect(details).toContainText(DEMO.address[locale]);
+        await expect(details).toContainText(DEMO.hours[locale]);
+        await expect(details.locator(`a[href="mailto:${DEMO.email}"]`)).toHaveText(DEMO.email);
+        await expect(details.locator('a[href="tel:+995555000000"]')).toHaveText(DEMO.phone);
+      });
+
+      test("the contact page lists every demo detail, tagged, with clickable contacts", async ({ page }) => {
+        await page.goto("/contact");
+        const card = page.locator("main").getByTestId("merchant-details");
+        await expect(page.locator("main").getByTestId("demo-notice")).toContainText(NOTICE);
+        for (const text of [DEMO.name[locale], DEMO.idCode, DEMO.address[locale], DEMO.hours[locale], DEMO.email, DEMO.phone]) await expect(card).toContainText(text);
+        await expect(card).toContainText(locale === "ka" ? "შეზღუდული პასუხისმგებლობის საზოგადოება (შპს)" : "Limited Liability Company (LLC)");
+        expect(await card.locator("[data-demo]").count()).toBeGreaterThanOrEqual(7);
+        await expect(page.locator(`section#support a[href="mailto:${DEMO.email}"]`)).toBeVisible();
+        await expect(page.locator('section#support a[href="tel:+995555000000"]')).toBeVisible();
+        await expect(page.locator(`section#privacy-requests a[href="mailto:${DEMO.privacyEmail}"]`)).toHaveText(DEMO.privacyEmail);
+      });
+
+      test("demo data never puts the policies into effect: drafts and review markers remain", async ({ page }) => {
+        for (const path of ["/terms", "/privacy", "/delivery-and-refunds"]) {
+          await page.goto(path);
+          await expect(page.getByTestId("draft-banner")).toBeVisible();
+          await expect(page.getByText(siteText(locale, "status", "notYetEffective"), { exact: true })).toBeVisible();
+          expect(await page.locator('[data-marker="review"]').count()).toBeGreaterThan(0);
+          expect(await page.locator('[data-marker="decision"]').count()).toBeGreaterThan(0);
+        }
+        await page.goto("/terms");
+        await expect(page.locator("section#who-we-are")).toContainText(DEMO.name[locale]);
+        await expect(page.locator("section#who-we-are [data-demo]").first()).toBeVisible();
+      });
+    });
+  }
 });

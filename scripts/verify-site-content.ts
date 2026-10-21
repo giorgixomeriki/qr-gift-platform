@@ -16,6 +16,9 @@ import { join } from "node:path";
  *   G. Copy that assumes a product fact matches the code.
  *   H. Every merchant-decision marker is documented in the requirements
  *      checklist.
+ *   I. The fictional demo profile (MERCHANT_PROFILE=demo) is opt-in only,
+ *      never mixes with real values, is refused on production, and is
+ *      labelled.
  *
  * The rendered pages (both languages, footer, mobile menu, pricing against
  * the database) are covered by e2e/site-pages.spec.ts.
@@ -23,7 +26,8 @@ import { join } from "node:path";
 const { parseInline, linksIn, merchantTokensIn } = require("../src/lib/site/inline") as typeof import("../src/lib/site/inline");
 const { sectionsSchema, analyseSections } = require("../src/lib/site/document") as typeof import("../src/lib/site/document");
 const { SITE_PAGES } = require("../src/lib/site/routes") as typeof import("../src/lib/site/routes");
-const { parseMerchantInfo, resolveMerchantToken, MERCHANT_FIELDS, MERCHANT_TOKENS } = require("../src/lib/merchant/info") as typeof import("../src/lib/merchant/info");
+const { parseMerchantInfo, loadMerchantInfo, resolveMerchantToken, MERCHANT_FIELDS, MERCHANT_TOKENS } = require("../src/lib/merchant/info") as typeof import("../src/lib/merchant/info");
+const { DEMO_MERCHANT_ENV } = require("../src/lib/merchant/demo") as typeof import("../src/lib/merchant/demo");
 const { pickStandardPrice } = require("../src/lib/merchant/standard-price") as typeof import("../src/lib/merchant/standard-price");
 const { MEDIA_SLOT_LIMITS } = require("../src/lib/validation/content-types") as typeof import("../src/lib/validation/content-types");
 
@@ -133,8 +137,9 @@ function main() {
   const neutral = (s: string) => NEUTRAL.has(s) || s.replace(/\{\{[a-zA-Z.]+\}\}/g, "").trim() === "";
   const notGeorgian = strings(site.ka).filter(([, s]) => !GEORGIAN.test(s) && !neutral(s)).map(([p, s]) => `${p}: ${s}`);
   check("C1. Every KA string is written in Georgian", notGeorgian.length === 0, notGeorgian.slice(0, 10));
-  const georgianInEn = strings(site.en).filter(([, s]) => GEORGIAN.test(s)).map(([p]) => p);
-  check("C2. No EN string contains Georgian", georgianInEn.length === 0, georgianInEn);
+  // The demo notice is deliberately bilingual ("DEMO / სატესტო მონაცემები") in both languages.
+  const georgianInEn = strings(site.en).filter(([p, s]) => GEORGIAN.test(s) && p !== "site.demo.notice").map(([p]) => p);
+  check("C2. No EN string contains Georgian (except the bilingual demo notice)", georgianInEn.length === 0, georgianInEn);
   const navKeys = SITE_PAGES.map((p) => p.key);
   for (const locale of ["ka", "en"] as const) {
     const nav = ((site[locale].site as Record<string, Json>).nav ?? {}) as Record<string, Json>;
@@ -208,6 +213,54 @@ function main() {
   const undocumented = [...refs].filter((r) => !new RegExp(`\\|\\s*${r}\\s*\\|`).test(checklist));
   check(`H1. Every decision marker in the copy (${[...refs].sort().join(", ")}) is listed in docs/merchant/BOG_WEBSITE_REQUIREMENTS.md`, undocumented.length === 0, undocumented);
   check(`H2. Legal-review markers are present where provisions await review (${reviews} in total)`, reviews > 0);
+
+  console.log("\n--- I. Demo profile isolation ---");
+  const plain = loadMerchantInfo({});
+  check("I1. Without MERCHANT_PROFILE nothing fictional is shown: mode is configured and every required detail is missing", plain.mode === "configured" && !plain.complete && Object.values(plain.values).every((v) => v === null));
+  const demo = loadMerchantInfo({ MERCHANT_PROFILE: "demo" });
+  const expected = {
+    legalNameKa: "შპს ქიუარ სტარ დემო",
+    legalNameEn: "QR Starr Demo LLC",
+    entityType: "LLC",
+    idCode: "000000000",
+    legalAddressKa: "საქართველო, თბილისი, დემო ქუჩა №1",
+    legalAddressEn: "1 Demo Street, Tbilisi, Georgia",
+    supportEmail: "demo@example.com",
+    phone: "+995 555 00 00 00",
+    supportHoursEn: "Monday–Friday, 10:00–18:00",
+    privacyEmail: "privacy@example.com",
+  } as const;
+  const wrong = Object.entries(expected).filter(([f, v]) => demo.values[f as keyof typeof demo.values] !== v);
+  check("I2. MERCHANT_PROFILE=demo shows the agreed fictional details, all of which pass validation", demo.mode === "demo" && demo.complete && demo.invalid.length === 0 && wrong.length === 0, { wrong, invalid: demo.invalid });
+  check("I3. The demo profile never sets an effective date: the policies stay drafts", demo.values.legalEffectiveDate === null);
+  const mixed = loadMerchantInfo({ MERCHANT_PROFILE: "demo", MERCHANT_SUPPORT_EMAIL: "real@company.test", MERCHANT_LEGAL_NAME_EN: "Real Company LLC" });
+  check("I4. Demo and real values never mix: with demo on, real MERCHANT_* values are not used", mixed.mode === "demo" && mixed.values.supportEmail === "demo@example.com" && mixed.values.legalNameEn === "QR Starr Demo LLC");
+  for (const [label, env] of [
+    ["VERCEL_ENV=production", { VERCEL_ENV: "production" }],
+    ["NEXT_PUBLIC_APP_URL=https://qrapp.ge", { NEXT_PUBLIC_APP_URL: "https://qrapp.ge" }],
+    ["NEXT_PUBLIC_APP_URL=https://www.qrapp.ge", { NEXT_PUBLIC_APP_URL: "https://www.qrapp.ge" }],
+  ] as const) {
+    const refused = loadMerchantInfo({ MERCHANT_PROFILE: "demo", ...env });
+    check(`I5. Demo is refused on production (${label}): real variables and their missing-data safeguards apply`, refused.mode === "configured" && !refused.complete && refused.values.supportEmail === null && !!refused.profileRefused);
+  }
+  const refusedWithReal = loadMerchantInfo({ MERCHANT_PROFILE: "demo", VERCEL_ENV: "production", ...Object.fromEntries(Object.entries(valid)) });
+  check("I6. On production, real values configured alongside a stray MERCHANT_PROFILE=demo are shown as normal", refusedWithReal.mode === "configured" && refusedWithReal.complete && refusedWithReal.values.supportEmail === "support@example.test");
+  check("I7. Preview deployments (VERCEL_ENV=preview, non-production URL) may use the demo profile", loadMerchantInfo({ MERCHANT_PROFILE: "demo", VERCEL_ENV: "preview", NEXT_PUBLIC_APP_URL: "https://qr-gift-platform-git-x.vercel.app" }).mode === "demo");
+  const unknown = loadMerchantInfo({ MERCHANT_PROFILE: "sample" });
+  check("I8. An unknown profile is ignored and reported, never guessed", unknown.mode === "configured" && !!unknown.profileRefused && unknown.values.supportEmail === null);
+  const srcFiles = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? srcFiles(join(dir, d.name)) : /\.(ts|tsx|json)$/.test(d.name) ? [join(dir, d.name)] : []));
+  // Imports of the demo module (from lib/merchant: "./demo"; elsewhere: ".../merchant/demo"), or the fictional values themselves.
+  const demoRefs = srcFiles(join(root, "src")).filter((f) => {
+    if (f.endsWith(join("merchant", "demo.ts"))) return false;
+    const text = readFileSync(f, "utf8");
+    const importsDemo = /merchant\/demo["']/.test(text) || (f.includes(join("lib", "merchant")) && /from ["']\.\/demo["']/.test(text));
+    return importsDemo || /demo@example\.com|privacy@example\.com|QR Starr Demo|ქიუარ სტარ დემო/.test(text);
+  });
+  check("I9. The fictional data lives only in lib/merchant/demo.ts and is loaded only by lib/merchant/info.ts", demoRefs.length === 1 && demoRefs[0]!.endsWith(join("merchant", "info.ts")), demoRefs.map((f) => f.slice(root.length)));
+  check("I10. The demo profile covers only merchant fields (no price, no policy terms)", Object.keys(DEMO_MERCHANT_ENV).every((k) => k.startsWith("MERCHANT_")));
+  const notices = [site.ka, site.en].map((m) => ((m.site as Record<string, Json>).demo as Record<string, Json>)?.notice);
+  check("I11. Both languages label demo data “DEMO / სატესტო მონაცემები”", notices.every((n) => n === "DEMO / სატესტო მონაცემები"), notices);
 
   console.log(`\n${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);

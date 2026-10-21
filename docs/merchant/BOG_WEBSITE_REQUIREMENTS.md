@@ -68,6 +68,11 @@ is a checkout code change (see R11).
 
 ## 3. Missing merchant information
 
+A preview deployment can show the pages complete with clearly labelled
+**fictional** details (`MERCHANT_PROFILE=demo`, refused on production). That is
+for internal review only: demo data is not merchant information, and pages
+showing it must not be submitted to BOG as the merchant's site.
+
 See `docs/merchant/MERCHANT_INFORMATION.md`. Run `npm run ops:check-merchant-info`
 against an environment to list what is still missing there. Required: legal
 name (KA and EN), legal form, identification code, legal address (KA and EN),

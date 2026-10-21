@@ -54,6 +54,11 @@
       "onThisPage": "On this page",
       "review": "Requires legal review",
       "decision": "Awaiting merchant decision"
+    },
+    "demo": {
+      "notice": "DEMO / სატესტო მონაცემები",
+      "body": "The company details shown on this site are fictional, for preview only. They are not real merchant information.",
+      "tag": "DEMO"
     }
   },
   "about": {
