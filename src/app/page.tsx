@@ -4,11 +4,13 @@ import { ThemeSwatch } from "@/components/greeting/theme-swatch";
 import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
 import { ButtonLink } from "@/components/ui/button";
 import { Logo } from "@/components/ui/logo";
+import { SiteFooter } from "@/components/site/site-footer";
 
 /**
- * The bare domain. There's no public marketing site yet, so this is a calm
- * brand page that explains the product in one line and routes partners to
- * sign in — recipients and senders always arrive via /g/{token}.
+ * The bare domain. A calm brand page that explains the product in one line
+ * and routes partners to sign in — recipients and senders always arrive via
+ * /g/{token}. The site footer links the public information pages (about,
+ * pricing, contact, policies) and carries the merchant details.
  */
 export default async function RootPage() {
   const t = await getTranslations("home");
@@ -31,6 +33,7 @@ export default async function RootPage() {
         </div>
         <ThemeSwatch themeKey="celebration" scale={0.85} className="animate-fade aspect-[4/3] w-full rounded-[var(--radius-lg)] md:aspect-[4/5]" />
       </main>
+      <SiteFooter />
     </div>
   );
 }
