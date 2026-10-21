@@ -20,10 +20,10 @@ export async function SiteFooter() {
 
   return (
     <footer className="mt-auto border-t border-line bg-sunken/60 pb-[var(--safe-bottom)]" data-testid="site-footer">
-      <div className="mx-auto grid w-full max-w-6xl gap-10 px-page py-12 md:grid-cols-[1.3fr_repeat(3,1fr)]">
-        <div className="max-w-xs">
-          <Logo className="text-base" />
-          <p className="mt-3 text-body-sm text-ink-2">{t("footer.tagline")}</p>
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-x-6 gap-y-10 px-page py-14 md:grid-cols-[1.3fr_repeat(3,1fr)]">
+        <div className="col-span-2 max-w-sm md:col-span-1">
+          <Logo className="text-lg" />
+          <p className="mt-4 font-serif text-[1.0625rem] leading-relaxed text-ink-2">{t("footer.tagline")}</p>
         </div>
         {SITE_GROUPS.map((group) => (
           <nav key={group} aria-label={t(`footer.${group}`)}>

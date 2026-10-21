@@ -240,6 +240,21 @@
   line-height: 1.2;
 }
 
+/* Public site chrome (the home page and the (site) information pages): the
+   Signature wine and ivory replace the app's ember accent and paper (links,
+   eyebrows, focus) without touching the flow or the dashboards. */
+.site-skin {
+  --ember: #7a3244;
+  --ember-soft: #f3e2da;
+  --ember-ink: #5e1f33;
+  --focus: #7a3244;
+  --paper: #f7f1e8;
+  --surface-sunken: #efe6d9;
+  --line: #e3d7c6;
+  --line-strong: #d5c6b2;
+  background: var(--paper);
+}
+
 /* The consumer page gutter: 16px on phones, 24px from sm, and never less than
    the side safe area (landscape notch). Full-bleed children still bleed with
    -mx-4 / sm:-mx-6; in landscape they stop at the safe area instead. */

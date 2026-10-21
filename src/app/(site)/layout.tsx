@@ -9,7 +9,7 @@ import { DemoRibbon } from "@/components/site/demo-ribbon";
  */
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className="site-skin flex min-h-dvh flex-col">
       <DemoRibbon />
       <SiteHeader />
       <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-page pb-20 pt-12 outline-none md:pt-16">

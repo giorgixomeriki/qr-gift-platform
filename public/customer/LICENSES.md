@@ -157,3 +157,11 @@ the world's rest state.
 |---|---|---|
 | Wax seal with the Starr spark | `src/components/customer/wax-seal.tsx` (inline SVG) | Drawn for QR Starr; uses the brand `SPARK_PATH` from `src/components/ui/logo.tsx`. Recolourable via `--cx-seal-*` tokens. Press animation in `globals.css`. |
 | Blind-embossed Starr maker's mark | `src/components/customer/starr-emboss.tsx` (inline SVG filter) | Drawn for QR Starr from `SPARK_PATH`; no ink, edges only. |
+
+## Reuse on the public home page (2026-10-21, design/public-site-redesign)
+
+No new external assets. These listed assets are also used, unmodified, by `src/components/site/home/home.css` on `/`:
+window-light-900 (hero light), romantic-leaves-rest (hero leaf shadow), paper-tooth-256 and linen-rough-256 (paper and linen),
+entry-stationery-mobile-640, celebration-sky-rest and celebration-room (photo prints and video poster in the illustrated phone and greeting tiles).
+Celebration's Mixkit footage is not redistributed as footage: only the existing still frames are shown, inside the product illustration.
+
