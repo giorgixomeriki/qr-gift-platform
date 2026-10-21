@@ -6,19 +6,13 @@ import { verifyGreetingEditAccess, InvalidEditTokenError } from "./access";
 import { isThemeKey, type ThemeKey } from "@/lib/themes/registry";
 import { getTemplate } from "@/lib/templates/catalog";
 import { greetingMessageSchema } from "@/lib/validation/greeting-text";
-import { validateMediaUpload, allowedMimeTypesFor, type SupportedContentType } from "@/lib/validation/content-types";
+import { validateMediaUpload, allowedMimeTypesFor, MEDIA_SLOT_LIMITS, type SupportedContentType } from "@/lib/validation/content-types";
 import { buildStorageKey, createSignedUploadUrl, createSignedReadUrl, deleteStorageObject } from "@/lib/storage/media";
 import { verifyUploadedContentMatchesMime, ContentVerificationError } from "@/lib/storage/verify-upload";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 
 export { InvalidEditTokenError };
 export class ContentActionError extends Error {}
-
-const SLOT_LIMITS: Record<Extract<SupportedContentType, "photo" | "video" | "audio">, number> = {
-  photo: 3,
-  video: 1,
-  audio: 1,
-};
 
 /**
  * qr_codes is fully publicly readable by RLS design (qr_codes_select: `using
@@ -125,7 +119,7 @@ export async function requestMediaUpload(
   await verifyGreetingEditAccess(greetingId, editToken);
   const validated = validateMediaUpload({ type: input.type, slot: input.slot, mimeType: input.mimeType, sizeBytes: input.sizeBytes });
 
-  const limit = SLOT_LIMITS[input.type];
+  const limit = MEDIA_SLOT_LIMITS[input.type];
   if (validated.slot < 0 || validated.slot >= limit) {
     throw new ContentActionError(`${input.type} supports at most ${limit} item(s)`);
   }
