@@ -858,7 +858,8 @@
       "sampleSign": "With love",
       "sampleVoice": "Voice note",
       "cardLine": "Scan me",
-      "cardHint": "A greeting is waiting inside"
+      "cardHint": "A greeting is waiting inside",
+    "recipientHint": "Received a QR Starr card? Scan its code with your phone’s camera, and your greeting opens on its own."
     },
     "demo": {
       "eyebrow": "After the scan",

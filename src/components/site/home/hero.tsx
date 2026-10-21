@@ -1,9 +1,14 @@
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
+import { QrCode } from "@phosphor-icons/react/dist/ssr/QrCode";
 import { getHomeQrSvg, getLanding } from "./copy";
 import { LetterScreen, Phone, QrCard } from "./objects";
 
-/** The opening view: the promise in one line, and the card beside the phone it opened. */
+/**
+ * The opening view: the promise in one line, and the card, tied to its gift
+ * with a ribbon, beside the phone it opened. On phones the order is words,
+ * actions, the note for someone holding a card, then the picture.
+ */
 export async function Hero() {
   const { text, raw } = await getLanding();
   const svg = await getHomeQrSvg();
@@ -30,23 +35,29 @@ export async function Hero() {
               {text("hero.secondary")}
             </a>
           </div>
-          <ul className="hm-hero__assure">
-            {raw<string[]>("hero.assurances").map((a) => (
-              <li key={a}>
-                <Check size={16} weight="bold" aria-hidden />
-                {a}
-              </li>
-            ))}
-          </ul>
         </div>
 
         <div className="hm-stage" role="img" aria-label={text("hero.visualLabel")}>
           <span className="hm-stage__shadow" />
+          <span className="hm-ribbon" />
           <QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} className="hm-stage__card" />
           <Phone className="hm-stage__phone">
             <LetterScreen copy={sample} />
           </Phone>
         </div>
+
+        <ul className="hm-hero__assure">
+          {raw<string[]>("hero.assurances").map((a) => (
+            <li key={a}>
+              <Check size={16} weight="bold" aria-hidden />
+              {a}
+            </li>
+          ))}
+        </ul>
+        <p className="hm-hint" data-testid="home-recipient-hint">
+          <QrCode size={20} weight="light" aria-hidden />
+          <span>{text("hero.recipientHint")}</span>
+        </p>
       </div>
     </section>
   );

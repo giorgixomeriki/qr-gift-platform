@@ -97,15 +97,13 @@ export async function Steps() {
           {items.map((s, i) => {
             const Icon = STEP_ICONS[i] ?? Gift;
             return (
-              <li key={i} className="hm-step hm-paper" data-reveal style={{ ["--d" as string]: i }}>
-                <div className="hm-step__top">
-                  <span className="hm-step__num hm-numeral" aria-hidden>
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="hm-step__icon" aria-hidden>
-                    <Icon size={22} weight="light" />
-                  </span>
-                </div>
+              <li key={i} className="hm-step" data-reveal style={{ ["--d" as string]: i }}>
+                <span className="hm-step__num hm-numeral" aria-hidden>
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="hm-step__icon" aria-hidden>
+                  <Icon size={22} weight="light" />
+                </span>
                 <h3 className="hm-h3">{s.title}</h3>
                 <p className="hm-body">{s.text}</p>
               </li>
@@ -332,25 +330,27 @@ export async function Trust() {
   const faq = raw<{ q: string; a: string }[]>("trust.faq");
   return (
     <section className="hm-section" id="faq" aria-labelledby="hm-trust-title" style={{ background: "var(--hm-paper-2)" }}>
-      <div className="hm-wrap">
-        <Head id="hm-trust-title" eyebrow={text("trust.eyebrow")} title={text("trust.title")} />
-        <ul className="hm-trust">
-          {items.map((it, i) => {
-            const Icon = TRUST_ICONS[i] ?? Eye;
-            return (
-              <li key={i} className="hm-trust__item" data-reveal style={{ ["--d" as string]: i }}>
-                <Icon size={26} weight="light" aria-hidden />
-                <h3 className="hm-h3">{it.title}</h3>
-                <p className="hm-body">{it.text}</p>
-              </li>
-            );
-          })}
-        </ul>
-        <div className="hm-faq">
-          <h2 className="hm-title" data-reveal>
-            {text("trust.faqTitle")}
-          </h2>
-          <div className="hm-faq__list" data-reveal>
+      <div className="hm-wrap hm-trustfaq">
+        <div className="hm-trustfaq__side">
+          <Head id="hm-trust-title" eyebrow={text("trust.eyebrow")} title={text("trust.title")} />
+          <ul className="hm-trust">
+            {items.map((it, i) => {
+              const Icon = TRUST_ICONS[i] ?? Eye;
+              return (
+                <li key={i} className="hm-trust__item" data-reveal style={{ ["--d" as string]: i }}>
+                  <Icon size={24} weight="light" aria-hidden />
+                  <div>
+                    <h3 className="hm-h3">{it.title}</h3>
+                    <p className="hm-body mt-1">{it.text}</p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+        <div className="hm-faq" data-reveal>
+          <h2 className="hm-faq__title">{text("trust.faqTitle")}</h2>
+          <div className="hm-faq__list">
             {faq.map((f, i) => (
               <details key={i} className="hm-faq__item" name="hm-faq">
                 <summary>

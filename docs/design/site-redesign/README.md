@@ -73,3 +73,13 @@ The brief asked for an evaluation of Aceternity UI, Magic UI, shadcn/ui and Moti
 - The info pages get the new header, footer and wine skin, but their body layouts are unchanged.
 - The illustrations use the sample name "Ana" (tagged "Example"), and the voice note "0:24" is decorative.
 - Only emulated browsers were tested; no physical-device QA.
+
+## 8. Final quality review (2026-10-21, second pass)
+
+These were the five biggest remaining weaknesses, and how each was fixed:
+
+1. **Unconvincing phone mockups.** Added an iOS-style status bar and enlarged the type on every screen so it can be read. Photo prints get a film grade. The scan screen is now a real camera view (a blurred table photograph) instead of a dark void.
+2. **Template-looking grids.** Steps are now editorial columns: large italic numerals over an ink rule, no boxes. The four trust cards became a ruled list beside a sticky FAQ card.
+3. **Hero lacked gift context, and the overlays read as smudges.** A flat wine satin ribbon now runs from under the card, behind the phone and off the page. The leaf-shadow overlay is removed and the window light softened.
+4. **Tablet imbalance.** The letter tile no longer spans two rows, the partner sheet is capped at 26rem, and the demo phone is narrower.
+5. **Recipients on mobile.** A new note ("Received a QR Starr card? Scan its code…") sits right under the actions on phones, so it is on the first screen at 390×844. On desktop the hero copy and the note align to the stage.

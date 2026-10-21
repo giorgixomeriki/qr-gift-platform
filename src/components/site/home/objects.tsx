@@ -34,6 +34,13 @@ export function Phone({ children, className = "" }: { children: ReactNode; class
     <div className={`hm-phone ${className}`}>
       <div className="hm-phone__screen">
         <span className="hm-phone__island" />
+        <span className="hm-phone__status">
+          <span>9:41</span>
+          <span className="hm-phone__glyphs">
+            <i className="hm-glyph-signal" />
+            <i className="hm-glyph-battery" />
+          </span>
+        </span>
         {children}
       </div>
     </div>
@@ -96,6 +103,7 @@ function VoiceRow({ label }: { label: string }) {
 export function ScanScreen({ svg, cardLine, pill, active }: { svg: string; cardLine: string; pill: string; active?: boolean }) {
   return (
     <div className="hm-screen hm-screen--scan" data-active={active || undefined}>
+      <span className="hm-scan__view hm-img-letter" />
       <QrCard svg={svg} line={cardLine} seal={false} className="hm-scan__card" />
       <span className="hm-scan__frame" />
       <span className="hm-scan__pill">

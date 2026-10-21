@@ -29,6 +29,8 @@ for (const locale of ["ka", "en"] as const) {
     await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", copy.metaDescription);
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(page.locator("h1")).toContainText(copy.hero.titleB);
+    // Someone holding a card who typed the address is told to scan it instead.
+    await expect(page.getByTestId("home-recipient-hint")).toHaveText(copy.hero.recipientHint);
     for (const title of [copy.demo.title, copy.steps.title, copy.experiences.title, copy.occasions.title, copy.partners.title, copy.pricing.title, copy.trust.title, copy.finale.title]) {
       await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
     }
