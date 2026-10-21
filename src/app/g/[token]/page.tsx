@@ -11,6 +11,8 @@ import { loadDraftForEdit, InvalidEditTokenError } from "@/lib/greetings/content
 import { loadActiveGreetingForRecipient, isOriginalSender, RecipientAccessError } from "@/lib/greetings/recipient";
 import { SenderEntry } from "@/components/greeting/sender-entry";
 import { CreationWizard, type WizardInitialState } from "@/components/greeting/creation-wizard";
+import { SignatureWizard } from "@/components/greeting/signature-wizard";
+import { signatureUiEnabled } from "@/components/signature/flag";
 import { RecipientView } from "@/components/greeting/recipient-view";
 import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/placeholders";
 
@@ -97,11 +99,7 @@ export default async function QrEntryPage({
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
         };
 
-        return (
-          <Suspense>
-            <CreationWizard initial={initial} />
-          </Suspense>
-        );
+        return <Suspense>{signatureUiEnabled() ? <SignatureWizard initial={initial} /> : <CreationWizard initial={initial} />}</Suspense>;
       } catch (err) {
         if (err instanceof InvalidEditTokenError) return <DraftNoAccessPlaceholder />;
         throw err;

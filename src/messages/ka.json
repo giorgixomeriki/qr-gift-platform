@@ -169,7 +169,56 @@
     },
     "toPreview": "გადახედვა",
     "skipToPreview": "გამოტოვება და გადახედვა",
-    "livePreview": "ცოცხალი გადახედვა"
+    "livePreview": "ცოცხალი გადახედვა",
+    "sig": {
+      "steps": {
+        "theme": "დიზაინი",
+        "create": "სიტყვები",
+        "preview": "გადახედვა"
+      },
+      "stepLabel": "ნაბიჯი {n} / 3 · {label}",
+      "chosen": "არჩეულია",
+      "memories": "მოგონებები",
+      "addPhoto": "ფოტო",
+      "addVideo": "ვიდეო",
+      "addVoice": "ხმა",
+      "slotPhoto": "{count} / {max}",
+      "slotVideo": "1 კლიპი",
+      "slotVoice": "1 წუთამდე",
+      "full": "დამატებულია",
+      "addAriaPhoto": "ფოტოს დამატება ({count} / {max})",
+      "addAriaVideo": "ვიდეოს დამატება",
+      "addAriaVoice": "ხმოვანი შეტყობინების ჩაწერა",
+      "photoN": "ფოტო {n}",
+      "videoLabel": "ვიდეო",
+      "voiceLabel": "ხმოვანი შეტყობინება",
+      "ready": "მზადაა",
+      "preparing": "მზადდება…",
+      "uploadingPct": "იტვირთება · {pct}%",
+      "uploadFailed": "ვერ აიტვირთა — შეამოწმეთ კავშირი",
+      "retryUpload": "თავიდან",
+      "cancel": "გაუქმება",
+      "remove": "წაშლა",
+      "removed": "{name} წაიშალა",
+      "undo": "დაბრუნება",
+      "failedBlock": "ერთი ფაილი ვერ აიტვირთა. სცადეთ თავიდან ან წაშალეთ.",
+      "waiting": "{count, plural, one {ელოდება ატვირთვას…} other {ელოდება # ფაილის ატვირთვას…}}",
+      "removeError": "წაშლა ვერ მოხერხდა. შეამოწმეთ კავშირი და სცადეთ თავიდან.",
+      "voiceClose": "დახურვა",
+      "previewKicker": "გადახედვა",
+      "previewTitle": "ასე დახვდება ადრესატს",
+      "previewLede": "დაასკანერებს ბარათს — და ეს კონვერტი მხოლოდ მისთვის გაიხსნება.",
+      "watch": "ნახეთ ადრესატის თვალით",
+      "editText": "ტექსტი",
+      "editMedia": "მოგონებები",
+      "editDesign": "დიზაინი",
+      "editNav": "მილოცვის რედაქტირება",
+      "contents": "თქვენი მილოცვა: {items}",
+      "itemsText": "ტექსტი",
+      "itemsPhotos": "{count} ფოტო",
+      "itemsVideo": "ვიდეო",
+      "itemsVoice": "ხმა"
+    }
   },
   "greeting": {
     "tapToOpen": "შეეხე და გახსენი",
@@ -601,7 +650,16 @@
     "title": "ციფრული მილოცვები ნამდვილი საჩუქრებისთვის",
     "body": "QR Starr ყვავილებს, ტორტებსა და საჩუქრებს პირად მილოცვას, ფოტოებს, ვიდეოსა და ხმოვან შეტყობინებას ამატებს — ყველაფერი ერთი დასკანერებით იხსნება.",
     "partnerCta": "პარტნიორის შესვლა",
-    "adminCta": "ადმინი"
+    "adminCta": "ადმინი",
+    "kicker": "QR Starr · საჩუქრის თანმხლები",
+    "how": {
+      "card": "ბარათი",
+      "cardLine": "საჩუქარს QR ბარათი ახლავს",
+      "words": "სიტყვები",
+      "wordsLine": "მჩუქებელი წერს და ურთავს მოგონებებს",
+      "opening": "გახსნა",
+      "openingLine": "ადრესატი ასკანერებს და ხსნის"
+    }
   },
   "batchPerformance": {
     "summary": "{distributed} გავრცელებული · {scanned} სკანირებული · {paid} გადახდილი · {conversion} კონვერსია · {commission} საკომისიო"

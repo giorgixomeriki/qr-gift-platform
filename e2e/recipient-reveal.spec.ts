@@ -37,8 +37,7 @@ async function openPreview(page: Page, theme: string, message: string) {
   await page.getByTestId("wizard-continue").click();
   await page.getByTestId("message-textarea").fill(message);
   await page.getByTestId("wizard-continue").click();
-  await expect(page.getByTestId("media-step")).toBeVisible();
-  await page.getByTestId("wizard-continue").click();
+  await page.getByTestId("preview-watch").click();
   await expect(page.getByTestId("greeting-renderer")).toBeVisible();
 }
 

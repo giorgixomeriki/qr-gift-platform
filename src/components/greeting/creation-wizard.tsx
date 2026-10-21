@@ -26,6 +26,7 @@ import { GreetingRenderer, type GreetingRenderContent } from "./greeting-rendere
 import { LivePreview } from "./live-preview";
 import { LocaleSwitcher } from "./locale-switcher";
 import { ThemePicker } from "./theme-picker";
+import { clearMessageBackup, readMessageBackup, writeMessageBackup } from "./message-backup";
 
 type ExistingItem = { contentId: string; url: string } | null;
 
@@ -48,35 +49,6 @@ const WIZARD_STEPS = ["theme", "message", "media"] as const satisfies readonly S
 /** Server action errors are developer-facing English; consumers always see localized copy. */
 function logActionError(scope: string, error: string) {
   console.error(`[${scope}]`, error);
-}
-
-/**
- * The message as typed, kept on the device until the server has it. Phones
- * discard background tabs freely — a sender who switches to Photos or a chat
- * to copy a line can come back to a reloaded page; what they typed must
- * still be there. Cleared once the message is saved (MessageStep).
- */
-const draftKey = (greetingId: string) => `qrs:message:${greetingId}`;
-function readMessageBackup(greetingId: string): string | null {
-  try {
-    return window.localStorage.getItem(draftKey(greetingId));
-  } catch {
-    return null;
-  }
-}
-function writeMessageBackup(greetingId: string, value: string) {
-  try {
-    window.localStorage.setItem(draftKey(greetingId), value);
-  } catch {
-    /* storage unavailable (private mode, quota): the server copy still saves on Continue */
-  }
-}
-function clearMessageBackup(greetingId: string) {
-  try {
-    window.localStorage.removeItem(draftKey(greetingId));
-  } catch {
-    /* ignore */
-  }
 }
 
 export function CreationWizard({ initial }: { initial: WizardInitialState }) {
@@ -222,7 +194,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
   );
 }
 
-function WizardHeader({ step, wizardStepIndex, onBack }: { step: Step; wizardStepIndex: number; onBack: () => void }) {
+export function WizardHeader({ step, wizardStepIndex, onBack }: { step: Step; wizardStepIndex: number; onBack: () => void }) {
   const t = useTranslations("wizard");
   const showBack = step === "checkout" || wizardStepIndex > 0;
   return (
@@ -478,14 +450,17 @@ function MediaSection({ title, hint, children }: { title: string; hint: string; 
   );
 }
 
-function PreviewStep({
+export function PreviewStep({
   greetingId,
   themeKey,
   content,
   priceLabel,
   onEdit,
   onCheckout,
+  recordView = true,
 }: {
+  /** False when the Signature preview screen in front of this one already recorded PREVIEW_VIEWED. */
+  recordView?: boolean;
   greetingId: string;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
@@ -504,10 +479,10 @@ function PreviewStep({
   // re-run (Phase 2 §13).
   const recordedRef = useRef(false);
   useEffect(() => {
-    if (recordedRef.current) return;
+    if (recordedRef.current || !recordView) return;
     recordedRef.current = true;
     void viewPreviewAction(greetingId);
-  }, [greetingId]);
+  }, [greetingId, recordView]);
 
   // A viewing layer, not an editor: plain bars above and below, and the
   // greeting — exactly as the recipient gets it — in between, untouched.
@@ -583,7 +558,7 @@ function PreviewStep({
 const RETURN_POLL_ATTEMPTS = 5;
 const RETURN_POLL_INTERVAL_MS = 2000;
 
-function CheckoutStep({
+export function CheckoutStep({
   greetingId,
   isTestPayments,
   themeKey,

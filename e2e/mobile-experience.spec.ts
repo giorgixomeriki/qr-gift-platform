@@ -28,14 +28,24 @@ async function toMessage(page: Page, token: string) {
   await expect(page.getByTestId("message-textarea")).toBeVisible();
 }
 
-async function toPreview(page: Page, token: string) {
+/** To the Preview screen (Signature): message and media are one Create step. */
+async function toPreviewScreen(page: Page, token: string) {
   await toMessage(page, token);
   await page.getByTestId("message-textarea").fill("Happy birthday, dear friend!");
   await page.getByTestId("wizard-continue").click();
-  await expect(page.getByTestId("media-step")).toBeVisible();
-  await page.getByTestId("wizard-continue").click();
+  await expect(page.getByTestId("preview-step")).toBeVisible();
+}
+
+/** Into the recipient's view of the preview (the real renderer). */
+async function toPreview(page: Page, token: string) {
+  await toPreviewScreen(page, token);
+  await page.getByTestId("preview-watch").click();
   await expect(page.getByTestId("greeting-tap-to-open")).toBeVisible();
 }
+
+const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+const UPLOAD = "**/storage/v1/object/upload/sign/**";
+const pickPhoto = (page: Page, name = "p.png") => page.getByTestId("media-input-photo").setInputFiles({ name, mimeType: "image/png", buffer: PNG });
 
 async function horizontalOverflow(page: Page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -53,11 +63,13 @@ test.describe("Mobile experience", () => {
     expect(await horizontalOverflow(page)).toBe(0);
     await page.getByTestId("wizard-continue").click();
     await page.getByTestId("message-textarea").fill("ძვირფასო ანა, გილოცავ დაბადების დღეს! ".repeat(10));
-    expect(await horizontalOverflow(page)).toBe(0);
-    await page.getByTestId("wizard-continue").click();
     await expect(page.getByTestId("media-step")).toBeVisible();
+    await page.getByTestId("add-audio").click(); // the voice panel open, too
     expect(await horizontalOverflow(page)).toBe(0);
     await page.getByTestId("wizard-continue").click();
+    await expect(page.getByTestId("preview-step")).toBeVisible();
+    expect(await horizontalOverflow(page)).toBe(0);
+    await page.getByTestId("preview-watch").click();
     await expect(page.getByTestId("greeting-tap-to-open")).toBeVisible();
     expect(await horizontalOverflow(page)).toBe(0);
   });
@@ -65,7 +77,7 @@ test.describe("Mobile experience", () => {
   test("wizard steps are history entries: Back returns to the previous step", async ({ page }) => {
     const token = await freshCard();
     await toMessage(page, token);
-    await expect(page).toHaveURL(/step=message/);
+    await expect(page).toHaveURL(/step=create/);
     await page.goBack();
     await expect(page.getByTestId("theme-step")).toBeVisible();
     await page.goForward();
@@ -78,6 +90,25 @@ test.describe("Mobile experience", () => {
     await page.getByTestId("message-textarea").fill("Typed while switching apps");
     await page.reload();
     await expect(page.getByTestId("message-textarea")).toHaveValue("Typed while switching apps");
+  });
+
+  test("words typed before the page has loaded are kept", async ({ page }) => {
+    const token = await freshCard();
+    await toMessage(page, token);
+    // A slow phone: the letter is on screen seconds before the scripts arrive.
+    let release: () => void = () => {};
+    const held = new Promise<void>((r) => (release = r));
+    await page.route("**/_next/static/chunks/**", async (route) => {
+      await held;
+      await route.continue().catch(() => {});
+    });
+    await page.goto(`/g/${token}?step=create`, { waitUntil: "commit" });
+    await page.getByTestId("message-textarea").fill("Typed before it loaded");
+    release();
+    await expect(page.getByTestId("media-step")).toBeVisible();
+    await page.waitForTimeout(1500); // hydration, and any re-render after it
+    await page.getByTestId("add-audio").click(); // a state change re-renders the field
+    await expect(page.getByTestId("message-textarea")).toHaveValue("Typed before it loaded");
   });
 
   test("a second tap on Open does not skip the message", async ({ page }) => {
@@ -119,116 +150,96 @@ test.describe("Mobile experience", () => {
   test("a failed upload keeps the photo and retries in one tap", async ({ page }) => {
     const token = await freshCard();
     await toMessage(page, token);
-    await page.getByTestId("message-textarea").fill("Upload check");
-    await page.getByTestId("wizard-continue").click();
-    await expect(page.getByTestId("media-step")).toBeVisible();
     let fail = true;
-    await page.route("**/storage/v1/object/upload/sign/**", (route) => (fail ? route.abort("connectionreset") : route.continue()));
-    const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
-    await page.getByTestId("media-input-photo-0").setInputFiles({ name: "p.png", mimeType: "image/png", buffer: png });
+    await page.route(UPLOAD, (route) => (fail ? route.abort("connectionreset") : route.continue()));
+    await pickPhoto(page);
     await expect(page.getByTestId("media-retry-photo-0")).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId("media-error-photo-0")).toBeVisible();
+    // Continue is refused with the reason while a file has failed.
+    await page.getByTestId("message-textarea").fill("Upload check");
+    await page.getByTestId("wizard-continue").click();
+    await expect(page.getByTestId("failed-block")).toBeVisible();
     fail = false;
     await page.getByTestId("media-retry-photo-0").click();
-    await expect(page.getByTestId("media-remove-photo-0")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("media-ready-photo-0")).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId("failed-block")).toBeHidden();
   });
 
-  test.describe("photo replacement keeps the current photo until the new one is committed", () => {
-    const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
-    const UPLOAD = "**/storage/v1/object/upload/sign/**";
-    /** The content id inside slot 0's signed URL — which photo the slot is actually showing. */
-    const shownId = async (page: Page) => {
-      const src = await page.getByTestId("media-field-photo-0").locator("img").first().getAttribute("src");
-      return src?.match(/([0-9a-f-]{36})\.(?:jpe?g|png|webp)/)?.[1] ?? null;
-    };
-    const pick = (page: Page, name: string) => page.getByTestId("media-input-photo-0").setInputFiles({ name, mimeType: "image/png", buffer: PNG });
-
-    async function withPhotoA(page: Page) {
+  test.describe("attachments (Signature list)", () => {
+    test("cancelling an upload, or reloading during one, saves nothing", async ({ page }) => {
       const token = await freshCard();
       await toMessage(page, token);
-      await page.getByTestId("message-textarea").fill("Replacement check");
-      await page.getByTestId("wizard-continue").click();
-      await expect(page.getByTestId("media-step")).toBeVisible();
-      await pick(page, "a.png");
-      await expect(page.getByTestId("media-remove-photo-0")).toBeVisible({ timeout: 20_000 });
-      const a = await shownId(page);
-      expect(a).toBeTruthy();
-      return a!;
-    }
-
-    test("a failed replacement leaves photo A shown, saved, and retryable", async ({ page }) => {
-      const a = await withPhotoA(page);
-      let fail = true;
-      await page.route(UPLOAD, (route) => (fail ? route.abort("connectionreset") : route.continue()));
-      await page.getByTestId("media-replace-photo-0").click();
-      await pick(page, "b.png");
-      await expect(page.getByTestId("media-retry-photo-0")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByTestId("media-current-photo-0")).toBeVisible();
-      expect(await shownId(page)).toBe(a);
-      await expect(page.getByTestId("media-error-photo-0")).toContainText(/kept|შენახულია/);
-      // Reloaded now, the greeting still holds A.
-      await page.reload();
-      await expect(page.getByTestId("media-remove-photo-0")).toBeVisible();
-      expect(await shownId(page)).toBe(a);
-      // Retry from scratch succeeds and replaces A.
-      fail = false;
-      await page.getByTestId("media-replace-photo-0").click();
-      await pick(page, "b.png");
-      await expect(page.getByTestId("media-busy-photo-0")).toBeHidden({ timeout: 20_000 });
-      const b = await shownId(page);
-      expect(b).toBeTruthy();
-      expect(b).not.toBe(a);
-    });
-
-    test("cancelling, or reloading during, a replacement keeps photo A", async ({ page }) => {
-      const a = await withPhotoA(page);
       let release: () => void = () => {};
       const held = new Promise<void>((r) => (release = r));
       await page.route(UPLOAD, async (route) => {
         if (route.request().method() === "PUT") await held;
         await route.continue().catch(() => {});
       });
-      await pick(page, "b.png");
+      await pickPhoto(page, "a.png");
       await expect(page.getByTestId("media-cancel-photo-0")).toBeVisible({ timeout: 20_000 });
-      await expect(page.getByTestId("media-current-photo-0")).toBeVisible(); // A stays on the tile while B uploads
       await page.getByTestId("media-cancel-photo-0").click();
-      await expect(page.getByTestId("media-remove-photo-0")).toBeVisible();
-      expect(await shownId(page)).toBe(a);
-      // Start another replacement and reload mid-upload.
-      await pick(page, "c.png");
+      await expect(page.getByTestId("media-row-photo-0")).toHaveCount(0);
+      await pickPhoto(page, "b.png");
       await expect(page.getByTestId("media-cancel-photo-0")).toBeVisible({ timeout: 20_000 });
       await page.reload();
-      await expect(page.getByTestId("media-remove-photo-0")).toBeVisible();
-      expect(await shownId(page)).toBe(a);
+      await expect(page.getByTestId("media-step")).toBeVisible();
+      await expect(page.getByTestId("media-row-photo-0")).toHaveCount(0);
       release();
     });
 
-    test("picking C while B is still uploading commits C; B can never land over it", async ({ page }) => {
-      const a = await withPhotoA(page);
-      let releaseB: () => void = () => {};
-      const heldB = new Promise<void>((r) => (releaseB = r));
-      let first = true;
+    test("Continue waits for an upload still running, then goes on by itself", async ({ page }) => {
+      const token = await freshCard();
+      await toMessage(page, token);
+      let release: () => void = () => {};
+      const held = new Promise<void>((r) => (release = r));
       await page.route(UPLOAD, async (route) => {
-        // Hold B's transfer itself (not its CORS preflight, which C's would share).
-        if (first && route.request().method() === "PUT") {
-          first = false;
-          await heldB; // B is slow
-        }
+        if (route.request().method() === "PUT") await held;
         await route.continue().catch(() => {});
       });
-      const bInFlight = page.waitForRequest((r) => r.method() === "PUT" && r.url().includes("/upload/sign/"));
-      await pick(page, "b.png");
-      await bInFlight; // B's transfer has started (and is held: a slow connection)
-      await pick(page, "c.png"); // the sender changes their mind
-      await expect(page.getByTestId("media-busy-photo-0")).toBeHidden({ timeout: 20_000 });
-      const c = await shownId(page);
-      expect(c).toBeTruthy();
-      expect(c).not.toBe(a);
-      releaseB(); // B finally finishes — too late, and abandoned
-      await page.waitForTimeout(1500);
+      await page.getByTestId("message-textarea").fill("Waiting for a photo");
+      await pickPhoto(page);
+      await expect(page.getByTestId("media-cancel-photo-0")).toBeVisible({ timeout: 20_000 });
+      await page.getByTestId("wizard-continue").click();
+      await expect(page.getByTestId("wizard-continue")).toHaveAttribute("aria-busy", "true");
+      await expect(page.getByTestId("create-step")).toBeVisible();
+      release();
+      await expect(page.getByTestId("preview-step")).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByTestId("preview-contents")).toContainText(/1 photo/);
+    });
+
+    test("Remove can be undone; a removal is committed before Preview", async ({ page }) => {
+      const token = await freshCard();
+      await toMessage(page, token);
+      await pickPhoto(page);
+      await expect(page.getByTestId("media-ready-photo-0")).toBeVisible({ timeout: 20_000 });
+      // Remove → Undo restores it, and it's still saved after a reload.
+      await page.getByTestId("media-remove-photo-0").click();
+      await page.getByTestId("media-undo-photo-0").click();
+      await expect(page.getByTestId("media-ready-photo-0")).toBeVisible();
       await page.reload();
-      await expect(page.getByTestId("media-remove-photo-0")).toBeVisible();
-      expect(await shownId(page)).toBe(c);
+      await expect(page.getByTestId("media-ready-photo-0")).toBeVisible();
+      // Remove, then go straight on: Preview doesn't hold it, and neither does the draft.
+      await page.getByTestId("message-textarea").fill("Without the photo");
+      await page.getByTestId("media-remove-photo-0").click();
+      await page.getByTestId("wizard-continue").click();
+      await expect(page.getByTestId("preview-step")).toBeVisible();
+      await expect(page.getByTestId("preview-contents")).not.toContainText(/photo/);
+      await page.goto(`/g/${token}?step=create`);
+      await expect(page.getByTestId("media-step")).toBeVisible();
+      await expect(page.getByTestId("media-row-photo-0")).toHaveCount(0);
+    });
+
+    test("old step links (?step=message, ?step=media) open the Create screen with the saved draft", async ({ page }) => {
+      const token = await freshCard();
+      await toMessage(page, token);
+      await page.getByTestId("message-textarea").fill("Saved before the link");
+      await page.getByTestId("wizard-continue").click();
+      await expect(page.getByTestId("preview-step")).toBeVisible();
+      for (const step of ["message", "media"]) {
+        await page.goto(`/g/${token}?step=${step}`);
+        await expect(page.getByTestId("create-step")).toBeVisible();
+        await expect(page.getByTestId("message-textarea")).toHaveValue("Saved before the link");
+      }
     });
   });
 
@@ -243,7 +254,7 @@ test.describe("Mobile experience", () => {
     const page = await context.newPage();
     try {
       const token = await freshCard();
-      await toPreview(page, token);
+      await toPreviewScreen(page, token);
       await page.getByTestId("preview-activate-cta").click();
       await expect(page.getByTestId("checkout-pay")).toBeVisible();
       const snippet = page.locator('section[aria-labelledby="checkout-summary"] p.line-clamp-2');
@@ -290,7 +301,7 @@ test.describe("Mobile experience", () => {
 
   test("touch targets on the checkout are at least 44px tall", async ({ page }) => {
     const token = await freshCard();
-    await toPreview(page, token);
+    await toPreviewScreen(page, token);
     await page.getByTestId("preview-activate-cta").click();
     await expect(page.getByTestId("checkout-pay")).toBeVisible();
     const short = await page.evaluate(() =>

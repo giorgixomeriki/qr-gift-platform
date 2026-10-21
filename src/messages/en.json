@@ -169,7 +169,56 @@
     },
     "toPreview": "See preview",
     "skipToPreview": "Skip to preview",
-    "livePreview": "Live preview"
+    "livePreview": "Live preview",
+    "sig": {
+      "steps": {
+        "theme": "Design",
+        "create": "Words",
+        "preview": "Preview"
+      },
+      "stepLabel": "Step {n} of 3 · {label}",
+      "chosen": "Selected",
+      "memories": "Memories",
+      "addPhoto": "Photo",
+      "addVideo": "Video",
+      "addVoice": "Voice",
+      "slotPhoto": "{count} / {max}",
+      "slotVideo": "1 clip",
+      "slotVoice": "Up to 1 min",
+      "full": "Added",
+      "addAriaPhoto": "Add a photo ({count} of {max})",
+      "addAriaVideo": "Add a video",
+      "addAriaVoice": "Record a voice message",
+      "photoN": "Photo {n}",
+      "videoLabel": "Video",
+      "voiceLabel": "Voice message",
+      "ready": "Ready",
+      "preparing": "Preparing…",
+      "uploadingPct": "Uploading · {pct}%",
+      "uploadFailed": "Didn't upload — check your connection",
+      "retryUpload": "Retry",
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "removed": "{name} removed",
+      "undo": "Undo",
+      "failedBlock": "One file didn't upload. Retry it or remove it.",
+      "waiting": "{count, plural, one {Waiting for the upload…} other {Waiting for # uploads…}}",
+      "removeError": "We couldn't remove it. Check your connection and try again.",
+      "voiceClose": "Close",
+      "previewKicker": "Preview",
+      "previewTitle": "How it will reach them",
+      "previewLede": "They scan the card — and this envelope opens for them alone.",
+      "watch": "See it as the recipient",
+      "editText": "Text",
+      "editMedia": "Memories",
+      "editDesign": "Design",
+      "editNav": "Edit your greeting",
+      "contents": "Your greeting: {items}",
+      "itemsText": "text",
+      "itemsPhotos": "{count, plural, one {# photo} other {# photos}}",
+      "itemsVideo": "video",
+      "itemsVoice": "voice"
+    }
   },
   "greeting": {
     "tapToOpen": "Tap to open",
@@ -601,7 +650,16 @@
     "title": "Digital greetings for physical gifts",
     "body": "QR Starr adds a personal message, photos, video and a voice note to flowers, cakes and gifts — revealed with a single scan.",
     "partnerCta": "Partner sign in",
-    "adminCta": "Admin"
+    "adminCta": "Admin",
+    "kicker": "QR Starr · the words that come with a gift",
+    "how": {
+      "card": "The card",
+      "cardLine": "A QR card comes with the gift",
+      "words": "The words",
+      "wordsLine": "The giver writes and adds memories",
+      "opening": "The opening",
+      "openingLine": "The recipient scans and opens it"
+    }
   },
   "batchPerformance": {
     "summary": "{distributed} distributed · {scanned} scanned · {paid} paid · {conversion} conversion · {commission} commission"
