@@ -299,7 +299,7 @@ function SignaturePreview({
       <p className="sig-sub">{ts("previewLede")}</p>
 
       {/* The recipient's room in miniature, the stationery envelope inside it. */}
-      <button type="button" className="sig-window" style={roomStyle} data-room={template.spec.room.dark ? "dark" : "light"} onClick={onWatch} data-testid="preview-watch">
+      <button type="button" className="sig-window" style={roomStyle} data-room={template.spec.room.dark ? "dark" : "light"} data-composition={template.spec.composition} onClick={onWatch} data-testid="preview-watch">
         <span className="sig-window__line">{tt(`${themeKey}.opening`)}</span>
         <SealedEnvelope small />
         <span className="sig-window__cta">

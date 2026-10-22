@@ -1,6 +1,7 @@
 "use client";
 
 import { useLayoutEffect, useRef, type CSSProperties } from "react";
+import { WaxSeal } from "@/components/customer/wax-seal";
 import { SPARK_PATH } from "@/components/ui/logo";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
@@ -114,6 +115,17 @@ export function ThemeWorld({
           </span>
         )}
         {c === "vellum" && <span className="tw__vellum" />}
+        {c === "keepsake" && (
+          <>
+            <span className="tw__vine">
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="tw__rose" />
+          </>
+        )}
         {c === "just-words" && <span className="tw__point" />}
         {c === "just-words" && <span className="tw__hairline" />}
         {c === "ink-and-stone" && (
@@ -130,6 +142,11 @@ export function ThemeWorld({
           <path d={SPARK_PATH} />
         </svg>
         {c === "quiet-light" && <span className="tw__vellum" />}
+        {c === "keepsake" && (
+          <span className="tw__wax">
+            <WaxSeal />
+          </span>
+        )}
         {c === "vellum" && (
           <span className="tw__veil">
             <span className="tw__seal">
@@ -311,6 +328,8 @@ function WorldArtwork({ composition }: { composition: CompositionId }) {
       return <span className="tw__rule" />;
     case "just-words":
       return null;
+    case "keepsake":
+      return <span className="tw__candle" data-depth="2" />;
   }
 }
 
@@ -398,6 +417,12 @@ function SealArt({ composition }: { composition: CompositionId }) {
           <rect x="18.6" y="8.6" width="11.8" height="22.8" fill="none" stroke="var(--w-ink)" strokeOpacity="0.35" strokeWidth="0.4" />
           <line x1="20" y1="21" x2="28" y2="21" stroke="var(--w-ink)" strokeOpacity="0.35" strokeWidth="0.4" />
         </svg>
+      );
+    case "keepsake":
+      return (
+        <i className="tw-seal__card">
+          <i className="tw-seal__rose" />
+        </i>
       );
     case "just-words":
       return (

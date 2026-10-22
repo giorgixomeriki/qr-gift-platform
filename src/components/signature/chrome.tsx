@@ -8,6 +8,7 @@ import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
 import { Spark } from "@/components/ui/logo";
 import { Spinner } from "@/components/ui/spinner";
 import "./signature.css";
+import "./vintage.css";
 
 /**
  * The Signature Experience's sender chrome (approved Final Polish, ported

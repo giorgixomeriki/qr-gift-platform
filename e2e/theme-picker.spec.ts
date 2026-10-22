@@ -3,12 +3,13 @@ import { createAvailableQr } from "./fixtures";
 
 /**
  * Screen #2 — the theme picker ("How should it feel?"), Signature layout: the
- * chosen world as a hero in its own room over a 3 × 2 grid of all six.
- * Behaviour only, no pixels: the six worlds are one radio group; choosing
+ * chosen world as a hero in its own room over a 3 × 2 grid of the launch six,
+ * with the seventh (Luxury Vintage) on its own full-width row.
+ * Behaviour only, no pixels: the seven worlds are one radio group; choosing
  * saves the theme; the choice survives reloads, the next step and back,
  * locale switches, keyboard use and reduced motion.
  */
-const THEMES = ["minimal", "romantic", "birthday", "wedding", "celebration", "elegant"] as const;
+const THEMES = ["minimal", "romantic", "birthday", "wedding", "celebration", "elegant", "luxury-vintage"] as const;
 
 test.use({ locale: "en-US" });
 test.beforeEach(async ({ context, baseURL }) => {
@@ -39,10 +40,10 @@ async function choose(page: Page, key: (typeof THEMES)[number]) {
 }
 
 test.describe("Theme picker", () => {
-  test("enters from Screen #1 with six worlds and the default chosen", async ({ page }) => {
+  test("enters from Screen #1 with seven worlds and the default chosen", async ({ page }) => {
     await openPicker(page);
     const group = page.getByRole("radiogroup", { name: "How should it feel?" });
-    await expect(group.getByRole("radio")).toHaveCount(6);
+    await expect(group.getByRole("radio")).toHaveCount(7);
     await expect(page.getByTestId("theme-option-minimal")).toHaveAttribute("aria-checked", "true");
     await expect(group.getByRole("radio", { checked: true })).toHaveCount(1);
   });
@@ -54,7 +55,7 @@ test.describe("Theme picker", () => {
       await expect(page.getByRole("radio", { checked: true })).toHaveCount(1);
     }
     await page.reload();
-    await expect(page.getByTestId("theme-option-elegant")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId(`theme-option-${THEMES[THEMES.length - 1]}`)).toHaveAttribute("aria-checked", "true");
   });
 
   test("the choice carries into the next step and is still chosen on the way back", async ({ page }) => {
@@ -74,11 +75,12 @@ test.describe("Theme picker", () => {
     await page.keyboard.press("ArrowRight");
     await expect(page.getByTestId("theme-option-romantic")).toHaveAttribute("aria-checked", "true");
     await expect(page.getByTestId("theme-option-romantic")).toBeFocused();
+    // Left from the first world wraps to the last (the seventh, Luxury Vintage).
     await page.keyboard.press("ArrowLeft");
     await page.keyboard.press("ArrowLeft");
-    await expect(page.getByTestId("theme-option-elegant")).toHaveAttribute("aria-checked", "true");
+    await expect(page.getByTestId("theme-option-luxury-vintage")).toHaveAttribute("aria-checked", "true");
     // Only the chosen radio is in the tab order.
-    await expect(page.getByTestId("theme-option-elegant")).toHaveAttribute("tabindex", "0");
+    await expect(page.getByTestId("theme-option-luxury-vintage")).toHaveAttribute("tabindex", "0");
     await expect(page.getByTestId("theme-option-minimal")).toHaveAttribute("tabindex", "-1");
   });
 
@@ -90,7 +92,7 @@ test.describe("Theme picker", () => {
     await expect(page.getByTestId("theme-option-celebration")).toHaveAttribute("aria-checked", "true");
   });
 
-  test("phones: all six worlds and the action fit one screen; a tapped world takes the hero", async ({ page }, testInfo) => {
+  test("phones: all seven worlds and the action fit one screen; a tapped world takes the hero", async ({ page }, testInfo) => {
     test.skip(testInfo.project.name !== "mobile-emulated", "the phone layout");
     await openPicker(page);
     const viewport = page.viewportSize()!;

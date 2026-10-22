@@ -1415,3 +1415,47 @@ button.sigf-add__btn:focus-visible {
     text-align: left;
   }
 }
+
+/* A seventh world (Luxury Vintage, added last) gets its own full-width row: a wide window onto its room and
+   its name. The hero gives up that row's height, so all worlds and the action still fit one phone screen.
+   By position, not by template id (the picker never names a world). */
+.sigf-worlds .sigf-tile:nth-child(7) {
+  grid-column: 1 / -1;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.3rem;
+}
+.sigf-worlds .sigf-tile:nth-child(7) .sigf-tile__swatch {
+  height: 2.5rem;
+}
+.sigf-worlds .sigf-tile:nth-child(7) .sigf-tile__name {
+  text-align: left;
+  font-size: 0.8125rem;
+}
+.sigf-picker:has(.sigf-tile:nth-child(7)) .sigf-hero {
+  --hero-h: clamp(11rem, calc(100dvh - 32.5rem), 30rem);
+}
+@media (max-height: 680px) {
+  .sigf-picker:has(.sigf-tile:nth-child(7)) .sigf-hero {
+    --hero-h: clamp(7rem, calc(100dvh - 29.5rem), 30rem);
+  }
+  .sigf-picker:has(.sigf-tile:nth-child(7)) .sigf-worlds {
+    gap: 0.3rem;
+    margin-top: 0.625rem;
+  }
+}
+@media (max-width: 350px) {
+  .sigf-worlds .sigf-tile:nth-child(7) {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+  .sigf-worlds .sigf-tile:nth-child(7) .sigf-tile__swatch {
+    height: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .sigf-picker:has(.sigf-tile:nth-child(7)) > .sigf-hero {
+    --hero-h: clamp(24rem, calc(100dvh - 15rem), 36rem);
+  }
+}

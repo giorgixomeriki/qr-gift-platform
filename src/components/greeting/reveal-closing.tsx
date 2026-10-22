@@ -1,11 +1,15 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, lazy, Suspense } from "react";
 import { useTranslations } from "next-intl";
 import { WaxSeal } from "@/components/customer/wax-seal";
 import { Spark } from "@/components/ui/logo";
 import type { GreetingRenderContent } from "./greeting-renderer";
 import { VoicePlayer } from "./voice-player";
+
+// Luxury Vintage only: its keepsake components (and `motion`, `canvas-confetti`) load with this world alone.
+const VintagePrints = lazy(() => import("./vintage-keepsake").then((m) => ({ default: m.VintagePrints })));
+const VintageSeal = lazy(() => import("./vintage-keepsake").then((m) => ({ default: m.VintageSeal })));
 
 /**
  * The Signature closing (integration blueprint §2.7), under the world once
@@ -24,8 +28,10 @@ export const RevealClosing = forwardRef<
     content: GreetingRenderContent;
     signOff: string;
     onPlayed: (type: "video" | "audio") => void;
+    /** The Luxury Vintage world (composition `keepsake`): parchment letter, print stack, postmarked seal. */
+    vintage?: boolean;
   }
->(function RevealClosing({ content, signOff, onPlayed }, ref) {
+>(function RevealClosing({ content, signOff, onPlayed, vintage = false }, ref) {
   const t = useTranslations("greeting");
   let n = 0;
   const num = () => String(++n).padStart(2, "0");
@@ -34,7 +40,7 @@ export const RevealClosing = forwardRef<
   return (
     <section ref={ref} className="sx-closing" aria-label={t("toLetter")} data-testid="greeting-closing" tabIndex={-1}>
       {content.message && (
-        <article className="sx-letter" tabIndex={0} aria-label={t("letterLabel")} data-testid="greeting-closing-letter">
+        <article className={vintage ? "sx-letter sx-letter--vintage" : "sx-letter"} tabIndex={0} aria-label={t("letterLabel")} data-testid="greeting-closing-letter">
           <p className="sx-letter__for">
             <Spark />
             {t("forYou")}
@@ -47,7 +53,15 @@ export const RevealClosing = forwardRef<
       {hasKeepsakes && (
         <div className="sx-keepsakes">
           <h2 className="sx-kicker">{t("keepsakes")}</h2>
-          {content.photos.length > 0 && (
+          {vintage && content.photos.length > 1 ? (
+            <Suspense fallback={<div className="sx-vintage-prints" aria-hidden />}>
+              <VintagePrints label={t("printsLabel")} photos={content.photos.map((p, i) => ({ ...p, alt: t("photoAlt", { n: i + 1, total: content.photos.length }) }))} />
+              <p className="sx-caption sx-caption--center">
+                <span className="sx-num">{content.photos.map(() => num()).join(" · ")}</span>
+                {t("keepsakePhoto")}
+              </p>
+            </Suspense>
+          ) : content.photos.length > 0 ? (
             <div className="sx-prints">
               {content.photos.map((p, i) => (
                 <figure key={p.id} className="sx-print">
@@ -60,7 +74,7 @@ export const RevealClosing = forwardRef<
                 </figure>
               ))}
             </div>
-          )}
+          ) : null}
           {content.video && (
             <figure className="sx-film">
               <video src={`${content.video.url}#t=0.1`} controls playsInline preload="metadata" aria-label={t("videoLabel")} onPlay={() => onPlayed("video")} />
@@ -83,9 +97,21 @@ export const RevealClosing = forwardRef<
       )}
 
       <div className="sx-close">
-        <span className="sx-close__seal" aria-hidden>
-          <WaxSeal />
-        </span>
+        {vintage ? (
+          <Suspense
+            fallback={
+              <span className="sx-close__seal" aria-hidden>
+                <WaxSeal />
+              </span>
+            }
+          >
+            <VintageSeal postmark={t("postmark")} />
+          </Suspense>
+        ) : (
+          <span className="sx-close__seal" aria-hidden>
+            <WaxSeal />
+          </span>
+        )}
         <p className="sx-close__title">{t("closingTitle")}</p>
         <p className="sx-close__body">{t("closingBody")}</p>
       </div>

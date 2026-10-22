@@ -7,6 +7,7 @@ import { Dock, SigAction } from "@/components/signature/chrome";
 import { Spark } from "@/components/ui/logo";
 import { allowedMimeTypesFor } from "@/lib/validation/content-types";
 import type { ThemeKey } from "@/lib/themes/registry";
+import { getThemeWorld } from "@/lib/themes/worlds";
 import { useWaveformPeaks } from "@/lib/client/waveform";
 import { SLOT_LIMITS, type MediaItem, type MediaKind, type MediaUploads } from "./use-media-uploads";
 import { SignatureVoiceCapture } from "./signature-voice-capture";
@@ -129,7 +130,7 @@ export function SignatureCreateStep({
   }
 
   return (
-    <div className="sigf-create flex flex-1 flex-col" data-typing={typing || undefined} data-testid="create-step">
+    <div className="sigf-create flex flex-1 flex-col" data-typing={typing || undefined} data-composition={getThemeWorld(themeKey).composition} data-testid="create-step">
       <h1 className="sig-title">{tm("title")}</h1>
       <p className="sig-sub">{tm("subtitle")}</p>
 

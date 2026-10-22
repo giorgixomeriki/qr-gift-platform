@@ -245,7 +245,9 @@
     "keepsakeVoice": "Voice",
     "closingTitle": "This letter is yours to keep.",
     "closingBody": "Scan the card again whenever you'd like to open it.",
-    "toLetter": "Your letter"
+    "toLetter": "Your letter",
+    "postmark": "QR STARR · LUXURY VINTAGE · KEEPSAKE · ",
+    "printsLabel": "Photos. Press Enter for the next one."
   },
   "themes": {
     "romantic": {
@@ -289,6 +291,13 @@
       "opening": "A few words, just for you",
       "ending": "With warmest wishes",
       "sample": "With admiration, and every good wish."
+    },
+    "luxury-vintage": {
+      "name": "Luxury Vintage",
+      "tagline": "An antique letter, sealed in wax",
+      "opening": "A letter kept just for you",
+      "ending": "Yours, always",
+      "sample": "Some words are meant to be kept for a lifetime."
     }
   },
   "success": {

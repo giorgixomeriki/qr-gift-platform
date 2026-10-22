@@ -115,6 +115,18 @@ const FINALE_CASES: { theme: string; finale: string; closed: (page: Page) => Pro
       expect(point!.x).toBeGreaterThan(message!.x + message!.width * 0.3);
     },
   },
+  {
+    theme: "luxury-vintage",
+    finale: "keepsake-seal",
+    closed: async (page) => {
+      const beat = page.getByTestId("greeting-ending-beat");
+      // The letter keeps its gold vine frame, its rose and its wax seal; the candle has burned a little lower.
+      await expect(beat.locator(".tw__vine i")).toHaveCount(4);
+      await expect(beat.locator(".tw__rose")).toBeVisible();
+      await expect(beat.locator(".tw__wax svg")).toBeVisible();
+      expect(await beat.locator(".tw__candle").evaluate((e) => Number(getComputedStyle(e).opacity))).toBeCloseTo(0.7, 1);
+    },
+  },
 ];
 
 test.describe("Recipient reveal", () => {

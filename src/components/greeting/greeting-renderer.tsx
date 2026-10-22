@@ -379,7 +379,7 @@ export function GreetingRenderer({
                 )}
               </div>
             </div>
-            {endingRest && <RevealClosing ref={closingRef} content={content} signOff={endingLine} onPlayed={notifyPlayed} />}
+            {endingRest && <RevealClosing ref={closingRef} content={content} signOff={endingLine} onPlayed={notifyPlayed} vintage={world.composition === "keepsake"} />}
           </>
         )}
       </div>
