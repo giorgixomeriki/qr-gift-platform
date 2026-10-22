@@ -2105,6 +2105,7 @@
 }
 .hm-finale__inner {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   justify-items: center;
 }
 .hm-finale__seal {
@@ -2673,6 +2674,8 @@ html.hm-dialog-open {
   display: flex;
   justify-content: center;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
   margin: -1rem 0 1.5rem;
 }
 .hm-fan {
