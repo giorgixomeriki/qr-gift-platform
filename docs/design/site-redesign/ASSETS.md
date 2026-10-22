@@ -85,3 +85,13 @@ The QR Starr card on the home page is always our own live artwork: logo, a real 
 ## Icons
 
 Phosphor Icons (MIT), already a dependency. One family across the page.
+
+## Product media (functional, `public/site/media/` and `public/site/designs/`)
+
+| File | Source | Licence | Notes |
+|---|---|---|---|
+| `design-<theme>-<ka|en>-{400,720}` | Captured from QR Starr's own theme picker (`/g/<token>`, design step), 2026-10-22 | QR Starr's own product | The six real greeting designs, in both languages |
+| `video-bouquet-720.mp4`, `video-bouquet-poster-*` | Mixkit, "Girl in love smells a bouquet of flowers" (#42596), https://mixkit.co/free-stock-video/girl-in-love-smells-a-bouquet-of-flowers-42596/ | Mixkit Stock Video Free License: the clip page states free download "for commercial or personal use" (checked 2026-10-22; several other gifting clips were Restricted and rejected) | Re-encoded 1280×720 H.264, silent, slight warm grade, 9 s, 0.96 MB; loads only when opened |
+| `voice-sonnet43.m4a`, `.peaks.json` | LibriVox, "Sonnet 43" by Elizabeth Barrett Browning, reader "CG", https://archive.org/details/sonnet_43_librivox | Public domain (LibriVox; item licence creativecommons.org/licenses/publicdomain) | Demo only, in English (no licensed Georgian greeting recording exists in Commons, Lingua Libre, Freesound CC0 or LibriVox). Trimmed to the poem (43 s), loudness-normalised, AAC 80 kbps; peaks computed from the file. Replace with a real Georgian greeting when available |
+
+Library: wavesurfer.js 7.12.12 (BSD-3-Clause, https://wavesurfer.xyz), imported on demand.

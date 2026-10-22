@@ -1,7 +1,6 @@
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { QrCode } from "@phosphor-icons/react/dist/ssr/QrCode";
-import { Microphone } from "@phosphor-icons/react/dist/ssr/Microphone";
 import { getHomeQrSvg, getLanding } from "./copy";
 import { LetterScreen, PhoneShell, QrCard } from "./objects";
 import { Photo } from "./photo";
@@ -52,19 +51,7 @@ export async function Hero() {
               <LetterScreen copy={sample} />
             </PhoneShell>
           }
-          badges={
-            <>
-              <span className="hm-gilt hm-gilt--photo" aria-hidden />
-              <span className="hm-badge hm-badge--scan">
-                <QrCode size={16} weight="regular" aria-hidden />
-                {text("hero.badgeScan")}
-              </span>
-              <span className="hm-badge hm-badge--voice">
-                <Microphone size={16} weight="fill" aria-hidden />
-                {text("hero.badgeVoice")} · 0:24
-              </span>
-            </>
-          }
+          badges={<span className="hm-gilt hm-gilt--photo" aria-hidden />}
         />
 
         <ul className="hm-hero__assure">

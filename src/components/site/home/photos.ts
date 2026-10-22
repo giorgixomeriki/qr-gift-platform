@@ -37,6 +37,19 @@ export const PHOTOS = {
   "redoute-moss": { w: 2328, h: 3162, widths: [480, 800], dir: "vintage" },
   "ruotte-bouquet": { w: 2056, h: 3128, widths: [480, 800], dir: "vintage" },
   "lace-valentine": { w: 3061, h: 3760, widths: [480, 800], dir: "vintage" },
+  // Real QR Starr greeting designs, captured from the product's theme picker
+  "design-romantic-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-romantic-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-birthday-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-birthday-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-wedding-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-wedding-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-celebration-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-celebration-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-elegant-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-elegant-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-minimal-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-minimal-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
 } as const;
 
 export type PhotoName = keyof typeof PHOTOS;

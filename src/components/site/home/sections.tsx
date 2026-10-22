@@ -2,36 +2,20 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
-import { Storefront } from "@phosphor-icons/react/dist/ssr/Storefront";
-import { DeviceMobileCamera } from "@phosphor-icons/react/dist/ssr/DeviceMobileCamera";
-import { EnvelopeOpen } from "@phosphor-icons/react/dist/ssr/EnvelopeOpen";
-import { PenNib } from "@phosphor-icons/react/dist/ssr/PenNib";
-import { Image as ImageIcon } from "@phosphor-icons/react/dist/ssr/Image";
-import { VideoCamera } from "@phosphor-icons/react/dist/ssr/VideoCamera";
-import { Microphone } from "@phosphor-icons/react/dist/ssr/Microphone";
-import { Swatches } from "@phosphor-icons/react/dist/ssr/Swatches";
-import { Play } from "@phosphor-icons/react/dist/ssr/Play";
-import { Gift } from "@phosphor-icons/react/dist/ssr/Gift";
-import { Printer } from "@phosphor-icons/react/dist/ssr/Printer";
-import { ChartLineUp } from "@phosphor-icons/react/dist/ssr/ChartLineUp";
-import { EyeSlash } from "@phosphor-icons/react/dist/ssr/EyeSlash";
-import { Eye } from "@phosphor-icons/react/dist/ssr/Eye";
-import { LockSimple } from "@phosphor-icons/react/dist/ssr/LockSimple";
-import { DeviceMobile } from "@phosphor-icons/react/dist/ssr/DeviceMobile";
-import { ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { HandSwipeRight } from "@phosphor-icons/react/dist/ssr/HandSwipeRight";
-import { ThemeSwatch } from "@/components/greeting/theme-swatch";
-import { SELECTABLE_THEMES } from "@/lib/themes/registry";
 import { Marquee } from "@/components/vendor/magicui/marquee";
-import { BlurFade } from "@/components/vendor/magicui/blur-fade";
 import { CardsCarousel } from "@/components/vendor/aceternity/cards-carousel";
 import { FocusCards } from "@/components/vendor/aceternity/focus-cards";
 import { getHomeQrSvg, getLanding } from "./copy";
-import { CardComposite, KeepScreen, LetterScreen, OpenScreen, QrCard, ScanScreen, Wave } from "./objects";
+import { CardComposite, KeepScreen, LetterScreen, OpenScreen, QrCard, ScanScreen } from "./objects";
 import { OccasionPostcard, PaperToScreen, PostcardFan } from "./vintage";
 import { Photo } from "./photo";
 import type { PhotoName } from "./photos";
-import { DemoLetterText, PhotoStack, RevealText, TiltCard } from "./motion";
+import { DemoLetterText, PhotoStack, TiltCard } from "./motion";
+import { DesignShowcase } from "./design-showcase";
+import { VoiceMessage } from "./voice-message";
+import { HeroVideoDialog } from "@/components/vendor/magicui/hero-video-dialog";
+import VOICE_PEAKS from "../../../../public/site/media/voice-sonnet43.peaks.json";
 import { ScanDemo } from "./scan-demo";
 
 /*
@@ -84,7 +68,6 @@ export async function Moments() {
 }
 
 /* -------------------------------------------------------------- steps */
-const STEP_ICONS = [Storefront, DeviceMobileCamera, EnvelopeOpen];
 
 export async function Steps() {
   const { text, raw } = await getLanding();
@@ -105,19 +88,15 @@ export async function Steps() {
         <Head id="hm-steps-title" eyebrow={text("steps.eyebrow")} title={text("steps.title")} />
         <ol className="hm-steps">
           {items.map((s, i) => {
-            const Icon = STEP_ICONS[i] ?? Gift;
             return (
               <li key={i} className="hm-step">
-                <BlurFade inView delay={i * 0.12} duration={0.7} className="hm-step__frame">
+                <div className="hm-step__frame">
                   {visual(i)}
                   <span className="hm-step__num hm-numeral" aria-hidden>
                     {String(i + 1).padStart(2, "0")}
                   </span>
-                </BlurFade>
+                </div>
                 <div className="hm-step__body">
-                  <span className="hm-step__icon" aria-hidden>
-                    <Icon size={20} weight="light" />
-                  </span>
                   <h3 className="hm-h3">{s.title}</h3>
                   <p className="hm-body">{s.text}</p>
                 </div>
@@ -125,7 +104,7 @@ export async function Steps() {
             );
           })}
         </ol>
-        <p className="mt-10" data-reveal>
+        <p className="mt-10">
           <Link href="/how-it-works" className="hm-link">
             {text("steps.more")}
             <ArrowRight size={16} aria-hidden />
@@ -139,9 +118,8 @@ export async function Steps() {
 /* ---------------------------------------------------------- transform */
 /** From paper to screen: the physical card and the greeting it opens, compared. */
 export async function Transform() {
-  const { text } = await getLanding();
+  const { text, ctx } = await getLanding();
   const svg = await getHomeQrSvg();
-  const sample = { to: text("hero.sampleTo"), text: text("hero.sampleText"), sign: text("hero.sampleSign"), voice: text("hero.sampleVoice"), tag: text("hero.sampleTag") };
   return (
     <section className="hm-section hm-transform" id="paper-to-screen" aria-labelledby="hm-transform-title">
       <div className="hm-wrap">
@@ -157,19 +135,7 @@ export async function Transform() {
           }
           screen={
             <div className="hm-compare__screen">
-              <div className="hm-compare__letter hm-letter">
-                <span className="hm-screen__kicker">{sample.to}</span>
-                <p className="hm-letter__text">{sample.text}</p>
-                <p className="hm-letter__sign">{sample.sign}</p>
-              </div>
-              <div className="hm-compare__prints">
-                <span className="hm-print">
-                  <Photo name="keepsake-hug" alt="" sizes="200px" />
-                </span>
-                <span className="hm-print">
-                  <Photo name="bouquet-garden" alt="" sizes="200px" />
-                </span>
-              </div>
+              <Photo name={`design-romantic-${ctx.locale}` as PhotoName} alt="" sizes="(min-width: 64rem) 22rem, 46vw" className="hm-compare__design" />
             </div>
           }
         />
@@ -190,7 +156,7 @@ export async function Demo() {
     <section className="hm-section hm-demo-section" id="after-scan" aria-labelledby="hm-demo-title">
       <div className="hm-wrap">
         <Head id="hm-demo-title" eyebrow={text("demo.eyebrow")} title={text("demo.title")} lead={text("demo.lead")} />
-        <div className="hm-demo-stage" data-reveal>
+        <div className="hm-demo-stage">
           <div className="hm-demo-stage__photo">
             <Photo name="recipient-admiring" alt={text("demo.photoAlt")} sizes="(min-width: 56rem) 26vw, 0px" position="50% 55%" />
           </div>
@@ -211,79 +177,88 @@ export async function Demo() {
 }
 
 /* -------------------------------------------------------- experiences */
-const STACK: PhotoName[] = ["keepsake-picnic", "keepsake-hug", "bouquet-garden", "occasion-love"];
+const STACK: PhotoName[] = ["keepsake-hug", "bouquet-garden", "keepsake-picnic", "occasion-love"];
+const DESIGN_ORDER = ["romantic", "birthday", "wedding", "celebration", "elegant", "minimal"] as const;
 
+/**
+ * Inside a greeting: the six real designs as the centrepiece, then an
+ * editorial spread of what a greeting holds: the letter, photo prints, a
+ * real video and a real voice note. No identical cards.
+ */
 export async function Experiences() {
-  const { text, raw, rich } = await getLanding();
+  const { text, raw, rich, ctx } = await getLanding();
   const tApp = await getTranslations("themes");
   const stackAlts = raw<string[]>("experiences.stackAlts");
-  const tile = (key: string, Icon: typeof PenNib) => (
-    <>
-      <span className="hm-tile__icon">
-        <Icon size={20} weight="light" aria-hidden />
-        <h3 className="hm-h3 text-[var(--hm-ink)]">{rich(`experiences.${key}.title`)}</h3>
-      </span>
-      <p className="hm-body">{rich(`experiences.${key}.text`)}</p>
-    </>
-  );
+  const loc = ctx.locale;
+  const designs = DESIGN_ORDER.map((key) => {
+    const name = tApp(`${key}.name`);
+    return {
+      key,
+      name,
+      tagline: tApp(`${key}.tagline`),
+      opening: tApp(`${key}.opening`),
+      image: <Photo name={`design-${key}-${loc}` as PhotoName} alt={text("experiences.designAlt").replace("{name}", name)} sizes="(min-width: 64rem) 30rem, 82vw" />,
+    };
+  });
+  const voice = VOICE_PEAKS;
 
   return (
-    <section className="hm-section" id="greetings" aria-labelledby="hm-exp-title" style={{ background: "var(--hm-paper-2)" }}>
+    <section className="hm-section hm-inside" id="greetings" aria-labelledby="hm-exp-title">
       <div className="hm-wrap">
         <Head id="hm-exp-title" eyebrow={text("experiences.eyebrow")} title={text("experiences.title")} lead={text("experiences.lead")} />
-        <ul className="hm-bento">
-          <li className="hm-tile hm-tile--photos hm-paper" data-reveal>
-            <div className="hm-tile__art hm-tile__art--stack">
-              <PhotoStack
-                label={text("experiences.stackLabel")}
-                cards={STACK.map((name, i) => (
-                  <Photo key={name} name={name} alt={stackAlts[i] ?? ""} sizes="260px" />
-                ))}
-              />
-              <span className="hm-tile__hint" aria-hidden>
-                <HandSwipeRight size={16} weight="regular" />
-                {text("experiences.stackHint")}
-              </span>
-            </div>
-            {tile("photos", ImageIcon)}
-          </li>
-          <li className="hm-tile hm-tile--letter hm-paper" data-reveal style={{ ["--d" as string]: 1 }}>
-            <div className="hm-tile__art" aria-hidden>
-              <p className="hm-tile__letter">
-                {text("experiences.letterSample")}
-                <span className="hm-tile__caret" />
-              </p>
-            </div>
-            {tile("message", PenNib)}
-          </li>
-          <li className="hm-tile hm-tile--video hm-paper" data-reveal>
-            <div className="hm-tile__art hm-tile__art--video">
-              <Photo name="gift-hands-cafe" alt={text("experiences.videoAlt")} sizes="(min-width: 64rem) 30vw, 92vw" />
-              <span className="hm-tile__play" aria-hidden>
-                <Play size={20} weight="fill" />
-              </span>
-            </div>
-            {tile("video", VideoCamera)}
-          </li>
-          <li className="hm-tile hm-tile--voice hm-paper" data-reveal style={{ ["--d" as string]: 1 }}>
-            <div className="hm-tile__art" aria-hidden>
-              <span className="hm-tile__rec">0:24</span>
-              <Wave className="hm-tile__wave" />
-            </div>
-            {tile("voice", Microphone)}
-          </li>
-          <li className="hm-tile hm-tile--designs hm-paper" data-reveal>
-            <div className="hm-tile__art" aria-hidden>
-              {SELECTABLE_THEMES.map((th) => (
-                <span key={th.key} className="hm-swatch">
-                  <ThemeSwatch themeKey={th.key} className="hm-swatch__art" />
-                  <span className="hm-swatch__name">{tApp(`${th.key}.name`)}</span>
-                </span>
+        <DesignShowcase designs={designs} label={text("experiences.designsLabel")} counter={text("experiences.designsCounter")} />
+
+        <div className="hm-spread">
+          <article className="hm-spread__letter hm-paper">
+            <p className="hm-spread__label">{text("experiences.letterLabel")}</p>
+            <p className="hm-spread__words">
+              {text("hero.sampleText")} {text("experiences.letterSample")}
+            </p>
+            <p className="hm-spread__sign">{tApp("romantic.ending")}</p>
+            <p className="hm-spread__meta">{rich("experiences.letterLimit")}</p>
+          </article>
+
+          <div className="hm-spread__prints">
+            <PhotoStack
+              label={text("experiences.stackLabel")}
+              cards={STACK.map((name, i) => (
+                <Photo key={name} name={name} alt={stackAlts[i] ?? ""} sizes="260px" />
               ))}
-            </div>
-            {tile("designs", Swatches)}
-          </li>
-        </ul>
+            />
+            <p className="hm-spread__meta hm-spread__meta--center">
+              <HandSwipeRight size={16} weight="regular" aria-hidden /> {rich("experiences.photosLabel")} · {text("experiences.stackHint")}
+            </p>
+          </div>
+
+          <div className="hm-spread__video">
+            <HeroVideoDialog
+              title={text("experiences.videoTitle")}
+              duration="0:09"
+              videoSrc="/site/media/video-bouquet-720.mp4"
+              posterSrc="/site/media/video-bouquet-poster-1280.webp"
+              labels={{ play: text("experiences.videoPlay"), close: text("experiences.videoClose") }}
+              poster={
+                <picture className="hm-photo">
+                  <source type="image/avif" srcSet="/site/media/video-bouquet-poster-640.avif 640w, /site/media/video-bouquet-poster-1280.avif 1280w" sizes="(min-width: 64rem) 40rem, 92vw" />
+                  <img src="/site/media/video-bouquet-poster-1280.webp" srcSet="/site/media/video-bouquet-poster-640.webp 640w, /site/media/video-bouquet-poster-1280.webp 1280w" sizes="(min-width: 64rem) 40rem, 92vw" alt={text("experiences.videoAlt")} width={1280} height={720} loading="lazy" decoding="async" />
+                </picture>
+              }
+            />
+            <p className="hm-spread__meta">{rich("experiences.videoLimit")}</p>
+          </div>
+
+          <div className="hm-spread__voice">
+            <VoiceMessage
+              src="/site/media/voice-sonnet43.m4a"
+              peaks={voice.peaks}
+              duration={voice.duration}
+              title={text("experiences.voiceTitle")}
+              credit={text("experiences.voiceCredit")}
+              labels={{ play: text("experiences.voicePlay"), pause: text("experiences.voicePause"), seek: text("experiences.voiceSeek") }}
+            />
+            <p className="hm-spread__meta">{rich("experiences.voiceLimit")}</p>
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -300,7 +275,7 @@ const OCCASIONS: { theme: string; photo: PhotoName; plate: PhotoName; position?:
 ];
 
 export async function Occasions() {
-  const { text, raw } = await getLanding();
+  const { text, raw, ctx } = await getLanding();
   const tApp = await getTranslations("themes");
   const items = raw<Item[]>("occasions.items");
   const alts = raw<string[]>("occasions.alts");
@@ -321,7 +296,7 @@ export async function Occasions() {
                 key={i}
                 front={<Photo name={occ.photo} alt={alts[i] ?? ""} sizes="(min-width: 48rem) 340px, 76vw" position={occ.position} />}
                 plate={<Photo name={occ.plate} alt={text("occasions.plateAlt")} sizes="(min-width: 48rem) 320px, 60vw" />}
-                swatch={<ThemeSwatch themeKey={occ.theme} className="hm-occ__swatch" />}
+                swatch={<Photo name={`design-${occ.theme}-${ctx.locale}` as PhotoName} alt="" sizes="72px" className="hm-occ__swatch" />}
                 label={`${text("occasions.designLabel")}: ${design}`}
                 title={o.title}
                 text={o.text}
@@ -339,7 +314,6 @@ export async function Occasions() {
 }
 
 /* ----------------------------------------------------------- partners */
-const BENEFIT_ICONS = [Gift, Printer, ChartLineUp, EyeSlash];
 const PARTNER_PHOTOS: { name: PhotoName; position: string }[] = [
   { name: "florist-roses", position: "50% 45%" },
   { name: "bouquet-peonies", position: "50% 50%" },
@@ -355,7 +329,7 @@ export async function Partners() {
     <section className="hm-section hm-dark" id="partners" aria-labelledby="hm-partners-title" data-testid="home-partners">
       <div className="hm-wrap">
         <div className="hm-partners">
-          <div className="grid justify-items-start gap-6" data-reveal>
+          <div className="grid justify-items-start gap-6">
             <p className="hm-kicker">{text("partners.eyebrow")}</p>
             <h2 id="hm-partners-title" className="hm-title">
               {text("partners.title")}
@@ -383,11 +357,10 @@ export async function Partners() {
         </div>
         <ul className="hm-benefits">
           {items.map((b, i) => {
-            const Icon = BENEFIT_ICONS[i] ?? Gift;
             return (
-              <li key={i} className="hm-benefit" data-reveal style={{ ["--d" as string]: i }}>
-                <span className="hm-benefit__icon" aria-hidden>
-                  <Icon size={22} weight="light" />
+              <li key={i} className="hm-benefit">
+                <span className="hm-benefit__n hm-numeral" aria-hidden>
+                  {String(i + 1).padStart(2, "0")}
                 </span>
                 <h3 className="hm-h3">{b.title}</h3>
                 <p className="hm-body">{b.text}</p>
@@ -408,7 +381,7 @@ export async function Pricing() {
   return (
     <section className="hm-section" id="pricing" aria-labelledby="hm-pricing-title">
       <div className="hm-wrap hm-pricing">
-        <div className="grid justify-items-start gap-5" data-reveal>
+        <div className="grid justify-items-start gap-5">
           <p className="hm-kicker">{text("pricing.eyebrow")}</p>
           <h2 id="hm-pricing-title" className="hm-title">
             {text("pricing.title")}
@@ -419,7 +392,7 @@ export async function Pricing() {
             <ArrowRight size={16} aria-hidden />
           </Link>
         </div>
-        <div className="hm-pricing__visual" data-reveal style={{ ["--d" as string]: 1 }}>
+        <div className="hm-pricing__visual">
           <div className="hm-pricing__mat" aria-hidden>
             <Photo name="lace-valentine" alt="" sizes="(min-width: 56rem) 24vw, 60vw" />
           </div>
@@ -447,7 +420,6 @@ export async function Pricing() {
 }
 
 /* -------------------------------------------------------------- trust */
-const TRUST_ICONS = [Eye, LockSimple, DeviceMobile, ArrowCounterClockwise];
 
 export async function Trust() {
   const { text, raw, rich } = await getLanding();
@@ -460,10 +432,11 @@ export async function Trust() {
           <Head id="hm-trust-title" eyebrow={text("trust.eyebrow")} title={text("trust.title")} />
           <ul className="hm-trust">
             {items.map((it, i) => {
-              const Icon = TRUST_ICONS[i] ?? Eye;
               return (
-                <li key={i} className="hm-trust__item" data-reveal style={{ ["--d" as string]: i }}>
-                  <Icon size={24} weight="light" aria-hidden />
+                <li key={i} className="hm-trust__item">
+                  <span className="hm-trust__n hm-numeral" aria-hidden>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
                   <div>
                     <h3 className="hm-h3">{it.title}</h3>
                     <p className="hm-body mt-1">{it.text}</p>
@@ -473,7 +446,7 @@ export async function Trust() {
             })}
           </ul>
         </div>
-        <div className="hm-faq" data-reveal>
+        <div className="hm-faq">
           <span className="hm-gilt hm-gilt--tr" aria-hidden />
           <h2 className="hm-faq__title">{text("trust.faqTitle")}</h2>
           <div className="hm-faq__list">
@@ -505,7 +478,9 @@ export async function Finale() {
       </div>
       <div className="hm-wrap hm-finale__inner">
         <PostcardFan label={text("finale.postcardsLabel")} cards={POSTCARDS.map((name, i) => ({ alt: alts[i] ?? "", node: <Photo name={name} alt="" sizes="180px" /> }))} />
-        <RevealText id="hm-finale-title" text={text("finale.title")} className="hm-title hm-finale__title" />
+        <h2 id="hm-finale-title" className="hm-title hm-finale__title">
+          {text("finale.title")}
+        </h2>
         <p className="hm-lead mx-auto mt-5">{text("finale.body")}</p>
         <div className="hm-actions hm-actions--stack">
           <Link href="/how-it-works" className="hm-btn hm-btn--cream">

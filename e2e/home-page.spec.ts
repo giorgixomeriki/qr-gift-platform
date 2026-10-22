@@ -121,3 +121,48 @@ test("an occasion opens as a postcard dialog, closes on Escape and returns focus
   await expect(dialog).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+test("the six real designs are a keyboard tab list that changes the stage", async ({ page, context }) => {
+  await useLocale(context, "en");
+  await page.goto("/");
+  const tabs = page.getByRole("tablist", { name: landing("en").experiences.designsLabel });
+  await expect(tabs.getByRole("tab")).toHaveCount(6);
+  const first = page.getByTestId("design-tab-romantic");
+  await expect(first).toHaveAttribute("aria-selected", "true");
+  await first.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(page.getByTestId("design-tab-birthday")).toHaveAttribute("aria-selected", "true");
+  await expect(page.getByTestId("design-tab-birthday")).toBeFocused();
+  await expect(page.getByRole("tabpanel").getByRole("img", { name: /Birthday/ })).toBeVisible();
+});
+
+test("the video poster opens a real, playable video in a dialog that closes on Escape", async ({ page, context }) => {
+  await useLocale(context, "en");
+  const copy = landing("en").experiences;
+  await page.goto("/");
+  const poster = page.getByRole("button", { name: `${copy.videoPlay}: ${copy.videoTitle}` });
+  await poster.click();
+  const dialog = page.getByRole("dialog", { name: copy.videoTitle });
+  await expect(dialog).toBeVisible();
+  const video = dialog.locator("video");
+  await expect(video).toHaveAttribute("src", "/site/media/video-bouquet-720.mp4");
+  await expect.poll(() => video.evaluate((v: HTMLVideoElement) => v.readyState)).toBeGreaterThan(0);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(poster).toBeFocused();
+});
+
+test("the voice note is a real recording: wavesurfer draws its waveform and play starts audio", async ({ page, context }) => {
+  await useLocale(context, "en");
+  const copy = landing("en").experiences;
+  await page.goto("/");
+  const player = page.locator(".hm-vm");
+  await player.scrollIntoViewIfNeeded();
+  await expect(player).toHaveAttribute("data-ready", "");
+  const audio = await page.request.get("/site/media/voice-sonnet43.m4a");
+  expect(audio.ok()).toBeTruthy();
+  expect(Number(audio.headers()["content-length"] ?? (await audio.body()).length)).toBeGreaterThan(100_000);
+  await page.getByRole("button", { name: copy.voicePlay }).click();
+  await expect(page.getByRole("button", { name: copy.voicePause })).toBeVisible();
+  await expect(page.getByRole("slider", { name: copy.voiceSeek })).toBeVisible();
+});

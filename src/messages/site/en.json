@@ -925,8 +925,8 @@
     },
     "experiences": {
       "eyebrow": "Inside a greeting",
-      "title": "Everything you’d want to say",
-      "lead": "Only the message is required. Add as much or as little as the moment needs.",
+      "title": "Everything you’d want to say, beautifully kept",
+      "lead": "Six designs, each a complete world with its own typography, colour and opening. Then your words, your photos, a video and your voice. Only the message is required.",
       "message": {
         "title": "A letter",
         "text": "Up to {{fact.messageMaxLength}} characters, set like a handwritten note on paper."
@@ -956,7 +956,23 @@
         "A bouquet of white roses held in a garden",
         "A hand holding a pink and peach bouquet"
       ],
-      "videoAlt": "Hands passing a wrapped gift across a café table"
+      "videoAlt": "A woman smiling as she smells a bouquet of roses",
+      "designsLabel": "The six greeting designs",
+      "designsCounter": "Design {n} of {total}",
+      "designAlt": "The {name} greeting design, as the recipient sees it",
+      "letterLabel": "Your letter",
+      "letterLimit": "Up to {{fact.messageMaxLength}} characters",
+      "photosLabel": "Up to {{fact.photoCount}} photos",
+      "videoTitle": "A video, as they will see it",
+      "videoLimit": "One video, up to {{fact.videoMaxMb}} MB",
+      "videoPlay": "Play the video",
+      "videoClose": "Close the video",
+      "voiceTitle": "A voice note",
+      "voiceLimit": "Record up to {{fact.voiceMaxSeconds}} seconds in the browser, or upload a file",
+      "voiceCredit": "Demo recording: Sonnet 43 by Elizabeth Barrett Browning, read for LibriVox (public domain)",
+      "voicePlay": "Play the voice note",
+      "voicePause": "Pause the voice note",
+      "voiceSeek": "Position in the voice note"
     },
     "occasions": {
       "eyebrow": "Occasions",
