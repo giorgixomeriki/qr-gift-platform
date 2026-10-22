@@ -72,6 +72,7 @@ New (2.0):
 | `greeting/studio-aside.tsx` | Desktop live world beside the letter |
 | `flow/status-screen.tsx` + `signature/status.css` | Status screens in Signature paper |
 | `lib/client/waveform.ts` | Real waveform peaks from the audio |
+| `greeting/card-states.tsx` | Each `/g/[token]` state as its own client bundle (`React.lazy` + `Suspense`, server-rendered); the recipient never downloads the wizard |
 | `lib/client/use-media-query.ts` | `useSyncExternalStore` media query (mounts the studio only on wide screens) |
 
 Ported (approved design, from 84b364c): `signature/chrome.tsx`, `signature/signature.css`, `greeting/signature-{wizard,theme-picker,create-step,voice-capture}.tsx`, `greeting/use-media-uploads.ts` and `greeting/message-backup.ts`.
@@ -105,9 +106,9 @@ There are no changes under `src/lib/payments`, `src/lib/greetings`, `src/lib/qr`
 |---|---|
 | `tsc --noEmit` | clean |
 | `eslint` | clean |
-| `next build` | passes; `/g/[token]` first load **122 kB** (production baseline bfbbae8: 185 kB) |
+| `next build` | passes; `/g/[token]` first load **121 kB** (production baseline bfbbae8: 185 kB) |
 | `verify:templates` · `verify:site-content` · `verify:low-cost-hosting` · `verify:env-guards` | pass (51 · 55 · 36 checks) |
-| e2e post-scan suites (greeting-flow, recipient-reveal, theme-picker, mobile-experience, pilot-protections, locale) + new `signature-experience` | see the final run in the commit message / review notes |
+| e2e post-scan suites (greeting-flow, recipient-reveal, theme-picker, mobile-experience, pilot-protections, locale) + new `signature-experience`, Chromium desktop + Pixel 7 | final run **83 passed, 2 failed, 9 skipped**. The 2 failures were load timeouts (a "session closed" protocol error and a 12 s wait while the machine's load average was ~15), and both passed on an immediate rerun. The 9 skips are by design: WebKit-only/desktop-only tests in the other project, and the Signature group runs once with explicit phone contexts. Earlier runs on the same code saw 1–7 similar load flakes, all passing on rerun |
 | Legacy path (`SIGNATURE_UI=0`) against **production's original** greeting-flow + pilot-protections specs | 12 / 12 (the shared checkout hook drives the money path and QA-02/04/08) |
 | Console | no errors or warnings on sender screens or on the reveal of any world (a `useId` hydration mismatch caused by `next/dynamic` was found and fixed by moving to `React.lazy` + `Suspense`) |
 | Horizontal overflow | none at 320, 360, 390, 430, 768, 1024 or 1440 px on any captured screen |
@@ -126,9 +127,9 @@ New focused spec `e2e/signature-experience.spec.ts`:
 
 | | baseline bfbbae8 | 2.0 |
 |---|---|---|
-| JS transferred (uncompressed) | 712 KB | **557 KB** (−22%: each card state is its own bundle now) |
+| JS transferred (uncompressed) | 712 KB | **554 KB** (−22%: each card state is its own bundle now) |
 | CSS (uncompressed) | 128 KB | 151 KB |
-| LCP (CPU ×4) | 132–252 ms | 124–236 ms |
+| LCP (CPU ×4, warm) | 132–252 ms | 108–116 ms (cold first request: 624 ms) |
 | CLS at rest / after the ending | 0 / 0.028 | 0 / 0.033 |
 | Open → message beat (in-page) | 193–201 ms | 962–981 ms: the 950 ms envelope gesture, by design |
 
@@ -147,4 +148,7 @@ The world's artwork is no longer preloaded at high priority behind the sealed en
 - Screen #1 (the entry after the first scan) is unchanged on purpose. It was approved and frozen on 2026-10-06. A redesign of it would be a proposal for the owner.
 - Only emulated browsers were used (Chromium desktop, Pixel 7 emulation and Playwright WebKit for the Safari check). No physical iOS or Android QA was done.
 - The envelope's seal is QR Starr's wine for every world (a brand mark). Per-world seal tints are a possible follow-up.
-- The Preview step and the theme hero still play the world's GSAP scene. Throttled-CPU numbers for the 2.0 additions are in section 9.
+- The Preview step and the theme hero still play the world's GSAP scene (unchanged cost).
+- iPhone voice memos are often typed `audio/x-m4a`, which the upload allowlist (`audio/mp4`) doesn't list. This is untested on a device, and changing it is a validation-rule decision, so it was left alone.
+- WebKit pixel test (checkout snippet): the snippet is now clamped deterministically (height, not `-webkit-line-clamp`; `text-wrap: wrap`). A rare sub-pixel difference (≈ 1 render in 60 in a stress loop) remains, while the test passed 5/5 and in the final reruns.
+- The preview shows 10 ₾ from the local seed; pricing wasn't touched.
