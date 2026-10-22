@@ -149,7 +149,10 @@
       "stillVerifyingBody": "If you paid, it will be confirmed shortly — please don't pay again. Check again in a moment.",
       "checkAgain": "Check again",
       "closedTitle": "Payments open soon",
-      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged."
+      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged.",
+      "orderKicker": "Your order",
+      "design": "Design",
+      "contents": "Contents"
     },
     "preview": {
       "edit": "Back to editing",
@@ -234,7 +237,15 @@
     "pause": "Pause",
     "seek": "Playback position",
     "madeWith": "Made with QR Starr",
-    "letterLabel": "Message"
+    "letterLabel": "Message",
+    "forYou": "For you",
+    "keepsakes": "Keepsakes",
+    "keepsakePhoto": "Photo",
+    "keepsakeVideo": "Video",
+    "keepsakeVoice": "Voice",
+    "closingTitle": "This letter is yours to keep.",
+    "closingBody": "Scan the card again whenever you'd like to open it.",
+    "toLetter": "Your letter"
   },
   "themes": {
     "romantic": {
@@ -282,7 +293,8 @@
   },
   "success": {
     "banner": "This is exactly what they'll see. Give the gift with the card — they scan it and it opens.",
-    "title": "Your greeting is live"
+    "title": "Your greeting is live",
+    "kicker": "Activated"
   },
   "partner": {
     "notAdmin": "Signed in as {email}, but not an admin.",

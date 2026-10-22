@@ -141,12 +141,13 @@ test.describe("Recipient reveal", () => {
     await expect(ending.locator(".tw")).not.toHaveAttribute("data-scene", /pending|playing/);
   });
 
-  test("opens in the chosen world: sealed, then its scene with the sender's own words", async ({ page }) => {
+  test("opens in the chosen world: a sealed envelope in its room, then its scene with the sender's own words", async ({ page }) => {
     await openPreview(page, "wedding", SHORT);
     const reveal = page.getByTestId("greeting-renderer");
     await expect(reveal).toHaveAttribute("data-composition", "vellum");
     await expect(reveal).toHaveAttribute("data-stage", "closed");
-    await expect(reveal.locator(".tw[data-sealed]")).toHaveCount(1);
+    // Signature 2.0: the envelope (in the world's room) replaces the sealed world card.
+    await expect(reveal.locator('.sx-env[data-state="sealed"]')).toHaveCount(1);
     await expect(reveal).toContainText("A few words for your big day"); // the template's opening line, as real text
 
     await page.getByTestId("greeting-tap-to-open").click();

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { EditIcon, ErrorIcon, PhotoIcon, PlayIcon } from "@/components/customer/icons";
+import { BackIcon, EditIcon, ErrorIcon, PhotoIcon, PlayIcon } from "@/components/customer/icons";
 import { BackButton, Brand, Dock, Mast, SealedEnvelope, SigAction, SigRoot, Steps } from "@/components/signature/chrome";
 import { ThemeWorld } from "@/components/themes/theme-world";
 import { updateMessageAction, viewPreviewAction } from "@/lib/greetings/actions";
@@ -11,11 +11,14 @@ import { getTemplate } from "@/lib/templates/catalog";
 import { roomVars } from "@/lib/templates/room";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
+import { useMediaQuery } from "@/lib/client/use-media-query";
 import { greetingMessageSchema, MESSAGE_MAX_LENGTH } from "@/lib/validation/greeting-text";
-import { CheckoutStep, PreviewStep, WizardHeader, type WizardInitialState } from "./creation-wizard";
+import { type WizardInitialState } from "./creation-wizard";
 import { clearMessageBackup, readMessageBackup, writeMessageBackup } from "./message-backup";
-import type { GreetingRenderContent } from "./greeting-renderer";
+import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
+import { SignatureCheckout } from "./signature-checkout";
 import { SignatureCreateStep } from "./signature-create-step";
+import { StudioAside } from "./studio-aside";
 import { SignatureThemePicker } from "./signature-theme-picker";
 import { useMediaUploads } from "./use-media-uploads";
 
@@ -62,6 +65,8 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
   const [saving, setSaving] = useState(false);
   const savedMessageRef = useRef(initial.message);
   const media = useMediaUploads(initial.greetingId, initial);
+  /** Desktop studio: the live world beside the letter (never mounted on phones). */
+  const wide = useMediaQuery("(min-width: 1024px)");
 
   const goToStep = useCallback(
     (next: Step, params: Record<string, string> = {}) => {
@@ -154,36 +159,32 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
   const content: GreetingRenderContent = { message: message.trim() || null, ...media.content };
 
   if (step === "checkout") {
-    // Checkout keeps its production visuals until the pricing-and-checkout phase.
     return (
-      <div className="flex min-h-dvh w-full flex-col">
-        <WizardHeader step="checkout" wizardStepIndex={-1} onBack={() => goToStep("preview")} />
-        <main className="px-page mx-auto flex w-full max-w-5xl flex-1 flex-col">
-          <div className="mx-auto flex w-full max-w-xl flex-1 flex-col">
-            <CheckoutStep
-              greetingId={initial.greetingId}
-              isTestPayments={initial.isTestPayments}
-              themeKey={themeKey}
-              content={content}
-              onBackToPreview={() => goToStep("preview")}
-              onEdit={() => goToStep("create")}
-            />
-          </div>
+      <SigRoot>
+        <main className="sig-page">
+          <Mast start={<BackButton onClick={() => goToStep("preview")} testId="checkout-back-to-preview" />} />
+          <SignatureCheckout
+            greetingId={initial.greetingId}
+            isTestPayments={initial.isTestPayments}
+            themeKey={themeKey}
+            content={content}
+            onBackToPreview={() => goToStep("preview")}
+            onEdit={() => goToStep("create")}
+          />
         </main>
-      </div>
+      </SigRoot>
     );
   }
 
   if (watching) {
     // "See it as the recipient": the real renderer, exactly what they'll receive; its own Activate waits at the ending.
     return (
-      <PreviewStep
-        greetingId={initial.greetingId}
+      <SignatureWatch
         themeKey={themeKey}
         content={content}
         priceLabel={initial.priceLabel}
-        recordView={false}
-        onEdit={() => goToStep("preview")}
+        onClose={() => goToStep("preview")}
+        onEdit={() => goToStep("create")}
         onCheckout={() => goToStep("checkout")}
       />
     );
@@ -191,7 +192,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
 
   return (
     <SigRoot>
-      <main className="sig-page">
+      <main className="sig-page" data-studio={(step !== "theme" && step !== "preview") || undefined}>
         {step === "theme" ? (
           <>
             <Mast start={<Brand />} />
@@ -217,17 +218,22 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
           <>
             <Mast start={<BackButton onClick={() => leaveCreate("theme")} />} />
             <StepRow step="create" />
-            <SignatureCreateStep
-              themeKey={themeKey}
-              message={message}
-              onMessageChange={changeMessage}
-              limit={MESSAGE_MAX_LENGTH}
-              messageError={messageError}
-              onClearError={() => setMessageError(null)}
-              media={media}
-              saving={saving}
-              onContinue={() => void continueFromCreate()}
-            />
+            <div className="sig-studio">
+              <div className="sig-studio__main">
+                <SignatureCreateStep
+                  themeKey={themeKey}
+                  message={message}
+                  onMessageChange={changeMessage}
+                  limit={MESSAGE_MAX_LENGTH}
+                  messageError={messageError}
+                  onClearError={() => setMessageError(null)}
+                  media={media}
+                  saving={saving}
+                  onContinue={() => void continueFromCreate()}
+                />
+              </div>
+              {wide && <StudioAside themeKey={themeKey} content={content} />}
+            </div>
           </>
         )}
       </main>
@@ -335,5 +341,65 @@ function SignaturePreview({
         )}
       </Dock>
     </div>
+  );
+}
+
+/**
+ * "See it as the recipient": the real renderer, full screen in the world's
+ * room — no app bars around it, so the sender sees exactly the recipient's
+ * screen. A close control floats at the top; at the ending, once its finale
+ * rests, Activate arrives in the room's own button style beside Edit.
+ * PREVIEW_VIEWED was already recorded by the Preview screen in front of this.
+ */
+function SignatureWatch({
+  themeKey,
+  content,
+  priceLabel,
+  onClose,
+  onEdit,
+  onCheckout,
+}: {
+  themeKey: ThemeKey;
+  content: GreetingRenderContent;
+  priceLabel: string | null;
+  onClose: () => void;
+  onEdit: () => void;
+  onCheckout: () => void;
+}) {
+  const t = useTranslations("wizard.preview");
+  const tc = useTranslations("wizard.checkout");
+  return (
+    <GreetingRenderer
+      themeKey={themeKey}
+      content={content}
+      mode="preview"
+      chrome={
+        <button type="button" onClick={onClose} aria-label={tc("backToPreview")} className="reveal__ghost reveal__ghost--chip" data-testid="preview-close">
+          <BackIcon size={16} aria-hidden />
+          <span>{t("viewingAs")}</span>
+        </button>
+      }
+      senderControls={
+        <div className="flex w-full flex-col gap-2" data-testid="preview-sender-controls">
+          {priceLabel ? (
+            <>
+              <p className="reveal__hint">{t("readyBody")}</p>
+              <div className="flex gap-2">
+                <button type="button" onClick={onEdit} className="reveal__ghost reveal__ghost--edit" data-testid="preview-edit">
+                  {t("editShort")}
+                </button>
+                <button type="button" onClick={onCheckout} className="reveal__primary flex-1" data-testid="preview-activate-cta">
+                  {t("activate", { price: priceLabel })}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="reveal__hint" role="alert" data-testid="preview-price-unavailable">
+              {t("priceUnavailable")}
+            </p>
+          )}
+        </div>
+      }
+    />
   );
 }

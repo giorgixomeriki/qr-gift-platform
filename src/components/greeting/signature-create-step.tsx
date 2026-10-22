@@ -7,6 +7,7 @@ import { Dock, SigAction } from "@/components/signature/chrome";
 import { Spark } from "@/components/ui/logo";
 import { allowedMimeTypesFor } from "@/lib/validation/content-types";
 import type { ThemeKey } from "@/lib/themes/registry";
+import { useWaveformPeaks } from "@/lib/client/waveform";
 import { SLOT_LIMITS, type MediaItem, type MediaKind, type MediaUploads } from "./use-media-uploads";
 import { SignatureVoiceCapture } from "./signature-voice-capture";
 
@@ -315,7 +316,7 @@ function MediaRow({ m, name, media }: { m: MediaItem; name: string; media: Media
         {m.kind === "audio" ? (
           <span className="sigf-row__voice">
             <VoiceIcon size={16} weight="fill" />
-            <Wave bars={9} />
+            <Wave src={m.url} bars={9} />
           </span>
         ) : m.kind === "video" ? (
           m.url && <video src={`${m.url}#t=0.1`} muted playsInline preload="metadata" onLoadedMetadata={(e) => Number.isFinite(e.currentTarget.duration) && setDuration(e.currentTarget.duration * 1000)} />
@@ -385,13 +386,13 @@ function MediaRow({ m, name, media }: { m: MediaItem; name: string; media: Media
   );
 }
 
-function Wave({ bars }: { bars: number }) {
-  // A fixed, deterministic waveform (no randomness between server and client renders).
-  const heights = Array.from({ length: bars }, (_, i) => 30 + Math.round(55 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.6))));
+function Wave({ src, bars }: { src: string | null; bars: number }) {
+  // The note's real loudness once decoded; until then (or if it can't be decoded) a level line — never invented peaks.
+  const peaks = useWaveformPeaks(src, bars);
   return (
-    <span className="sig-wave">
-      {heights.map((h, i) => (
-        <i key={i} style={{ height: `${h}%` }} />
+    <span className="sig-wave" data-real={peaks ? "" : undefined}>
+      {Array.from({ length: bars }, (_, i) => (
+        <i key={i} style={{ height: peaks ? `${Math.round(peaks[i]! * 100)}%` : "12%" }} />
       ))}
     </span>
   );

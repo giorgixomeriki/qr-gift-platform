@@ -9,11 +9,9 @@ import { getDefaultProductPrice, formatMinorAmount } from "@/lib/payments/displa
 import { editTokenCookieName } from "@/lib/security/edit-token";
 import { loadDraftForEdit, InvalidEditTokenError } from "@/lib/greetings/content";
 import { loadActiveGreetingForRecipient, isOriginalSender, RecipientAccessError } from "@/lib/greetings/recipient";
-import { SenderEntry } from "@/components/greeting/sender-entry";
-import { CreationWizard, type WizardInitialState } from "@/components/greeting/creation-wizard";
-import { SignatureWizard } from "@/components/greeting/signature-wizard";
+import type { WizardInitialState } from "@/components/greeting/creation-wizard";
+import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
 import { signatureUiEnabled } from "@/components/signature/flag";
-import { RecipientView } from "@/components/greeting/recipient-view";
 import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/placeholders";
 
 /**
@@ -33,6 +31,7 @@ import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/pl
  * would be scoped per-token, never shared across different Greetings.
  */
 export const dynamic = "force-dynamic";
+
 
 export default async function QrEntryPage({
   params,

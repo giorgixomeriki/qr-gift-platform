@@ -257,7 +257,7 @@ test.describe("Mobile experience", () => {
       await toPreviewScreen(page, token);
       await page.getByTestId("preview-activate-cta").click();
       await expect(page.getByTestId("checkout-pay")).toBeVisible();
-      const snippet = page.locator('section[aria-labelledby="checkout-summary"] p.line-clamp-2');
+      const snippet = page.locator('section[aria-labelledby="checkout-summary"] .sig-order__msg');
       const messages = [
         "Happy birthday 🎉 to the kindest 🎂 friend 🎁 — wishing you light 🌟 and laughter 😂 and a year 💐 full of 🥂 good surprises 🎈🎈 and love ❤️",
         "გილოცავ 🎉 დაბადების დღეს 🎂 ჩემო ძვირფასო 🎁 — გისურვებ სინათლეს 🌟 და სიცილს 😂 და წელს 💐 სავსე 🥂 სიურპრიზებით 🎈🎈",
