@@ -859,7 +859,11 @@
       "sampleVoice": "Voice note",
       "cardLine": "Scan me",
       "cardHint": "A greeting is waiting inside",
-    "recipientHint": "Received a QR Starr card? Scan its code with your phone’s camera, and your greeting opens on its own."
+      "recipientHint": "Received a QR Starr card? Scan its code with your phone’s camera, and your greeting opens on its own.",
+      "photoAlt": "Red tulips wrapped in kraft paper, with a QR Starr card tucked beside them",
+      "badgeScan": "Opens in the phone’s browser",
+      "badgeVoice": "Voice note",
+      "secondaryLink": "For florists and gift shops"
     },
     "demo": {
       "eyebrow": "After the scan",
@@ -910,7 +914,12 @@
           "text": "The same card opens your greeting on their phone, at the very moment the gift arrives."
         }
       ],
-      "more": "The full details: what a greeting holds, activation and limits"
+      "more": "The full details: what a greeting holds, activation and limits",
+      "alts": [
+        "A florist arranging a bouquet in her workshop",
+        "A QR Starr card and envelope on a table beside a sunflower",
+        "A woman walking with a bouquet, reading her phone"
+      ]
     },
     "experiences": {
       "eyebrow": "Inside a greeting",
@@ -936,7 +945,16 @@
         "title": "{{fact.themeCount}} designs",
         "text": "Each with its own typography, colours and opening animation. Change it as often as you like before paying."
       },
-      "letterSample": "I wish I could be there to see your face when you open this…"
+      "letterSample": "I wish I could be there to see your face when you open this…",
+      "stackLabel": "Photos in a greeting. Drag a print, or use the arrow keys, to look through them.",
+      "stackHint": "Drag the prints",
+      "stackAlts": [
+        "Friends laughing together on a picnic blanket",
+        "Two friends hugging on a beach",
+        "A bouquet of white roses held in a garden",
+        "A hand holding a pink and peach bouquet"
+      ],
+      "videoAlt": "Hands passing a wrapped gift across a café table"
     },
     "occasions": {
       "eyebrow": "Occasions",
@@ -969,7 +987,17 @@
           "text": "Sometimes a single sentence is the whole gift."
         }
       ],
-      "designLabel": "Design"
+      "designLabel": "Design",
+      "previous": "Previous occasions",
+      "next": "More occasions",
+      "alts": [
+        "A hand lighting the candles on a birthday cake",
+        "A hand holding a pink and peach bouquet",
+        "A couple holding hands across a candlelit dinner table",
+        "A bride and groom, the bride holding a soft beige bouquet",
+        "Champagne being poured into a row of glasses",
+        "Orange tulips beside a green envelope and a blank card"
+      ]
     },
     "partners": {
       "eyebrow": "For florists, bakeries and gift shops",
@@ -996,7 +1024,26 @@
       "terms": "Partnership terms are agreed individually.",
       "primary": "Become a partner",
       "secondary": "Partner sign in",
-      "sheetLabel": "A printed sheet of QR Starr cards"
+      "sheetLabel": "A printed sheet of QR Starr cards",
+      "cards": [
+        {
+          "title": "In the workshop",
+          "caption": "A card goes in as the bouquet is wrapped."
+        },
+        {
+          "title": "On the shelf",
+          "caption": "Cards wait beside the gifts, ready for any order."
+        },
+        {
+          "title": "At the counter",
+          "caption": "Your customer personalises it later, on their own phone."
+        }
+      ],
+      "photoAlts": [
+        "A florist arranging flowers in her workshop",
+        "A sunlit flower shop full of plants and cut flowers",
+        "A shop display crowded with fresh bouquets"
+      ]
     },
     "pricing": {
       "eyebrow": "Pricing",
@@ -1012,7 +1059,8 @@
         "Opened as often as the recipient likes"
       ],
       "note": "The price for your card is shown on its start screen and again at checkout, before you pay.",
-      "more": "Pricing details"
+      "more": "Pricing details",
+      "compositeAlt": "A QR Starr card on a table beside an envelope and a sunflower"
     },
     "trust": {
       "eyebrow": "Peace of mind",
@@ -1063,7 +1111,19 @@
       "title": "Next time, let the gift speak in your words.",
       "body": "Ask for a QR Starr card at a partner shop, or bring QR Starr to yours.",
       "primary": "How it works",
-      "secondary": "Become a partner"
+      "secondary": "Become a partner",
+      "photoAlt": "Hands passing a gift box tied with red ribbon across a café table"
+    },
+    "moments": {
+      "label": "Gift-giving moments",
+      "alts": [
+        "Hands passing a gift box tied with red ribbon across a café table",
+        "A bouquet of white roses and blue hydrangea held in a garden",
+        "Someone holding out a small gift wrapped in paper and twine",
+        "A pink and peach bouquet held at arm’s length",
+        "A woman walking down the street with flowers, looking at her phone",
+        "A small paper parcel tied with string, held in window light"
+      ]
     }
   }
 }

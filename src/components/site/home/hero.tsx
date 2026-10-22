@@ -1,13 +1,18 @@
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { QrCode } from "@phosphor-icons/react/dist/ssr/QrCode";
+import { Microphone } from "@phosphor-icons/react/dist/ssr/Microphone";
 import { getHomeQrSvg, getLanding } from "./copy";
-import { LetterScreen, Phone, QrCard } from "./objects";
+import { LetterScreen, PhoneShell, QrCard } from "./objects";
+import { Photo } from "./photo";
+import { HeroStage } from "./motion";
 
 /**
- * The opening view: the promise in one line, and the card, tied to its gift
- * with a ribbon, beside the phone it opened. On phones the order is words,
- * actions, the note for someone holding a card, then the picture.
+ * The opening view, composed like a campaign: a photograph of a real gift
+ * (tulips in kraft paper), our QR card tucked beside it, and the phone that
+ * card opens, breaking out of the photograph's frame. One primary action;
+ * partners get a quiet link. On phones the order is words, action, the note
+ * for someone holding a card, then the picture.
  */
 export async function Hero() {
   const { text, raw } = await getLanding();
@@ -16,7 +21,6 @@ export async function Hero() {
 
   return (
     <section className="hm-hero" aria-labelledby="hm-hero-title" data-testid="home-hero">
-      <div className="hm-hero__light" aria-hidden />
       <div className="hm-wrap hm-hero__grid">
         <div className="hm-hero__copy">
           <p className="hm-kicker">{text("hero.eyebrow")}</p>
@@ -24,27 +28,42 @@ export async function Hero() {
             {text("hero.titleA")} <em>{text("hero.titleB")}</em>
           </h1>
           <p className="hm-lead">{text("hero.lead")}</p>
-          <div className="hm-actions hm-actions--stack mt-2">
+          <div className="hm-hero__actions">
             <a href="#how" className="hm-btn hm-btn--primary">
               {text("hero.primary")}
               <span className="hm-btn__disc" aria-hidden>
                 <ArrowRight size={16} weight="bold" />
               </span>
             </a>
-            <a href="#partners" className="hm-btn hm-btn--quiet">
-              {text("hero.secondary")}
+            <a href="#partners" className="hm-link">
+              {text("hero.secondaryLink")}
+              <ArrowRight size={16} aria-hidden />
             </a>
           </div>
         </div>
 
-        <div className="hm-stage" role="img" aria-label={text("hero.visualLabel")}>
-          <span className="hm-stage__shadow" />
-          <span className="hm-ribbon" />
-          <QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} className="hm-stage__card" />
-          <Phone className="hm-stage__phone">
-            <LetterScreen copy={sample} />
-          </Phone>
-        </div>
+        <HeroStage
+          label={text("hero.photoAlt")}
+          photo={<Photo name="hero-tulips" alt="" priority sizes="(min-width: 62rem) 34vw, 78vw" position="40% 40%" />}
+          card={<QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} />}
+          phone={
+            <PhoneShell>
+              <LetterScreen copy={sample} />
+            </PhoneShell>
+          }
+          badges={
+            <>
+              <span className="hm-badge hm-badge--scan">
+                <QrCode size={16} weight="regular" aria-hidden />
+                {text("hero.badgeScan")}
+              </span>
+              <span className="hm-badge hm-badge--voice">
+                <Microphone size={16} weight="fill" aria-hidden />
+                {text("hero.badgeVoice")} · 0:24
+              </span>
+            </>
+          }
+        />
 
         <ul className="hm-hero__assure">
           {raw<string[]>("hero.assurances").map((a) => (

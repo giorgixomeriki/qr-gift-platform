@@ -165,3 +165,5 @@ window-light-900 (hero light), romantic-leaves-rest (hero leaf shadow), paper-to
 entry-stationery-mobile-640, celebration-sky-rest and celebration-room (photo prints and video poster in the illustrated phone and greeting tiles).
 Celebration's Mixkit footage is not redistributed as footage: only the existing still frames are shown, inside the product illustration.
 
+Update 2026-10-22: the home page now uses its own licensed photography in `public/site/photos/` (19 Unsplash photos, each checked as free under the Unsplash License). They are registered in `docs/design/site-redesign/ASSETS.md`, not here. The celebration stills and the stationery photo are no longer used on the home page; window-light and the paper and linen textures still are.
+

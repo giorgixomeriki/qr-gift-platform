@@ -19,18 +19,26 @@ import { Eye } from "@phosphor-icons/react/dist/ssr/Eye";
 import { LockSimple } from "@phosphor-icons/react/dist/ssr/LockSimple";
 import { DeviceMobile } from "@phosphor-icons/react/dist/ssr/DeviceMobile";
 import { ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
+import { HandSwipeRight } from "@phosphor-icons/react/dist/ssr/HandSwipeRight";
 import { ThemeSwatch } from "@/components/greeting/theme-swatch";
 import { WaxSeal } from "@/components/customer/wax-seal";
-import { Spark } from "@/components/ui/logo";
 import { SELECTABLE_THEMES } from "@/lib/themes/registry";
+import { Marquee } from "@/components/vendor/magicui/marquee";
+import { BlurFade } from "@/components/vendor/magicui/blur-fade";
+import { CardsCarousel } from "@/components/vendor/aceternity/cards-carousel";
+import { FocusCards } from "@/components/vendor/aceternity/focus-cards";
 import { getHomeQrSvg, getLanding } from "./copy";
-import { KeepScreen, LetterScreen, OpenScreen, ScanScreen, Wave } from "./objects";
+import { CardComposite, KeepScreen, LetterScreen, OpenScreen, ScanScreen, Wave } from "./objects";
+import { Photo } from "./photo";
+import type { PhotoName } from "./photos";
+import { DemoLetterText, PhotoStack, RevealText, TiltCard } from "./motion";
 import { ScanDemo } from "./scan-demo";
 
 /*
- * The home page's sections, top to bottom. Each is a server component that
- * reads its own copy; only the scan demo and the reveal observer run in the
- * browser.
+ * The home page's sections, top to bottom. Server components read their own
+ * copy; interaction comes from the vendored components (components/vendor)
+ * and the motion layer (motion.tsx). Photographs are licensed stock that
+ * illustrate gifting; none is presented as a QR Starr customer or partner.
  */
 
 type Item = { title: string; text: string };
@@ -55,30 +63,22 @@ function Arrow() {
   );
 }
 
-/* --------------------------------------------------------------- demo */
-export async function Demo() {
-  const { text, raw, rich } = await getLanding();
-  const svg = await getHomeQrSvg();
-  const sample = { to: text("hero.sampleTo"), text: text("hero.sampleText"), sign: text("hero.sampleSign"), voice: text("hero.sampleVoice"), tag: text("hero.sampleTag") };
-  const beats = raw<{ label: string; title: string }[]>("demo.beats").map((b, i) => ({ ...b, text: rich(`demo.beats.${i}.text`) }));
+/* ------------------------------------------------------------ moments */
+const MOMENTS: PhotoName[] = ["gift-hands-cafe", "bouquet-garden", "gift-box-held", "occasion-love", "recipient-street", "gift-parcel"];
 
+/** A slow ribbon of gifting moments (Magic UI Marquee): the world the card travels in. */
+export async function Moments() {
+  const { text, raw } = await getLanding();
+  const alts = raw<string[]>("moments.alts");
   return (
-    <section className="hm-section" id="after-scan" aria-labelledby="hm-demo-title">
-      <div className="hm-wrap">
-        <Head id="hm-demo-title" eyebrow={text("demo.eyebrow")} title={text("demo.title")} lead={text("demo.lead")} />
-        <div className="mt-[clamp(2.5rem,1.5rem+3vw,4rem)]" data-reveal>
-          <ScanDemo
-            beats={beats}
-            labels={{ tabs: text("demo.tabsLabel") }}
-            screens={[
-              <ScanScreen key="scan" svg={svg} cardLine={text("hero.cardLine")} pill="qrapp.ge" />,
-              <OpenScreen key="open" to={sample.to} cta={text("demo.screenOpen")} />,
-              <LetterScreen key="read" copy={{ ...sample, text: `${sample.text} ${text("experiences.letterSample")}` }} withKeepsakes={false} />,
-              <KeepScreen key="keep" copy={sample} />,
-            ]}
-          />
-        </div>
-      </div>
+    <section className="hm-moments" aria-label={text("moments.label")}>
+      <Marquee pauseOnHover className="[--hm-marquee-duration:70s]">
+        {MOMENTS.map((name, i) => (
+          <figure key={name} className={`hm-moment hm-moment--${i % 3}`}>
+            <Photo name={name} alt={alts[i] ?? ""} sizes="(min-width: 48rem) 300px, 220px" />
+          </figure>
+        ))}
+      </Marquee>
     </section>
   );
 }
@@ -88,29 +88,44 @@ const STEP_ICONS = [Storefront, DeviceMobileCamera, EnvelopeOpen];
 
 export async function Steps() {
   const { text, raw } = await getLanding();
+  const svg = await getHomeQrSvg();
   const items = raw<Item[]>("steps.items");
+  const alts = raw<string[]>("steps.alts");
+  const visual = (i: number) =>
+    i === 0 ? (
+      <Photo name="florist-arranging" alt={alts[0] ?? ""} sizes="(min-width: 48rem) 30vw, 92vw" position="50% 35%" />
+    ) : i === 1 ? (
+      <CardComposite svg={svg} line={text("hero.cardLine")} alt={alts[1] ?? ""} sizes="(min-width: 48rem) 30vw, 92vw" />
+    ) : (
+      <Photo name="recipient-street" alt={alts[2] ?? ""} sizes="(min-width: 48rem) 30vw, 92vw" position="52% 40%" />
+    );
   return (
-    <section className="hm-section hm-section--tight" id="how" aria-labelledby="hm-steps-title" style={{ background: "var(--hm-paper-2)" }}>
+    <section className="hm-section" id="how" aria-labelledby="hm-steps-title">
       <div className="hm-wrap">
         <Head id="hm-steps-title" eyebrow={text("steps.eyebrow")} title={text("steps.title")} />
         <ol className="hm-steps">
           {items.map((s, i) => {
             const Icon = STEP_ICONS[i] ?? Gift;
             return (
-              <li key={i} className="hm-step" data-reveal style={{ ["--d" as string]: i }}>
-                <span className="hm-step__num hm-numeral" aria-hidden>
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="hm-step__icon" aria-hidden>
-                  <Icon size={22} weight="light" />
-                </span>
-                <h3 className="hm-h3">{s.title}</h3>
-                <p className="hm-body">{s.text}</p>
+              <li key={i} className="hm-step">
+                <BlurFade inView delay={i * 0.12} duration={0.7} className="hm-step__frame">
+                  {visual(i)}
+                  <span className="hm-step__num hm-numeral" aria-hidden>
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                </BlurFade>
+                <div className="hm-step__body">
+                  <span className="hm-step__icon" aria-hidden>
+                    <Icon size={20} weight="light" />
+                  </span>
+                  <h3 className="hm-h3">{s.title}</h3>
+                  <p className="hm-body">{s.text}</p>
+                </div>
               </li>
             );
           })}
         </ol>
-        <p className="mt-8" data-reveal>
+        <p className="mt-10" data-reveal>
           <Link href="/how-it-works" className="hm-link">
             {text("steps.more")}
             <ArrowRight size={16} aria-hidden />
@@ -121,10 +136,45 @@ export async function Steps() {
   );
 }
 
+/* --------------------------------------------------------------- demo */
+export async function Demo() {
+  const { text, raw, rich } = await getLanding();
+  const svg = await getHomeQrSvg();
+  const sample = { to: text("hero.sampleTo"), text: text("hero.sampleText"), sign: text("hero.sampleSign"), voice: text("hero.sampleVoice"), tag: text("hero.sampleTag") };
+  const beats = raw<{ label: string; title: string }[]>("demo.beats").map((b, i) => ({ ...b, text: rich(`demo.beats.${i}.text`) }));
+  const letter = `${sample.text} ${text("experiences.letterSample")}`;
+
+  return (
+    <section className="hm-section hm-demo-section" id="after-scan" aria-labelledby="hm-demo-title">
+      <div className="hm-wrap">
+        <Head id="hm-demo-title" eyebrow={text("demo.eyebrow")} title={text("demo.title")} lead={text("demo.lead")} />
+        <div className="hm-demo-stage" data-reveal>
+          <div className="hm-demo-stage__photo" aria-hidden>
+            <Photo name="recipient-smile" alt="" sizes="(min-width: 56rem) 26vw, 0px" position="30% 35%" />
+          </div>
+          <ScanDemo
+            beats={beats}
+            labels={{ tabs: text("demo.tabsLabel") }}
+            screens={[
+              <ScanScreen key="scan" svg={svg} cardLine={text("hero.cardLine")} pill="qrapp.ge" />,
+              <OpenScreen key="open" to={sample.to} cta={text("demo.screenOpen")} />,
+              <LetterScreen key="read" copy={{ ...sample, text: letter }} withKeepsakes={false} letter={<DemoLetterText text={letter} beat={2} className="hm-letter__text" />} />,
+              <KeepScreen key="keep" copy={sample} />,
+            ]}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /* -------------------------------------------------------- experiences */
+const STACK: PhotoName[] = ["keepsake-picnic", "keepsake-hug", "bouquet-garden", "occasion-love"];
+
 export async function Experiences() {
-  const { text, rich } = await getLanding();
+  const { text, raw, rich } = await getLanding();
   const tApp = await getTranslations("themes");
+  const stackAlts = raw<string[]>("experiences.stackAlts");
   const tile = (key: string, Icon: typeof PenNib) => (
     <>
       <span className="hm-tile__icon">
@@ -136,11 +186,26 @@ export async function Experiences() {
   );
 
   return (
-    <section className="hm-section" id="greetings" aria-labelledby="hm-exp-title">
+    <section className="hm-section" id="greetings" aria-labelledby="hm-exp-title" style={{ background: "var(--hm-paper-2)" }}>
       <div className="hm-wrap">
         <Head id="hm-exp-title" eyebrow={text("experiences.eyebrow")} title={text("experiences.title")} lead={text("experiences.lead")} />
         <ul className="hm-bento">
-          <li className="hm-tile hm-tile--letter hm-paper" data-reveal>
+          <li className="hm-tile hm-tile--photos hm-paper" data-reveal>
+            <div className="hm-tile__art hm-tile__art--stack">
+              <PhotoStack
+                label={text("experiences.stackLabel")}
+                cards={STACK.map((name, i) => (
+                  <Photo key={name} name={name} alt={stackAlts[i] ?? ""} sizes="260px" />
+                ))}
+              />
+              <span className="hm-tile__hint" aria-hidden>
+                <HandSwipeRight size={16} weight="regular" />
+                {text("experiences.stackHint")}
+              </span>
+            </div>
+            {tile("photos", ImageIcon)}
+          </li>
+          <li className="hm-tile hm-tile--letter hm-paper" data-reveal style={{ ["--d" as string]: 1 }}>
             <div className="hm-tile__art" aria-hidden>
               <p className="hm-tile__letter">
                 {text("experiences.letterSample")}
@@ -149,25 +214,10 @@ export async function Experiences() {
             </div>
             {tile("message", PenNib)}
           </li>
-          <li className="hm-tile hm-tile--photos hm-paper" data-reveal style={{ ["--d" as string]: 1 }}>
-            <div className="hm-tile__art" aria-hidden>
-              <span className="hm-fan">
-                <span className="hm-print">
-                  <span className="hm-img-letter" />
-                </span>
-                <span className="hm-print">
-                  <span className="hm-img-room" />
-                </span>
-                <span className="hm-print">
-                  <span className="hm-img-stars" />
-                </span>
-              </span>
-            </div>
-            {tile("photos", ImageIcon)}
-          </li>
           <li className="hm-tile hm-tile--video hm-paper" data-reveal>
-            <div className="hm-tile__art hm-img-stars" aria-hidden>
-              <span className="hm-tile__play">
+            <div className="hm-tile__art hm-tile__art--video">
+              <Photo name="gift-hands-cafe" alt={text("experiences.videoAlt")} sizes="(min-width: 64rem) 30vw, 92vw" />
+              <span className="hm-tile__play" aria-hidden>
                 <Play size={20} weight="fill" />
               </span>
             </div>
@@ -198,31 +248,48 @@ export async function Experiences() {
 }
 
 /* ---------------------------------------------------------- occasions */
-const OCCASION_THEMES = ["birthday", "romantic", "elegant", "wedding", "celebration", "minimal"] as const;
+const OCCASIONS: { theme: string; photo: PhotoName; position?: string }[] = [
+  { theme: "birthday", photo: "occasion-birthday", position: "50% 45%" },
+  { theme: "romantic", photo: "occasion-love", position: "50% 40%" },
+  { theme: "elegant", photo: "occasion-anniversary", position: "40% 50%" },
+  { theme: "wedding", photo: "occasion-wedding", position: "45% 50%" },
+  { theme: "celebration", photo: "occasion-celebration", position: "60% 50%" },
+  { theme: "minimal", photo: "occasion-justbecause", position: "50% 50%" },
+];
 
 export async function Occasions() {
   const { text, raw } = await getLanding();
   const tApp = await getTranslations("themes");
   const items = raw<Item[]>("occasions.items");
+  const alts = raw<string[]>("occasions.alts");
   return (
-    <section className="hm-section" id="occasions" aria-labelledby="hm-occ-title" style={{ paddingTop: 0 }}>
+    <section className="hm-section" id="occasions" aria-labelledby="hm-occ-title">
       <div className="hm-wrap">
         <Head id="hm-occ-title" eyebrow={text("occasions.eyebrow")} title={text("occasions.title")} lead={text("occasions.lead")} />
-        <ul className="hm-occasions" aria-label={text("occasions.listLabel")}>
-          {items.map((o, i) => {
-            const theme = OCCASION_THEMES[i] ?? "minimal";
+      </div>
+      <div className="hm-occ-rail">
+        <CardsCarousel
+          label={text("occasions.listLabel")}
+          labels={{ previous: text("occasions.previous"), next: text("occasions.next") }}
+          items={items.map((o, i) => {
+            const occ = OCCASIONS[i] ?? OCCASIONS[5]!;
             return (
-              <li key={i} className="hm-occasion hm-paper" data-reveal style={{ ["--d" as string]: i % 3 }}>
-                <ThemeSwatch themeKey={theme} line={tApp(`${theme}.opening`)} className="hm-occasion__art" />
-                <h3 className="hm-h3">{o.title}</h3>
-                <p className="hm-body">{o.text}</p>
-                <p className="hm-occasion__design">
-                  {text("occasions.designLabel")}: {tApp(`${theme}.name`)}
-                </p>
-              </li>
+              <figure className="hm-occ" key={i}>
+                <Photo name={occ.photo} alt={alts[i] ?? ""} sizes="(min-width: 48rem) 340px, 76vw" position={occ.position} />
+                <span className="hm-occ__design" aria-hidden>
+                  <ThemeSwatch themeKey={occ.theme} className="hm-occ__swatch" />
+                </span>
+                <figcaption className="hm-occ__body">
+                  <span className="hm-occ__label">
+                    {text("occasions.designLabel")}: {tApp(`${occ.theme}.name`)}
+                  </span>
+                  <h3 className="hm-occ__title">{o.title}</h3>
+                  <p className="hm-occ__text">{o.text}</p>
+                </figcaption>
+              </figure>
             );
           })}
-        </ul>
+        />
       </div>
     </section>
   );
@@ -230,11 +297,17 @@ export async function Occasions() {
 
 /* ----------------------------------------------------------- partners */
 const BENEFIT_ICONS = [Gift, Printer, ChartLineUp, EyeSlash];
+const PARTNER_PHOTOS: { name: PhotoName; position: string }[] = [
+  { name: "florist-arranging", position: "50% 30%" },
+  { name: "florist-shop", position: "50% 50%" },
+  { name: "florist-display", position: "40% 50%" },
+];
 
 export async function Partners() {
   const { text, raw } = await getLanding();
-  const svg = await getHomeQrSvg();
   const items = raw<Item[]>("partners.items");
+  const cards = raw<{ title: string; caption: string }[]>("partners.cards");
+  const alts = raw<string[]>("partners.photoAlts");
   return (
     <section className="hm-section hm-dark" id="partners" aria-labelledby="hm-partners-title" data-testid="home-partners">
       <div className="hm-wrap">
@@ -256,23 +329,23 @@ export async function Partners() {
             </div>
             <p className="hm-caption">{text("partners.terms")}</p>
           </div>
-          <div className="hm-sheet hm-paper" role="img" aria-label={text("partners.sheetLabel")} data-reveal style={{ ["--d" as string]: 1 }}>
-            <div className="hm-sheet__grid">
-              {Array.from({ length: 6 }, (_, i) => (
-                <span key={i} className="hm-sheet__card">
-                  <Spark className="hm-sheet__mark" />
-                  <span className="hm-sheet__qr contents" dangerouslySetInnerHTML={{ __html: svg.replace("<svg ", '<svg class="hm-sheet__qr" ') }} />
-                </span>
-              ))}
-            </div>
-          </div>
+          <FocusCards
+            className="hm-partners__gallery"
+            cards={cards.map((c, i) => ({
+              title: c.title,
+              caption: c.caption,
+              media: <Photo name={PARTNER_PHOTOS[i]!.name} alt={alts[i] ?? ""} sizes="(min-width: 60rem) 18vw, 80vw" position={PARTNER_PHOTOS[i]!.position} />,
+            }))}
+          />
         </div>
         <ul className="hm-benefits">
           {items.map((b, i) => {
             const Icon = BENEFIT_ICONS[i] ?? Gift;
             return (
               <li key={i} className="hm-benefit" data-reveal style={{ ["--d" as string]: i }}>
-                <Icon className="hm-benefit__icon" size={26} weight="light" aria-hidden />
+                <span className="hm-benefit__icon" aria-hidden>
+                  <Icon size={22} weight="light" />
+                </span>
                 <h3 className="hm-h3">{b.title}</h3>
                 <p className="hm-body">{b.text}</p>
               </li>
@@ -287,6 +360,7 @@ export async function Partners() {
 /* ------------------------------------------------------------ pricing */
 export async function Pricing() {
   const { text, raw, rich } = await getLanding();
+  const svg = await getHomeQrSvg();
   const included = raw<string[]>("pricing.included");
   return (
     <section className="hm-section" id="pricing" aria-labelledby="hm-pricing-title">
@@ -302,19 +376,24 @@ export async function Pricing() {
             <ArrowRight size={16} aria-hidden />
           </Link>
         </div>
-        <div className="hm-slip hm-paper" data-reveal data-testid="home-price" style={{ ["--d" as string]: 1 }}>
-          <p className="hm-kicker">{text("pricing.label")}</p>
-          <p className="hm-slip__price">{rich("pricing.price")}</p>
-          <p className="hm-body mt-2">{text("pricing.unit")}</p>
-          <ul className="hm-slip__rows">
-            {included.map((_, i) => (
-              <li key={i}>
-                <Check size={16} weight="bold" aria-hidden />
-                <span>{rich(`pricing.included.${i}`)}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="hm-caption mt-5">{text("pricing.note")}</p>
+        <div className="hm-pricing__visual" data-reveal style={{ ["--d" as string]: 1 }}>
+          <CardComposite svg={svg} line={text("hero.cardLine")} alt={text("pricing.compositeAlt")} sizes="(min-width: 56rem) 26vw, 70vw" className="hm-pricing__photo" />
+          <TiltCard className="hm-pricing__slip">
+            <div className="hm-slip hm-paper" data-testid="home-price">
+              <p className="hm-kicker">{text("pricing.label")}</p>
+              <p className="hm-slip__price">{rich("pricing.price")}</p>
+              <p className="hm-body mt-2">{text("pricing.unit")}</p>
+              <ul className="hm-slip__rows">
+                {included.map((_, i) => (
+                  <li key={i}>
+                    <Check size={16} weight="bold" aria-hidden />
+                    <span>{rich(`pricing.included.${i}`)}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="hm-caption mt-5">{text("pricing.note")}</p>
+            </div>
+          </TiltCard>
         </div>
       </div>
     </section>
@@ -366,26 +445,26 @@ export async function Trust() {
     </section>
   );
 }
-
 /* ------------------------------------------------------------- finale */
 export async function Finale() {
   const { text } = await getLanding();
   return (
     <section className="hm-finale" aria-labelledby="hm-finale-title">
-      <div className="hm-wrap grid justify-items-center" data-reveal>
+      <div className="hm-finale__photo" aria-hidden>
+        <Photo name="gift-hands-cafe" alt="" sizes="100vw" position="55% 50%" />
+      </div>
+      <div className="hm-wrap hm-finale__inner">
         <span className="hm-finale__seal" aria-hidden>
           <WaxSeal />
         </span>
-        <h2 id="hm-finale-title" className="hm-title max-w-3xl">
-          {text("finale.title")}
-        </h2>
+        <RevealText id="hm-finale-title" text={text("finale.title")} className="hm-title hm-finale__title" />
         <p className="hm-lead mx-auto mt-5">{text("finale.body")}</p>
         <div className="hm-actions hm-actions--stack">
-          <Link href="/how-it-works" className="hm-btn hm-btn--primary">
+          <Link href="/how-it-works" className="hm-btn hm-btn--cream">
             {text("finale.primary")}
             <Arrow />
           </Link>
-          <Link href="/contact" className="hm-btn hm-btn--quiet">
+          <Link href="/contact" className="hm-btn hm-btn--ring">
             {text("finale.secondary")}
           </Link>
         </div>

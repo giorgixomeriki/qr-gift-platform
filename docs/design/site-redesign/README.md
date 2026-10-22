@@ -83,3 +83,36 @@ These were the five biggest remaining weaknesses, and how each was fixed:
 3. **Hero lacked gift context, and the overlays read as smudges.** A flat wine satin ribbon now runs from under the card, behind the phone and off the page. The leaf-shadow overlay is removed and the window light softened.
 4. **Tablet imbalance.** The letter tile no longer spans two rows, the partner sheet is capped at 26rem, and the demo phone is narrower.
 5. **Recipients on mobile.** A new note ("Received a QR Starr card? Scan its code…") sits right under the actions on phones, so it is on the first screen at 390×844. On desktop the hero copy and the note align to the stage.
+
+## 9. Visual richness pass (2026-10-22)
+
+The minimal CSS-only illustrations were replaced by photographic storytelling. There are 19 licensed Unsplash photographs, all registered in `ASSETS.md`. The redesign also integrates real components from Magic UI, Aceternity UI, Motion Primitives and React Bits.
+
+| Section | Before | Now |
+|---|---|---|
+| Hero | CSS card + CSS phone + ribbon | Campaign composition: tulips in kraft paper (photo), QR Starr card, Magic UI iPhone breaking the frame, two badges; scroll parallax (Motion). One primary CTA, partners as a quiet link |
+| Moments (new) | — | Magic UI Marquee ribbon of six gifting photographs as tilted prints; pauses on hover/focus, static under reduced motion |
+| How it works | Text columns | Three photographs telling the journey (florist → product mockup → recipient), numerals over the photo, BlurFade reveals; swipeable on phones |
+| After the scan | CSS phone | Magic UI iPhone; scan screen shows the card over a real (blurred) table; the letter writes itself in (Motion Primitives TextEffect); a recipient photo behind the phone on desktop |
+| Inside a greeting | CSS prints | React Bits Stack: draggable, flickable, keyboard-operable photo prints; video tile with a real poster |
+| Occasions | ThemeSwatch grid | Aceternity cards carousel of six occasion photographs, each with its design's real swatch |
+| Partners | CSS print sheet | Aceternity focus cards of three florist photographs (hover/focus recedes the others) |
+| Pricing | Slip alone | QR Starr card composited onto a real flat-lay, with the price slip laid over it (Motion Primitives Tilt on fine pointers) |
+| Final CTA | Seal on paper | Full-bleed photograph of a gift being passed, warmed with wine, words revealed word by word |
+
+### Component register
+
+| Component | Source | Where | Integration | Licence | Weight |
+|---|---|---|---|---|---|
+| Motion (library) | https://motion.dev (`motion@12.43.0`, pinned; released 2026-07-28) | Every animated component | Installed (npm) | MIT | Most of the added JS; shared by all the components below |
+| Iphone | Magic UI, https://magicui.design/docs/components/iphone | Hero phone, demo phone | Adapted: `children` slot for live HTML, unique mask ids, themeable fills | MIT | ~2 kB, SVG only |
+| Marquee | Magic UI, https://magicui.design/docs/components/marquee | Moments ribbon | Adapted: CSS keyframes in home.css, repeats aria-hidden | MIT | <1 kB, CSS animation |
+| BlurFade | Magic UI, https://magicui.design/docs/components/blur-fade | How-it-works photos | Adapted: visible on the server / without JS | MIT | <1 kB + Motion |
+| Apple Cards Carousel | Aceternity UI, https://ui.aceternity.com/components/apple-cards-carousel | Occasions | Adapted: no modal, scroll-snap, labelled arrows (Phosphor), no next/image or tabler | Aceternity licence: end products OK, no template resale | ~1.5 kB + Motion |
+| Focus Cards | Aceternity UI, https://ui.aceternity.com/components/focus-cards | Partners gallery | Adapted: picture media, keyboard focus = hover, captions visible on touch | Aceternity licence | <1 kB |
+| TextEffect | Motion Primitives, https://motion-primitives.com/docs/text-effect | Demo letter, final CTA heading | Installed from registry, unchanged (sr-only full text kept) | MIT | ~2 kB + Motion |
+| Tilt | Motion Primitives, https://motion-primitives.com/docs/tilt | Pricing slip | Installed from registry; mounted only for fine pointers without reduced motion | MIT | <1 kB + Motion |
+| Stack | React Bits, https://reactbits.dev/components/stack | Photo prints tile | Installed from registry; demo images removed, translatable label, strict-TS assertions | MIT + Commons Clause: use in a website allowed, no resale of the component | ~6 kB + Motion |
+| Accordion | shadcn/ui, https://ui.shadcn.com/docs/components/accordion | — | Evaluated, not installed: native `<details name>` already gives exclusive, accessible, JS-free disclosure; Radix would add weight for no gain | MIT | 0 |
+
+Every vendored file carries a header with its source URL, licence and modifications (`src/components/vendor/**`).

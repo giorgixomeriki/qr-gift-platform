@@ -1,7 +1,8 @@
 "use client";
 
 import { Children, useCallback, useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
-import { Phone } from "./objects";
+import { PhoneShell } from "./objects";
+import { BeatProvider } from "./motion";
 
 const BEAT_MS = 5200;
 
@@ -60,7 +61,9 @@ export function ScanDemo({ beats, screens, labels }: { beats: Beat[]; screens: R
   return (
     <div ref={rootRef} className="hm-demo" style={{ ["--hm-beat-ms" as string]: `${BEAT_MS}ms` }}>
       <div className="hm-demo__device" id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-tab-${active}`} data-active-beat={active}>
-        <Phone>{marked}</Phone>
+        <BeatProvider value={active}>
+          <PhoneShell>{marked}</PhoneShell>
+        </BeatProvider>
       </div>
       <div className="hm-beats" role="tablist" aria-label={labels.tabs} aria-orientation="vertical" onKeyDown={onKeyDown} data-playing={playing || undefined}>
         {beats.map((b, i) => (

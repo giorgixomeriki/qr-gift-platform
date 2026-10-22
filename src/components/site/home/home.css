@@ -58,9 +58,6 @@
   padding-block: var(--hm-section);
   scroll-margin-top: 4rem;
 }
-.hm-section--tight {
-  padding-block: calc(var(--hm-section) * 0.7);
-}
 
 /* ------------------------------------------------------------ typography */
 .hm-kicker {
@@ -293,6 +290,19 @@
   text-decoration-color: var(--hm-wine);
 }
 
+/* --------------------------------------------------------------- photo */
+.hm-photo {
+  display: block;
+  overflow: hidden;
+  background: var(--hm-paper-2);
+}
+.hm-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* --------------------------------------------------------------- paper */
 .hm-paper {
   position: relative;
@@ -318,39 +328,7 @@
   isolation: isolate;
   padding-block: clamp(2rem, 1rem + 4vw, 4.5rem) clamp(1rem, 0.5rem + 2vw, 2.5rem);
 }
-/* Window light falling across the table, and a branch's shadow. Stills. */
-.hm-hero__light {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  overflow: hidden;
-}
-.hm-hero__light::before {
-  content: "";
-  position: absolute;
-  inset: -10% -20% -10% 20%;
-  background: image-set(url(/customer/textures/window-light-900.avif) type("image/avif"), url(/customer/textures/window-light-900.webp) type("image/webp")) center / cover no-repeat;
-  filter: invert(1) sepia(0.4) blur(2px);
-  mix-blend-mode: multiply;
-  opacity: 0.045;
-  transform: rotate(-8deg) scale(1.1);
-}
-.hm-hero__light::after {
-  display: none;
-  content: "";
-  position: absolute;
-  top: -8%;
-  right: -6%;
-  width: min(70vw, 54rem);
-  aspect-ratio: 4 / 5;
-  background: url(/customer/scenes/romantic-leaves-rest.webp) center / cover no-repeat;
-  mix-blend-mode: multiply;
-  opacity: 0.22;
-  filter: sepia(0.5) blur(1.5px);
-  -webkit-mask-image: radial-gradient(closest-side, #000 40%, transparent);
-  mask-image: radial-gradient(closest-side, #000 40%, transparent);
-}
+
 .hm-hero__grid {
   display: grid;
   grid-template-areas: "copy" "hint" "stage" "assure";
@@ -360,7 +338,7 @@
 .hm-hero__copy {
   grid-area: copy;
 }
-.hm-stage {
+.hm-hstage {
   grid-area: stage;
 }
 .hm-hero__assure {
@@ -426,81 +404,120 @@
   color: var(--hm-wine-2);
 }
 
-/* The stage: a card on the table and the phone that opened it. Sized in
-   container units so one composition serves every width. */
-.hm-stage {
+/* The stage, composed like a campaign photograph: the gift (a licensed
+   photo) in a tall frame, our card tucked against it, the phone breaking
+   out of the frame. Measured in container units, so one composition serves
+   every width. */
+.hm-hstage {
   position: relative;
   width: 100%;
-  max-width: 34rem;
+  max-width: 30rem;
   justify-self: center;
-  aspect-ratio: 1 / 1.08;
+  aspect-ratio: 1 / 1.1;
   container-type: inline-size;
 }
 @media (min-width: 62rem) {
-  .hm-stage {
+  .hm-hstage {
     max-width: none;
-    aspect-ratio: 1 / 1.1;
   }
 }
-.hm-stage .hm-stage__card {
-  position: absolute;
-  left: 4cqw;
-  bottom: 5cqw;
-  width: 44cqw;
-  transform: rotate(-7deg);
-  transform-origin: 30% 80%;
-  z-index: 1;
-}
-.hm-stage .hm-stage__phone {
-  position: absolute;
-  right: 4cqw;
-  top: 1cqw;
-  width: 49cqw;
-  transform: rotate(4deg);
-  z-index: 2;
-}
-/* A satin ribbon running out from under the card, behind the phone and off
-   the page: the card is tied to a gift. Flat satin, one soft sheen. */
-.hm-stage .hm-ribbon {
-  position: absolute;
-  z-index: 0;
-  left: 12cqw;
-  right: -60cqw;
-  bottom: 30cqw;
-  height: 5.2cqw;
-  transform: rotate(-14deg);
-  transform-origin: left center;
-  background:
-    linear-gradient(180deg, transparent 0 22%, rgb(255 228 222 / 0.22) 34%, transparent 52%),
-    linear-gradient(180deg, #5a1c30, #74293f 50%, #5a1c30);
-  box-shadow: 0 8px 14px -8px rgb(46 15 25 / 0.5);
-}
-.hm-stage .hm-ribbon::after {
-  /* the ribbon's woven edge */
-  content: "";
-  position: absolute;
-  inset: 0.45cqw 0;
-  border-block: 1px solid rgb(255 220 210 / 0.18);
-}
-.hm-stage__shadow {
+.hm-hstage__photo {
   position: absolute;
   left: 8cqw;
-  right: 4cqw;
-  bottom: 2cqw;
-  height: 16cqw;
-  background: radial-gradient(closest-side, rgb(46 15 25 / 0.18), transparent);
-  filter: blur(10px);
-  z-index: 0;
+  top: 0;
+  width: 70cqw;
+  height: 100%;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: var(--hm-shadow-object);
+  transform-origin: 50% 30%;
+}
+.hm-hstage__photo .hm-photo,
+.hm-hstage__photo img {
+  width: 100%;
+  height: 100%;
+}
+.hm-hstage__photo::after {
+  /* a breath of the page's warmth over the photograph's lower edge */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgb(46 15 25 / 0.18));
+  pointer-events: none;
+}
+.hm-hstage__card {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 9cqw;
+  width: 30cqw;
+}
+.hm-hstage__card .hm-qrcard {
+  transform: rotate(-7deg);
+  font-size: clamp(0.42rem, 2cqw, 0.8rem);
+}
+.hm-hstage__phone {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: -2cqw;
+  width: 37cqw;
+}
+.hm-hstage__phone .hm-iphone {
+  transform: rotate(4deg);
+}
+.hm-badge {
+  position: absolute;
+  z-index: 4;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.875rem 0.5rem 0.625rem;
+  border-radius: 999px;
+  background: rgb(252 249 243 / 0.94);
+  box-shadow: 0 10px 28px -14px rgb(46 15 25 / 0.6), inset 0 0 0 1px rgb(255 255 255 / 0.6);
+  font-size: clamp(0.6875rem, 0.5rem + 0.9cqw, 0.8125rem);
+  font-weight: 500;
+  color: var(--hm-ink);
+  white-space: nowrap;
+}
+.hm-badge svg {
+  flex: none;
+  color: var(--hm-wine-2);
+}
+.hm-badge--scan {
+  top: 6cqw;
+  right: 16cqw;
+}
+.hm-badge--voice {
+  left: 34cqw;
+  bottom: 6cqw;
+}
+@media (max-width: 30rem) {
+  .hm-badge--voice {
+    display: none;
+  }
 }
 @media (prefers-reduced-motion: no-preference) {
-  .hm-stage .hm-stage__card {
-    animation: hm-card-land 900ms var(--ease-out) 120ms both;
+  .hm-hstage__photo {
+    animation: hm-photo-in 1100ms var(--ease-out) both;
   }
-  .hm-stage .hm-stage__phone {
-    animation: hm-phone-rise 1000ms var(--ease-out) 260ms both;
+  .hm-hstage__card .hm-qrcard {
+    animation: hm-card-land 900ms var(--ease-out) 260ms both;
   }
+  .hm-hstage__phone .hm-iphone {
+    animation: hm-phone-rise 1000ms var(--ease-out) 380ms both;
+  }
+  .hm-badge {
+    animation: rise 700ms var(--ease-out) 900ms both;
+  }
+  .hm-badge--voice {
+    animation-delay: 1100ms;
+  }
+  /* Movement only, no fade: the headline and lead are the page's largest
+     paint, and text held at opacity 0 delays it. */
   .hm-hero__copy > * {
-    animation: rise 700ms var(--ease-out) both;
+    animation: hm-lift 700ms var(--ease-out) both;
   }
   .hm-hero__copy > *:nth-child(2) {
     animation-delay: 70ms;
@@ -512,10 +529,26 @@
     animation-delay: 210ms;
   }
 }
+@keyframes hm-photo-in {
+  from {
+    clip-path: inset(8% 6% 8% 6% round 1.5rem);
+  }
+  to {
+    clip-path: inset(0 round 1.5rem);
+  }
+}
+@keyframes hm-lift {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}
 @keyframes hm-card-land {
   from {
     opacity: 0;
-    transform: translateY(18px) rotate(-11deg);
+    transform: translateY(18px) rotate(-12deg);
   }
   to {
     opacity: 1;
@@ -525,11 +558,24 @@
 @keyframes hm-phone-rise {
   from {
     opacity: 0;
-    transform: translateY(28px) rotate(6deg);
+    transform: translateY(32px) rotate(7deg);
   }
   to {
     opacity: 1;
     transform: rotate(4deg);
+  }
+}
+.hm-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 30rem) {
+  .hm-hero__actions .hm-btn {
+    width: 100%;
+    justify-content: space-between;
   }
 }
 
@@ -610,33 +656,29 @@
 }
 
 /* ------------------------------------------------------------ phone */
-.hm-phone {
-  position: relative;
-  aspect-ratio: 9 / 19;
-  padding: 3.2%;
-  border-radius: 15% / 7.2%;
-  background: linear-gradient(145deg, #3a2a2c, #140c0e 55%, #2b1d1f);
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.06) inset,
-    0 1px 1px rgb(46 15 25 / 0.1),
-    0 30px 60px -24px rgb(46 15 25 / 0.55),
-    0 60px 90px -50px rgb(46 15 25 / 0.45);
-  container-type: inline-size;
+/* Magic UI's iPhone (components/vendor/magicui/iphone.tsx) in a warm
+   graphite: its fills read these custom properties. */
+.hm-iphone {
+  --ip-edge: #4a3b3d;
+  --ip-body: #1d1517;
+  --ip-bezel: #0d0809;
+  --ip-island: #050304;
+  filter: drop-shadow(0 30px 34px rgb(46 15 25 / 0.32)) drop-shadow(0 6px 10px rgb(46 15 25 / 0.2));
 }
 .hm-phone__screen {
-  position: relative;
-  height: 100%;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
-  border-radius: 12.4% / 5.9%;
   background: #3b2224;
   isolation: isolate;
+  container-type: inline-size;
 }
 .hm-phone__status {
   position: absolute;
   z-index: 6;
-  top: 2.5%;
+  top: 2.2%;
   left: 9%;
-  right: 8%;
+  right: 9%;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -666,17 +708,6 @@
   border-radius: 0.9cqw;
   box-shadow: inset 0 0 0 0.35cqw rgb(255 255 255 / 0.55);
   background: linear-gradient(90deg, currentColor 0 78%, transparent 78%) 0.7cqw 0.7cqw / calc(100% - 1.4cqw) calc(100% - 1.4cqw) no-repeat;
-}
-.hm-phone__island {
-  position: absolute;
-  z-index: 5;
-  top: 2.2%;
-  left: 50%;
-  width: 30%;
-  height: 3.2%;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: #0b0607;
 }
 
 /* ------------------------------------------------- greeting screens */
@@ -782,14 +813,10 @@
   border-radius: 0.8cqw;
   box-shadow: 0 2cqw 5cqw -1.5cqw rgb(0 0 0 / 0.55);
 }
-.hm-print > span {
-  display: block;
+.hm-print > .hm-photo {
   height: 100%;
   border-radius: 0.4cqw;
-  background-size: cover;
-  background-position: center;
-  filter: sepia(0.28) saturate(0.95) contrast(1.04) brightness(1.02);
-  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.06);
+  filter: sepia(0.12) saturate(0.98) contrast(1.03);
 }
 .hm-print--a {
   left: 3cqw;
@@ -800,15 +827,7 @@
   top: 3cqw;
   transform: rotate(5deg);
 }
-.hm-img-stars {
-  background-image: url(/customer/scenes/celebration-sky-rest.webp);
-}
-.hm-img-letter {
-  background-image: image-set(url(/customer/illustrations/entry-stationery-mobile-640.avif) type("image/avif"), url(/customer/illustrations/entry-stationery-mobile-640.webp) type("image/webp"));
-}
-.hm-img-room {
-  background-image: url(/customer/scenes/celebration-room.webp);
-}
+
 .hm-voice {
   display: flex;
   align-items: center;
@@ -862,12 +881,13 @@
   display: none;
 }
 .hm-scan__view {
-  position: absolute;
+  position: absolute !important;
   inset: -6%;
-  background-size: cover;
-  background-position: 40% 60%;
-  filter: blur(3px) brightness(0.62) sepia(0.3);
+  filter: blur(3px) brightness(0.6) sepia(0.25);
   transform: scale(1.08);
+}
+.hm-scan__view img {
+  object-position: 30% 60%;
 }
 .hm-scan__card {
   position: relative;
@@ -971,13 +991,16 @@
 }
 .hm-video {
   position: relative;
+  display: block;
   width: 100%;
   aspect-ratio: 16 / 10;
   border-radius: 2cqw;
   overflow: hidden;
-  background-size: cover;
-  background-position: center;
   box-shadow: 0 3cqw 7cqw -3cqw rgb(0 0 0 / 0.6);
+}
+.hm-video > .hm-photo {
+  position: absolute;
+  inset: 0;
 }
 .hm-video__play {
   position: absolute;
@@ -1013,12 +1036,8 @@
   justify-self: center;
   width: min(68vw, 17.5rem);
 }
-.hm-demo__device .hm-phone {
-  /* the pool of candle light the phone sits in */
-  box-shadow:
-    0 0 0 1px rgb(255 255 255 / 0.06) inset,
-    0 30px 60px -24px rgb(46 15 25 / 0.55),
-    0 10px 140px rgb(242 201 154 / 0.3);
+.hm-demo__device .hm-iphone {
+  filter: drop-shadow(0 34px 40px rgb(46 15 25 / 0.38)) drop-shadow(0 0 60px rgb(242 201 154 / 0.35));
 }
 @media (max-width: 55.99rem) {
   .hm-demo__device {
@@ -1144,46 +1163,95 @@
 }
 
 /* =============================================================== STEPS */
-/* Editorial columns, not boxed cards: a large italic numeral over an ink
-   rule, the way a printed programme numbers its acts. */
+/* Three photographs tell the journey (shop, card, recipient); a large
+   italic numeral sits on each like a printed programme's act number. */
 .hm-steps {
   display: grid;
-  gap: 0;
+  gap: 2.5rem;
   margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
 }
 @media (min-width: 48rem) {
   .hm-steps {
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: clamp(1.5rem, 1rem + 2vw, 3rem);
+    gap: clamp(1.25rem, 0.5rem + 2vw, 2.25rem);
+  }
+  .hm-step:nth-child(2) {
+    margin-top: 3rem;
   }
 }
 .hm-step {
-  position: relative;
   display: grid;
-  grid-template-columns: 1fr auto;
   align-content: start;
-  gap: 0.75rem 1rem;
-  padding-block: 1.5rem 2rem;
-  border-top: 1px solid var(--hm-ink);
+  gap: 1.25rem;
 }
-.hm-step > :not(.hm-step__num, .hm-step__icon) {
-  grid-column: 1 / -1;
+/* Phones: the three steps as a swipeable row that peeks at the next one. */
+@media (max-width: 47.99rem) {
+  .hm-steps {
+    grid-auto-flow: column;
+    grid-auto-columns: 80%;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--hm-gutter);
+    margin-inline: calc(-1 * var(--hm-gutter));
+    padding: 0.5rem var(--hm-gutter) 1rem;
+    scrollbar-width: none;
+  }
+  .hm-steps::-webkit-scrollbar {
+    display: none;
+  }
+  .hm-step {
+    scroll-snap-align: start;
+  }
+}
+.hm-step__frame {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: var(--hm-shadow-object);
+}
+.hm-step__frame > .hm-photo,
+.hm-step__frame > .hm-composite {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hm-step__frame .hm-photo img {
+  transition: transform 1200ms var(--ease-out);
+}
+@media (hover: hover) {
+  .hm-step:hover .hm-step__frame .hm-photo img {
+    transform: scale(1.04);
+  }
 }
 .hm-step__num {
-  font-size: clamp(3.25rem, 2.5rem + 2.5vw, 4.75rem);
-  line-height: 0.9;
+  position: absolute;
+  left: 1rem;
+  bottom: 0.25rem;
+  z-index: 2;
+  font-size: clamp(3.5rem, 2.5rem + 3vw, 5rem);
+  line-height: 1;
   letter-spacing: -0.03em;
-  color: var(--hm-wine);
-  margin-bottom: 0.75rem;
+  color: var(--hm-cream);
+  text-shadow: 0 2px 24px rgb(20 8 12 / 0.45);
+}
+.hm-step__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, transparent 58%, rgb(30 10 16 / 0.42));
+  pointer-events: none;
+}
+.hm-step__body {
+  display: grid;
+  gap: 0.625rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hm-ink);
 }
 .hm-step__icon {
-  align-self: start;
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 999px;
-  box-shadow: inset 0 0 0 1px var(--hm-line-2);
   color: var(--hm-wine);
 }
 .hm-step .hm-h3 {
@@ -1191,6 +1259,35 @@
 }
 :lang(ka) .hm-step .hm-h3 {
   font-size: 1.25rem;
+}
+
+/* The product mockup: our card laid onto the blank card of a licensed
+   flat-lay, in that photograph's own coordinates (3 : 4). */
+.hm-composite {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.hm-composite > .hm-photo {
+  position: absolute;
+  inset: 0;
+}
+.hm-composite__card.hm-qrcard {
+  position: absolute;
+  left: 54.6cqw;
+  top: 68cqw;
+  width: 33.8cqw;
+  padding: 8% 8% 7%;
+  font-size: 2.5cqw;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.08), 0 2cqw 4cqw -1cqw rgb(0 0 0 / 0.35);
+}
+.hm-composite__card .hm-qrcard__seal {
+  width: 26%;
+}
+.hm-step__frame > .hm-composite {
+  aspect-ratio: auto;
 }
 
 /* ========================================================= EXPERIENCES */
@@ -1204,29 +1301,15 @@
     grid-template-columns: repeat(6, minmax(0, 1fr));
     gap: 1.25rem;
   }
-  .hm-tile--letter {
-    grid-column: span 3;
-  }
   .hm-tile--photos {
-    grid-column: span 3;
+    grid-column: 1 / span 3;
+    grid-row: span 2;
   }
+  .hm-tile--letter,
+  .hm-tile--voice,
   .hm-tile--video,
-  .hm-tile--voice {
+  .hm-tile--designs {
     grid-column: span 3;
-  }
-  .hm-tile--designs {
-    grid-column: span 6;
-  }
-}
-@media (min-width: 64rem) {
-  .hm-tile--letter {
-    grid-column: span 2;
-  }
-  .hm-tile--photos {
-    grid-column: span 4;
-  }
-  .hm-tile--designs {
-    grid-column: span 6;
   }
 }
 .hm-tile {
@@ -1293,49 +1376,57 @@
     opacity: 0;
   }
 }
-.hm-tile__count {
-  align-self: end;
-  justify-self: end;
-  margin-top: auto;
+
+/* React Bits Stack (components/vendor/reactbits/stack.tsx): prints that
+   can be dragged, flicked or tabbed through. */
+.hm-tile__art--stack {
+  min-height: 22rem;
+  background:
+    radial-gradient(60% 50% at 50% 45%, rgb(255 255 255 / 0.55), transparent 70%),
+    var(--hm-paper-2);
+  overflow: visible;
+}
+.hm-pstack {
+  width: min(62%, 15rem) !important;
+  aspect-ratio: 4 / 5;
+  height: auto !important;
+  margin: 1.75rem auto 3rem;
+}
+.hm-pstack:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 10px;
+  border-radius: 8px;
+}
+.hm-tile__hint {
+  position: absolute;
+  left: 50%;
+  bottom: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  transform: translateX(-50%);
   font-size: 0.8125rem;
   color: var(--hm-ink-3);
-  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-.hm-tile--photos .hm-tile__art {
-  min-height: 13rem;
-}
-.hm-fan {
-  position: relative;
-  width: min(100%, 22rem);
-  height: 11rem;
-}
-.hm-fan .hm-print {
-  width: 7.5rem;
-  padding: 0.4rem 0.4rem 1.4rem;
-  top: 1rem;
-  left: 50%;
-  transition: transform 520ms var(--ease-out);
-}
-.hm-fan .hm-print:nth-child(1) {
-  transform: translateX(-125%) rotate(-9deg);
-}
-.hm-fan .hm-print:nth-child(2) {
-  transform: translateX(-50%) translateY(-6px) rotate(1deg);
-  z-index: 1;
-}
-.hm-fan .hm-print:nth-child(3) {
-  transform: translateX(25%) rotate(8deg);
-}
+
 .hm-tile--photos:hover .hm-print:nth-child(1) {
   transform: translateX(-140%) rotate(-13deg);
 }
 .hm-tile--photos:hover .hm-print:nth-child(3) {
   transform: translateX(40%) rotate(12deg);
 }
-.hm-tile--video .hm-tile__art {
-  background-image: url(/customer/scenes/celebration-sky-rest.webp);
-  background-size: cover;
-  background-position: center 30%;
+.hm-tile__art--video > .hm-photo {
+  position: absolute;
+  inset: 0;
+}
+.hm-tile__art--video .hm-photo img {
+  transition: transform 1200ms var(--ease-out);
+}
+@media (hover: hover) {
+  .hm-tile--video:hover .hm-photo img {
+    transform: scale(1.04);
+  }
 }
 .hm-tile--video .hm-tile__art::after {
   content: "";
@@ -1356,6 +1447,8 @@
   box-shadow: 0 10px 24px -10px rgb(0 0 0 / 0.6);
 }
 .hm-tile--voice .hm-tile__art {
+  min-height: 9rem;
+  flex: 0 1 auto;
   background: linear-gradient(160deg, #4a1827, var(--hm-wine-deep));
   color: var(--hm-cream);
 }
@@ -1431,67 +1524,141 @@
 }
 
 /* =========================================================== OCCASIONS */
-.hm-occasions {
-  display: grid;
+/* Aceternity's cards carousel (components/vendor/aceternity): tall
+   photographic cards, each naming the design that suits the occasion and
+   showing that design's own swatch. The rail starts at the page's text
+   edge and bleeds off to the right. */
+.hm-occ-rail {
+  margin-top: clamp(2rem, 1rem + 3vw, 3.5rem);
+}
+.hm-carousel__row {
+  display: flex;
   gap: 1.25rem;
-  margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: max(var(--hm-gutter), calc((100vw - var(--hm-max)) / 2));
+  padding: 0.5rem max(var(--hm-gutter), calc((100vw - var(--hm-max)) / 2)) 1.5rem;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
 }
-@media (min-width: 40rem) {
-  .hm-occasions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
+.hm-carousel__row::-webkit-scrollbar {
+  display: none;
 }
-@media (min-width: 64rem) {
-  .hm-occasions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+.hm-carousel__item {
+  flex: none;
+  width: min(76vw, 21rem);
+  scroll-snap-align: start;
 }
-/* Phones: a swipeable row that peeks at the next card. */
-@media (max-width: 39.99rem) {
-  .hm-occasions {
-    grid-auto-flow: column;
-    grid-auto-columns: 78%;
-    overflow-x: auto;
-    scroll-snap-type: x mandatory;
-    scroll-padding-inline: var(--hm-gutter);
-    margin-inline: calc(-1 * var(--hm-gutter));
-    padding: 0.5rem var(--hm-gutter) 1.5rem;
-    scrollbar-width: none;
-  }
-  .hm-occasions::-webkit-scrollbar {
-    display: none;
-  }
-  .hm-occasion {
-    scroll-snap-align: start;
-  }
+.hm-carousel__nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+  max-width: calc(var(--hm-max) + 2 * var(--hm-gutter));
+  margin: 0.5rem auto 0;
+  padding-inline: var(--hm-gutter);
 }
-.hm-occasion {
+.hm-carousel__btn {
   display: grid;
-  align-content: start;
-  gap: 0.5rem;
-  padding: 0.625rem 0.625rem 1.375rem;
-  border-radius: 1.25rem;
-  box-shadow: var(--hm-shadow-soft);
+  place-items: center;
+  width: 2.875rem;
+  height: 2.875rem;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: var(--hm-card);
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
   transition:
-    transform 420ms var(--ease-out),
-    box-shadow 420ms var(--ease-out);
+    background-color 200ms,
+    opacity 200ms,
+    transform 200ms var(--ease-out);
 }
-.hm-occasion:hover {
-  transform: translateY(-4px);
+.hm-carousel__btn:hover:not(:disabled) {
+  background: var(--hm-rose);
+}
+.hm-carousel__btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.hm-carousel__btn:disabled {
+  opacity: 0.35;
+}
+.hm-carousel__btn:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+.hm-occ {
+  position: relative;
+  aspect-ratio: 3 / 4.3;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  isolation: isolate;
   box-shadow: var(--hm-shadow-object);
+  color: var(--hm-cream);
 }
-.hm-occasion__art {
-  aspect-ratio: 5 / 4;
-  border-radius: 0.875rem;
-  margin-bottom: 0.875rem;
+.hm-occ > .hm-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
 }
-.hm-occasion > :not(.hm-occasion__art) {
-  padding-inline: 0.875rem;
+.hm-occ > .hm-photo img {
+  transition: transform 1400ms var(--ease-out);
 }
-.hm-occasion__design {
-  margin-top: 0.375rem;
-  font-size: 0.8125rem;
-  color: var(--hm-ink-3);
+@media (hover: hover) {
+  .hm-occ:hover > .hm-photo img {
+    transform: scale(1.05);
+  }
+}
+.hm-occ::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(20 8 12 / 0.05) 30%, rgb(26 9 15 / 0.78) 88%);
+}
+.hm-occ__design {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 4.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: rgb(252 249 243 / 0.92);
+  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.5);
+}
+.hm-occ__swatch {
+  aspect-ratio: 4 / 5;
+  border-radius: 0.5rem;
+}
+.hm-occ__body {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.375rem;
+  padding: 1.5rem 1.375rem 1.5rem;
+}
+.hm-occ__label {
+  justify-self: start;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--hm-cream);
+  background: rgb(246 235 225 / 0.16);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.3);
+}
+.hm-occ__title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+:lang(ka) .hm-occ__title {
+  font-weight: 400;
+  font-size: 1.375rem;
+  line-height: 1.35;
+}
+.hm-occ__text {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: rgb(246 235 225 / 0.88);
 }
 
 /* ============================================================ PARTNERS */
@@ -1530,7 +1697,96 @@
 }
 @media (min-width: 60rem) {
   .hm-partners {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.95fr);
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+}
+/* Aceternity focus cards (components/vendor/aceternity/focus-cards.tsx):
+   hovering or focusing one photograph lets the others recede. */
+.hm-focus {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+.hm-focus__card {
+  position: relative;
+  aspect-ratio: 3 / 4.6;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.7);
+  transition:
+    filter 400ms var(--ease-out),
+    transform 400ms var(--ease-out),
+    opacity 400ms var(--ease-out);
+  outline: none;
+}
+.hm-focus__card:nth-child(2) {
+  transform: translateY(2.5rem);
+}
+.hm-focus__card > .hm-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.hm-focus__card.is-dimmed {
+  filter: blur(3px) saturate(0.8);
+  opacity: 0.7;
+  transform: scale(0.97);
+}
+.hm-focus__card.is-dimmed:nth-child(2) {
+  transform: translateY(2.5rem) scale(0.97);
+}
+.hm-focus__card:focus-visible {
+  box-shadow: 0 0 0 2px var(--hm-candle), 0 30px 60px -30px rgb(0 0 0 / 0.7);
+}
+.hm-focus__scrim {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.25rem;
+  padding: 3rem 1rem 1rem;
+  background: linear-gradient(180deg, transparent, rgb(20 6 11 / 0.85));
+  transition: opacity 400ms var(--ease-out);
+}
+@media (hover: hover) {
+  .hm-focus__scrim {
+    opacity: 0;
+  }
+  .hm-focus__card.is-active .hm-focus__scrim {
+    opacity: 1;
+  }
+}
+.hm-focus__title {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.25;
+  color: var(--hm-cream);
+}
+.hm-focus__caption {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgb(246 235 225 / 0.85);
+}
+@media (max-width: 39.99rem) {
+  .hm-focus {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: 62%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin-inline: calc(-1 * var(--hm-gutter));
+    padding: 0 var(--hm-gutter) 1rem;
+    scrollbar-width: none;
+  }
+  .hm-focus::-webkit-scrollbar {
+    display: none;
+  }
+  .hm-focus__card {
+    scroll-snap-align: start;
+  }
+  .hm-focus__card:nth-child(2),
+  .hm-focus__card.is-dimmed:nth-child(2) {
+    transform: none;
   }
 }
 .hm-benefits {
@@ -1564,84 +1820,73 @@
   }
 }
 .hm-benefit__icon {
-  color: var(--hm-candle);
-  margin-bottom: 0.375rem;
-}
-.hm-sheet {
-  position: relative;
-  justify-self: center;
-  width: min(82%, 26rem);
-  aspect-ratio: 210 / 230;
-  padding: 7%;
-  border-radius: 3px;
-  transform: rotate(-3deg);
-  box-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.65);
-  container-type: inline-size;
-}
-.hm-sheet__grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4cqw;
-  height: 100%;
-}
-.hm-sheet__card {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  align-content: center;
-  gap: 2cqw;
-  border: 1px dashed color-mix(in oklab, var(--hm-wine) 25%, transparent);
-  border-radius: 1cqw;
-  color: #2a201c;
-}
-.hm-sheet__card svg.hm-sheet__qr {
-  width: 62%;
-  height: auto;
-}
-.hm-sheet__card .hm-sheet__mark {
-  width: 4cqw;
-  height: 4cqw;
-  color: var(--hm-wine-2);
-}
-.hm-sheet__tag {
-  position: absolute;
-  right: -4%;
-  bottom: 8%;
-  padding: 0.5rem 0.875rem;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  margin-bottom: 0.5rem;
   border-radius: 999px;
-  background: var(--hm-cream);
-  color: var(--hm-wine-deep);
-  font-size: 0.8125rem;
-  font-weight: 500;
-  transform: rotate(3deg);
-  box-shadow: 0 10px 24px -10px rgb(0 0 0 / 0.5);
+  color: var(--hm-candle);
+  box-shadow: inset 0 0 0 1px rgb(242 201 154 / 0.35);
 }
 
 /* ============================================================= PRICING */
 .hm-pricing {
   display: grid;
-  gap: clamp(2rem, 1rem + 3vw, 3.5rem);
+  gap: clamp(2.5rem, 1rem + 3vw, 3.5rem);
   align-items: center;
 }
 @media (min-width: 56rem) {
   .hm-pricing {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+/* The card on its table (the product mockup) with the order slip laid
+   over its corner. */
+.hm-pricing__visual {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  align-items: end;
+}
+.hm-pricing__photo {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+  justify-self: end;
+  width: 58%;
+  border-radius: 1.25rem;
+  box-shadow: var(--hm-shadow-object);
+  transform: rotate(2.5deg);
+}
+.hm-pricing__slip {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+  justify-self: start;
+  z-index: 1;
+  width: min(62%, 23rem);
+  margin-bottom: -2.5rem;
+}
+@media (max-width: 34rem) {
+  .hm-pricing__visual {
+    display: block;
+  }
+  .hm-pricing__photo {
+    width: 76%;
+    margin-left: auto;
+  }
+  .hm-pricing__slip {
+    margin: -2.5rem 0 0;
+    width: 88%;
   }
 }
 .hm-slip {
   position: relative;
   width: 100%;
-  max-width: 28rem;
-  justify-self: center;
   padding: 2.25rem 2rem 2.75rem;
   border-radius: 6px 6px 0 0;
   box-shadow: var(--hm-shadow-object);
 }
-@media (min-width: 56rem) {
-  .hm-slip {
-    justify-self: end;
-  }
-}
+
 .hm-slip::before {
   /* the torn foot */
   content: "";
@@ -1814,24 +2059,161 @@
 }
 
 /* ============================================================== FINALE */
+/* The closing image: hands passing a gift, warmed with the wine, and the
+   seal and words over it. */
 .hm-finale {
   position: relative;
   overflow: hidden;
   isolation: isolate;
-  padding-block: clamp(4.5rem, 3rem + 6vw, 8rem);
+  padding-block: clamp(5.5rem, 3rem + 8vw, 10rem);
   text-align: center;
-  border-top: 1px solid var(--hm-line);
+  color: var(--hm-cream);
+  background: var(--hm-wine-deep);
+}
+.hm-finale__photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+.hm-finale__photo .hm-photo {
+  width: 100%;
+  height: 100%;
+}
+.hm-finale::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   background:
-    radial-gradient(50% 60% at 50% 0%, rgb(243 226 218 / 0.9), transparent 75%),
-    var(--hm-paper);
+    radial-gradient(70% 70% at 50% 50%, rgb(46 15 25 / 0.55), rgb(30 8 15 / 0.86)),
+    linear-gradient(180deg, rgb(46 15 25 / 0.3), rgb(46 15 25 / 0.6));
+}
+.hm-finale__inner {
+  display: grid;
+  justify-items: center;
 }
 .hm-finale__seal {
-  width: 5.5rem;
+  width: 5rem;
   margin: 0 auto 2rem;
+  filter: drop-shadow(0 10px 20px rgb(0 0 0 / 0.4));
+}
+.hm-finale__title {
+  max-width: 46rem;
+  color: var(--hm-cream);
+}
+.hm-finale .hm-lead {
+  color: rgb(246 235 225 / 0.86);
 }
 .hm-finale .hm-actions {
   justify-content: center;
   margin-top: 2.25rem;
+}
+.hm-finale .hm-btn:focus-visible {
+  outline-color: var(--hm-candle);
+}
+
+/* ============================================================= MOMENTS */
+/* Magic UI marquee (components/vendor/magicui/marquee.tsx): a slow ribbon
+   of gifting photographs, slightly tilted like prints on a table. Stops on
+   hover and focus, and stands still under reduced motion. */
+.hm-moments {
+  padding-block: 1rem clamp(1.5rem, 1rem + 2vw, 3rem);
+  overflow: hidden;
+}
+.hm-marquee {
+  --hm-marquee-gap: 1.25rem;
+  display: flex;
+  gap: var(--hm-marquee-gap);
+  overflow: hidden;
+  padding-block: 1.5rem;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.hm-marquee__track {
+  display: flex;
+  flex: none;
+  gap: var(--hm-marquee-gap);
+  animation: hm-marquee var(--hm-marquee-duration, 60s) linear infinite;
+}
+.hm-marquee__track--reverse {
+  animation-direction: reverse;
+}
+.hm-marquee:hover .hm-marquee__track--pause,
+.hm-marquee:focus-within .hm-marquee__track--pause {
+  animation-play-state: paused;
+}
+@keyframes hm-marquee {
+  to {
+    transform: translateX(calc(-100% - var(--hm-marquee-gap)));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-marquee {
+    overflow-x: auto;
+  }
+  .hm-marquee__track {
+    animation: none;
+  }
+}
+.hm-moment {
+  flex: none;
+  width: clamp(13rem, 9rem + 10vw, 18.5rem);
+  aspect-ratio: 4 / 5;
+  padding: 0.5rem 0.5rem 2rem;
+  border-radius: 6px;
+  background: var(--hm-card);
+  box-shadow: var(--hm-shadow-soft);
+}
+.hm-moment--0 {
+  transform: rotate(-2deg);
+}
+.hm-moment--1 {
+  transform: rotate(1.5deg) translateY(10px);
+}
+.hm-moment--2 {
+  transform: rotate(-0.5deg) translateY(-6px);
+}
+.hm-moment > .hm-photo {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* ========================================================= DEMO STAGE */
+/* A recipient reading on her phone sits behind the demo phone: the
+   moment the demo describes, in a photograph. Desktop only. */
+.hm-demo-stage {
+  position: relative;
+  margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+}
+.hm-demo-stage__photo {
+  display: none;
+}
+@media (min-width: 56rem) {
+  .hm-demo-stage__photo {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 10%;
+    width: 31%;
+    bottom: 10%;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: var(--hm-shadow-object);
+  }
+  .hm-demo-stage__photo .hm-photo {
+    width: 100%;
+    height: 100%;
+  }
+  .hm-demo-stage__photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 40%, rgb(247 241 232 / 0.35));
+  }
+  .hm-demo-stage .hm-demo__device {
+    justify-self: end;
+    margin-right: 6%;
+  }
 }
 
 /* ======================================================= SCROLL REVEAL */

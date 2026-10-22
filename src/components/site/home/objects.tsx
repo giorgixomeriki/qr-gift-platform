@@ -3,13 +3,15 @@ import { Play } from "@phosphor-icons/react/dist/ssr/Play";
 import { LinkSimple } from "@phosphor-icons/react/dist/ssr/LinkSimple";
 import { Spark } from "@/components/ui/logo";
 import { WaxSeal } from "@/components/customer/wax-seal";
+import { Iphone } from "@/components/vendor/magicui/iphone";
+import { Photo } from "./photo";
 
 /**
- * The home page's illustrated objects: the printed QR card, the phone, and
- * the greeting screens a recipient moves through. Drawn in HTML/CSS
- * (home.css) so every word on them is live, translatable text, and nothing
- * is a screenshot that could drift from the product. All decorative: the
- * sections that use them describe the same thing in text.
+ * The home page's product objects: the printed QR card (our own artwork,
+ * rendered live, never a stock photo of somebody else's card), the phone
+ * (Magic UI's iPhone frame with live HTML in its screen), and the greeting
+ * screens a recipient moves through. Every word on them is translatable
+ * text. Decorative: the sections that use them say the same thing in words.
  */
 
 export function QrCard({ svg, line, hint, seal = true, className = "" }: { svg: string; line: string; hint?: string; seal?: boolean; className?: string }) {
@@ -29,11 +31,11 @@ export function QrCard({ svg, line, hint, seal = true, className = "" }: { svg: 
   );
 }
 
-export function Phone({ children, className = "" }: { children: ReactNode; className?: string }) {
+/** Magic UI's iPhone in the Signature materials, with a status bar over the live screen. */
+export function PhoneShell({ children, className = "" }: { children: ReactNode; className?: string }) {
   return (
-    <div className={`hm-phone ${className}`}>
+    <Iphone className={`hm-iphone ${className}`}>
       <div className="hm-phone__screen">
-        <span className="hm-phone__island" />
         <span className="hm-phone__status">
           <span>9:41</span>
           <span className="hm-phone__glyphs">
@@ -43,7 +45,7 @@ export function Phone({ children, className = "" }: { children: ReactNode; class
         </span>
         {children}
       </div>
-    </div>
+    </Iphone>
   );
 }
 
@@ -61,26 +63,32 @@ export function Wave({ className = "hm-wave", count = WAVE.length }: { className
 
 export type SampleCopy = { to: string; text: string; sign: string; voice: string; tag: string };
 
-/** The opened greeting: the letter, two prints and the voice note. */
-export function LetterScreen({ copy, withKeepsakes = true, active, className = "" }: { copy: SampleCopy; withKeepsakes?: boolean; active?: boolean; className?: string }) {
+function Prints() {
   return (
-    <div className={`hm-screen ${className}`} data-active={active || undefined}>
+    <div className="hm-prints">
+      <span className="hm-print hm-print--a">
+        <Photo name="keepsake-picnic" alt="" sizes="120px" />
+      </span>
+      <span className="hm-print hm-print--b">
+        <Photo name="keepsake-hug" alt="" sizes="120px" />
+      </span>
+    </div>
+  );
+}
+
+/** The opened greeting: the letter, two prints and the voice note. `letter` replaces the plain text (the demo animates it). */
+export function LetterScreen({ copy, withKeepsakes = true, letter }: { copy: SampleCopy; withKeepsakes?: boolean; letter?: ReactNode }) {
+  return (
+    <div className="hm-screen">
       <span className="hm-screen__tag">{copy.tag}</span>
       <span className="hm-screen__kicker">{copy.to}</span>
       <div className="hm-letter">
-        <p className="hm-letter__text">{copy.text}</p>
+        {letter ?? <p className="hm-letter__text">{copy.text}</p>}
         <p className="hm-letter__sign">{copy.sign}</p>
       </div>
       {withKeepsakes && (
         <>
-          <div className="hm-prints">
-            <span className="hm-print hm-print--a">
-              <span className="hm-img-letter" />
-            </span>
-            <span className="hm-print hm-print--b">
-              <span className="hm-img-stars" />
-            </span>
-          </div>
+          <Prints />
           <VoiceRow label={copy.voice} />
         </>
       )}
@@ -100,10 +108,10 @@ function VoiceRow({ label }: { label: string }) {
   );
 }
 
-export function ScanScreen({ svg, cardLine, pill, active }: { svg: string; cardLine: string; pill: string; active?: boolean }) {
+export function ScanScreen({ svg, cardLine, pill }: { svg: string; cardLine: string; pill: string }) {
   return (
-    <div className="hm-screen hm-screen--scan" data-active={active || undefined}>
-      <span className="hm-scan__view hm-img-letter" />
+    <div className="hm-screen hm-screen--scan">
+      <Photo name="card-flatlay" alt="" sizes="260px" className="hm-scan__view" />
       <QrCard svg={svg} line={cardLine} seal={false} className="hm-scan__card" />
       <span className="hm-scan__frame" />
       <span className="hm-scan__pill">
@@ -114,9 +122,9 @@ export function ScanScreen({ svg, cardLine, pill, active }: { svg: string; cardL
   );
 }
 
-export function OpenScreen({ to, cta, active }: { to: string; cta: string; active?: boolean }) {
+export function OpenScreen({ to, cta }: { to: string; cta: string }) {
   return (
-    <div className="hm-screen hm-screen--open" data-active={active || undefined}>
+    <div className="hm-screen hm-screen--open">
       <span className="hm-screen__kicker">{to}</span>
       <span className="hm-envelope">
         <WaxSeal className="hm-envelope__seal" />
@@ -126,24 +134,33 @@ export function OpenScreen({ to, cta, active }: { to: string; cta: string; activ
   );
 }
 
-export function KeepScreen({ copy, active }: { copy: SampleCopy; active?: boolean }) {
+export function KeepScreen({ copy }: { copy: SampleCopy }) {
   return (
-    <div className="hm-screen hm-screen--keep" data-active={active || undefined}>
+    <div className="hm-screen hm-screen--keep">
       <span className="hm-screen__kicker">{copy.to}</span>
-      <div className="hm-prints" style={{ marginTop: 0 }}>
-        <span className="hm-print hm-print--a">
-          <span className="hm-img-letter" />
-        </span>
-        <span className="hm-print hm-print--b">
-          <span className="hm-img-room" />
-        </span>
-      </div>
-      <span className="hm-video hm-img-stars">
+      <Prints />
+      <span className="hm-video">
+        <Photo name="gift-hands-cafe" alt="" sizes="240px" />
         <span className="hm-video__play">
           <Play weight="fill" />
         </span>
       </span>
       <VoiceRow label={copy.voice} />
+    </div>
+  );
+}
+
+/**
+ * Our card composited onto the blank card in a licensed flat-lay
+ * photograph (card-flatlay): an accurate mockup of the product, never a
+ * stock photo presented as one. The overlay is positioned in the photo's
+ * own coordinates, so the frame keeps the photo's aspect ratio.
+ */
+export function CardComposite({ svg, line, alt, sizes, className = "" }: { svg: string; line: string; alt: string; sizes: string; className?: string }) {
+  return (
+    <div className={`hm-composite ${className}`} role="img" aria-label={alt}>
+      <Photo name="card-flatlay" alt="" sizes={sizes} />
+      <QrCard svg={svg} line={line} seal className="hm-composite__card" />
     </div>
   );
 }
