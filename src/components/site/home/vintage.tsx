@@ -99,7 +99,7 @@ export function OccasionPostcard({
             <MorphingDialogTitle className="hm-postcard__title">{title}</MorphingDialogTitle>
             <MorphingDialogDescription disableLayoutAnimation className="hm-postcard__desc" variants={{ initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 8 } }}>
               <p className="hm-postcard__opening">{opening}</p>
-              <p className="hm-postcard__sample">“{sample}”</p>
+              <p className="hm-postcard__sample">{sample}</p>
               <p className="hm-postcard__design">{designLabel}</p>
             </MorphingDialogDescription>
           </div>

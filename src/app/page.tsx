@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { preload } from "react-dom";
 import { getTranslations } from "next-intl/server";
 import { SiteHeader } from "@/components/site/site-header";
 import { SiteFooter } from "@/components/site/site-footer";
@@ -27,6 +28,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function RootPage() {
+  // The Latin display face of this page only (home.css); the headline paints with it.
+  preload("/fonts/cormorant-garamond-latin.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   return (
     <div className="hm site-skin flex min-h-dvh flex-col">
       <DemoRibbon />

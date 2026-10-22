@@ -93,3 +93,31 @@ for (const width of [320, 375]) {
     await context.close();
   });
 }
+
+test("paper-to-screen comparison is a keyboard slider", async ({ page, context }) => {
+  await useLocale(context, "en");
+  await page.goto("/");
+  const slider = page.getByRole("slider", { name: landing("en").transform.slider });
+  await slider.focus();
+  await page.keyboard.press("Home");
+  await expect(slider).toHaveAttribute("aria-valuenow", "0");
+  await page.keyboard.press("ArrowRight");
+  await expect(slider).toHaveAttribute("aria-valuenow", "5");
+  await page.keyboard.press("End");
+  await expect(slider).toHaveAttribute("aria-valuenow", "100");
+});
+
+test("an occasion opens as a postcard dialog, closes on Escape and returns focus", async ({ page, context }) => {
+  await useLocale(context, "en");
+  const copy = landing("en");
+  await page.goto("/");
+  const first = copy.occasions.items[0].title;
+  const trigger = page.getByRole("button", { name: copy.occasions.open.replace("{title}", first) });
+  await trigger.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText(first);
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(trigger).toBeFocused();
+});

@@ -1285,6 +1285,9 @@
   position: absolute;
   inset: 0;
 }
+.hm-composite > .hm-photo img {
+  object-position: 30% 100%;
+}
 .hm-composite__card.hm-qrcard {
   position: absolute;
   left: 54.6cqw;
@@ -2293,7 +2296,7 @@
   display: block;
   width: min(14rem, 50vw);
   aspect-ratio: 1920 / 620;
-  margin: 0 auto;
+  margin: 0 auto 1rem;
   background: var(--hm-foil) center / 300px;
   -webkit-mask: url(/site/vintage/divider-vine.svg) center / contain no-repeat;
   mask: url(/site/vintage/divider-vine.svg) center / contain no-repeat;
@@ -2369,30 +2372,32 @@
   width: 100%;
   height: 100%;
 }
+/* Each side keeps its subject in its own half: the card left of the
+   starting handle (46%), the greeting right of it. */
 .hm-compare__card.hm-qrcard {
   position: absolute;
-  left: 58%;
-  top: 14%;
-  width: 22%;
-  rotate: 7deg;
-  font-size: 1.9cqw;
+  left: 14%;
+  top: 16%;
+  width: 20%;
+  rotate: -6deg;
+  font-size: 1.05cqw;
 }
 @media (max-width: 40rem) {
   .hm-compare__card.hm-qrcard {
-    left: 48%;
-    top: 34%;
-    width: 42%;
-    font-size: 3.6cqw;
+    left: 6%;
+    top: 24%;
+    width: 36%;
+    font-size: 1.9cqw;
   }
 }
 .hm-compare__screen {
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
   align-items: center;
-  gap: 6%;
-  padding: 7% 8%;
+  gap: 5%;
+  padding: 7% 6% 7% 52%;
   color: var(--hm-cream);
   background:
     radial-gradient(60% 70% at 35% 45%, rgb(242 201 154 / 0.28), transparent 70%),
@@ -2426,7 +2431,7 @@
   height: 70%;
 }
 .hm-compare__prints .hm-print {
-  width: 62%;
+  width: 86%;
   padding: 3% 3% 10%;
   border-radius: 3px;
 }
@@ -2445,13 +2450,13 @@
   .hm-compare__screen {
     grid-template-columns: 1fr;
     grid-template-rows: auto 1fr;
-    padding: 12% 8% 8%;
+    padding: 16% 5% 6% 50%;
   }
   .hm-compare__prints {
     height: 100%;
   }
   .hm-compare__prints .hm-print {
-    width: 46%;
+    width: 62%;
   }
 }
 .hm-compare__tag {
@@ -2593,6 +2598,8 @@ html.hm-dialog-open {
   font-size: 1.0625rem;
 }
 .hm-postcard__sample {
+  padding-left: 0.875rem;
+  border-left: 2px solid var(--hm-gold);
   font-size: 0.9688rem;
   line-height: 1.65;
   color: var(--hm-ink-2);
@@ -2678,4 +2685,13 @@ html.hm-dialog-open {
 .hm-fan .hm-photo {
   width: 100%;
   height: 100%;
+}
+
+/* Cormorant's default figures are old-style ("10" reads as "IO"): prices
+   and counts use lining figures. */
+.hm-slip__price,
+.hm-postcard__title,
+.hm-title,
+.hm-display {
+  font-variant-numeric: lining-nums;
 }

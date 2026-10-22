@@ -21,7 +21,7 @@ export const PHOTOS = {
   "bouquet-peonies": { w: 2400, h: 3168, widths: [480, 800] },
   "flower-stall-dusk": { w: 2400, h: 2952, widths: [480, 800] },
   "wax-seal-ribbon": { w: 2400, h: 2560, widths: [480, 800] },
-  "envelope-seal": { w: 2400, h: 2240, widths: [560, 900, 1300] },
+  "envelope-seal": { w: 2400, h: 1856, widths: [560, 900, 1300] },
   "sealed-letter": { w: 2400, h: 2721, widths: [560, 900, 1300] },
   "roses-envelope": { w: 2400, h: 2400, widths: [480, 800] },
   "roses-vintage": { w: 2400, h: 2400, widths: [800, 1400, 2000] },
