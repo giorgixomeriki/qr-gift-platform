@@ -863,7 +863,8 @@
       "photoAlt": "Red tulips wrapped in kraft paper, with a QR Starr card tucked beside them",
       "badgeScan": "Opens in the phone’s browser",
       "badgeVoice": "Voice note",
-      "secondaryLink": "For florists and gift shops"
+      "secondaryLink": "For florists and gift shops",
+      "plateAlt": "A Redouté rose engraving, 1817–24, laid beneath a bouquet of tulips"
     },
     "demo": {
       "eyebrow": "After the scan",
@@ -895,7 +896,8 @@
       "screenScan": "Opening your greeting…",
       "screenOpen": "Tap to open",
       "previous": "Previous moment",
-      "next": "Next moment"
+      "next": "Next moment",
+      "photoAlt": "A woman leaning in to admire a bouquet of pink roses"
     },
     "steps": {
       "eyebrow": "How it works",
@@ -916,9 +918,9 @@
       ],
       "more": "The full details: what a greeting holds, activation and limits",
       "alts": [
-        "A florist arranging a bouquet in her workshop",
-        "A QR Starr card and envelope on a table beside a sunflower",
-        "A woman walking with a bouquet, reading her phone"
+        "A florist arranging peonies in soft light",
+        "A QR Starr card tucked into an envelope sealed with wax",
+        "A woman reading at a café table beside a bouquet of tulips"
       ]
     },
     "experiences": {
@@ -993,11 +995,16 @@
       "alts": [
         "A hand lighting the candles on a birthday cake",
         "A hand holding a pink and peach bouquet",
-        "A couple holding hands across a candlelit dinner table",
+        "Hands holding red and cream roses",
         "A bride and groom, the bride holding a soft beige bouquet",
         "Champagne being poured into a row of glasses",
-        "Orange tulips beside a green envelope and a blank card"
-      ]
+        "A small paper parcel tied with string, held in window light"
+      ],
+      "open": "Open the {title} postcard",
+      "close": "Close the postcard",
+      "postcard": "Postcard",
+      "from": "A greeting in the {design} design",
+      "plateAlt": "A Redouté rose engraving from Les Roses, 1817–24"
     },
     "partners": {
       "eyebrow": "For florists, bakeries and gift shops",
@@ -1040,9 +1047,9 @@
         }
       ],
       "photoAlts": [
-        "A florist arranging flowers in her workshop",
-        "A sunlit flower shop full of plants and cut flowers",
-        "A shop display crowded with fresh bouquets"
+        "A florist arranging pink roses",
+        "Roses and peonies, freshly arranged",
+        "A flower stall lit at dusk on a wet city square"
       ]
     },
     "pricing": {
@@ -1060,7 +1067,7 @@
       ],
       "note": "The price for your card is shown on its start screen and again at checkout, before you pay.",
       "more": "Pricing details",
-      "compositeAlt": "A QR Starr card on a table beside an envelope and a sunflower"
+      "compositeAlt": "A QR Starr card on a wax-sealed envelope, laid on an antique lace valentine"
     },
     "trust": {
       "eyebrow": "Peace of mind",
@@ -1112,18 +1119,36 @@
       "body": "Ask for a QR Starr card at a partner shop, or bring QR Starr to yours.",
       "primary": "How it works",
       "secondary": "Become a partner",
-      "photoAlt": "Hands passing a gift box tied with red ribbon across a café table"
+      "photoAlt": "Hands passing a gift box tied with red ribbon across a café table",
+      "postcardsLabel": "Postcards: botanical engravings and gifting moments",
+      "postcardAlts": [
+        "A Redouté pompon rose engraving",
+        "Pink roses tucked into an envelope",
+        "A Redouté rose engraving",
+        "A wax seal on an olive ribbon",
+        "A Redouté cabbage rose engraving"
+      ]
     },
     "moments": {
       "label": "Gift-giving moments",
       "alts": [
-        "Hands passing a gift box tied with red ribbon across a café table",
-        "A bouquet of white roses and blue hydrangea held in a garden",
-        "Someone holding out a small gift wrapped in paper and twine",
-        "A pink and peach bouquet held at arm’s length",
-        "A woman walking down the street with flowers, looking at her phone",
-        "A small paper parcel tied with string, held in window light"
+        "Hands wrapping gifts in kraft paper with red ribbon",
+        "Pink roses and peonies in soft light",
+        "A gift box with a burgundy ribbon being opened",
+        "A wax seal on an olive ribbon with dried flowers",
+        "Pink roses tucked into an envelope",
+        "A bouquet of white roses and hydrangea held in a garden"
       ]
+    },
+    "transform": {
+      "eyebrow": "From paper to screen",
+      "title": "The card in their hands. Your words on their phone.",
+      "lead": "Drag across: the same moment, before and after the scan.",
+      "paper": "On paper",
+      "screen": "On their phone",
+      "slider": "Compare the card on paper with the greeting on the phone",
+      "value": "{value}% of the greeting shown",
+      "paperAlt": "A sealed letter on a writing desk with a QR Starr card beside it"
     }
   }
 }

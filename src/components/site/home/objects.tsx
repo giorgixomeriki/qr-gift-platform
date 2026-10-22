@@ -111,7 +111,7 @@ function VoiceRow({ label }: { label: string }) {
 export function ScanScreen({ svg, cardLine, pill }: { svg: string; cardLine: string; pill: string }) {
   return (
     <div className="hm-screen hm-screen--scan">
-      <Photo name="card-flatlay" alt="" sizes="260px" className="hm-scan__view" />
+      <Photo name="sealed-letter" alt="" sizes="260px" className="hm-scan__view" />
       <QrCard svg={svg} line={cardLine} seal={false} className="hm-scan__card" />
       <span className="hm-scan__frame" />
       <span className="hm-scan__pill">
@@ -151,15 +151,15 @@ export function KeepScreen({ copy }: { copy: SampleCopy }) {
 }
 
 /**
- * Our card composited onto the blank card in a licensed flat-lay
- * photograph (card-flatlay): an accurate mockup of the product, never a
- * stock photo presented as one. The overlay is positioned in the photo's
- * own coordinates, so the frame keeps the photo's aspect ratio.
+ * Our card composited into a licensed photograph of a wax-sealed envelope
+ * (envelope-seal): an accurate mockup of the product, never a stock photo
+ * presented as one. The overlay is positioned in the photo's own
+ * coordinates, so the frame keeps the photo's aspect ratio.
  */
 export function CardComposite({ svg, line, alt, sizes, className = "" }: { svg: string; line: string; alt: string; sizes: string; className?: string }) {
   return (
     <div className={`hm-composite ${className}`} role="img" aria-label={alt}>
-      <Photo name="card-flatlay" alt="" sizes={sizes} />
+      <Photo name="envelope-seal" alt="" sizes={sizes} />
       <QrCard svg={svg} line={line} seal className="hm-composite__card" />
     </div>
   );

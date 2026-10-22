@@ -18,15 +18,21 @@ export function MotionRoot({ children }: { children: ReactNode }) {
 }
 
 /** Hero depth: as the page scrolls away, the phone rises a little faster than the photograph and the card settles. */
-export function HeroStage({ photo, card, phone, badges, label }: { photo: ReactNode; card: ReactNode; phone: ReactNode; badges: ReactNode; label: string }) {
+export function HeroStage({ photo, plate, card, phone, badges, label }: { photo: ReactNode; plate?: ReactNode; card: ReactNode; phone: ReactNode; badges: ReactNode; label: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
   const phoneY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : -70]);
   const cardY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 30]);
   const photoScale = useTransform(scrollYProgress, [0, 1], [1, reduce ? 1 : 1.06]);
+  const plateY = useTransform(scrollYProgress, [0, 1], [0, reduce ? 0 : 40]);
   return (
     <div ref={ref} className="hm-hstage" role="img" aria-label={label}>
+      {plate && (
+        <motion.div className="hm-hstage__plate" style={{ y: plateY }}>
+          {plate}
+        </motion.div>
+      )}
       <motion.div className="hm-hstage__photo" style={{ scale: photoScale }}>
         {photo}
       </motion.div>

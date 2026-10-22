@@ -21,14 +21,14 @@ import { DeviceMobile } from "@phosphor-icons/react/dist/ssr/DeviceMobile";
 import { ArrowCounterClockwise } from "@phosphor-icons/react/dist/ssr/ArrowCounterClockwise";
 import { HandSwipeRight } from "@phosphor-icons/react/dist/ssr/HandSwipeRight";
 import { ThemeSwatch } from "@/components/greeting/theme-swatch";
-import { WaxSeal } from "@/components/customer/wax-seal";
 import { SELECTABLE_THEMES } from "@/lib/themes/registry";
 import { Marquee } from "@/components/vendor/magicui/marquee";
 import { BlurFade } from "@/components/vendor/magicui/blur-fade";
 import { CardsCarousel } from "@/components/vendor/aceternity/cards-carousel";
 import { FocusCards } from "@/components/vendor/aceternity/focus-cards";
 import { getHomeQrSvg, getLanding } from "./copy";
-import { CardComposite, KeepScreen, LetterScreen, OpenScreen, ScanScreen, Wave } from "./objects";
+import { CardComposite, KeepScreen, LetterScreen, OpenScreen, QrCard, ScanScreen, Wave } from "./objects";
+import { OccasionPostcard, PaperToScreen, PostcardFan } from "./vintage";
 import { Photo } from "./photo";
 import type { PhotoName } from "./photos";
 import { DemoLetterText, PhotoStack, RevealText, TiltCard } from "./motion";
@@ -64,7 +64,7 @@ function Arrow() {
 }
 
 /* ------------------------------------------------------------ moments */
-const MOMENTS: PhotoName[] = ["gift-hands-cafe", "bouquet-garden", "gift-box-held", "occasion-love", "recipient-street", "gift-parcel"];
+const MOMENTS: PhotoName[] = ["gift-wrapping", "bouquet-peonies", "gift-opening", "wax-seal-ribbon", "roses-envelope", "bouquet-garden"];
 
 /** A slow ribbon of gifting moments (Magic UI Marquee): the world the card travels in. */
 export async function Moments() {
@@ -93,11 +93,11 @@ export async function Steps() {
   const alts = raw<string[]>("steps.alts");
   const visual = (i: number) =>
     i === 0 ? (
-      <Photo name="florist-arranging" alt={alts[0] ?? ""} sizes="(min-width: 48rem) 30vw, 92vw" position="50% 35%" />
+      <Photo name="florist-peonies" alt={alts[0] ?? ""} sizes="(min-width: 48rem) 30vw, 80vw" position="50% 40%" />
     ) : i === 1 ? (
-      <CardComposite svg={svg} line={text("hero.cardLine")} alt={alts[1] ?? ""} sizes="(min-width: 48rem) 30vw, 92vw" />
+      <CardComposite svg={svg} line={text("hero.cardLine")} alt={alts[1] ?? ""} sizes="(min-width: 48rem) 30vw, 80vw" />
     ) : (
-      <Photo name="recipient-street" alt={alts[2] ?? ""} sizes="(min-width: 48rem) 30vw, 92vw" position="52% 40%" />
+      <Photo name="reader-tulips" alt={alts[2] ?? ""} sizes="(min-width: 48rem) 30vw, 80vw" position="38% 50%" />
     );
   return (
     <section className="hm-section" id="how" aria-labelledby="hm-steps-title">
@@ -136,6 +136,48 @@ export async function Steps() {
   );
 }
 
+/* ---------------------------------------------------------- transform */
+/** From paper to screen: the physical card and the greeting it opens, compared. */
+export async function Transform() {
+  const { text } = await getLanding();
+  const svg = await getHomeQrSvg();
+  const sample = { to: text("hero.sampleTo"), text: text("hero.sampleText"), sign: text("hero.sampleSign"), voice: text("hero.sampleVoice"), tag: text("hero.sampleTag") };
+  return (
+    <section className="hm-section hm-transform" id="paper-to-screen" aria-labelledby="hm-transform-title">
+      <div className="hm-wrap">
+        <span className="hm-divider" aria-hidden />
+        <Head id="hm-transform-title" eyebrow={text("transform.eyebrow")} title={text("transform.title")} lead={text("transform.lead")} center />
+        <PaperToScreen
+          labels={{ paper: text("transform.paper"), screen: text("transform.screen"), slider: text("transform.slider"), value: text("transform.value") }}
+          paper={
+            <div className="hm-compare__paper" role="img" aria-label={text("transform.paperAlt")}>
+              <Photo name="sealed-letter" alt="" sizes="(min-width: 64rem) 60rem, 100vw" position="50% 40%" />
+              <QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} className="hm-compare__card" />
+            </div>
+          }
+          screen={
+            <div className="hm-compare__screen">
+              <div className="hm-compare__letter hm-letter">
+                <span className="hm-screen__kicker">{sample.to}</span>
+                <p className="hm-letter__text">{sample.text}</p>
+                <p className="hm-letter__sign">{sample.sign}</p>
+              </div>
+              <div className="hm-compare__prints">
+                <span className="hm-print">
+                  <Photo name="keepsake-hug" alt="" sizes="200px" />
+                </span>
+                <span className="hm-print">
+                  <Photo name="bouquet-garden" alt="" sizes="200px" />
+                </span>
+              </div>
+            </div>
+          }
+        />
+      </div>
+    </section>
+  );
+}
+
 /* --------------------------------------------------------------- demo */
 export async function Demo() {
   const { text, raw, rich } = await getLanding();
@@ -149,8 +191,8 @@ export async function Demo() {
       <div className="hm-wrap">
         <Head id="hm-demo-title" eyebrow={text("demo.eyebrow")} title={text("demo.title")} lead={text("demo.lead")} />
         <div className="hm-demo-stage" data-reveal>
-          <div className="hm-demo-stage__photo" aria-hidden>
-            <Photo name="recipient-smile" alt="" sizes="(min-width: 56rem) 26vw, 0px" position="30% 35%" />
+          <div className="hm-demo-stage__photo">
+            <Photo name="recipient-admiring" alt={text("demo.photoAlt")} sizes="(min-width: 56rem) 26vw, 0px" position="50% 55%" />
           </div>
           <ScanDemo
             beats={beats}
@@ -248,13 +290,13 @@ export async function Experiences() {
 }
 
 /* ---------------------------------------------------------- occasions */
-const OCCASIONS: { theme: string; photo: PhotoName; position?: string }[] = [
-  { theme: "birthday", photo: "occasion-birthday", position: "50% 45%" },
-  { theme: "romantic", photo: "occasion-love", position: "50% 40%" },
-  { theme: "elegant", photo: "occasion-anniversary", position: "40% 50%" },
-  { theme: "wedding", photo: "occasion-wedding", position: "45% 50%" },
-  { theme: "celebration", photo: "occasion-celebration", position: "60% 50%" },
-  { theme: "minimal", photo: "occasion-justbecause", position: "50% 50%" },
+const OCCASIONS: { theme: string; photo: PhotoName; plate: PhotoName; position?: string }[] = [
+  { theme: "birthday", photo: "occasion-birthday", plate: "redoute-pompon", position: "50% 45%" },
+  { theme: "romantic", photo: "occasion-love", plate: "redoute-josephine", position: "50% 40%" },
+  { theme: "elegant", photo: "roses-hands", plate: "redoute-gallica", position: "50% 55%" },
+  { theme: "wedding", photo: "occasion-wedding", plate: "redoute-moss", position: "45% 50%" },
+  { theme: "celebration", photo: "occasion-celebration", plate: "ruotte-bouquet", position: "60% 50%" },
+  { theme: "minimal", photo: "gift-parcel", plate: "redoute-cabbage", position: "50% 50%" },
 ];
 
 export async function Occasions() {
@@ -273,20 +315,21 @@ export async function Occasions() {
           labels={{ previous: text("occasions.previous"), next: text("occasions.next") }}
           items={items.map((o, i) => {
             const occ = OCCASIONS[i] ?? OCCASIONS[5]!;
+            const design = tApp(`${occ.theme}.name`);
             return (
-              <figure className="hm-occ" key={i}>
-                <Photo name={occ.photo} alt={alts[i] ?? ""} sizes="(min-width: 48rem) 340px, 76vw" position={occ.position} />
-                <span className="hm-occ__design" aria-hidden>
-                  <ThemeSwatch themeKey={occ.theme} className="hm-occ__swatch" />
-                </span>
-                <figcaption className="hm-occ__body">
-                  <span className="hm-occ__label">
-                    {text("occasions.designLabel")}: {tApp(`${occ.theme}.name`)}
-                  </span>
-                  <h3 className="hm-occ__title">{o.title}</h3>
-                  <p className="hm-occ__text">{o.text}</p>
-                </figcaption>
-              </figure>
+              <OccasionPostcard
+                key={i}
+                front={<Photo name={occ.photo} alt={alts[i] ?? ""} sizes="(min-width: 48rem) 340px, 76vw" position={occ.position} />}
+                plate={<Photo name={occ.plate} alt={text("occasions.plateAlt")} sizes="(min-width: 48rem) 320px, 60vw" />}
+                swatch={<ThemeSwatch themeKey={occ.theme} className="hm-occ__swatch" />}
+                label={`${text("occasions.designLabel")}: ${design}`}
+                title={o.title}
+                text={o.text}
+                designLabel={text("occasions.from").replace("{design}", design)}
+                opening={tApp(`${occ.theme}.opening`)}
+                sample={tApp(`${occ.theme}.sample`)}
+                labels={{ open: text("occasions.open").replace("{title}", o.title), close: text("occasions.close"), postcard: text("occasions.postcard") }}
+              />
             );
           })}
         />
@@ -298,9 +341,9 @@ export async function Occasions() {
 /* ----------------------------------------------------------- partners */
 const BENEFIT_ICONS = [Gift, Printer, ChartLineUp, EyeSlash];
 const PARTNER_PHOTOS: { name: PhotoName; position: string }[] = [
-  { name: "florist-arranging", position: "50% 30%" },
-  { name: "florist-shop", position: "50% 50%" },
-  { name: "florist-display", position: "40% 50%" },
+  { name: "florist-roses", position: "50% 45%" },
+  { name: "bouquet-peonies", position: "50% 50%" },
+  { name: "flower-stall-dusk", position: "45% 60%" },
 ];
 
 export async function Partners() {
@@ -377,6 +420,9 @@ export async function Pricing() {
           </Link>
         </div>
         <div className="hm-pricing__visual" data-reveal style={{ ["--d" as string]: 1 }}>
+          <div className="hm-pricing__mat" aria-hidden>
+            <Photo name="lace-valentine" alt="" sizes="(min-width: 56rem) 24vw, 60vw" />
+          </div>
           <CardComposite svg={svg} line={text("hero.cardLine")} alt={text("pricing.compositeAlt")} sizes="(min-width: 56rem) 26vw, 70vw" className="hm-pricing__photo" />
           <TiltCard className="hm-pricing__slip">
             <div className="hm-slip hm-paper" data-testid="home-price">
@@ -428,6 +474,7 @@ export async function Trust() {
           </ul>
         </div>
         <div className="hm-faq" data-reveal>
+          <span className="hm-gilt hm-gilt--tr" aria-hidden />
           <h2 className="hm-faq__title">{text("trust.faqTitle")}</h2>
           <div className="hm-faq__list">
             {faq.map((f, i) => (
@@ -446,17 +493,18 @@ export async function Trust() {
   );
 }
 /* ------------------------------------------------------------- finale */
+const POSTCARDS: PhotoName[] = ["redoute-pompon", "roses-envelope", "redoute-gallica", "wax-seal-ribbon", "redoute-cabbage"];
+
 export async function Finale() {
-  const { text } = await getLanding();
+  const { text, raw } = await getLanding();
+  const alts = raw<string[]>("finale.postcardAlts");
   return (
     <section className="hm-finale" aria-labelledby="hm-finale-title">
       <div className="hm-finale__photo" aria-hidden>
-        <Photo name="gift-hands-cafe" alt="" sizes="100vw" position="55% 50%" />
+        <Photo name="roses-vintage" alt="" sizes="100vw" position="50% 50%" />
       </div>
       <div className="hm-wrap hm-finale__inner">
-        <span className="hm-finale__seal" aria-hidden>
-          <WaxSeal />
-        </span>
+        <PostcardFan label={text("finale.postcardsLabel")} cards={POSTCARDS.map((name, i) => ({ alt: alts[i] ?? "", node: <Photo name={name} alt="" sizes="180px" /> }))} />
         <RevealText id="hm-finale-title" text={text("finale.title")} className="hm-title hm-finale__title" />
         <p className="hm-lead mx-auto mt-5">{text("finale.body")}</p>
         <div className="hm-actions hm-actions--stack">

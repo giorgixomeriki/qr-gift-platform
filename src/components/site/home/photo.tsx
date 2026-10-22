@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { PHOTOS, type PhotoName } from "./photos";
 
 /**
- * A licensed photograph (public/site/photos, register in
+ * A licensed photograph or public-domain artwork (public/site, register in
  * docs/design/site-redesign/ASSETS.md) as a responsive <picture>: AVIF with
  * a WebP fallback at every encoded width, intrinsic width/height so the
  * layout never shifts, lazy by default and eager + high priority for the
@@ -33,8 +33,9 @@ export function Photo({
   position?: string;
 }) {
   const p = PHOTOS[name];
-  const set = (ext: "avif" | "webp") => p.widths.map((w) => `/site/photos/${name}-${w}.${ext} ${w}w`).join(", ");
-  const fallback = `/site/photos/${name}-${p.widths[Math.min(1, p.widths.length - 1)]}.webp`;
+  const dir = "dir" in p ? p.dir : "photos";
+  const set = (ext: "avif" | "webp") => p.widths.map((w) => `/site/${dir}/${name}-${w}.${ext} ${w}w`).join(", ");
+  const fallback = `/site/${dir}/${name}-${p.widths[Math.min(1, p.widths.length - 1)]}.webp`;
   return (
     <picture className={`hm-photo ${className}`} style={style}>
       <source type="image/avif" srcSet={set("avif")} sizes={sizes} />

@@ -43,7 +43,8 @@ export async function Hero() {
         </div>
 
         <HeroStage
-          label={text("hero.photoAlt")}
+          label={`${text("hero.photoAlt")}. ${text("hero.plateAlt")}`}
+          plate={<Photo name="redoute-josephine" alt="" sizes="(min-width: 62rem) 18vw, 40vw" />}
           photo={<Photo name="hero-tulips" alt="" priority sizes="(min-width: 62rem) 34vw, 78vw" position="40% 40%" />}
           card={<QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} />}
           phone={
@@ -53,6 +54,7 @@ export async function Hero() {
           }
           badges={
             <>
+              <span className="hm-gilt hm-gilt--photo" aria-hidden />
               <span className="hm-badge hm-badge--scan">
                 <QrCode size={16} weight="regular" aria-hidden />
                 {text("hero.badgeScan")}

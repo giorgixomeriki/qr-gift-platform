@@ -34,6 +34,13 @@
   --hm-shadow-object: 0 1px 1px rgb(46 15 25 / 0.06), 0 2px 6px rgb(46 15 25 / 0.06), 0 24px 48px -22px rgb(46 15 25 / 0.42);
   --hm-shadow-soft: 0 1px 2px rgb(46 15 25 / 0.05), 0 12px 32px -16px rgb(46 15 25 / 0.22);
   --hm-tooth: var(--cx-paper-tooth);
+  /* Latin display in Cormorant Garamond; Georgian falls through (by
+     unicode-range) to Noto Serif Georgian, unchanged. */
+  --font-serif: "Cormorant Garamond", "Noto Serif Georgian", "Newsreader", Georgia, serif;
+  /* Gold foil: a CC0 foil photograph (ambientCG Foil002) warmed to the
+     Signature candle gold, shown through public-domain ornaments as masks. */
+  --hm-foil: image-set(url(/site/vintage/gold-foil-512.avif) type("image/avif"), url(/site/vintage/gold-foil-512.webp) type("image/webp"));
+  --hm-gold: #b38a4a;
   --cx-press: 500ms;
 
   background: var(--hm-paper);
@@ -71,12 +78,15 @@
   text-transform: uppercase;
   color: var(--hm-wine-2);
 }
+/* Harpel's flourish (public domain), in gold foil. */
 .hm-kicker::before {
   content: "";
-  width: 1.25rem;
-  height: 1px;
-  background: currentColor;
-  opacity: 0.7;
+  flex: none;
+  width: 2.25rem;
+  height: 0.5rem;
+  background: var(--hm-foil) center / 220px;
+  -webkit-mask: url(/site/vintage/flourish-harpel.svg) center / contain no-repeat;
+  mask: url(/site/vintage/flourish-harpel.svg) center / contain no-repeat;
 }
 :lang(ka) .hm-kicker {
   text-transform: none;
@@ -87,9 +97,10 @@
 .hm-display {
   font-family: var(--font-serif);
   font-weight: 400;
-  font-size: clamp(2.6rem, 1.45rem + 4.9vw, 5.4rem);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
+  font-weight: 500;
+  font-size: clamp(2.9rem, 1.6rem + 5.4vw, 6rem);
+  line-height: 0.98;
+  letter-spacing: -0.015em;
   color: var(--hm-ink);
   text-wrap: balance;
 }
@@ -109,10 +120,10 @@
 
 .hm-title {
   font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: clamp(2rem, 1.35rem + 2.6vw, 3.35rem);
-  line-height: 1.08;
-  letter-spacing: -0.02em;
+  font-weight: 500;
+  font-size: clamp(2.25rem, 1.5rem + 2.9vw, 3.75rem);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
   text-wrap: balance;
 }
 :lang(ka) .hm-title {
@@ -123,8 +134,8 @@
 }
 .hm-h3 {
   font-family: var(--font-serif);
-  font-weight: 400;
-  font-size: 1.375rem;
+  font-weight: 600;
+  font-size: 1.5rem;
   line-height: 1.2;
   letter-spacing: -0.01em;
 }
@@ -1965,6 +1976,7 @@
   margin-top: 0.125rem;
 }
 .hm-faq {
+  position: relative;
   display: grid;
   align-content: start;
   gap: 1.25rem;
@@ -2085,8 +2097,8 @@
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(70% 70% at 50% 50%, rgb(46 15 25 / 0.55), rgb(30 8 15 / 0.86)),
-    linear-gradient(180deg, rgb(46 15 25 / 0.3), rgb(46 15 25 / 0.6));
+    radial-gradient(60% 65% at 50% 55%, rgb(46 15 25 / 0.5), rgb(30 8 15 / 0.82)),
+    linear-gradient(180deg, rgb(46 15 25 / 0.15), rgb(46 15 25 / 0.5));
 }
 .hm-finale__inner {
   display: grid;
@@ -2230,4 +2242,440 @@
       transform 900ms var(--ease-out);
     transition-delay: calc(var(--d, 0) * 90ms);
   }
+}
+
+/* =================================================== LUXURY VINTAGE */
+/* Subtle period details over the modern page: public-domain engravings
+   and ornaments from museum open-access collections, gold foil seen
+   through them as masks, and a few collectible-postcard surfaces.
+   Register: docs/design/site-redesign/ASSETS.md. */
+:lang(ka) .hm-display,
+:lang(ka) .hm-title,
+:lang(ka) .hm-h3 {
+  font-weight: 300;
+}
+:lang(ka) .hm-h3 {
+  font-weight: 400;
+}
+
+/* Gold-foil ornaments (masks over the foil). */
+.hm-gilt {
+  position: absolute;
+  z-index: 5;
+  width: 4.5rem;
+  aspect-ratio: 372 / 252;
+  background: var(--hm-foil) center / 240px;
+  -webkit-mask: url(/site/vintage/corner-art-nouveau.svg) center / contain no-repeat;
+  mask: url(/site/vintage/corner-art-nouveau.svg) center / contain no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.35));
+}
+.hm-gilt--tl {
+  top: -0.75rem;
+  left: -0.75rem;
+}
+.hm-gilt--tr {
+  top: -0.75rem;
+  right: -0.75rem;
+  transform: scaleX(-1);
+}
+.hm-gilt--photo {
+  top: -1.1rem;
+  left: calc(78cqw - 3.6rem);
+  transform: scaleX(-1);
+}
+.hm-gilt--br {
+  right: -0.75rem;
+  bottom: -0.75rem;
+  transform: scale(-1);
+}
+.hm-divider {
+  display: block;
+  width: min(14rem, 50vw);
+  aspect-ratio: 1920 / 620;
+  margin: 0 auto;
+  background: var(--hm-foil) center / 300px;
+  -webkit-mask: url(/site/vintage/divider-vine.svg) center / contain no-repeat;
+  mask: url(/site/vintage/divider-vine.svg) center / contain no-repeat;
+  opacity: 0.85;
+}
+
+/* Hero: a Redouté plate laid under the photograph, like a print on the table. */
+.hm-hstage__plate {
+  position: absolute;
+  z-index: 0;
+  left: -3cqw;
+  top: -5cqw;
+  width: 33cqw;
+  padding: 1.1cqw;
+  background: #fbf7f0;
+  box-shadow: var(--hm-shadow-soft);
+  rotate: -6deg;
+}
+.hm-hstage__plate .hm-photo {
+  aspect-ratio: 2699 / 3680;
+}
+.hm-hstage__photo {
+  z-index: 1;
+}
+
+/* ---------------------------------------------------- paper to screen */
+.hm-transform {
+  padding-top: calc(var(--hm-section) * 0.6);
+}
+.hm-transform .hm-head {
+  margin-bottom: clamp(2rem, 1rem + 3vw, 3.5rem);
+}
+.hm-cscroll {
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
+}
+.hm-cscroll__card {
+  transform-origin: 50% 100%;
+  padding: clamp(0.5rem, 0.3rem + 0.8vw, 0.875rem);
+  border-radius: clamp(1.25rem, 1rem + 1vw, 1.875rem);
+  background: linear-gradient(160deg, #4a1827, var(--hm-wine-deep));
+  box-shadow:
+    inset 0 0 0 1px rgb(242 201 154 / 0.25),
+    0 9px 20px rgb(46 15 25 / 0.25),
+    0 37px 37px rgb(46 15 25 / 0.18),
+    0 84px 50px rgb(46 15 25 / 0.1);
+}
+.hm-cscroll__screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(0.875rem, 0.7rem + 0.8vw, 1.25rem);
+  aspect-ratio: 16 / 9.5;
+}
+@media (max-width: 40rem) {
+  .hm-cscroll__screen {
+    aspect-ratio: 4 / 5;
+  }
+}
+.hm-compare {
+  position: absolute !important;
+  inset: 0;
+  cursor: ew-resize;
+}
+.hm-compare__paper {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+}
+.hm-compare__paper > .hm-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hm-compare__card.hm-qrcard {
+  position: absolute;
+  left: 58%;
+  top: 14%;
+  width: 22%;
+  rotate: 7deg;
+  font-size: 1.9cqw;
+}
+@media (max-width: 40rem) {
+  .hm-compare__card.hm-qrcard {
+    left: 48%;
+    top: 34%;
+    width: 42%;
+    font-size: 3.6cqw;
+  }
+}
+.hm-compare__screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+  align-items: center;
+  gap: 6%;
+  padding: 7% 8%;
+  color: var(--hm-cream);
+  background:
+    radial-gradient(60% 70% at 35% 45%, rgb(242 201 154 / 0.28), transparent 70%),
+    linear-gradient(180deg, #45282b, #2f1a1d);
+  container-type: inline-size;
+}
+.hm-compare__letter.hm-letter {
+  margin: 0;
+  padding: 7% 8%;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+.hm-compare__letter .hm-screen__kicker {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-size: 0.75rem;
+  color: #7a3244;
+}
+.hm-compare__letter .hm-letter__text {
+  font-size: clamp(1.1rem, 0.7rem + 1.6cqw, 2rem);
+}
+:lang(ka) .hm-compare__letter .hm-letter__text {
+  font-size: clamp(0.95rem, 0.6rem + 1.3cqw, 1.6rem);
+}
+.hm-compare__letter .hm-letter__sign {
+  font-size: clamp(1rem, 0.7rem + 1cqw, 1.5rem);
+  margin-top: 1rem;
+}
+.hm-compare__prints {
+  position: relative;
+  height: 70%;
+}
+.hm-compare__prints .hm-print {
+  width: 62%;
+  padding: 3% 3% 10%;
+  border-radius: 3px;
+}
+.hm-compare__prints .hm-print:nth-child(1) {
+  left: 0;
+  top: 2%;
+  rotate: -6deg;
+}
+.hm-compare__prints .hm-print:nth-child(2) {
+  right: 0;
+  bottom: 2%;
+  top: auto;
+  rotate: 5deg;
+}
+@media (max-width: 40rem) {
+  .hm-compare__screen {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    padding: 12% 8% 8%;
+  }
+  .hm-compare__prints {
+    height: 100%;
+  }
+  .hm-compare__prints .hm-print {
+    width: 46%;
+  }
+}
+.hm-compare__tag {
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+.hm-compare__tag--paper {
+  left: 1rem;
+  color: var(--hm-ink);
+  background: rgb(252 249 243 / 0.92);
+}
+.hm-compare__tag--screen {
+  right: 1rem;
+  color: var(--hm-cream);
+  background: rgb(46 15 25 / 0.55);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.35);
+}
+.hm-compare__rule {
+  z-index: 4;
+  width: 2px !important;
+  margin-left: -1px;
+  background: rgb(252 249 243 / 0.9);
+  box-shadow: 0 0 12px rgb(0 0 0 / 0.35);
+  outline: none;
+}
+.hm-compare__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  translate: -50% -50%;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: var(--hm-cream);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(179 138 74 / 0.6);
+}
+.hm-compare__rule:focus-visible .hm-compare__handle {
+  outline: 2px solid var(--hm-candle);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------ occasion postcards */
+button.hm-occ {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+button.hm-occ:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 4px;
+}
+.hm-occ__title,
+.hm-occ__text,
+.hm-occ__label {
+  display: block;
+}
+.hm-dialog__backdrop {
+  background: rgb(30 8 15 / 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+html.hm-dialog-open {
+  overflow: hidden;
+}
+.hm-postcard {
+  position: relative;
+  z-index: 51;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 1.5rem;
+  width: min(92vw, 46rem);
+  max-height: 88dvh;
+  padding: 1.125rem;
+  overflow: auto;
+  border-radius: 6px;
+  color: var(--hm-ink);
+  background: #fbf7f0;
+  box-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.6), inset 0 0 0 1px rgb(179 138 74 / 0.45);
+}
+.hm-postcard__plate .hm-photo {
+  height: 100%;
+  border-radius: 2px;
+}
+.hm-postcard__back {
+  display: grid;
+  align-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem 1.5rem 1.5rem;
+  border-left: 1px dashed rgb(122 50 68 / 0.3);
+}
+.hm-postcard__kicker {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hm-wine-2);
+}
+:lang(ka) .hm-postcard__kicker {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.hm-postcard__title {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.05;
+}
+:lang(ka) .hm-postcard__title {
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.hm-postcard__desc {
+  display: grid;
+  gap: 0.75rem;
+}
+.hm-postcard__opening {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--hm-wine);
+}
+:lang(ka) .hm-postcard__opening {
+  font-style: normal;
+  font-size: 1.0625rem;
+}
+.hm-postcard__sample {
+  font-size: 0.9688rem;
+  line-height: 1.65;
+  color: var(--hm-ink-2);
+}
+.hm-postcard__design {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hm-line);
+  font-size: 0.8125rem;
+  color: var(--hm-ink-3);
+}
+.hm-postcard__close {
+  display: grid;
+  place-items: center;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: rgb(252 249 243 / 0.92);
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
+}
+.hm-postcard__close:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+@media (max-width: 40rem) {
+  .hm-postcard {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .hm-postcard__plate {
+    max-height: 38dvh;
+    overflow: hidden;
+  }
+  .hm-postcard__plate .hm-photo img {
+    object-position: 50% 35%;
+  }
+  .hm-postcard__back {
+    padding: 1.25rem 0.5rem 0.5rem;
+    border-left: 0;
+    border-top: 1px dashed rgb(122 50 68 / 0.3);
+  }
+}
+
+/* ------------------------------------------------- pricing lace mat */
+.hm-pricing__mat {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
+  width: 70%;
+  margin-right: -6%;
+  rotate: -5deg;
+  box-shadow: var(--hm-shadow-soft);
+}
+.hm-pricing__mat .hm-photo {
+  aspect-ratio: 3061 / 3760;
+}
+.hm-pricing__photo {
+  z-index: 1;
+}
+@media (max-width: 34rem) {
+  .hm-pricing__mat {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------- finale postcards */
+.hm-fanwrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: -1rem 0 1.5rem;
+}
+.hm-fan {
+  flex: none;
+}
+.hm-fan [role="button"],
+.hm-fan > div {
+  overflow: hidden;
+}
+.hm-fan .hm-photo {
+  width: 100%;
+  height: 100%;
 }
