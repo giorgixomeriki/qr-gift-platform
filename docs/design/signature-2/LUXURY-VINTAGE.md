@@ -52,3 +52,26 @@ Not integrated: React Bits SplitText (needs `@gsap/react`, which wasn't approved
 
 - The world's CSS rules match only `.tw--keepsake` and `[data-composition="keepsake"]`. Its images and fonts are requested only when an element of this world renders. Elsewhere that's only its picker tile, which costs the 3 KB rose crop: tiles render worlds without their typefaces (no `data-near`), so the fonts load only once Luxury Vintage is chosen.
 - `vintage-keepsake.tsx` (Stack, SpinningText, Confetti, `motion`, `canvas-confetti`) is a `React.lazy` chunk requested only by a Luxury Vintage closing. An e2e test asserts that a Romantic recipient downloads none of it.
+
+## 5. Verification (local, throwaway DB `qr_signature2`, TEST payments, no real money)
+
+| Check | Result |
+|---|---|
+| `tsc --noEmit` · `eslint` · `next build` | clean · clean (0 warnings) · builds (`/g/[token]` first load 121 kB, unchanged) |
+| `verify:templates` | all pass, including the new world's definition, copy (EN/KA), assets, scene, CSS, seal, arrival, finale, chrome contrast (7.62:1) and its `themes` row |
+| `verify:site-content` · `verify:low-cost-hosting` · `verify:env-guards` | 51 · 55 · 36 pass |
+| e2e (post-scan suites + `signature-experience` + `luxury-vintage`; Chromium desktop + Pixel 7) | final run on the final code **80 passed, 12 failed, 14 skipped**. That run took 1.6 h because the machine slept mid-run, and all 12 failures were visibility timeouts; **all 12 passed on an immediate rerun** (92 passed in total). The 14 skips are by design (single-project groups and desktop/WebKit-only tests). `luxury-vintage.spec.ts` also passed 5/5 twice on its own |
+| Six launch worlds vs the pre-change baseline | **36 / 36 frames pixel-identical** (sealed, letter and ending × 6 worlds × KA/EN, reduced motion; two baseline runs differ by 0, so there is no noise) |
+| Console / horizontal overflow | none at 320, 360, 390, 768, 1024 and 1440 px |
+
+**Download cost** (production builds, recipient from load through the closing; uncompressed; files requested and sized once):
+
+| | before (`e84987d`) | after |
+|---|---|---|
+| Each of the six worlds: scripts | 554.2 KB / 17 files | 560.4 KB / 17 files (+1.1%) |
+| Each of the six worlds: styles | 151.1 KB / 4 files | 162.7 KB / 4 files (the added rules are ≈ 4 KB gzip) |
+| Luxury Vintage: scripts | n/a | 719.2 KB / 19 files (+2 lazy chunks: `motion`, `canvas-confetti`, the three components) |
+
+The six worlds request none of the vintage chunks (also asserted in e2e). Their small increase is the seventh world's definition, scene and CSS in the shared files, which keeps it ready at first paint.
+
+Screenshots: `/Users/Shared/qr-gift-platform-signature-2-review/luxury-vintage/` (sender and reveal at 320/390/768/1024/1440, KA and EN; full flows with photos; `before-rest` / `after-rest-final` for the six worlds).
