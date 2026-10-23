@@ -158,7 +158,7 @@ test("the voice note is a real recording: wavesurfer draws its waveform and play
   await page.goto("/");
   const player = page.locator(".hm-vm");
   await player.scrollIntoViewIfNeeded();
-  await expect(player).toHaveAttribute("data-ready", "");
+  await expect(player).toHaveAttribute("data-ready", "true");
   const audio = await page.request.get("/site/media/voice-sonnet43.m4a");
   expect(audio.ok()).toBeTruthy();
   expect(Number(audio.headers()["content-length"] ?? (await audio.body()).length)).toBeGreaterThan(100_000);
