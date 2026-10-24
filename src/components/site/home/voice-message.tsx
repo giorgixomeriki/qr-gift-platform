@@ -96,7 +96,9 @@ export function VoiceMessage({
   return (
     <div ref={rootRef} className="hm-vm" data-ready={ready || undefined} data-playing={playing || undefined}>
       <button type="button" className="hm-vm__btn" onClick={toggle} aria-label={playing ? labels.pause : labels.play}>
-        {playing ? <Pause size={22} weight="fill" aria-hidden /> : <Play size={22} weight="fill" aria-hidden />}
+        {/* both icons stay mounted so the change can cross-fade (home.css) */}
+        <Play size={22} weight="fill" aria-hidden className="hm-vm__icon hm-vm__icon--play" />
+        <Pause size={22} weight="fill" aria-hidden className="hm-vm__icon hm-vm__icon--pause" />
       </button>
       <div className="hm-vm__body">
         <p className="hm-vm__title">{title}</p>

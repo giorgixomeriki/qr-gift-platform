@@ -60,6 +60,7 @@ export function DesignShowcase({ designs, label, counter }: { designs: Design[];
       <div className="hm-ds__stage" id={`${id}-panel`} role="tabpanel" aria-labelledby={`${id}-t${active}`}>
         <div className="hm-ds__behind" aria-hidden>
           {behind.map((d, k) => (
+            // keyed by the design, so each change re-mounts the paper and it settles in (home.css)
             <span key={`${d.key}-${k}`} className={`hm-ds__ghost hm-ds__ghost--${k}`}>
               {d.image}
             </span>
