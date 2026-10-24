@@ -3,6 +3,7 @@ import { ASSETS, COMPOSITIONS, ROOM_TEXTURE_ASSETS, TYPE_PAIRS, type AssetId } f
 import { birthday } from "./definitions/birthday";
 import { celebration } from "./definitions/celebration";
 import { elegant } from "./definitions/elegant";
+import { luxuryVintage } from "./definitions/luxury-vintage";
 import { minimal } from "./definitions/minimal";
 import { romantic } from "./definitions/romantic";
 import { wedding } from "./definitions/wedding";
@@ -16,19 +17,19 @@ import { wedding } from "./definitions/wedding";
  * its copy under `themes.<id>` in messages/{en,ka}.json, and a `themes` row
  * (src/db/seed.ts); `npm run verify:templates` checks all of it.
  */
-export const TEMPLATES: readonly TemplateDefinition[] = [romantic, birthday, wedding, celebration, elegant, minimal];
+export const TEMPLATES: readonly TemplateDefinition[] = [romantic, birthday, wedding, celebration, elegant, minimal, luxuryVintage];
 
 /** Ids of the launch collection — also the type used where a launch template is named in code (tests, defaults). */
 export type LaunchTemplateId = (typeof LAUNCH_ORDER)[number];
 
 /**
  * Curated collections: what the picker shows, in order. The launch picker
- * shows one collection of six; larger libraries add collections (seasonal,
+ * shows one collection of seven (Luxury Vintage, added 2026-10-22, last); larger libraries add collections (seasonal,
  * featured, by occasion) without touching the picker's model.
  * Order: the quiet default first (a new greeting starts on it, so the
  * gallery opens at its beginning), then the emotional worlds.
  */
-const LAUNCH_ORDER = ["minimal", "romantic", "birthday", "wedding", "celebration", "elegant"] as const;
+const LAUNCH_ORDER = ["minimal", "romantic", "birthday", "wedding", "celebration", "elegant", "luxury-vintage"] as const;
 export const COLLECTIONS = {
   launch: { templateIds: LAUNCH_ORDER as readonly string[] },
 } as const;

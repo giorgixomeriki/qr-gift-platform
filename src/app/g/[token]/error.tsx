@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CloudOff, RotateCcw } from "lucide-react";
+import { CloudOff } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { StatusScreen } from "@/components/flow/status-screen";
 import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
-import { Button } from "@/components/ui/button";
+import { SigAction } from "@/components/signature/chrome";
 
 /**
  * When a card's page fails to load (a server error, or the phone dropped its
@@ -29,21 +29,18 @@ export default function CardError({ error }: { error: Error & { digest?: string 
       body={t("errorBody")}
       headerEnd={<LocaleSwitcher />}
       action={
-        <Button
-          size="lg"
-          block
-          loading={retrying}
-          icon={<RotateCcw className="size-4" aria-hidden />}
+        <SigAction
+          busy={retrying}
           onClick={() => {
             setRetrying(true);
             // A full reload: the failure may have been the connection, and a
             // fresh request is what actually tries again.
             window.location.reload();
           }}
-          data-testid="card-error-retry"
+          testId="card-error-retry"
         >
           {t("retry")}
-        </Button>
+        </SigAction>
       }
     />
   );

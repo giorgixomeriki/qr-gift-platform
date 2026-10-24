@@ -20,7 +20,7 @@ async function startAndWrite(page: Page, publicToken: string, message: string | 
   await page.getByTestId("wizard-continue").click();
   await page.getByTestId("message-textarea").fill(message);
   await page.getByTestId("wizard-continue").click();
-  await expect(page.getByTestId("media-step")).toBeVisible();
+  await expect(page.getByTestId("preview-step")).toBeVisible();
 }
 
 test.describe("Pilot protections", () => {

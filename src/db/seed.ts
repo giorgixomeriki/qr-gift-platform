@@ -72,6 +72,7 @@ async function main() {
       { key: "wedding", name: "Wedding", config: { palette: "ivory-sage", reveal: "envelope" } },
       { key: "celebration", name: "Celebration", config: { palette: "midnight-stars", reveal: "balloon" } },
       { key: "elegant", name: "Elegant", config: { palette: "noir-gold", reveal: "fade" } },
+      { key: "luxury-vintage", name: "Luxury Vintage", config: { palette: "parchment-gold", reveal: "envelope" } },
     ])
     .onConflictDoNothing();
 
