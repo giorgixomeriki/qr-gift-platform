@@ -14,7 +14,8 @@
       "openMenu": "Open menu",
       "closeMenu": "Close menu",
       "legalHeading": "Policies",
-      "skipToContent": "Skip to content"
+      "skipToContent": "Skip to content",
+      "partnerLogin": "Partner sign in"
     },
     "footer": {
       "tagline": "A digital greeting inside every gift: a QR card that opens a personal message, photos, video and voice.",
@@ -834,5 +835,336 @@
         ]
       }
     ]
+  },
+  "landing": {
+    "metaTitle": "QR Starr — your words, inside the gift",
+    "metaDescription": "A QR Starr card travels with flowers, cakes and gifts. One scan opens a personal greeting: your message, photos, a video and your voice, in a design you chose.",
+    "hero": {
+      "eyebrow": "Digital greeting cards for real gifts",
+      "titleA": "Your words,",
+      "titleB": "inside the gift.",
+      "lead": "A QR Starr card travels with flowers, cakes and gifts. One scan opens your personal greeting: a letter, photos, a video and your voice, in a design you chose.",
+      "primary": "See how it works",
+      "secondary": "For florists and gift shops",
+      "assurances": [
+        "No app to install",
+        "Preview before you pay",
+        "Georgian and English"
+      ],
+      "visualLabel": "A QR Starr card beside a phone showing an opened greeting",
+      "sampleTag": "Example",
+      "sampleTo": "For Ana",
+      "sampleText": "Every ordinary day is better with you.",
+      "sampleSign": "With love",
+      "sampleVoice": "Voice note",
+      "cardLine": "Scan me",
+      "cardHint": "A greeting is waiting inside",
+      "recipientHint": "Received a QR Starr card? Scan its code with your phone’s camera, and your greeting opens on its own.",
+      "photoAlt": "Red tulips wrapped in kraft paper, with a QR Starr card tucked beside them",
+      "badgeScan": "Opens in the phone’s browser",
+      "badgeVoice": "Voice note",
+      "secondaryLink": "For florists and gift shops",
+      "plateAlt": "A Redouté rose engraving, 1817–24, laid beneath a bouquet of tulips"
+    },
+    "demo": {
+      "eyebrow": "After the scan",
+      "title": "What happens when they scan the card",
+      "lead": "No app and no sign-in. The phone’s camera reads the card and the greeting opens straight in the browser.",
+      "tabsLabel": "The four moments of opening a greeting",
+      "beats": [
+        {
+          "label": "Scan",
+          "title": "The camera finds the card",
+          "text": "Any phone camera reads the QR code on the card. A tap on the link, and the greeting opens."
+        },
+        {
+          "label": "Open",
+          "title": "A moment of anticipation",
+          "text": "Each design has its own opening animation, so the greeting unfolds before a single word appears."
+        },
+        {
+          "label": "Read",
+          "title": "Your words, beautifully set",
+          "text": "Your message arrives as a letter, in typography made for reading in Georgian and English."
+        },
+        {
+          "label": "Keep",
+          "title": "Photos, video and your voice",
+          "text": "Then the keepsakes: up to {{fact.photoCount}} photos, a video and a voice note. They can scan the card and open it again whenever they like."
+        }
+      ],
+      "screenScan": "Opening your greeting…",
+      "screenOpen": "Tap to open",
+      "previous": "Previous moment",
+      "next": "Next moment",
+      "photoAlt": "A woman leaning in to admire a bouquet of pink roses"
+    },
+    "steps": {
+      "eyebrow": "How it works",
+      "title": "Three steps, from shop to smile",
+      "items": [
+        {
+          "title": "Choose a gift with a card",
+          "text": "Partner florists, bakeries and gift shops include a QR Starr card with flowers, cakes and gifts."
+        },
+        {
+          "title": "Scan it and make it yours",
+          "text": "Write your message, add photos, a video or your voice, and pick a design. Preview it exactly as they will see it, then pay once."
+        },
+        {
+          "title": "They scan, it opens",
+          "text": "The same card opens your greeting on their phone, at the very moment the gift arrives."
+        }
+      ],
+      "more": "The full details: what a greeting holds, activation and limits",
+      "alts": [
+        "A florist arranging peonies in soft light",
+        "A QR Starr card tucked into an envelope sealed with wax",
+        "A woman reading at a café table beside a bouquet of tulips"
+      ]
+    },
+    "experiences": {
+      "eyebrow": "Inside a greeting",
+      "title": "Everything you’d want to say, beautifully kept",
+      "lead": "Six designs, each a complete world with its own typography, colour and opening. Then your words, your photos, a video and your voice. Only the message is required.",
+      "message": {
+        "title": "A letter",
+        "text": "Up to {{fact.messageMaxLength}} characters, set like a handwritten note on paper."
+      },
+      "photos": {
+        "title": "Photos",
+        "text": "Up to {{fact.photoCount}} photos, shown as prints they can look through."
+      },
+      "video": {
+        "title": "A video",
+        "text": "One video, up to {{fact.videoMaxMb}} MB: a wave, a song, a toast."
+      },
+      "voice": {
+        "title": "Your voice",
+        "text": "Record up to {{fact.voiceMaxSeconds}} seconds right in the browser, or upload a file."
+      },
+      "designs": {
+        "title": "{{fact.themeCount}} designs",
+        "text": "Each with its own typography, colours and opening animation. Change it as often as you like before paying."
+      },
+      "letterSample": "I wish I could be there to see your face when you open this…",
+      "stackLabel": "Photos in a greeting. Drag a print, or use the arrow keys, to look through them.",
+      "stackHint": "Drag the prints",
+      "stackAlts": [
+        "Friends laughing together on a picnic blanket",
+        "Two friends hugging on a beach",
+        "A bouquet of white roses held in a garden",
+        "A hand holding a pink and peach bouquet"
+      ],
+      "videoAlt": "A woman smiling as she smells a bouquet of roses",
+      "designsLabel": "The six greeting designs",
+      "designsCounter": "Design {n} of {total}",
+      "designAlt": "The {name} greeting design, as the recipient sees it",
+      "letterLabel": "Your letter",
+      "letterLimit": "Up to {{fact.messageMaxLength}} characters",
+      "photosLabel": "Up to {{fact.photoCount}} photos",
+      "videoTitle": "A video, as they will see it",
+      "videoLimit": "One video, up to {{fact.videoMaxMb}} MB",
+      "videoPlay": "Play the video",
+      "videoClose": "Close the video",
+      "voiceTitle": "A voice note",
+      "voiceLimit": "Record up to {{fact.voiceMaxSeconds}} seconds in the browser, or upload a file",
+      "voiceCredit": "Demo recording: Sonnet 43 by Elizabeth Barrett Browning, read for LibriVox (public domain)",
+      "voicePlay": "Play the voice note",
+      "voicePause": "Pause the voice note",
+      "voiceSeek": "Position in the voice note"
+    },
+    "occasions": {
+      "eyebrow": "Occasions",
+      "title": "For every reason to give",
+      "lead": "Any design works for any occasion. These are the pairings we love.",
+      "listLabel": "Occasions and the designs that suit them",
+      "items": [
+        {
+          "title": "Birthdays",
+          "text": "Candles, cake and a message they can replay all year."
+        },
+        {
+          "title": "Flowers and love",
+          "text": "The bouquet says it beautifully. Your voice says the rest."
+        },
+        {
+          "title": "Anniversaries",
+          "text": "Years of memories, gathered in photos and a few careful words."
+        },
+        {
+          "title": "Weddings",
+          "text": "A toast for the couple that stays long after the day."
+        },
+        {
+          "title": "Celebrations",
+          "text": "Graduations, new jobs, big wins: mark the moment properly."
+        },
+        {
+          "title": "Just because",
+          "text": "Sometimes a single sentence is the whole gift."
+        }
+      ],
+      "designLabel": "Design",
+      "previous": "Previous occasions",
+      "next": "More occasions",
+      "alts": [
+        "A hand lighting the candles on a birthday cake",
+        "A hand holding a pink and peach bouquet",
+        "Hands holding red and cream roses",
+        "A bride and groom, the bride holding a soft beige bouquet",
+        "Champagne being poured into a row of glasses",
+        "A small paper parcel tied with string, held in window light"
+      ],
+      "open": "Open the {title} postcard",
+      "close": "Close the postcard",
+      "postcard": "Postcard",
+      "from": "A greeting in the {design} design",
+      "plateAlt": "A Redouté rose engraving from Les Roses, 1817–24"
+    },
+    "partners": {
+      "eyebrow": "For florists, bakeries and gift shops",
+      "title": "Give every gift you sell a personal voice",
+      "lead": "QR Starr cards travel with your flowers, cakes and gifts. Your customers add the personal greeting on their own phones, and the card does the rest.",
+      "items": [
+        {
+          "title": "A personal touch, ready to go",
+          "text": "A ready-made way to add a personal, digital greeting to the gifts you already sell."
+        },
+        {
+          "title": "Printable card batches",
+          "text": "Create and print QR card batches yourself, in the partner dashboard."
+        },
+        {
+          "title": "Inventory and sales at a glance",
+          "text": "See your cards and their sales reporting in the partner dashboard."
+        },
+        {
+          "title": "Private by design",
+          "text": "You see whether a card has been used, never what a greeting says or shows."
+        }
+      ],
+      "terms": "Partnership terms are agreed individually.",
+      "primary": "Become a partner",
+      "secondary": "Partner sign in",
+      "sheetLabel": "A printed sheet of QR Starr cards",
+      "cards": [
+        {
+          "title": "In the workshop",
+          "caption": "A card goes in as the bouquet is wrapped."
+        },
+        {
+          "title": "On the shelf",
+          "caption": "Cards wait beside the gifts, ready for any order."
+        },
+        {
+          "title": "At the counter",
+          "caption": "Your customer personalises it later, on their own phone."
+        }
+      ],
+      "photoAlts": [
+        "A florist arranging pink roses",
+        "Roses and peonies, freshly arranged",
+        "A flower stall lit at dusk on a wet city square"
+      ]
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "One greeting, one price",
+      "lead": "You pay once, after you’ve previewed your greeting. No subscription and no account.",
+      "label": "Standard price",
+      "price": "{{price}}",
+      "unit": "per greeting, one-time activation",
+      "included": [
+        "A message, up to {{fact.photoCount}} photos, one video and one voice note",
+        "Any of the {{fact.themeCount}} designs",
+        "A preview before you pay",
+        "Opened as often as the recipient likes"
+      ],
+      "note": "The price for your card is shown on its start screen and again at checkout, before you pay.",
+      "more": "Pricing details",
+      "compositeAlt": "A QR Starr card on a wax-sealed envelope, laid on an antique lace valentine"
+    },
+    "trust": {
+      "eyebrow": "Peace of mind",
+      "title": "Clear, private and simple",
+      "items": [
+        {
+          "title": "See it before you pay",
+          "text": "The preview shows the greeting exactly as the recipient will see it."
+        },
+        {
+          "title": "Private from the shop",
+          "text": "Partner shops see whether a card has been used, never your message, photos or voice."
+        },
+        {
+          "title": "Nothing to install",
+          "text": "Senders and recipients use the camera and browser already on their phone."
+        },
+        {
+          "title": "Nothing charged unless you finish",
+          "text": "If a payment fails, nothing is activated and you can try again."
+        }
+      ],
+      "faqTitle": "Questions people ask",
+      "faq": [
+        {
+          "q": "Where do I get a QR Starr card?",
+          "a": "From a partner shop: the card comes with your flowers, cake or gift."
+        },
+        {
+          "q": "Does the recipient need an app or an account?",
+          "a": "No. They scan the card with their phone camera and the greeting opens in the browser."
+        },
+        {
+          "q": "Can I edit my greeting after paying?",
+          "a": "Before paying you can change everything, as often as you like. Once a greeting is activated it can’t be edited, so the preview is your final check."
+        },
+        {
+          "q": "Can I start on one phone and finish on another?",
+          "a": "Editing access stays on the device you started on, for {{fact.editAccessDays}} days. If you switch devices or clear your browser data before paying, you won’t be able to continue the draft."
+        },
+        {
+          "q": "Who can open the greeting?",
+          "a": "Anyone who holds the activated card, or has its link. There is no password, so give the card only to the person it is meant for."
+        }
+      ]
+    },
+    "finale": {
+      "title": "Next time, let the gift speak in your words.",
+      "body": "Ask for a QR Starr card at a partner shop, or bring QR Starr to yours.",
+      "primary": "How it works",
+      "secondary": "Become a partner",
+      "photoAlt": "Hands passing a gift box tied with red ribbon across a café table",
+      "postcardsLabel": "Postcards: botanical engravings and gifting moments",
+      "postcardAlts": [
+        "A Redouté pompon rose engraving",
+        "Pink roses tucked into an envelope",
+        "A Redouté rose engraving",
+        "A wax seal on an olive ribbon",
+        "A Redouté cabbage rose engraving"
+      ]
+    },
+    "moments": {
+      "label": "Gift-giving moments",
+      "alts": [
+        "Hands wrapping gifts in kraft paper with red ribbon",
+        "Pink roses and peonies in soft light",
+        "A gift box with a burgundy ribbon being opened",
+        "A wax seal on an olive ribbon with dried flowers",
+        "Pink roses tucked into an envelope",
+        "A bouquet of white roses and hydrangea held in a garden"
+      ]
+    },
+    "transform": {
+      "eyebrow": "From paper to screen",
+      "title": "The card in their hands. Your words on their phone.",
+      "lead": "Drag across: the same moment, before and after the scan.",
+      "paper": "On paper",
+      "screen": "On their phone",
+      "slider": "Compare the card on paper with the greeting on the phone",
+      "value": "{value}% of the greeting shown",
+      "paperAlt": "A sealed letter on a writing desk with a QR Starr card beside it"
+    }
   }
 }

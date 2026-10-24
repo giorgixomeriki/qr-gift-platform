@@ -209,3 +209,13 @@ the world's rest state.
 | Where used | Luxury Vintage parchment (card, letter field, envelope sheet, closing letter), blended soft-light over #f3e7cf |
 
 Fonts for this world (`public/fonts/themes/`): IM Fell English (Igino Marini, from the Fell Types; `OFL-imfellenglish.txt`) and Pinyon Script (The Pinyon Project Authors; `OFL-pinyonscript.txt`), both SIL OFL 1.1, from github.com/google/fonts; Latin subset, woff2.
+
+## Reuse on the public home page (2026-10-21, design/public-site-redesign)
+
+No new external assets. These listed assets are also used, unmodified, by `src/components/site/home/home.css` on `/`:
+window-light-900 (hero light), romantic-leaves-rest (hero leaf shadow), paper-tooth-256 and linen-rough-256 (paper and linen),
+entry-stationery-mobile-640, celebration-sky-rest and celebration-room (photo prints and video poster in the illustrated phone and greeting tiles).
+Celebration's Mixkit footage is not redistributed as footage: only the existing still frames are shown, inside the product illustration.
+
+Update 2026-10-22: the home page now uses its own licensed photography in `public/site/photos/` (19 Unsplash photos, each checked as free under the Unsplash License). They are registered in `docs/design/site-redesign/ASSETS.md`, not here. The celebration stills and the stationery photo are no longer used on the home page; window-light and the paper and linen textures still are.
+

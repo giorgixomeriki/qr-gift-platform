@@ -12,7 +12,7 @@ type NavLink = { href: string; label: string };
  * of every information page. Closes on navigation, on Escape (returning
  * focus to the button) and on an outside click.
  */
-export function MobileNav({ primary, legal, labels }: { primary: NavLink[]; legal: NavLink[]; labels: { open: string; close: string; nav: string; legal: string } }) {
+export function MobileNav({ primary, legal, partner, labels }: { primary: NavLink[]; legal: NavLink[]; partner?: NavLink; labels: { open: string; close: string; nav: string; legal: string } }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const panelId = useId();
@@ -77,6 +77,11 @@ export function MobileNav({ primary, legal, labels }: { primary: NavLink[]; lega
       >
         <nav aria-label={labels.nav}>
           <ul className="space-y-0.5">{primary.map(item)}</ul>
+          {partner && (
+            <Link href={partner.href} className="mt-3 flex min-h-11 items-center justify-center rounded-full text-body font-medium text-ink ring-1 ring-inset ring-line-strong transition-colors hover:bg-sunken">
+              {partner.label}
+            </Link>
+          )}
           <p className="mt-4 px-3 text-eyebrow text-ink-3">{labels.legal}</p>
           <ul className="mt-1 space-y-0.5">{legal.map(item)}</ul>
         </nav>

@@ -76,6 +76,10 @@ test.describe("footer navigation", () => {
   test.beforeEach(async ({ context }) => useLocale(context, "en"));
 
   test("every footer link opens its page, from the home page and from an information page", async ({ page }) => {
+    // Fourteen full page loads in one test, seven of them of the home page,
+    // which now carries photography and the motion layer: under `next dev`
+    // that no longer fits Playwright's default 30s, so give it the slow budget.
+    test.slow();
     for (const start of ["/", "/terms"]) {
       for (const p of SITE_PAGES) {
         await page.goto(start);

@@ -26,9 +26,21 @@ export async function SiteHeader() {
         <nav aria-label={t("primaryLabel")} className="hidden md:block">
           <NavLinks links={primary} />
         </nav>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 md:gap-3">
           <LocaleSwitcher />
-          <MobileNav primary={primary} legal={legal} labels={{ open: t("openMenu"), close: t("closeMenu"), nav: t("menuLabel"), legal: t("legalHeading") }} />
+          <Link
+            href="/partner/login"
+            className="hidden min-h-10 items-center rounded-full px-4 text-label text-ink ring-1 ring-inset ring-line-strong transition-colors hover:bg-sunken lg:inline-flex"
+            data-testid="header-partner-login"
+          >
+            {t("partnerLogin")}
+          </Link>
+          <MobileNav
+            primary={primary}
+            legal={legal}
+            partner={{ href: "/partner/login", label: t("partnerLogin") }}
+            labels={{ open: t("openMenu"), close: t("closeMenu"), nav: t("menuLabel"), legal: t("legalHeading") }}
+          />
         </div>
       </div>
     </header>

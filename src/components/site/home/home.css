@@ -1,0 +1,3274 @@
+/*
+ * QR Starr — public home page.
+ *
+ * The Signature identity (docs: design-lab/signature/DESIGN_SYSTEM.md on
+ * design/v2-signature-final-polish) applied to the marketing surface:
+ * ivory cotton paper lit by a window, wine wax as the one accent, a light
+ * Georgian serif for words and Google Sans for UI, editorial kickers and
+ * numerals. Every rule is scoped under .hm so nothing leaks into the app.
+ *
+ * Materials reuse the licensed textures already shipped for Screen #1 and
+ * the theme worlds (public/customer/LICENSES.md). Motion is opacity and
+ * transform only, runs once, and collapses under prefers-reduced-motion.
+ */
+
+.hm {
+  --hm-paper: #f7f1e8;
+  --hm-paper-2: #efe6d9;
+  --hm-card: #fcf9f3;
+  --hm-ink: #2a201c; /* 14.6:1 on paper */
+  --hm-ink-2: #5d4f47; /* 7.1:1 */
+  --hm-ink-3: #6f6157; /* 5.3:1 — captions */
+  --hm-line: #e3d7c6;
+  --hm-line-2: #d5c6b2;
+  --hm-wine: #5e1f33; /* 11.6:1 on paper */
+  --hm-wine-2: #7a3244;
+  --hm-wine-deep: #2e0f19;
+  --hm-rose: #f3e2da;
+  --hm-cream: #f6ebe1; /* text on wine: 12.9:1 */
+  --hm-candle: #f2c99a;
+  /* Same gutter and measure as the site header and footer (px-page, max-w-6xl). */
+  --hm-gutter: max(1rem, var(--safe-left), var(--safe-right));
+  --hm-max: 69rem;
+  --hm-section: clamp(4.5rem, 2.6rem + 6vw, 8.5rem);
+  --hm-shadow-object: 0 1px 1px rgb(46 15 25 / 0.06), 0 2px 6px rgb(46 15 25 / 0.06), 0 24px 48px -22px rgb(46 15 25 / 0.42);
+  --hm-shadow-soft: 0 1px 2px rgb(46 15 25 / 0.05), 0 12px 32px -16px rgb(46 15 25 / 0.22);
+  --hm-tooth: var(--cx-paper-tooth);
+  /* Latin display in Cormorant Garamond; Georgian falls through (by
+     unicode-range) to Noto Serif Georgian, unchanged. */
+  --font-serif: "Cormorant Garamond", "Noto Serif Georgian", "Newsreader", Georgia, serif;
+  /* Gold foil: a CC0 foil photograph (ambientCG Foil002) warmed to the
+     Signature candle gold, shown through public-domain ornaments as masks. */
+  --hm-foil: image-set(url(/site/vintage/gold-foil-512.avif) type("image/avif"), url(/site/vintage/gold-foil-512.webp) type("image/webp"));
+  --hm-gold: #b38a4a;
+  --cx-press: 500ms;
+
+  background: var(--hm-paper);
+  color: var(--hm-ink);
+  overflow-x: clip;
+}
+@media (min-width: 40rem) {
+  .hm {
+    --hm-gutter: max(1.5rem, var(--safe-left), var(--safe-right));
+  }
+}
+
+/* ---------------------------------------------------------------- layout */
+.hm-wrap {
+  width: 100%;
+  max-width: calc(var(--hm-max) + 2 * var(--hm-gutter));
+  margin-inline: auto;
+  padding-inline: var(--hm-gutter);
+}
+.hm-section {
+  position: relative;
+  padding-block: var(--hm-section);
+  scroll-margin-top: 4rem;
+}
+
+/* ------------------------------------------------------------ typography */
+.hm-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.625rem;
+  font-size: 0.75rem;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hm-wine-2);
+}
+/* Harpel's flourish (public domain), in gold foil. */
+.hm-kicker::before {
+  content: "";
+  flex: none;
+  width: 2.25rem;
+  height: 0.5rem;
+  background: var(--hm-foil) center / 220px;
+  -webkit-mask: url(/site/vintage/flourish-harpel.svg) center / contain no-repeat;
+  mask: url(/site/vintage/flourish-harpel.svg) center / contain no-repeat;
+}
+:lang(ka) .hm-kicker {
+  text-transform: none;
+  letter-spacing: 0.02em;
+  font-size: 0.8125rem;
+}
+
+.hm-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  font-weight: 500;
+  font-size: clamp(2.9rem, 1.6rem + 5.4vw, 6rem);
+  line-height: 0.98;
+  letter-spacing: -0.015em;
+  color: var(--hm-ink);
+  text-wrap: balance;
+}
+.hm-display em {
+  font-style: italic;
+  color: var(--hm-wine);
+}
+:lang(ka) .hm-display {
+  font-weight: 300;
+  font-size: clamp(2.05rem, 1.35rem + 2.7vw, 3.45rem);
+  line-height: 1.16;
+  letter-spacing: -0.01em;
+}
+:lang(ka) .hm-display em {
+  font-style: normal;
+}
+
+.hm-title {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  font-size: clamp(2.25rem, 1.5rem + 2.9vw, 3.75rem);
+  line-height: 1.04;
+  letter-spacing: -0.012em;
+  text-wrap: balance;
+}
+:lang(ka) .hm-title {
+  font-weight: 300;
+  font-size: clamp(1.6rem, 1.15rem + 1.9vw, 2.6rem);
+  line-height: 1.24;
+  letter-spacing: -0.005em;
+}
+.hm-h3 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+:lang(ka) .hm-h3 {
+  font-size: 1.1875rem;
+  line-height: 1.35;
+}
+.hm-lead {
+  font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+  line-height: 1.65;
+  color: var(--hm-ink-2);
+  max-width: 36rem;
+}
+:lang(ka) .hm-lead {
+  font-size: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  line-height: 1.75;
+}
+.hm-body {
+  font-size: 0.9688rem;
+  line-height: 1.65;
+  color: var(--hm-ink-2);
+}
+:lang(ka) .hm-body {
+  font-size: 0.9375rem;
+  line-height: 1.75;
+}
+.hm-caption {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--hm-ink-3);
+}
+.hm-numeral {
+  font-family: "Newsreader", Georgia, serif;
+  font-style: italic;
+  font-variant-numeric: lining-nums tabular-nums;
+}
+
+.hm-head {
+  display: grid;
+  gap: 1.125rem;
+  max-width: 44rem;
+}
+.hm-head--center {
+  margin-inline: auto;
+  justify-items: center;
+  text-align: center;
+}
+
+/* --------------------------------------------------------------- actions */
+.hm-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 3.25rem;
+  max-width: 100%;
+  padding: 0.625rem 0.75rem 0.625rem 1.375rem;
+  border-radius: 999px;
+  font-size: 0.9688rem;
+  font-weight: 500;
+  line-height: 1.25;
+  text-align: left;
+  transition:
+    background-color 200ms var(--ease-out),
+    color 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out),
+    transform 200ms var(--ease-out);
+}
+.hm-btn:active {
+  transform: scale(0.98);
+}
+.hm-btn__disc {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  transition: transform 260ms var(--ease-out);
+}
+.hm-btn:hover .hm-btn__disc {
+  transform: translateX(3px);
+}
+.hm-btn--primary {
+  background: linear-gradient(180deg, #6b2539, var(--hm-wine));
+  color: var(--hm-cream);
+  box-shadow:
+    0 1px 0 rgb(255 255 255 / 0.12) inset,
+    0 10px 24px -12px rgb(46 15 25 / 0.7);
+}
+.hm-btn--primary:hover {
+  background: linear-gradient(180deg, #78304a, #6a2539);
+}
+.hm-btn--primary .hm-btn__disc {
+  background: rgb(246 235 225 / 0.16);
+}
+
+.hm-btn--cream {
+  background: var(--hm-cream);
+  color: var(--hm-wine-deep);
+}
+.hm-btn--cream:hover {
+  background: #fff8f1;
+}
+.hm-btn--cream .hm-btn__disc {
+  background: rgb(94 31 51 / 0.1);
+}
+.hm-btn--ring {
+  padding-inline: 1.375rem;
+  color: var(--hm-cream);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.4);
+}
+.hm-btn--ring:hover {
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.85);
+  background: rgb(246 235 225 / 0.06);
+}
+.hm-btn:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 3px;
+}
+.hm-dark .hm-btn:focus-visible {
+  outline-color: var(--hm-candle);
+}
+.hm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+@media (max-width: 30rem) {
+  .hm-actions--stack .hm-btn {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .hm-actions--stack .hm-btn--ring {
+    justify-content: center;
+  }
+}
+
+.hm-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  font-weight: 500;
+  color: var(--hm-wine);
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklab, var(--hm-wine) 35%, transparent);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 200ms;
+}
+.hm-link:hover {
+  text-decoration-color: var(--hm-wine);
+}
+
+/* --------------------------------------------------------------- photo */
+.hm-photo {
+  display: block;
+  overflow: hidden;
+  background: var(--hm-paper-2);
+}
+.hm-photo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* --------------------------------------------------------------- paper */
+.hm-paper {
+  position: relative;
+  isolation: isolate;
+  background-color: var(--hm-card);
+}
+.hm-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background-image: var(--hm-tooth);
+  background-size: 256px;
+  mix-blend-mode: soft-light;
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+/* ================================================================= HERO */
+.hm-hero {
+  position: relative;
+  isolation: isolate;
+  padding-block: clamp(2rem, 1rem + 4vw, 4.5rem) clamp(1rem, 0.5rem + 2vw, 2.5rem);
+}
+
+.hm-hero__grid {
+  display: grid;
+  grid-template-areas: "copy" "hint" "stage" "assure";
+  gap: clamp(2rem, 1rem + 4vw, 3rem);
+  align-items: center;
+}
+.hm-hero__copy {
+  grid-area: copy;
+}
+.hm-hstage {
+  grid-area: stage;
+}
+.hm-hero__assure {
+  grid-area: assure;
+}
+.hm-hint {
+  grid-area: hint;
+}
+@media (min-width: 62rem) {
+  .hm-hero__grid {
+    grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr);
+    grid-template-areas: "copy stage" "assure stage" "hint stage";
+    grid-template-rows: auto auto auto;
+    row-gap: 1.25rem;
+    align-content: center;
+    min-height: min(calc(100svh - 12rem), 38rem);
+  }
+  .hm-hero__copy {
+    align-self: end;
+    margin-bottom: 0.75rem;
+  }
+  .hm-hint {
+    align-self: start;
+  }
+}
+/* For someone who received a card and typed the address instead of scanning. */
+.hm-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  max-width: 34rem;
+  padding: 0.875rem 1.125rem;
+  border-radius: 0.875rem;
+  background: rgb(252 249 243 / 0.75);
+  box-shadow: inset 0 0 0 1px var(--hm-line);
+  font-size: 0.9063rem;
+  line-height: 1.55;
+  color: var(--hm-ink-2);
+}
+.hm-hint svg {
+  flex: none;
+  margin-top: 0.0625rem;
+  color: var(--hm-wine-2);
+}
+.hm-hero__copy {
+  display: grid;
+  gap: 1.5rem;
+  justify-items: start;
+}
+.hm-hero__assure {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+.hm-hero__assure li {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--hm-ink-2);
+}
+.hm-hero__assure svg {
+  color: var(--hm-wine-2);
+}
+
+/* The stage, composed like a campaign photograph: the gift (a licensed
+   photo) in a tall frame, our card tucked against it, the phone breaking
+   out of the frame. Measured in container units, so one composition serves
+   every width. */
+.hm-hstage {
+  position: relative;
+  width: 100%;
+  max-width: 30rem;
+  justify-self: center;
+  aspect-ratio: 1 / 1.1;
+  container-type: inline-size;
+}
+@media (min-width: 62rem) {
+  .hm-hstage {
+    max-width: none;
+  }
+}
+.hm-hstage__photo {
+  position: absolute;
+  left: 8cqw;
+  top: 0;
+  width: 70cqw;
+  height: 100%;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  box-shadow: var(--hm-shadow-object);
+  transform-origin: 50% 30%;
+}
+.hm-hstage__photo .hm-photo,
+.hm-hstage__photo img {
+  width: 100%;
+  height: 100%;
+}
+.hm-hstage__photo::after {
+  /* a breath of the page's warmth over the photograph's lower edge */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 55%, rgb(46 15 25 / 0.18));
+  pointer-events: none;
+}
+.hm-hstage__card {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 9cqw;
+  width: 30cqw;
+}
+.hm-hstage__card .hm-qrcard {
+  transform: rotate(-7deg);
+  font-size: clamp(0.42rem, 2cqw, 0.8rem);
+}
+.hm-hstage__phone {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: -2cqw;
+  width: 37cqw;
+}
+.hm-hstage__phone .hm-iphone {
+  transform: rotate(4deg);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hm-hstage__photo {
+    animation: hm-photo-in 1100ms var(--ease-out) both;
+  }
+  .hm-hstage__card .hm-qrcard {
+    animation: hm-card-land 900ms var(--ease-out) 260ms both;
+  }
+  .hm-hstage__phone .hm-iphone {
+    animation: hm-phone-rise 1000ms var(--ease-out) 380ms both;
+  }
+
+  /* Movement only, no fade: the headline and lead are the page's largest
+     paint, and text held at opacity 0 delays it. */
+  .hm-hero__copy > * {
+    animation: hm-lift 700ms var(--ease-out) both;
+  }
+  .hm-hero__copy > *:nth-child(2) {
+    animation-delay: 70ms;
+  }
+  .hm-hero__copy > *:nth-child(3) {
+    animation-delay: 140ms;
+  }
+  .hm-hero__copy > *:nth-child(n + 4) {
+    animation-delay: 210ms;
+  }
+}
+@keyframes hm-photo-in {
+  from {
+    clip-path: inset(8% 6% 8% 6% round 1.5rem);
+  }
+  to {
+    clip-path: inset(0 round 1.5rem);
+  }
+}
+@keyframes hm-lift {
+  from {
+    transform: translateY(14px);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes hm-card-land {
+  from {
+    opacity: 0;
+    transform: translateY(18px) rotate(-12deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(-7deg);
+  }
+}
+@keyframes hm-phone-rise {
+  from {
+    opacity: 0;
+    transform: translateY(32px) rotate(7deg);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(4deg);
+  }
+}
+.hm-hero__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  margin-top: 0.5rem;
+}
+@media (max-width: 30rem) {
+  .hm-hero__actions .hm-btn {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* ---------------------------------------------------------- QR card */
+.hm-qrcard {
+  --q: 1cqw;
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.6em;
+  aspect-ratio: 5 / 7;
+  padding: 9% 9% 8%;
+  border-radius: 3px;
+  box-shadow: var(--hm-shadow-object);
+  font-size: clamp(0.5rem, 2.6cqw, 0.95rem);
+  text-align: center;
+  container-type: inline-size;
+}
+.hm-qrcard::before {
+  /* the deckle line printed inside the card's edge */
+  content: "";
+  position: absolute;
+  inset: 4.5%;
+  border: 1px solid color-mix(in oklab, var(--hm-wine) 22%, transparent);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.hm-qrcard__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
+  font-size: 1.05em;
+  font-weight: 500;
+  color: var(--hm-ink);
+}
+.hm-qrcard__brand svg {
+  width: 1em;
+  height: 1em;
+  color: var(--hm-wine-2);
+}
+.hm-qrcard__code {
+  width: 70%;
+  aspect-ratio: 1;
+  padding: 5%;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--hm-line);
+  color: var(--hm-ink);
+}
+.hm-qrcard__code svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.hm-qrcard__line {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.7em;
+  line-height: 1.1;
+  color: var(--hm-wine);
+}
+:lang(ka) .hm-qrcard__line {
+  font-style: normal;
+  font-weight: 400;
+  font-size: 1.35em;
+}
+.hm-qrcard__hint {
+  font-size: 0.85em;
+  color: var(--hm-ink-3);
+  line-height: 1.35;
+}
+.hm-qrcard__seal {
+  position: absolute;
+  width: 24%;
+  right: -7%;
+  top: -6%;
+  filter: drop-shadow(0 4px 6px rgb(46 15 25 / 0.25));
+}
+
+/* ------------------------------------------------------------ phone */
+/* Magic UI's iPhone (components/vendor/magicui/iphone.tsx) in a warm
+   graphite: its fills read these custom properties. */
+.hm-iphone {
+  --ip-edge: #4a3b3d;
+  --ip-body: #1d1517;
+  --ip-bezel: #0d0809;
+  --ip-island: #050304;
+  filter: drop-shadow(0 30px 34px rgb(46 15 25 / 0.32)) drop-shadow(0 6px 10px rgb(46 15 25 / 0.2));
+}
+.hm-phone__screen {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: #3b2224;
+  isolation: isolate;
+  container-type: inline-size;
+}
+.hm-phone__status {
+  position: absolute;
+  z-index: 6;
+  top: 2.2%;
+  left: 9%;
+  right: 9%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 3.6cqw;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgb(255 255 255 / 0.92);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.hm-phone__glyphs {
+  display: inline-flex;
+  align-items: center;
+  gap: 1.6cqw;
+}
+.hm-glyph-signal {
+  width: 5cqw;
+  height: 3cqw;
+  background: linear-gradient(90deg, currentColor 0 20%, transparent 20% 27%, currentColor 27% 47%, transparent 47% 54%, currentColor 54% 74%, transparent 74% 81%, currentColor 81%);
+  -webkit-mask: linear-gradient(to top right, #000 50%, transparent 50%);
+  mask: linear-gradient(to top right, #000 50%, transparent 50%);
+}
+.hm-glyph-battery {
+  position: relative;
+  width: 6.4cqw;
+  height: 3.1cqw;
+  border-radius: 0.9cqw;
+  box-shadow: inset 0 0 0 0.35cqw rgb(255 255 255 / 0.55);
+  background: linear-gradient(90deg, currentColor 0 78%, transparent 78%) 0.7cqw 0.7cqw / calc(100% - 1.4cqw) calc(100% - 1.4cqw) no-repeat;
+}
+
+/* ------------------------------------------------- greeting screens */
+.hm-screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16cqw 8cqw 10cqw;
+  font-size: 4.2cqw;
+  color: var(--hm-cream);
+  background:
+    radial-gradient(70% 45% at 50% 34%, rgb(242 201 154 / 0.26), transparent 70%),
+    linear-gradient(180deg, #45282b, #2f1a1d);
+}
+.hm-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: image-set(url(/customer/textures/linen-rough-256.avif) type("image/avif"), url(/customer/textures/linen-rough-256.webp) type("image/webp"));
+  background-size: 128px;
+  mix-blend-mode: soft-light;
+  opacity: 0.5;
+}
+.hm-screen__kicker {
+  font-size: 4cqw;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hm-candle);
+}
+:lang(ka) .hm-screen__kicker {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  font-size: 3.4cqw;
+}
+.hm-screen__tag {
+  position: absolute;
+  top: 13cqw;
+  right: 7cqw;
+  padding: 0.8cqw 2.8cqw;
+  border-radius: 999px;
+  font-size: 3.2cqw;
+  color: rgb(246 235 225 / 0.8);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.28);
+}
+.hm-letter {
+  position: relative;
+  width: 100%;
+  margin-top: 6cqw;
+  padding: 9cqw 8cqw 8cqw;
+  border-radius: 1.2cqw;
+  background: #f7eee2;
+  color: #43232c;
+  box-shadow: 0 2cqw 6cqw -2cqw rgb(0 0 0 / 0.5);
+  text-align: left;
+}
+.hm-letter::before {
+  /* fold creases at a third and two thirds */
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg, transparent 32.8%, rgb(67 35 44 / 0.07) 33.3%, transparent 34.5%, transparent 65.8%, rgb(67 35 44 / 0.06) 66.3%, transparent 67.5%);
+  pointer-events: none;
+}
+.hm-letter__text {
+  font-family: var(--font-serif);
+  font-size: 7.2cqw;
+  line-height: 1.36;
+  letter-spacing: -0.01em;
+}
+:lang(ka) .hm-letter__text {
+  font-weight: 300;
+  font-size: 6cqw;
+  line-height: 1.58;
+}
+.hm-letter__sign {
+  margin-top: 5cqw;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 5cqw;
+  color: #7a3244;
+}
+:lang(ka) .hm-letter__sign {
+  font-style: normal;
+}
+.hm-prints {
+  position: relative;
+  width: 100%;
+  height: 50cqw;
+  margin-top: 9cqw;
+}
+.hm-print {
+  position: absolute;
+  top: 0;
+  width: 42cqw;
+  aspect-ratio: 4 / 4.6;
+  padding: 2cqw 2cqw 7cqw;
+  background: #fbf7f0;
+  border-radius: 0.8cqw;
+  box-shadow: 0 2cqw 5cqw -1.5cqw rgb(0 0 0 / 0.55);
+}
+.hm-print > .hm-photo {
+  height: 100%;
+  border-radius: 0.4cqw;
+  filter: sepia(0.12) saturate(0.98) contrast(1.03);
+}
+.hm-print--a {
+  left: 3cqw;
+  transform: rotate(-6deg);
+}
+.hm-print--b {
+  right: 3cqw;
+  top: 3cqw;
+  transform: rotate(5deg);
+}
+
+.hm-voice {
+  display: flex;
+  align-items: center;
+  gap: 3cqw;
+  width: 100%;
+  margin-top: 8cqw;
+  padding: 3cqw 4cqw 3cqw 3cqw;
+  border-radius: 999px;
+  background: rgb(246 235 225 / 0.1);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.16);
+  font-size: 3.2cqw;
+}
+.hm-voice__play {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 10cqw;
+  height: 10cqw;
+  border-radius: 999px;
+  background: var(--hm-cream);
+  color: var(--hm-wine);
+}
+.hm-voice__play svg {
+  width: 4.4cqw;
+  height: 4.4cqw;
+}
+.hm-wave {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 1.1cqw;
+  height: 8cqw;
+}
+.hm-wave > i {
+  flex: 1;
+  border-radius: 99px;
+  background: currentColor;
+  opacity: 0.85;
+}
+.hm-wave > i:nth-child(n + 9) {
+  opacity: 0.35;
+}
+
+/* the scan screen: a camera finding the card */
+.hm-screen--scan {
+  padding: 0;
+  justify-content: center;
+  background: radial-gradient(80% 60% at 50% 45%, #6a5a50, #2a211d 70%, #1a1412);
+}
+.hm-screen--scan::after {
+  display: none;
+}
+.hm-scan__view {
+  position: absolute !important;
+  inset: -6%;
+  filter: blur(3px) brightness(0.6) sepia(0.25);
+  transform: scale(1.08);
+}
+.hm-scan__view img {
+  object-position: 30% 60%;
+}
+.hm-scan__card {
+  position: relative;
+  width: 54cqw;
+  transform: rotate(-4deg);
+  filter: blur(0.15cqw);
+}
+.hm-scan__frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 66cqw;
+  aspect-ratio: 1;
+  transform: translate(-50%, -54%);
+  --c: rgb(255 255 255 / 0.92);
+  background:
+    linear-gradient(var(--c), var(--c)) top left / 10cqw 0.9cqw,
+    linear-gradient(var(--c), var(--c)) top left / 0.9cqw 10cqw,
+    linear-gradient(var(--c), var(--c)) top right / 10cqw 0.9cqw,
+    linear-gradient(var(--c), var(--c)) top right / 0.9cqw 10cqw,
+    linear-gradient(var(--c), var(--c)) bottom left / 10cqw 0.9cqw,
+    linear-gradient(var(--c), var(--c)) bottom left / 0.9cqw 10cqw,
+    linear-gradient(var(--c), var(--c)) bottom right / 10cqw 0.9cqw,
+    linear-gradient(var(--c), var(--c)) bottom right / 0.9cqw 10cqw;
+  background-repeat: no-repeat;
+  border-radius: 3cqw;
+}
+.hm-scan__pill {
+  position: absolute;
+  left: 50%;
+  bottom: 14cqw;
+  display: inline-flex;
+  align-items: center;
+  gap: 2cqw;
+  padding: 2.4cqw 4.4cqw;
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgb(252 249 243 / 0.94);
+  color: var(--hm-ink);
+  font-size: 3.5cqw;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 2cqw 6cqw -2cqw rgb(0 0 0 / 0.5);
+}
+.hm-scan__pill svg {
+  width: 4cqw;
+  height: 4cqw;
+  color: var(--hm-wine-2);
+}
+
+/* the opening screen: the sealed envelope */
+.hm-screen--open {
+  justify-content: center;
+  gap: 9cqw;
+}
+.hm-envelope {
+  position: relative;
+  width: 76cqw;
+  aspect-ratio: 32 / 22;
+  border-radius: 2cqw;
+  background: #ead8c6;
+  box-shadow: 0 4cqw 10cqw -3cqw rgb(0 0 0 / 0.6);
+  overflow: hidden;
+}
+.hm-envelope::before,
+.hm-envelope::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+.hm-envelope::before {
+  background: #e2cdb8;
+  clip-path: polygon(0 100%, 50% 46%, 100% 100%);
+}
+.hm-envelope::after {
+  background: #f1e3d4;
+  clip-path: polygon(0 0, 100% 0, 50% 60%);
+  filter: drop-shadow(0 1px 0 rgb(0 0 0 / 0.1));
+}
+.hm-envelope__seal {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 60%;
+  width: 22cqw;
+  transform: translate(-50%, -50%);
+}
+.hm-screen__cta {
+  padding: 3cqw 6cqw;
+  border-radius: 999px;
+  background: var(--hm-cream);
+  color: var(--hm-wine-deep);
+  font-size: 3.6cqw;
+  font-weight: 500;
+}
+
+/* the keepsakes screen */
+.hm-screen--keep {
+  justify-content: flex-start;
+  gap: 5cqw;
+}
+.hm-video {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 2cqw;
+  overflow: hidden;
+  box-shadow: 0 3cqw 7cqw -3cqw rgb(0 0 0 / 0.6);
+}
+.hm-video > .hm-photo {
+  position: absolute;
+  inset: 0;
+}
+.hm-video__play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 13cqw;
+  height: 13cqw;
+  transform: translate(-50%, -50%);
+  border-radius: 999px;
+  background: rgb(252 249 243 / 0.92);
+  color: var(--hm-wine);
+}
+.hm-video__play svg {
+  width: 5cqw;
+  height: 5cqw;
+}
+
+/* ================================================================ DEMO */
+.hm-demo {
+  display: grid;
+  gap: clamp(2.5rem, 1rem + 4vw, 4.5rem);
+  align-items: center;
+}
+@media (min-width: 56rem) {
+  .hm-demo {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  }
+}
+.hm-demo__device {
+  position: relative;
+  justify-self: center;
+  width: min(68vw, 17.5rem);
+}
+.hm-demo__device .hm-iphone {
+  filter: drop-shadow(0 34px 40px rgb(46 15 25 / 0.38)) drop-shadow(0 0 60px rgb(242 201 154 / 0.35));
+}
+@media (max-width: 55.99rem) {
+  .hm-demo__device {
+    width: min(60vw, 16.5rem);
+  }
+  /* Phones: every moment's text stays open, so the auto-advance never
+     reflows the page under a reader. */
+  .hm-beat .hm-beat__text {
+    grid-template-rows: 1fr;
+  }
+  .hm-beat .hm-beat__text > span {
+    padding-top: 0.375rem;
+  }
+}
+.hm-demo [data-beat] > .hm-screen {
+  opacity: 0;
+  transform: scale(1.03);
+  transition:
+    opacity 520ms var(--ease-out),
+    transform 700ms var(--ease-out);
+}
+.hm-demo [data-on] > .hm-screen {
+  opacity: 1;
+  transform: none;
+}
+.hm-beats {
+  display: grid;
+  gap: 0.25rem;
+  counter-reset: beat;
+}
+.hm-beat {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: 0 0.75rem;
+  width: 100%;
+  padding: 1.125rem 1.25rem 1.125rem 1rem;
+  border-radius: 1rem;
+  text-align: left;
+  color: var(--hm-ink-2);
+  transition:
+    background-color 260ms var(--ease-out),
+    box-shadow 260ms var(--ease-out),
+    color 260ms;
+}
+.hm-beat:hover {
+  background: rgb(252 249 243 / 0.6);
+}
+.hm-beat[aria-selected="true"] {
+  background: var(--hm-card);
+  color: var(--hm-ink);
+  box-shadow: var(--hm-shadow-soft);
+}
+.hm-beat:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+.hm-beat__num {
+  grid-row: span 2;
+  font-size: 1.375rem;
+  line-height: 1.2;
+  color: var(--hm-ink-3);
+}
+.hm-beat[aria-selected="true"] .hm-beat__num {
+  color: var(--hm-wine);
+}
+.hm-beat__title {
+  font-family: var(--font-serif);
+  font-size: 1.25rem;
+  line-height: 1.3;
+}
+:lang(ka) .hm-beat__title {
+  font-size: 1.0625rem;
+  line-height: 1.45;
+}
+.hm-beat__text {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 420ms var(--ease-out);
+}
+.hm-beat__text > span {
+  overflow: hidden;
+  padding-top: 0;
+}
+.hm-beat[aria-selected="true"] .hm-beat__text {
+  grid-template-rows: 1fr;
+}
+.hm-beat[aria-selected="true"] .hm-beat__text > span {
+  padding-top: 0.375rem;
+}
+.hm-beat__bar {
+  position: absolute;
+  left: 1rem;
+  right: 1.25rem;
+  bottom: 0.5rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--hm-line);
+  overflow: hidden;
+  opacity: 0;
+}
+.hm-beat[aria-selected="true"] .hm-beat__bar {
+  opacity: 1;
+}
+.hm-beat__bar > i {
+  display: block;
+  height: 100%;
+  width: 100%;
+  background: var(--hm-wine-2);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.hm-beats[data-playing] .hm-beat[aria-selected="true"] .hm-beat__bar > i {
+  animation: hm-progress var(--hm-beat-ms, 5200ms) linear both;
+}
+.hm-beats:not([data-playing]) .hm-beat[aria-selected="true"] .hm-beat__bar > i {
+  transform: scaleX(1);
+}
+@keyframes hm-progress {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+/* =============================================================== STEPS */
+/* Three photographs tell the journey (shop, card, recipient); a large
+   italic numeral sits on each like a printed programme's act number. */
+.hm-steps {
+  display: grid;
+  gap: 2.5rem;
+  margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+}
+@media (min-width: 48rem) {
+  .hm-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.25rem, 0.5rem + 2vw, 2.25rem);
+  }
+  .hm-step:nth-child(2) {
+    margin-top: 3rem;
+  }
+}
+.hm-step {
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+/* Phones: the three steps as a swipeable row that peeks at the next one. */
+@media (max-width: 47.99rem) {
+  .hm-steps {
+    grid-auto-flow: column;
+    grid-auto-columns: 80%;
+    gap: 1rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--hm-gutter);
+    margin-inline: calc(-1 * var(--hm-gutter));
+    padding: 0.5rem var(--hm-gutter) 1rem;
+    scrollbar-width: none;
+  }
+  .hm-steps::-webkit-scrollbar {
+    display: none;
+  }
+  .hm-step {
+    scroll-snap-align: start;
+  }
+}
+.hm-step__frame {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: var(--hm-shadow-object);
+}
+.hm-step__frame > .hm-photo,
+.hm-step__frame > .hm-composite {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hm-step__frame .hm-photo img {
+  transition: transform 1200ms var(--ease-out);
+}
+@media (hover: hover) {
+  .hm-step:hover .hm-step__frame .hm-photo img {
+    transform: scale(1.04);
+  }
+}
+.hm-step__num {
+  position: absolute;
+  left: 1rem;
+  bottom: 0.25rem;
+  z-index: 2;
+  font-size: clamp(3.5rem, 2.5rem + 3vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--hm-cream);
+  text-shadow: 0 2px 24px rgb(20 8 12 / 0.45);
+}
+.hm-step__frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(180deg, transparent 58%, rgb(30 10 16 / 0.42));
+  pointer-events: none;
+}
+.hm-step__body {
+  display: grid;
+  gap: 0.625rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--hm-ink);
+}
+
+.hm-step .hm-h3 {
+  font-size: 1.5rem;
+}
+:lang(ka) .hm-step .hm-h3 {
+  font-size: 1.25rem;
+}
+
+/* The product mockup: our card laid onto the blank card of a licensed
+   flat-lay, in that photograph's own coordinates (3 : 4). */
+.hm-composite {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  container-type: inline-size;
+}
+.hm-composite > .hm-photo {
+  position: absolute;
+  inset: 0;
+}
+.hm-composite > .hm-photo img {
+  object-position: 30% 100%;
+}
+.hm-composite__card.hm-qrcard {
+  position: absolute;
+  left: 54.6cqw;
+  top: 68cqw;
+  width: 33.8cqw;
+  padding: 8% 8% 7%;
+  font-size: 2.5cqw;
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.08), 0 2cqw 4cqw -1cqw rgb(0 0 0 / 0.35);
+}
+.hm-composite__card .hm-qrcard__seal {
+  width: 26%;
+}
+.hm-step__frame > .hm-composite {
+  aspect-ratio: auto;
+}
+
+/* React Bits Stack (components/vendor/reactbits/stack.tsx): prints that
+   can be dragged, flicked or tabbed through. */
+.hm-pstack {
+  width: min(62%, 15rem) !important;
+  aspect-ratio: 4 / 5;
+  height: auto !important;
+  margin: 1.75rem auto 3rem;
+}
+.hm-pstack:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 10px;
+  border-radius: 8px;
+}
+
+/* =========================================================== OCCASIONS */
+/* Aceternity's cards carousel (components/vendor/aceternity): tall
+   photographic cards, each naming the design that suits the occasion and
+   showing that design's own swatch. The rail starts at the page's text
+   edge and bleeds off to the right. */
+.hm-occ-rail {
+  margin-top: clamp(2rem, 1rem + 3vw, 3.5rem);
+}
+.hm-carousel__row {
+  display: flex;
+  gap: 1.25rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: max(var(--hm-gutter), calc((100vw - var(--hm-max)) / 2));
+  padding: 0.5rem max(var(--hm-gutter), calc((100vw - var(--hm-max)) / 2)) 1.5rem;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.hm-carousel__row::-webkit-scrollbar {
+  display: none;
+}
+.hm-carousel__item {
+  flex: none;
+  width: min(76vw, 21rem);
+  scroll-snap-align: start;
+}
+.hm-carousel__nav {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.625rem;
+  max-width: calc(var(--hm-max) + 2 * var(--hm-gutter));
+  margin: 0.5rem auto 0;
+  padding-inline: var(--hm-gutter);
+}
+.hm-carousel__btn {
+  display: grid;
+  place-items: center;
+  width: 2.875rem;
+  height: 2.875rem;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: var(--hm-card);
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
+  transition:
+    background-color 200ms,
+    opacity 200ms,
+    transform 200ms var(--ease-out);
+}
+.hm-carousel__btn:hover:not(:disabled) {
+  background: var(--hm-rose);
+}
+.hm-carousel__btn:active:not(:disabled) {
+  transform: scale(0.94);
+}
+.hm-carousel__btn:disabled {
+  opacity: 0.35;
+}
+.hm-carousel__btn:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+.hm-occ {
+  position: relative;
+  aspect-ratio: 3 / 4.3;
+  border-radius: 1.5rem;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: var(--hm-shadow-object);
+  color: var(--hm-cream);
+}
+.hm-occ > .hm-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+.hm-occ > .hm-photo img {
+  transition: transform 1400ms var(--ease-out);
+}
+@media (hover: hover) {
+  .hm-occ:hover > .hm-photo img {
+    transform: scale(1.05);
+  }
+}
+.hm-occ::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(20 8 12 / 0.05) 30%, rgb(26 9 15 / 0.78) 88%);
+}
+.hm-occ__design {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 4.25rem;
+  padding: 0.25rem;
+  border-radius: 0.75rem;
+  background: rgb(252 249 243 / 0.92);
+  box-shadow: 0 8px 20px -10px rgb(0 0 0 / 0.5);
+}
+.hm-occ__swatch {
+  aspect-ratio: 4 / 5;
+  border-radius: 0.5rem;
+}
+.hm-occ__body {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.375rem;
+  padding: 1.5rem 1.375rem 1.5rem;
+}
+.hm-occ__label {
+  justify-self: start;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--hm-cream);
+  background: rgb(246 235 225 / 0.16);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.3);
+}
+.hm-occ__title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+:lang(ka) .hm-occ__title {
+  font-weight: 400;
+  font-size: 1.375rem;
+  line-height: 1.35;
+}
+.hm-occ__text {
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: rgb(246 235 225 / 0.88);
+}
+
+/* ============================================================ PARTNERS */
+.hm-dark {
+  --hm-ink: var(--hm-cream);
+  --hm-ink-2: #e2cfc6; /* 9.6:1 on #3a1220 */
+  --hm-ink-3: #c9b0a6;
+  --hm-line: rgb(246 235 225 / 0.16);
+  position: relative;
+  isolation: isolate;
+  color: var(--hm-cream);
+  background:
+    radial-gradient(60% 50% at 85% 20%, rgb(242 201 154 / 0.12), transparent 70%),
+    linear-gradient(180deg, #3a1220, var(--hm-wine-deep));
+}
+.hm-dark::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--hm-tooth);
+  background-size: 256px;
+  mix-blend-mode: soft-light;
+  opacity: 0.35;
+}
+.hm-dark .hm-kicker {
+  color: var(--hm-candle);
+}
+.hm-dark .hm-title {
+  color: var(--hm-cream);
+}
+.hm-partners {
+  display: grid;
+  gap: clamp(2.5rem, 1rem + 4vw, 4.5rem);
+  align-items: center;
+}
+@media (min-width: 60rem) {
+  .hm-partners {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  }
+}
+/* Aceternity focus cards (components/vendor/aceternity/focus-cards.tsx):
+   hovering or focusing one photograph lets the others recede. */
+.hm-focus {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.875rem;
+}
+.hm-focus__card {
+  position: relative;
+  aspect-ratio: 3 / 4.6;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.7);
+  transition:
+    filter 400ms var(--ease-out),
+    transform 400ms var(--ease-out),
+    opacity 400ms var(--ease-out);
+  outline: none;
+}
+.hm-focus__card:nth-child(2) {
+  transform: translateY(2.5rem);
+}
+.hm-focus__card > .hm-photo {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+}
+.hm-focus__card.is-dimmed {
+  filter: blur(3px) saturate(0.8);
+  opacity: 0.7;
+  transform: scale(0.97);
+}
+.hm-focus__card.is-dimmed:nth-child(2) {
+  transform: translateY(2.5rem) scale(0.97);
+}
+.hm-focus__card:focus-visible {
+  box-shadow: 0 0 0 2px var(--hm-candle), 0 30px 60px -30px rgb(0 0 0 / 0.7);
+}
+.hm-focus__scrim {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  gap: 0.25rem;
+  padding: 3rem 1rem 1rem;
+  background: linear-gradient(180deg, transparent, rgb(20 6 11 / 0.85));
+  transition: opacity 400ms var(--ease-out);
+}
+@media (hover: hover) {
+  .hm-focus__scrim {
+    opacity: 0;
+  }
+  .hm-focus__card.is-active .hm-focus__scrim {
+    opacity: 1;
+  }
+}
+.hm-focus__title {
+  font-family: var(--font-serif);
+  font-size: 1.125rem;
+  line-height: 1.25;
+  color: var(--hm-cream);
+}
+.hm-focus__caption {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  color: rgb(246 235 225 / 0.85);
+}
+@media (max-width: 39.99rem) {
+  .hm-focus {
+    grid-auto-flow: column;
+    grid-template-columns: none;
+    grid-auto-columns: 62%;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin-inline: calc(-1 * var(--hm-gutter));
+    padding: 0 var(--hm-gutter) 1rem;
+    scrollbar-width: none;
+  }
+  .hm-focus::-webkit-scrollbar {
+    display: none;
+  }
+  .hm-focus__card {
+    scroll-snap-align: start;
+  }
+  .hm-focus__card:nth-child(2),
+  .hm-focus__card.is-dimmed:nth-child(2) {
+    transform: none;
+  }
+}
+.hm-benefits {
+  display: grid;
+  gap: 0;
+  margin-top: clamp(3rem, 2rem + 3vw, 4.5rem);
+  border-top: 1px solid var(--hm-line);
+}
+@media (min-width: 40rem) {
+  .hm-benefits {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 2.5rem;
+  }
+}
+@media (min-width: 64rem) {
+  .hm-benefits {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.hm-benefit {
+  display: grid;
+  align-content: start;
+  gap: 0.5rem;
+  padding-block: 1.5rem;
+  border-bottom: 1px solid var(--hm-line);
+}
+@media (min-width: 64rem) {
+  .hm-benefit {
+    border-bottom: 0;
+    padding-block: 1.75rem 0;
+  }
+}
+
+/* ============================================================= PRICING */
+.hm-pricing {
+  display: grid;
+  gap: clamp(2.5rem, 1rem + 3vw, 3.5rem);
+  align-items: center;
+}
+@media (min-width: 56rem) {
+  .hm-pricing {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+}
+/* The card on its table (the product mockup) with the order slip laid
+   over its corner. */
+.hm-pricing__visual {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1fr);
+  align-items: end;
+}
+.hm-pricing__photo {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+  justify-self: end;
+  width: 58%;
+  border-radius: 1.25rem;
+  box-shadow: var(--hm-shadow-object);
+  transform: rotate(2.5deg);
+}
+.hm-pricing__slip {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+  justify-self: start;
+  z-index: 1;
+  width: min(62%, 23rem);
+  margin-bottom: -2.5rem;
+}
+@media (max-width: 34rem) {
+  .hm-pricing__visual {
+    display: block;
+  }
+  .hm-pricing__photo {
+    width: 76%;
+    margin-left: auto;
+  }
+  .hm-pricing__slip {
+    margin: -2.5rem 0 0;
+    width: 88%;
+  }
+}
+.hm-slip {
+  position: relative;
+  width: 100%;
+  padding: 2.25rem 2rem 2.75rem;
+  border-radius: 6px 6px 0 0;
+  box-shadow: var(--hm-shadow-object);
+}
+
+.hm-slip::before {
+  /* the torn foot */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -10px;
+  height: 10px;
+  background: var(--hm-card);
+  -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%;
+  mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% / 16px 100%;
+}
+.hm-slip__price {
+  display: block;
+  margin-top: 0.75rem;
+  font-family: var(--font-serif);
+  font-size: clamp(3rem, 2.4rem + 2.6vw, 4.25rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--hm-ink);
+}
+.hm-slip__price [data-price] {
+  font-weight: 400;
+  color: inherit;
+}
+.hm-slip__price [data-pending] {
+  font-family: var(--font-sans);
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+.hm-slip__rows {
+  margin-top: 1.75rem;
+  border-top: 1px solid var(--hm-ink);
+}
+.hm-slip__rows li {
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  gap: 0.75rem;
+  padding-block: 0.8125rem;
+  border-bottom: 1px solid var(--hm-line);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--hm-ink-2);
+}
+.hm-slip__rows svg {
+  margin-top: 0.2rem;
+  color: var(--hm-wine-2);
+}
+
+/* =============================================================== TRUST */
+.hm-trustfaq {
+  display: grid;
+  gap: clamp(3.5rem, 2.5rem + 3vw, 5rem);
+}
+@media (min-width: 60rem) {
+  .hm-trustfaq {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    gap: clamp(3rem, 1rem + 5vw, 6rem);
+    align-items: start;
+  }
+}
+.hm-trust {
+  display: grid;
+  margin-top: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+  border-top: 1px solid var(--hm-ink);
+}
+.hm-trust__item {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  gap: 1rem;
+  padding-block: 1.25rem;
+  border-bottom: 1px solid var(--hm-line-2);
+}
+.hm-trust__item svg {
+  color: var(--hm-wine-2);
+  margin-top: 0.125rem;
+}
+.hm-faq {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+@media (min-width: 60rem) {
+  .hm-faq {
+    padding: 2.25rem 2.25rem 1.25rem;
+    border-radius: 1.25rem;
+    background: var(--hm-card);
+    box-shadow: var(--hm-shadow-soft);
+    position: sticky;
+    top: 5.5rem;
+  }
+}
+.hm-faq__title {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+:lang(ka) .hm-faq__title {
+  font-weight: 300;
+  font-size: 1.5rem;
+  line-height: 1.35;
+}
+.hm-faq__list {
+  border-top: 1px solid var(--hm-ink);
+}
+.hm-faq__item {
+  border-bottom: 1px solid var(--hm-line-2);
+}
+.hm-faq__item summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  min-height: 3.5rem;
+  padding-block: 1.125rem;
+  cursor: pointer;
+  list-style: none;
+  font-family: var(--font-serif);
+  font-size: 1.1875rem;
+  line-height: 1.35;
+}
+:lang(ka) .hm-faq__item summary {
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+.hm-faq__item summary::-webkit-details-marker {
+  display: none;
+}
+.hm-faq__item summary:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.hm-faq__toggle {
+  position: relative;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
+  transition:
+    transform 300ms var(--ease-out),
+    background-color 200ms;
+}
+.hm-faq__toggle::before,
+.hm-faq__toggle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.75rem;
+  height: 1.5px;
+  background: var(--hm-wine);
+  transform: translate(-50%, -50%);
+}
+.hm-faq__toggle::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+  transition: transform 300ms var(--ease-out);
+}
+.hm-faq__item[open] .hm-faq__toggle {
+  background: var(--hm-rose);
+}
+.hm-faq__item[open] .hm-faq__toggle::after {
+  transform: translate(-50%, -50%) rotate(0deg);
+}
+.hm-faq__item p {
+  max-width: 40rem;
+  padding-bottom: 1.375rem;
+}
+
+/* ============================================================== FINALE */
+/* The closing image: hands passing a gift, warmed with the wine, and the
+   seal and words over it. */
+.hm-finale {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  padding-block: clamp(5.5rem, 3rem + 8vw, 10rem);
+  text-align: center;
+  color: var(--hm-cream);
+  background: var(--hm-wine-deep);
+}
+.hm-finale__photo {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+}
+.hm-finale__photo .hm-photo {
+  width: 100%;
+  height: 100%;
+}
+.hm-finale::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 65% at 50% 55%, rgb(46 15 25 / 0.5), rgb(30 8 15 / 0.82)),
+    linear-gradient(180deg, rgb(46 15 25 / 0.15), rgb(46 15 25 / 0.5));
+}
+.hm-finale__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+
+.hm-finale__title {
+  max-width: 46rem;
+  color: var(--hm-cream);
+}
+.hm-finale .hm-lead {
+  color: rgb(246 235 225 / 0.86);
+}
+.hm-finale .hm-actions {
+  justify-content: center;
+  margin-top: 2.25rem;
+}
+.hm-finale .hm-btn:focus-visible {
+  outline-color: var(--hm-candle);
+}
+
+/* ============================================================= MOMENTS */
+/* Magic UI marquee (components/vendor/magicui/marquee.tsx): a slow ribbon
+   of gifting photographs, slightly tilted like prints on a table. Stops on
+   hover and focus, and stands still under reduced motion. */
+.hm-moments {
+  padding-block: 1rem clamp(1.5rem, 1rem + 2vw, 3rem);
+  overflow: hidden;
+}
+.hm-marquee {
+  --hm-marquee-gap: 1.25rem;
+  display: flex;
+  gap: var(--hm-marquee-gap);
+  overflow: hidden;
+  padding-block: 1.5rem;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.hm-marquee__track {
+  display: flex;
+  flex: none;
+  gap: var(--hm-marquee-gap);
+  animation: hm-marquee var(--hm-marquee-duration, 60s) linear infinite;
+}
+.hm-marquee__track--reverse {
+  animation-direction: reverse;
+}
+.hm-marquee:hover .hm-marquee__track--pause,
+.hm-marquee:focus-within .hm-marquee__track--pause {
+  animation-play-state: paused;
+}
+@keyframes hm-marquee {
+  to {
+    transform: translateX(calc(-100% - var(--hm-marquee-gap)));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-marquee {
+    overflow-x: auto;
+  }
+  .hm-marquee__track {
+    animation: none;
+  }
+}
+.hm-moment {
+  flex: none;
+  width: clamp(13rem, 9rem + 10vw, 18.5rem);
+  aspect-ratio: 4 / 5;
+  padding: 0.5rem 0.5rem 2rem;
+  border-radius: 6px;
+  background: var(--hm-card);
+  box-shadow: var(--hm-shadow-soft);
+}
+
+.hm-moment > .hm-photo {
+  height: 100%;
+  border-radius: 3px;
+}
+
+/* ========================================================= DEMO STAGE */
+/* A recipient reading on her phone sits behind the demo phone: the
+   moment the demo describes, in a photograph. Desktop only. */
+.hm-demo-stage {
+  position: relative;
+  margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+}
+.hm-demo-stage__photo {
+  display: none;
+}
+@media (min-width: 56rem) {
+  .hm-demo-stage__photo {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 10%;
+    width: 31%;
+    bottom: 10%;
+    border-radius: 1.5rem;
+    overflow: hidden;
+    box-shadow: var(--hm-shadow-object);
+  }
+  .hm-demo-stage__photo .hm-photo {
+    width: 100%;
+    height: 100%;
+  }
+  .hm-demo-stage__photo::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 40%, rgb(247 241 232 / 0.35));
+  }
+  .hm-demo-stage .hm-demo__device {
+    justify-self: end;
+    margin-right: 6%;
+  }
+}
+
+/* ======================================================= SCROLL REVEAL */
+/* Content is visible without JavaScript; only once the reveal observer has
+   marked the page ready do below-the-fold blocks wait for their moment. */
+@media (prefers-reduced-motion: no-preference) {
+  .hm[data-reveal-ready] [data-reveal]:not([data-inview]) {
+    opacity: 0;
+    transform: translateY(22px);
+  }
+  .hm[data-reveal-ready] [data-reveal] {
+    transition:
+      opacity 800ms var(--ease-out),
+      transform 900ms var(--ease-out);
+    transition-delay: calc(var(--d, 0) * 90ms);
+  }
+}
+
+/* =================================================== LUXURY VINTAGE */
+/* Subtle period details over the modern page: public-domain engravings
+   and ornaments from museum open-access collections, gold foil seen
+   through them as masks, and a few collectible-postcard surfaces.
+   Register: docs/design/site-redesign/ASSETS.md. */
+:lang(ka) .hm-display,
+:lang(ka) .hm-title,
+:lang(ka) .hm-h3 {
+  font-weight: 300;
+}
+:lang(ka) .hm-h3 {
+  font-weight: 400;
+}
+
+/* Gold-foil ornaments (masks over the foil). */
+.hm-gilt {
+  position: absolute;
+  z-index: 5;
+  width: 4.5rem;
+  aspect-ratio: 372 / 252;
+  background: var(--hm-foil) center / 240px;
+  -webkit-mask: url(/site/vintage/corner-art-nouveau.svg) center / contain no-repeat;
+  mask: url(/site/vintage/corner-art-nouveau.svg) center / contain no-repeat;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgb(255 255 255 / 0.35));
+}
+.hm-gilt--tl {
+  top: -0.75rem;
+  left: -0.75rem;
+}
+.hm-gilt--tr {
+  top: -0.75rem;
+  right: -0.75rem;
+  transform: scaleX(-1);
+}
+.hm-gilt--photo {
+  top: -1.1rem;
+  left: calc(78cqw - 3.6rem);
+  transform: scaleX(-1);
+}
+
+.hm-divider {
+  display: block;
+  width: min(14rem, 50vw);
+  aspect-ratio: 1920 / 620;
+  margin: 0 auto 1rem;
+  background: var(--hm-foil) center / 300px;
+  -webkit-mask: url(/site/vintage/divider-vine.svg) center / contain no-repeat;
+  mask: url(/site/vintage/divider-vine.svg) center / contain no-repeat;
+  opacity: 0.85;
+}
+
+/* Hero: a Redouté plate laid under the photograph, like a print on the table. */
+.hm-hstage__plate {
+  position: absolute;
+  z-index: 0;
+  left: -3cqw;
+  top: -5cqw;
+  width: 33cqw;
+  padding: 1.1cqw;
+  background: #fbf7f0;
+  box-shadow: var(--hm-shadow-soft);
+  rotate: -6deg;
+}
+.hm-hstage__plate .hm-photo {
+  aspect-ratio: 2699 / 3680;
+}
+.hm-hstage__photo {
+  z-index: 1;
+}
+
+/* ---------------------------------------------------- paper to screen */
+.hm-transform {
+  padding-top: calc(var(--hm-section) * 0.6);
+}
+.hm-transform .hm-head {
+  margin-bottom: clamp(2rem, 1rem + 3vw, 3.5rem);
+}
+.hm-cscroll {
+  width: 100%;
+  max-width: 62rem;
+  margin-inline: auto;
+}
+.hm-cscroll__card {
+  transform-origin: 50% 100%;
+  padding: clamp(0.5rem, 0.3rem + 0.8vw, 0.875rem);
+  border-radius: clamp(1.25rem, 1rem + 1vw, 1.875rem);
+  background: linear-gradient(160deg, #4a1827, var(--hm-wine-deep));
+  box-shadow:
+    inset 0 0 0 1px rgb(242 201 154 / 0.25),
+    0 9px 20px rgb(46 15 25 / 0.25),
+    0 37px 37px rgb(46 15 25 / 0.18),
+    0 84px 50px rgb(46 15 25 / 0.1);
+}
+.hm-cscroll__screen {
+  position: relative;
+  overflow: hidden;
+  border-radius: clamp(0.875rem, 0.7rem + 0.8vw, 1.25rem);
+  aspect-ratio: 16 / 9.5;
+}
+@media (max-width: 40rem) {
+  .hm-cscroll__screen {
+    aspect-ratio: 4 / 5;
+  }
+}
+.hm-compare {
+  position: absolute !important;
+  inset: 0;
+  cursor: ew-resize;
+}
+.hm-compare__paper {
+  position: absolute;
+  inset: 0;
+  container-type: inline-size;
+}
+.hm-compare__paper > .hm-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+/* Each side keeps its subject in its own half: the card left of the
+   starting handle (46%), the greeting right of it. */
+.hm-compare__card.hm-qrcard {
+  position: absolute;
+  left: 14%;
+  top: 16%;
+  width: 20%;
+  rotate: -6deg;
+  font-size: 1.05cqw;
+}
+@media (max-width: 40rem) {
+  .hm-compare__card.hm-qrcard {
+    left: 6%;
+    top: 24%;
+    width: 36%;
+    font-size: 1.9cqw;
+  }
+}
+.hm-compare__screen {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+  align-items: center;
+  gap: 5%;
+  padding: 7% 6% 7% 52%;
+  color: var(--hm-cream);
+  background:
+    radial-gradient(60% 70% at 35% 45%, rgb(242 201 154 / 0.28), transparent 70%),
+    linear-gradient(180deg, #45282b, #2f1a1d);
+  container-type: inline-size;
+}
+
+@media (max-width: 40rem) {
+  .hm-compare__screen {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    padding: 16% 5% 6% 50%;
+  }
+
+}
+.hm-compare__tag {
+  position: absolute;
+  z-index: 3;
+  top: 1rem;
+  padding: 0.375rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+}
+.hm-compare__tag--paper {
+  left: 1rem;
+  color: var(--hm-ink);
+  background: rgb(252 249 243 / 0.92);
+}
+.hm-compare__tag--screen {
+  right: 1rem;
+  color: var(--hm-cream);
+  background: rgb(46 15 25 / 0.55);
+  box-shadow: inset 0 0 0 1px rgb(246 235 225 / 0.35);
+}
+.hm-compare__rule {
+  z-index: 4;
+  width: 2px !important;
+  margin-left: -1px;
+  background: rgb(252 249 243 / 0.9);
+  box-shadow: 0 0 12px rgb(0 0 0 / 0.35);
+  outline: none;
+}
+.hm-compare__handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  translate: -50% -50%;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: var(--hm-cream);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.35), inset 0 0 0 1px rgb(179 138 74 / 0.6);
+}
+.hm-compare__rule:focus-visible .hm-compare__handle {
+  outline: 2px solid var(--hm-candle);
+  outline-offset: 3px;
+}
+
+/* ------------------------------------------------ occasion postcards */
+button.hm-occ {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+button.hm-occ:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 4px;
+}
+.hm-occ__title,
+.hm-occ__text,
+.hm-occ__label {
+  display: block;
+}
+.hm-dialog__backdrop {
+  background: rgb(30 8 15 / 0.55);
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+}
+html.hm-dialog-open {
+  overflow: hidden;
+}
+.hm-postcard {
+  position: relative;
+  z-index: 51;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 1.5rem;
+  width: min(92vw, 46rem);
+  max-height: 88dvh;
+  padding: 1.125rem;
+  overflow: auto;
+  border-radius: 6px;
+  color: var(--hm-ink);
+  background: #fbf7f0;
+  box-shadow: 0 40px 80px -30px rgb(0 0 0 / 0.6), inset 0 0 0 1px rgb(179 138 74 / 0.45);
+}
+.hm-postcard__plate .hm-photo {
+  height: 100%;
+  border-radius: 2px;
+}
+.hm-postcard__back {
+  display: grid;
+  align-content: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem 1.5rem 1.5rem;
+  border-left: 1px dashed rgb(122 50 68 / 0.3);
+}
+.hm-postcard__kicker {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hm-wine-2);
+}
+:lang(ka) .hm-postcard__kicker {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.hm-postcard__title {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.05;
+}
+:lang(ka) .hm-postcard__title {
+  font-size: 1.625rem;
+  font-weight: 400;
+  line-height: 1.3;
+}
+.hm-postcard__desc {
+  display: grid;
+  gap: 0.75rem;
+}
+.hm-postcard__opening {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--hm-wine);
+}
+:lang(ka) .hm-postcard__opening {
+  font-style: normal;
+  font-size: 1.0625rem;
+}
+.hm-postcard__sample {
+  padding-left: 0.875rem;
+  border-left: 2px solid var(--hm-gold);
+  font-size: 0.9688rem;
+  line-height: 1.65;
+  color: var(--hm-ink-2);
+}
+.hm-postcard__design {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--hm-line);
+  font-size: 0.8125rem;
+  color: var(--hm-ink-3);
+}
+.hm-postcard__close {
+  display: grid;
+  place-items: center;
+  top: 0.75rem !important;
+  right: 0.75rem !important;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: rgb(252 249 243 / 0.92);
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
+}
+.hm-postcard__close:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+@media (max-width: 40rem) {
+  .hm-postcard {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  .hm-postcard__plate {
+    max-height: 38dvh;
+    overflow: hidden;
+  }
+  .hm-postcard__plate .hm-photo img {
+    object-position: 50% 35%;
+  }
+  .hm-postcard__back {
+    padding: 1.25rem 0.5rem 0.5rem;
+    border-left: 0;
+    border-top: 1px dashed rgb(122 50 68 / 0.3);
+  }
+}
+
+/* ------------------------------------------------- pricing lace mat */
+.hm-pricing__mat {
+  grid-column: 1 / span 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
+  width: 70%;
+  margin-right: -6%;
+  rotate: -5deg;
+  box-shadow: var(--hm-shadow-soft);
+}
+.hm-pricing__mat .hm-photo {
+  aspect-ratio: 3061 / 3760;
+}
+.hm-pricing__photo {
+  z-index: 1;
+}
+@media (max-width: 34rem) {
+  .hm-pricing__mat {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------- finale postcards */
+.hm-fanwrap {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  margin: -1rem 0 1.5rem;
+}
+.hm-fan {
+  flex: none;
+}
+.hm-fan [role="button"],
+.hm-fan > div {
+  overflow: hidden;
+}
+.hm-fan .hm-photo {
+  width: 100%;
+  height: 100%;
+}
+
+/* Cormorant's default figures are old-style ("10" reads as "IO"): prices
+   and counts use lining figures. */
+.hm-slip__price,
+.hm-postcard__title,
+.hm-title,
+.hm-display {
+  font-variant-numeric: lining-nums;
+}
+
+/* ====================================================== INSIDE A GREETING */
+/* The six real designs as the centrepiece, then an editorial spread. */
+.hm-inside {
+  background: var(--hm-paper-2);
+}
+.hm-ds {
+  display: grid;
+  gap: clamp(2rem, 1rem + 3vw, 4rem);
+  align-items: center;
+  margin-top: clamp(2.5rem, 1.5rem + 3vw, 4rem);
+}
+@media (min-width: 56rem) {
+  .hm-ds {
+    grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr);
+  }
+}
+.hm-ds__list {
+  display: grid;
+  border-top: 1px solid var(--hm-ink);
+}
+.hm-ds__tab {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.75rem 1fr;
+  column-gap: 0.75rem;
+  align-items: baseline;
+  padding: 0.9rem 0.5rem 0.9rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--hm-line-2);
+  background: none;
+  font: inherit;
+  text-align: left;
+  color: var(--hm-ink-2);
+  cursor: pointer;
+  transition: color 200ms;
+}
+.hm-ds__tab::after {
+  /* a gold hairline that draws under the chosen design */
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 2px;
+  width: 100%;
+  background: var(--hm-foil) center / 300px;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 420ms var(--ease-out);
+}
+.hm-ds__tab[aria-selected="true"] {
+  color: var(--hm-ink);
+}
+.hm-ds__tab[aria-selected="true"]::after {
+  transform: scaleX(1);
+}
+.hm-ds__tab:hover .hm-ds__name {
+  color: var(--hm-wine);
+}
+.hm-ds__tab:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+.hm-ds__n {
+  grid-row: span 2;
+  font-size: 1.25rem;
+  color: var(--hm-ink-3);
+}
+.hm-ds__tab[aria-selected="true"] .hm-ds__n {
+  color: var(--hm-wine);
+}
+.hm-ds__name {
+  font-family: var(--font-serif);
+  font-size: 1.75rem;
+  font-weight: 500;
+  line-height: 1.1;
+  transition: color 200ms;
+}
+:lang(ka) .hm-ds__name {
+  font-size: 1.25rem;
+  font-weight: 400;
+  line-height: 1.4;
+}
+.hm-ds__tagline {
+  font-size: 0.875rem;
+  color: var(--hm-ink-3);
+}
+.hm-ds__stage {
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  display: grid;
+  justify-items: start;
+  padding-right: 30%;
+}
+.hm-ds__front,
+.hm-ds__card {
+  width: min(100%, 26rem);
+}
+.hm-ds__card {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgb(46 15 25 / 0.1), 0 40px 70px -34px rgb(46 15 25 / 0.65);
+}
+.hm-ds__card .hm-photo,
+.hm-ds__ghost .hm-photo {
+  aspect-ratio: 1088 / 1362;
+}
+.hm-ds__behind {
+  position: absolute;
+  inset: 0 0 auto 0;
+  pointer-events: none;
+}
+.hm-ds__ghost {
+  position: absolute;
+  top: 0;
+  /* the same width as the front card (the stage's content box) */
+  width: min(70%, 26rem);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  box-shadow: var(--hm-shadow-soft);
+  transform-origin: left center;
+}
+
+.hm-ds__caption {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1rem;
+  align-items: baseline;
+  margin-top: 1.25rem;
+  font-size: 0.875rem;
+  color: var(--hm-ink-3);
+}
+.hm-ds__opening {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.125rem;
+  color: var(--hm-wine);
+}
+:lang(ka) .hm-ds__opening {
+  font-style: normal;
+  font-size: 1rem;
+}
+@media (max-width: 55.99rem) {
+  .hm-ds__stage {
+    order: -1;
+    padding-right: 18%;
+  }
+  .hm-ds__ghost {
+    width: min(82%, 26rem);
+  }
+
+  .hm-ds__list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
+  .hm-ds__tab {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    padding: 0.75rem 0;
+  }
+  .hm-ds__name {
+    font-size: 1.25rem;
+  }
+  :lang(ka) .hm-ds__name {
+    font-size: 1rem;
+  }
+  .hm-ds__tagline {
+    display: none;
+  }
+}
+
+/* --------------------------------------------------- the editorial spread */
+.hm-spread {
+  display: grid;
+  gap: clamp(2rem, 1rem + 2.5vw, 3rem);
+  margin-top: clamp(4rem, 3rem + 4vw, 7rem);
+}
+@media (min-width: 60rem) {
+  .hm-spread {
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 1.5rem;
+    row-gap: 3rem;
+    align-items: start;
+  }
+  .hm-spread__letter {
+    grid-column: 1 / span 5;
+    grid-row: 1 / span 2;
+  }
+  .hm-spread__prints {
+    grid-column: 7 / span 6;
+  }
+  .hm-spread__video {
+    grid-column: 6 / span 7;
+  }
+  .hm-spread__voice {
+    grid-column: 1 / span 12;
+  }
+}
+.hm-spread__letter {
+  padding: clamp(2rem, 1.5rem + 2vw, 3.25rem) clamp(1.75rem, 1.25rem + 2vw, 3rem);
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgb(46 15 25 / 0.06), 0 24px 48px -22px rgb(46 15 25 / 0.42);
+  rotate: -1.2deg;
+}
+.hm-spread__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hm-wine-2);
+}
+:lang(ka) .hm-spread__label {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+.hm-spread__words {
+  margin-top: 1.25rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.6rem, 1.2rem + 1.2vw, 2.15rem);
+  line-height: 1.32;
+  color: #43232c;
+}
+:lang(ka) .hm-spread__words {
+  font-weight: 300;
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.6rem);
+  line-height: 1.6;
+}
+.hm-spread__sign {
+  margin-top: 1.5rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--hm-wine-2);
+}
+:lang(ka) .hm-spread__sign {
+  font-style: normal;
+  font-size: 1.25rem;
+}
+.hm-spread__meta {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 1.25rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--hm-line);
+  font-size: 0.8125rem;
+  color: var(--hm-ink-3);
+}
+.hm-spread__meta--center {
+  justify-content: center;
+  border-top: 0;
+}
+.hm-spread__prints .hm-pstack {
+  margin: 1rem auto 0;
+}
+
+/* ------------------------------------------------------- video dialog */
+.hm-vdlg__poster {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  border: 0;
+  border-radius: 1rem;
+  overflow: hidden;
+  cursor: pointer;
+  color: var(--hm-cream);
+  box-shadow: 0 34px 64px -34px rgb(46 15 25 / 0.75);
+}
+.hm-vdlg__media,
+.hm-vdlg__media .hm-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.hm-vdlg__media img {
+  transition: transform 1200ms var(--ease-out), filter 600ms;
+}
+.hm-vdlg__poster:hover .hm-vdlg__media img {
+  transform: scale(1.035);
+}
+.hm-vdlg__shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgb(30 8 15 / 0.05) 40%, rgb(30 8 15 / 0.62));
+}
+.hm-vdlg__title {
+  position: absolute;
+  left: 1.5rem;
+  bottom: 1.25rem;
+  font-family: var(--font-serif);
+  font-size: clamp(1.25rem, 1rem + 0.8vw, 1.75rem);
+  text-align: left;
+}
+:lang(ka) .hm-vdlg__title {
+  font-size: 1.125rem;
+}
+.hm-vdlg__dur {
+  position: absolute;
+  right: 1.5rem;
+  bottom: 1.35rem;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+}
+.hm-vdlg__play {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  display: grid;
+  place-items: center;
+  width: 4.25rem;
+  height: 4.25rem;
+  translate: -50% -50%;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: rgb(252 249 243 / 0.94);
+  box-shadow: 0 0 0 10px rgb(252 249 243 / 0.18), 0 14px 30px -12px rgb(0 0 0 / 0.55);
+  transition: box-shadow 400ms var(--ease-out), scale 400ms var(--ease-out);
+}
+.hm-vdlg__poster:hover .hm-vdlg__play {
+  scale: 1.06;
+  box-shadow: 0 0 0 16px rgb(252 249 243 / 0.14), 0 14px 30px -12px rgb(0 0 0 / 0.55);
+}
+.hm-vdlg__poster:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 4px;
+}
+.hm-vdlg__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(30 8 15 / 0.72);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.hm-vdlg__panel {
+  position: relative;
+  width: min(100%, 60rem);
+  aspect-ratio: 16 / 9;
+  border-radius: 1rem;
+  overflow: hidden;
+  background: #000;
+  box-shadow: 0 0 0 1px rgb(242 201 154 / 0.35), 0 40px 90px -30px rgb(0 0 0 / 0.8);
+}
+.hm-vdlg__video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.hm-vdlg__close {
+  position: absolute;
+  z-index: 2;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: rgb(252 249 243 / 0.92);
+  cursor: pointer;
+}
+.hm-vdlg__close:focus-visible {
+  outline: 2px solid var(--hm-candle);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------ voice message */
+.hm-vm {
+  --vm-wave: rgb(246 235 225 / 0.32);
+  --vm-progress: #f6ebe1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 1.25rem 1.5rem;
+  align-items: center;
+  padding: 1.5rem 2rem 1.5rem 1.5rem;
+  border-radius: 1.5rem;
+  color: var(--hm-cream);
+  background:
+    radial-gradient(60% 120% at 0% 50%, rgb(242 201 154 / 0.14), transparent 60%),
+    linear-gradient(160deg, #4a1827, var(--hm-wine-deep));
+  box-shadow: inset 0 0 0 1px rgb(242 201 154 / 0.28), 0 30px 60px -34px rgb(46 15 25 / 0.8);
+}
+.hm-vm__btn {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  border: 0;
+  border-radius: 999px;
+  color: var(--hm-wine);
+  background: var(--hm-cream);
+  box-shadow: 0 0 0 6px rgb(246 235 225 / 0.12);
+  cursor: pointer;
+  transition: scale 200ms var(--ease-out);
+}
+.hm-vm__btn:active {
+  scale: 0.95;
+}
+.hm-vm__btn:focus-visible {
+  outline: 2px solid var(--hm-candle);
+  outline-offset: 4px;
+}
+.hm-vm__title {
+  font-family: var(--font-serif);
+  font-size: 1.375rem;
+  line-height: 1.2;
+}
+:lang(ka) .hm-vm__title {
+  font-size: 1.125rem;
+}
+.hm-vm__wave {
+  position: relative;
+  height: 3.5rem;
+  margin-top: 0.5rem;
+}
+.hm-vm__canvas {
+  position: absolute;
+  inset: 0;
+}
+.hm-vm__seek {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.hm-vm__seek:focus-visible {
+  opacity: 1;
+  appearance: none;
+  background: transparent;
+  outline: 2px solid var(--hm-candle);
+  outline-offset: 4px;
+  border-radius: 6px;
+}
+.hm-vm__seek:focus-visible::-webkit-slider-thumb {
+  opacity: 0;
+}
+.hm-vm__credit {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgb(246 235 225 / 0.7);
+}
+.hm-vm__time {
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.hm-vm__time span {
+  opacity: 0.6;
+}
+@media (max-width: 40rem) {
+  .hm-vm {
+    grid-template-columns: auto minmax(0, 1fr);
+    padding: 1.25rem;
+  }
+  .hm-vm__time {
+    grid-column: 2;
+    justify-self: start;
+    margin-top: -0.75rem;
+  }
+}
+
+/* ----------------------------------------------------- audit refinements */
+/* Numerals instead of generic icons: partners and trust. */
+.hm-benefit__n,
+.hm-trust__n {
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--hm-candle);
+}
+.hm-trust__n {
+  font-size: 1.5rem;
+  color: var(--hm-wine);
+}
+.hm-trust__item {
+  grid-template-columns: 2.75rem 1fr;
+}
+/* Paper to screen: the real Romantic design on the screen side. */
+.hm-compare__screen {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  place-items: center !important;
+  padding: 6% 8% 6% 54% !important;
+}
+.hm-compare__design {
+  width: min(100%, 17rem);
+  aspect-ratio: 1088 / 1362;
+  border-radius: 0.875rem;
+  box-shadow: 0 30px 60px -24px rgb(0 0 0 / 0.7);
+}
+@media (max-width: 40rem) {
+  .hm-compare__screen {
+    padding: 14% 5% 6% 50% !important;
+  }
+}
+/* Occasions: the chip is the real design. */
+.hm-occ__design .hm-photo {
+  border-radius: 0.5rem;
+  aspect-ratio: 1088 / 1362;
+}
+/* After the scan: the recipient photograph leads, the phone overlaps its edge. */
+@media (min-width: 56rem) {
+  .hm-demo-stage__photo {
+    top: 4% !important;
+    bottom: 4% !important;
+    width: 34% !important;
+  }
+  .hm-demo-stage .hm-demo__device {
+    margin-right: 0 !important;
+  }
+}
+/* Pricing: the lace reads. */
+.hm-pricing__mat {
+  width: 78%;
+  margin-right: -9%;
+}
+
+/* Stack prints: the photograph fills the print, the white border is the frame. */
+.hm-pstack .hm-photo {
+  width: 100%;
+  height: 100%;
+}
+.hm-spread__prints .hm-pstack {
+  width: min(70%, 17rem) !important;
+}
+
+/* restored: classes built from template strings */
+.hm-moment--0 {
+  transform: rotate(-2deg);
+}
+.hm-moment--1 {
+  transform: rotate(1.5deg) translateY(10px);
+}
+.hm-moment--2 {
+  transform: rotate(-0.5deg) translateY(-6px);
+}
+.hm-ds__ghost--0 {
+  left: 24%;
+  scale: 0.9;
+  rotate: 3deg;
+  opacity: 0.85;
+  z-index: 1;
+}
+.hm-ds__ghost--1 {
+  left: 44%;
+  scale: 0.8;
+  rotate: 6deg;
+  opacity: 0.55;
+  z-index: 0;
+}
+@media (max-width: 55.99rem) {
+  .hm-ds__ghost--0 {
+    left: 9%;
+  }
+  .hm-ds__ghost--1 {
+    left: 17%;
+  }
+}
+
+/* ======================================================= POLISH LAYER */
+/* A single art-directed system for shape, hover and motion. Everything
+   below is transform/opacity unless noted; touch devices get no hover
+   motion; reduced motion gets none (global rule in globals.css). */
+.hm {
+  --r-paper: 3px;
+  --r-photo: 10px;
+  --r-media: 14px;
+  --ease-paper: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --ease-settle: cubic-bezier(0.16, 1, 0.3, 1);
+  --shadow-rest: 0 1px 2px rgb(46 15 25 / 0.08), 0 18px 34px -22px rgb(46 15 25 / 0.5);
+  --shadow-lift: 0 2px 4px rgb(46 15 25 / 0.08), 0 30px 50px -26px rgb(46 15 25 / 0.6);
+}
+
+/* 1. Shape: paper is nearly square, photographs softly rounded, media a
+      touch more; only buttons are pills. */
+.hm-step__frame,
+.hm-occ,
+.hm-focus__card,
+.hm-hstage__photo,
+.hm-demo-stage__photo,
+.hm-pricing__photo,
+.hm-ds__card,
+.hm-ds__ghost,
+.hm-compare__design {
+  border-radius: var(--r-photo) !important;
+}
+.hm-vdlg__poster,
+.hm-vdlg__panel,
+.hm-cscroll__screen,
+.hm-vm {
+  border-radius: var(--r-media) !important;
+}
+.hm-cscroll__card {
+  border-radius: calc(var(--r-media) + 6px) !important;
+}
+.hm-faq,
+.hm-slip,
+.hm-spread__letter,
+.hm-postcard,
+.hm-hint {
+  border-radius: var(--r-paper) !important;
+}
+.hm-moment {
+  border-radius: 2px;
+}
+.hm-occ__design {
+  border-radius: 4px;
+}
+.hm-occ__design .hm-photo {
+  border-radius: 2px;
+}
+/* The FAQ is a sheet of paper, not a white card: texture, hairline, gilt corner. */
+@media (min-width: 60rem) {
+  .hm-faq {
+    background: var(--hm-card);
+    box-shadow: 0 1px 2px rgb(46 15 25 / 0.06), 0 22px 40px -28px rgb(46 15 25 / 0.45), inset 0 0 0 1px rgb(179 138 74 / 0.18);
+  }
+}
+
+/* 2. Hover: one language. A short lift, a deeper shadow, the photograph
+      drifting slowly inside its frame. Fine pointers only. */
+.hm-step__frame,
+.hm-occ,
+.hm-moment,
+.hm-vdlg__poster,
+.hm-spread__letter,
+.hm-hstage__photo {
+  transition:
+    translate 600ms var(--ease-paper),
+    rotate 600ms var(--ease-paper),
+    box-shadow 600ms var(--ease-paper);
+}
+.hm-step__frame .hm-photo img,
+.hm-occ > .hm-photo img,
+.hm-moment .hm-photo img,
+.hm-vdlg__media img,
+.hm-focus__card .hm-photo img {
+  transition: transform 1400ms var(--ease-settle);
+}
+/* neutralise the older, inconsistent hover scales */
+.hm-step:hover .hm-step__frame .hm-photo img,
+.hm-occ:hover > .hm-photo img,
+.hm-vdlg__poster:hover .hm-vdlg__media img {
+  transform: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .hm-step:hover .hm-step__frame,
+  .hm-occ:hover,
+  .hm-moment:hover,
+  .hm-vdlg__poster:hover {
+    translate: 0 -4px;
+    box-shadow: var(--shadow-lift);
+  }
+  .hm-step:hover .hm-step__frame .hm-photo img,
+  .hm-occ:hover > .hm-photo img,
+  .hm-moment:hover .hm-photo img,
+  .hm-vdlg__poster:hover .hm-vdlg__media img,
+  .hm-focus__card.is-active .hm-photo img {
+    transform: scale(1.03);
+  }
+  /* the letter straightens on the table as you reach for it */
+  .hm-spread__letter:hover {
+    rotate: 0deg;
+    translate: 0 -3px;
+  }
+}
+
+/* 3. No constant motion. The moments ribbon moves only with the page:
+      a scroll-driven drift where supported, still otherwise. */
+.hm-marquee__track {
+  animation: none;
+}
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hm-marquee__track {
+      animation: hm-drift linear both;
+      animation-timeline: view();
+      animation-range: entry 0% exit 100%;
+    }
+  }
+}
+@keyframes hm-drift {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-22%);
+  }
+}
+/* Partner gallery: the others recede by light and scale, never by blur. */
+.hm-focus__card.is-dimmed {
+  filter: none !important;
+  opacity: 0.62;
+}
+
+/* 4. The designs showcase: paper settles in, the active tab leans. */
+.hm-ds__ghost {
+  animation: hm-ghost-settle 700ms var(--ease-settle) both;
+}
+.hm-ds__ghost--1 {
+  animation-delay: 70ms;
+}
+@keyframes hm-ghost-settle {
+  from {
+    opacity: 0;
+    translate: -18px 6px;
+  }
+}
+.hm-ds__name,
+.hm-ds__n {
+  display: inline-block;
+  transition:
+    translate 420ms var(--ease-paper),
+    color 300ms;
+}
+.hm-ds__tab[aria-selected="true"] .hm-ds__name {
+  translate: 6px 0;
+}
+.hm-ds__card {
+  transition: box-shadow 600ms var(--ease-paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hm-ds__stage:hover .hm-ds__card {
+    box-shadow: 0 2px 4px rgb(46 15 25 / 0.1), 0 52px 80px -38px rgb(46 15 25 / 0.7);
+  }
+  .hm-ds__tab:not([aria-selected="true"]):hover .hm-ds__name {
+    translate: 3px 0;
+  }
+}
+
+/* 5a. Voice: the play and pause marks cross-fade; the ring eases out
+       while the real audio plays. The waveform progress is wavesurfer's,
+       driven by the audio clock. */
+.hm-vm__btn {
+  position: relative;
+  transition:
+    box-shadow 500ms var(--ease-paper),
+    scale 200ms var(--ease-paper),
+    background-color 300ms;
+}
+.hm-vm__icon {
+  position: absolute;
+  transition:
+    opacity 260ms var(--ease-paper),
+    scale 360ms var(--ease-settle);
+}
+.hm-vm__icon--pause,
+.hm-vm[data-playing] .hm-vm__icon--play {
+  opacity: 0;
+  scale: 0.6;
+}
+.hm-vm[data-playing] .hm-vm__icon--pause {
+  opacity: 1;
+  scale: 1;
+}
+.hm-vm[data-playing] .hm-vm__btn {
+  box-shadow: 0 0 0 12px rgb(246 235 225 / 0.09);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hm-vm__btn:hover {
+    background: #fffaf3;
+    box-shadow: 0 0 0 9px rgb(246 235 225 / 0.14);
+  }
+}
+.hm-vm__time {
+  transition: color 300ms;
+}
+.hm-vm[data-playing] .hm-vm__time {
+  color: var(--hm-candle);
+}
+
+/* 5b. Video: the play mark settles forward, its ring opens; the poster's
+       title rises a little. */
+.hm-vdlg__play {
+  transition:
+    scale 500ms var(--ease-settle),
+    box-shadow 600ms var(--ease-paper);
+}
+.hm-vdlg__title {
+  transition: translate 600ms var(--ease-paper);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hm-vdlg__poster:hover .hm-vdlg__title {
+    translate: 0 -3px;
+  }
+}
+
+/* 6. Typography: headings arrive in order (eyebrow, title, lead), short
+      and quiet; the hero's emphasis gets one gold underline. */
+@media (prefers-reduced-motion: no-preference) {
+  .hm[data-reveal-ready] .hm-head[data-reveal]:not([data-inview]) {
+    opacity: 1;
+    transform: none;
+  }
+  .hm[data-reveal-ready] .hm-head[data-reveal] > * {
+    transition:
+      opacity 700ms var(--ease-paper),
+      transform 800ms var(--ease-settle);
+  }
+  .hm[data-reveal-ready] .hm-head[data-reveal]:not([data-inview]) > * {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  .hm[data-reveal-ready] .hm-head[data-reveal] > :nth-child(2) {
+    transition-delay: 80ms;
+  }
+  .hm[data-reveal-ready] .hm-head[data-reveal] > :nth-child(3) {
+    transition-delay: 160ms;
+  }
+  .hm-display em {
+    background: linear-gradient(var(--hm-gold), var(--hm-gold)) left 92% / 0% 1px no-repeat;
+    animation: hm-underline 1200ms var(--ease-settle) 900ms forwards;
+  }
+}
+@keyframes hm-underline {
+  to {
+    background-size: 100% 1px;
+  }
+}
+
+/* 7. Ornaments and light. Gilt corners and the vine draw in as they come
+      into view; the hero photograph catches one soft pass of light. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hm-gilt,
+    .hm-divider {
+      animation: hm-draw linear both;
+      animation-timeline: view();
+      animation-range: entry 10% cover 35%;
+    }
+  }
+}
+@keyframes hm-draw {
+  from {
+    clip-path: inset(0 100% 0 0);
+    opacity: 0.2;
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    opacity: 1;
+  }
+}
+.hm-hstage__photo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, rgb(255 236 214 / 0.28) 50%, transparent 65%);
+  transform: translateX(-120%);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hm-hstage__photo::before {
+    animation: hm-light 2400ms var(--ease-paper) 700ms 1 both;
+  }
+}
+@keyframes hm-light {
+  0% {
+    transform: translateX(-120%);
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+/* 8. FAQ answers open with their height (where the browser can animate it). */
+@supports (interpolate-size: allow-keywords) {
+  .hm-faq__list {
+    interpolate-size: allow-keywords;
+  }
+  .hm-faq__item::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 420ms var(--ease-paper),
+      content-visibility 420ms allow-discrete;
+  }
+  .hm-faq__item[open]::details-content {
+    block-size: auto;
+  }
+}
+
+/* 9. Composition: the moments ribbon gets a deliberate rhythm. */
+.hm-moments {
+  padding-block: 0.5rem clamp(2rem, 1rem + 3vw, 4rem);
+}
+@media (prefers-reduced-motion: reduce) {
+  .hm-display em {
+    background: linear-gradient(var(--hm-gold), var(--hm-gold)) left 92% / 100% 1px no-repeat;
+  }
+}
