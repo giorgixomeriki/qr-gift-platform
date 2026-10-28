@@ -1,0 +1,1170 @@
+{
+  "site": {
+    "nav": {
+      "about": "About us",
+      "howItWorks": "How it works",
+      "pricing": "Pricing",
+      "contact": "Contact",
+      "terms": "Terms and conditions",
+      "privacy": "Privacy policy",
+      "refunds": "Delivery and refunds",
+      "home": "QR Starr home page",
+      "primaryLabel": "Main",
+      "menuLabel": "Site menu",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "legalHeading": "Policies",
+      "skipToContent": "Skip to content",
+      "partnerLogin": "Partner sign in"
+    },
+    "footer": {
+      "tagline": "A digital greeting inside every gift: a QR card that opens a personal message, photos, video and voice.",
+      "company": "Company",
+      "service": "Service",
+      "legal": "Policies",
+      "merchantHeading": "Merchant information",
+      "merchantPending": "Our registered company details are being finalised and will be published here.",
+      "currency": "All prices are in Georgian lari (GEL).",
+      "copyright": "© {year} QR Starr"
+    },
+    "merchant": {
+      "legalName": "Registered name",
+      "entityType": "Legal form",
+      "idCode": "Identification code",
+      "legalAddress": "Legal address",
+      "actualAddress": "Actual address",
+      "email": "Email",
+      "phone": "Phone",
+      "hours": "Support hours"
+    },
+    "entityTypes": {
+      "LLC": "Limited Liability Company (LLC)",
+      "JSC": "Joint Stock Company (JSC)",
+      "IE": "Individual Entrepreneur",
+      "OTHER": "Other"
+    },
+    "status": {
+      "pending": "Not yet published",
+      "pendingHint": "This detail has not been provided yet. It will be published once confirmed.",
+      "priceUnavailable": "Price currently unavailable",
+      "draftTitle": "Draft: not yet in effect",
+      "draftPolicyBody": "This policy is being finalised. Marked passages are awaiting legal review or a business decision. It takes effect only once it is published with an effective date.",
+      "draftPageBody": "Some details on this page are still being confirmed and are marked as such.",
+      "effectiveFrom": "In effect from {date}",
+      "notYetEffective": "Not yet in effect",
+      "onThisPage": "On this page",
+      "review": "Requires legal review",
+      "decision": "Awaiting merchant decision"
+    },
+    "demo": {
+      "notice": "DEMO / სატესტო მონაცემები",
+      "body": "The company details shown on this site are fictional, for preview only. They are not real merchant information.",
+      "tag": "DEMO"
+    }
+  },
+  "about": {
+    "metaTitle": "About us",
+    "metaDescription": "QR Starr turns a QR card that travels with a gift into a personal digital greeting: a message, photos, video and a voice note, opened with one scan.",
+    "eyebrow": "About QR Starr",
+    "title": "A personal greeting inside every gift",
+    "lead": "QR Starr connects a physical card that travels with a gift to a digital greeting the sender creates on their phone. The recipient scans the card and the greeting opens: a written message, photos, a video and a voice note, in a design the sender chose.",
+    "stepsLabel": "How it works, in four steps",
+    "steps": [
+      { "title": "Pick up a card", "text": "A partner shop includes a QR Starr card with your flowers, cake or gift." },
+      { "title": "Create your greeting", "text": "Scan the card and write a message. Add photos, a video or a voice note, and choose a design." },
+      { "title": "Preview and activate", "text": "See exactly what the recipient will see, then pay the one-time activation fee." },
+      { "title": "They scan, it opens", "text": "The recipient scans the same card and your greeting opens on their phone." }
+    ],
+    "sections": [
+      {
+        "id": "what-is-qr-starr",
+        "title": "What QR Starr is",
+        "blocks": [
+          { "type": "p", "text": "QR Starr is a digital greeting service. Each QR Starr card carries its own QR code which, once activated, opens one personal greeting created by the person giving the gift." },
+          { "type": "p", "text": "There is no app to install and no account to create. Senders and recipients use the camera and browser already on their phone." }
+        ]
+      },
+      {
+        "id": "how-cards-work",
+        "title": "How QR greeting cards work",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Every card has its own QR code. Scanning a card that hasn’t been used yet invites you to create a greeting on it.",
+              "While the greeting is being written, the card is reserved for it, and only the device that started the greeting can continue editing it.",
+              "After activation, scanning the card opens the finished greeting.",
+              "One card holds one greeting. Once activated, a greeting can’t be edited."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "personalising",
+        "title": "Personalising a greeting",
+        "blocks": [
+          { "type": "p", "text": "Every greeting includes a written message of up to {{fact.messageMaxLength}} characters. The sender can also add:" },
+          {
+            "type": "list",
+            "items": [
+              "up to {{fact.photoCount}} photos;",
+              "one video;",
+              "one voice note, recorded in the browser (up to {{fact.voiceMaxSeconds}} seconds) or uploaded as a file;",
+              "one of {{fact.themeCount}} designs, each with its own typography, colours and opening animation."
+            ]
+          },
+          { "type": "p", "text": "Before paying, the sender sees a preview exactly as the recipient will see it. File types and limits are listed on [How it works](/how-it-works)." }
+        ]
+      },
+      {
+        "id": "card-and-greeting",
+        "title": "A physical card, a digital experience",
+        "blocks": [
+          { "type": "p", "text": "The card links the gift to the greeting. The card travels with the gift; the greeting lives online. Because the greeting opens from the card itself, it arrives at the same moment as the gift." },
+          { "type": "callout", "tone": "important", "title": "The card is the key", "text": "Anyone who holds an activated card, or has its link, can open the greeting. There is no password, so the card should be given only to the person it is meant for." }
+        ]
+      },
+      {
+        "id": "for-customers",
+        "title": "For customers",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "A personal message with photos, video and voice that arrives together with a physical gift.",
+              "Nothing to install: everything works in the phone’s browser.",
+              "A preview before you pay, and a one-time price shown before payment. No subscription.",
+              "Available in Georgian and English."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "for-partners",
+        "title": "For partner businesses",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "A ready-made way to add a personal, digital touch to flowers, cakes and gifts.",
+              "Printable QR card batches, created and managed in the partner dashboard.",
+              "Card inventory and sales reporting in the partner dashboard.",
+              "Privacy by design: partners see whether a card has been used, never what a greeting says or shows."
+            ]
+          },
+          { "type": "p", "text": "Partnership terms are agreed individually. To become a partner, please [contact us](/contact)." }
+        ]
+      }
+    ]
+  },
+  "service": {
+    "metaTitle": "How it works",
+    "metaDescription": "What you buy with QR Starr, what a greeting can contain, how activation works and when the greeting becomes available.",
+    "eyebrow": "Product and service",
+    "title": "How QR Starr works",
+    "lead": "What you buy, what your greeting can hold, and when it becomes available to the person you are giving it to.",
+    "contentsLabel": "What a greeting can hold",
+    "contents": [
+      { "title": "Message", "text": "Required. Up to {{fact.messageMaxLength}} characters." },
+      { "title": "Photos", "text": "Up to {{fact.photoCount}}. {{fact.photoFormats}}, up to {{fact.photoMaxMb}} MB each." },
+      { "title": "Video", "text": "One video. {{fact.videoFormats}}, up to {{fact.videoMaxMb}} MB." },
+      { "title": "Voice note", "text": "One. Recorded in the browser (up to {{fact.voiceMaxSeconds}} seconds) or uploaded, up to {{fact.voiceMaxMb}} MB." }
+    ],
+    "sections": [
+      {
+        "id": "what-you-buy",
+        "title": "What you buy",
+        "blocks": [
+          { "type": "p", "text": "You buy the **activation of one digital greeting on one QR Starr card**. The activation fee is a one-time payment, shown in Georgian lari (GEL) before you pay. See [Pricing](/pricing)." },
+          { "type": "p", "text": "The physical card comes with your gift from the partner shop." },
+          { "type": "decision", "ref": "M2", "text": "How physical cards reach customers, and whether a card may be charged for separately, will be confirmed here." }
+        ]
+      },
+      {
+        "id": "how-cards-work",
+        "title": "How QR cards work",
+        "blocks": [
+          {
+            "type": "list",
+            "ordered": true,
+            "items": [
+              "Scan the card’s QR code with your phone camera.",
+              "If the card hasn’t been used yet, you can start a greeting on it. The card is then reserved for your greeting.",
+              "Your editing access is kept on the device you started on, for {{fact.editAccessDays}} days. If you switch devices or clear your browser data before paying, you won’t be able to continue the draft.",
+              "After activation, anyone who scans the card sees your finished greeting."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "personalising",
+        "title": "Creating and personalising your greeting",
+        "blocks": [
+          { "type": "p", "text": "Write your message, then add any of the media below; everything except the message is optional. Choose one of {{fact.themeCount}} designs. You can change it as often as you like before paying." },
+          {
+            "type": "table",
+            "head": ["Content", "Limit", "Formats"],
+            "rows": [
+              ["Message", "Required, up to {{fact.messageMaxLength}} characters", "Text"],
+              ["Photos", "Up to {{fact.photoCount}}, {{fact.photoMaxMb}} MB each", "{{fact.photoFormats}}"],
+              ["Video", "{{fact.videoCount}}, up to {{fact.videoMaxMb}} MB", "{{fact.videoFormats}}"],
+              ["Voice note", "{{fact.voiceCount}}, recorded (up to {{fact.voiceMaxSeconds}} seconds) or uploaded, up to {{fact.voiceMaxMb}} MB", "{{fact.voiceFormats}}"]
+            ]
+          },
+          { "type": "p", "text": "Files are checked after upload: a file whose content doesn’t match its declared type is rejected." }
+        ]
+      },
+      {
+        "id": "preview-and-payment",
+        "title": "Preview and payment",
+        "blocks": [
+          { "type": "p", "text": "Before paying, you see a preview of the greeting exactly as the recipient will see it. The activation fee is paid once, and nothing is charged until you complete payment." },
+          { "type": "p", "text": "If a payment fails, nothing is activated and you can try again." },
+          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before this page is published." }
+        ]
+      },
+      {
+        "id": "activation",
+        "title": "Activation: when the greeting becomes available",
+        "blocks": [
+          { "type": "p", "text": "Your greeting is activated **as soon as your payment is confirmed**. From then on, scanning the card opens it. Nothing is posted or shipped: the greeting is digital and opens from the card." },
+          { "type": "p", "text": "If a payment can’t be applied to your greeting, for example because it was already paid for in another browser tab, it doesn’t activate anything a second time and the extra payment is returned. See [Delivery and refunds](/delivery-and-refunds)." }
+        ]
+      },
+      {
+        "id": "opening",
+        "title": "Opening the greeting",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "The recipient scans the same card. No app or account is needed.",
+              "The greeting opens in the design you chose, with your message, photos, video and voice note.",
+              "It can be opened again by scanning the card again."
+            ]
+          },
+          { "type": "decision", "ref": "D1", "text": "How long an activated greeting remains available will be stated here." }
+        ]
+      },
+      {
+        "id": "limitations",
+        "title": "Limitations",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "**One card, one greeting.** A card can’t be reused or moved to a different greeting.",
+              "**No changes after activation.** Check the preview carefully before paying.",
+              "**The card is the key.** Anyone with the activated card or its link can open the greeting; there is no password.",
+              "**Editing stays on one device.** Before payment, editing access is kept on the device you started on, for {{fact.editAccessDays}} days.",
+              "**An internet connection and an up-to-date mobile browser** are needed to create and to open a greeting.",
+              "**Cards can be paused.** A card can’t be started while its partner’s account is paused, and greetings that break our [Terms](/terms) can be blocked."
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "pricing": {
+    "metaTitle": "Pricing",
+    "metaDescription": "The price of activating a QR Starr digital greeting, in Georgian lari (GEL).",
+    "eyebrow": "Pricing",
+    "title": "Simple, one-time pricing",
+    "lead": "One activation fee per greeting, shown in Georgian lari (GEL) before you pay. No subscription.",
+    "card": {
+      "label": "Standard price",
+      "unit": "per greeting, one-time activation",
+      "note": "The price for your card is always shown on its start screen and again at checkout, before you pay."
+    },
+    "sections": [
+      {
+        "id": "included",
+        "title": "What’s included",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Activation of one digital greeting on one QR Starr card.",
+              "A written message, up to {{fact.photoCount}} photos, one video and one voice note, in one of {{fact.themeCount}} designs.",
+              "A preview before you pay.",
+              "Opening by scanning the card, as often as the recipient likes."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "how-you-pay",
+        "title": "How and when you pay",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "You pay once, after previewing your greeting and before it is activated.",
+              "The amount is in Georgian lari (GEL) and is shown before you pay.",
+              "Nothing is charged if you stop before completing payment."
+            ]
+          },
+          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before this page is published." }
+        ]
+      },
+      {
+        "id": "price-for-your-card",
+        "title": "The price for your card",
+        "blocks": [
+          { "type": "p", "text": "The standard price applies unless a partner location has a different price agreed with us. The price that applies to your card is the one shown on its start screen and at checkout before you pay, and that is the amount charged." }
+        ]
+      },
+      {
+        "id": "price-changes",
+        "title": "Price changes",
+        "blocks": [
+          { "type": "p", "text": "Prices may change over time. A change never affects a greeting you have already paid for: the amount is fixed when you start checkout." }
+        ]
+      },
+      {
+        "id": "taxes",
+        "title": "Taxes",
+        "blocks": [
+          { "type": "decision", "ref": "C6", "text": "Tax (VAT) information for this price will be published here once confirmed." }
+        ]
+      },
+      {
+        "id": "physical-card",
+        "title": "The physical card",
+        "blocks": [
+          { "type": "p", "text": "The QR Starr card comes with your gift from the partner shop. QR Starr’s fee is the activation fee shown above." },
+          { "type": "decision", "ref": "M2", "text": "How physical cards reach customers, and whether a card may be charged for separately, will be confirmed here." }
+        ]
+      }
+    ]
+  },
+  "contact": {
+    "metaTitle": "Contact",
+    "metaDescription": "QR Starr merchant information and customer support contacts.",
+    "eyebrow": "Contact",
+    "title": "Merchant information and support",
+    "lead": "The company behind QR Starr, and how to reach us.",
+    "detailsTitle": "Merchant information",
+    "sections": [
+      {
+        "id": "support",
+        "title": "Customer support",
+        "blocks": [
+          { "type": "p", "text": "For help with a greeting, a payment or a refund, email {{merchant.supportEmail}} or call {{merchant.phone}}." },
+          { "type": "p", "text": "If you are writing about a specific greeting, please include the card’s link (the address that opens when you scan the card) and, for a payment, its date and amount." },
+          { "type": "decision", "ref": "M6", "text": "Our response time for support requests will be stated here." }
+        ]
+      },
+      {
+        "id": "privacy-requests",
+        "title": "Privacy requests",
+        "blocks": [
+          { "type": "p", "text": "To exercise your data protection rights, write to {{merchant.privacyEmail}}. See our [Privacy policy](/privacy)." }
+        ]
+      },
+      {
+        "id": "report",
+        "title": "Reporting a greeting",
+        "blocks": [
+          { "type": "p", "text": "If a greeting is abusive or unlawful, or infringes your rights, email {{merchant.supportEmail}} with the card’s link. We review reports and can block a greeting." },
+          { "type": "decision", "ref": "D7", "text": "A dedicated channel for reporting content may be announced here." }
+        ]
+      },
+      {
+        "id": "card-and-gift",
+        "title": "Questions about the card or the gift",
+        "blocks": [
+          { "type": "p", "text": "The physical card and the gift it came with are provided by the partner shop. For questions about them, please contact the shop directly." }
+        ]
+      },
+      {
+        "id": "partners",
+        "title": "Partners",
+        "blocks": [
+          { "type": "p", "text": "Would you like to offer QR Starr greetings with your gifts? Email {{merchant.supportEmail}}." }
+        ]
+      }
+    ]
+  },
+  "refunds": {
+    "metaTitle": "Delivery, cancellation and refund policy",
+    "metaDescription": "How QR Starr greetings are delivered and activated, and when and how you can cancel or get a refund.",
+    "eyebrow": "Policy",
+    "title": "Delivery, cancellation and refunds",
+    "lead": "How your greeting is delivered, what happens if you change your mind, and when you get your money back.",
+    "sections": [
+      {
+        "id": "what-you-buy",
+        "title": "What you buy",
+        "blocks": [
+          { "type": "p", "text": "The activation fee makes your digital greeting available on one QR Starr card. The amount is shown in Georgian lari (GEL) before you pay. See [Pricing](/pricing)." }
+        ]
+      },
+      {
+        "id": "physical-cards",
+        "title": "Physical QR cards",
+        "blocks": [
+          { "type": "p", "text": "QR Starr cards are handed out by our partner shops together with the gift you buy from them. QR Starr does not post or ship physical items to customers. Questions about the card itself, or about the gift, go to the shop that provided it." },
+          { "type": "decision", "ref": "M2", "text": "How physical cards reach customers, and whether a card may be charged for separately, will be confirmed here." }
+        ]
+      },
+      {
+        "id": "digital-delivery",
+        "title": "Digital delivery and activation",
+        "blocks": [
+          { "type": "p", "text": "Delivery is **immediate and digital**. Your greeting is activated on the card as soon as your payment is confirmed; from then on, scanning the card opens it. Nothing is sent by post." },
+          { "type": "p", "text": "If a payment fails, nothing is activated and you can try again." }
+        ]
+      },
+      {
+        "id": "before-payment",
+        "title": "Cancelling before payment",
+        "blocks": [
+          { "type": "p", "text": "You can stop at any time before completing payment. Nothing is charged, and an unpaid greeting is never shown to anyone." },
+          { "type": "p", "text": "The draft stays reserved on the card and can be continued from the same device for {{fact.editAccessDays}} days." }
+        ]
+      },
+      {
+        "id": "after-activation",
+        "title": "After activation",
+        "blocks": [
+          { "type": "p", "text": "Your greeting is digital content delivered immediately at your request, and it can’t be changed once it is activated." },
+          { "type": "review", "text": "Whether, and on what conditions, the right to withdraw from a distance contract ends once the greeting is activated, including any consent required before payment, must be confirmed under the Law of Georgia on the Protection of Consumer Rights." },
+          { "type": "p", "text": "This policy does not limit your rights as a consumer under Georgian law." }
+        ]
+      },
+      {
+        "id": "refunds",
+        "title": "When you get a refund",
+        "blocks": [
+          { "type": "p", "text": "You receive a **full refund** of the activation fee, to the card you paid with, if:" },
+          {
+            "type": "list",
+            "items": [
+              "**you were charged but the greeting could not be activated**, for example because it had already been paid for, or the card had been paused;",
+              "**you were charged more than once** for the same greeting: the extra payment is returned."
+            ]
+          },
+          { "type": "decision", "ref": "D4", "text": "Further refund cases, such as a technical fault on our side that stops an activated greeting from opening, and any time limits, will be stated here." }
+        ]
+      },
+      {
+        "id": "exclusions",
+        "title": "When a refund may not apply",
+        "blocks": [
+          { "type": "review", "text": "Refusing a refund after activation when you have simply changed your mind must be confirmed against consumer protection law before this policy is published." },
+          { "type": "decision", "ref": "M5", "text": "Whether the activation fee is refunded when a greeting is blocked for breaking our Terms, and whether a refunded greeting stays available on the card, will be stated here." }
+        ]
+      },
+      {
+        "id": "how-to-request",
+        "title": "How to request a refund",
+        "blocks": [
+          {
+            "type": "list",
+            "ordered": true,
+            "items": [
+              "Email {{merchant.supportEmail}} or call {{merchant.phone}}.",
+              "Include the card’s link (the address that opens when you scan the card), the date of payment and the amount.",
+              "Tell us briefly what went wrong."
+            ]
+          },
+          { "type": "decision", "ref": "M6", "text": "Our response time for refund requests will be stated here." }
+        ]
+      },
+      {
+        "id": "processing",
+        "title": "How refunds are processed",
+        "blocks": [
+          { "type": "p", "text": "Refunds are paid back to the card you paid with, through the bank that processed the payment. We refund the full activation fee; partial refunds are not offered. We reply to the email address you wrote from and let you know when the refund has been issued." },
+          { "type": "decision", "ref": "C4", "text": "How long the bank takes to return a refund to your card will be stated here once confirmed." }
+        ]
+      },
+      {
+        "id": "disputes",
+        "title": "Card disputes",
+        "blocks": [
+          { "type": "p", "text": "If you didn’t make a payment yourself, or you want to dispute a payment, please contact us as well as your bank; we can usually resolve it faster. If a dispute (chargeback) is opened, the bank’s decision applies. We may provide evidence that the greeting was delivered, such as when it was activated and opened, but never its content." }
+        ]
+      },
+      {
+        "id": "contact",
+        "title": "Contact",
+        "blocks": [
+          { "type": "p", "text": "Questions about delivery, cancellation or refunds: {{merchant.supportEmail}}, {{merchant.phone}}. Full company details are on our [Contact](/contact) page." }
+        ]
+      }
+    ]
+  },
+  "privacy": {
+    "metaTitle": "Privacy policy",
+    "metaDescription": "What personal data QR Starr processes, why, who can see it, how long it is kept and how to exercise your rights.",
+    "eyebrow": "Policy",
+    "title": "Privacy policy",
+    "lead": "This policy explains what personal data QR Starr processes when you create, pay for or open a greeting, or use a partner account, and the rights you have.",
+    "sections": [
+      {
+        "id": "controller",
+        "title": "Who is responsible",
+        "blocks": [
+          { "type": "p", "text": "The controller of the personal data described here is {{merchant.legalName}}, identification code {{merchant.idCode}}, {{merchant.legalAddress}} (“QR Starr”, “we”). Contact: {{merchant.privacyEmail}}." },
+          { "type": "review", "text": "Whether a personal data protection officer must be appointed and, if so, their contact details." }
+        ]
+      },
+      {
+        "id": "data-we-collect",
+        "title": "What we collect and why",
+        "blocks": [
+          {
+            "type": "table",
+            "head": ["Whose data", "Data", "Purpose"],
+            "rows": [
+              ["Sender (creates a greeting)", "Message, photos, video, voice note and chosen design, including any people, faces or voices in them", "Creating the greeting and showing it to whoever opens the card"],
+              ["Sender", "Payment record: amount, currency, time, the bank’s payment reference and, where the bank provides them, the card brand and last 4 digits. Never the full card number", "Payment, refunds, accounting and disputes"],
+              ["Sender", "A random editing key stored in a cookie on your device", "Making sure only you can edit your greeting before paying"],
+              ["Recipient (opens the card)", "When the greeting is opened, recorded against the card, not against you as a person", "Confirming delivery, evidence in payment disputes, usage statistics"],
+              ["Everyone", "IP address, browser information and request logs", "Security, preventing abuse (rate limiting) and fixing problems"],
+              ["Partners and administrators", "Email address, sign-in data and actions taken in the dashboard", "Running accounts, partner payouts and security"],
+              ["Anyone who contacts us", "Your message and contact details", "Answering you"]
+            ]
+          },
+          { "type": "review", "text": "The legal basis for each purpose (for example, performance of a contract, a legal obligation or a legitimate interest) under the Law of Georgia on Personal Data Protection." },
+          { "type": "p", "text": "We do not sell personal data, and we do not use advertising or third-party tracking." }
+        ]
+      },
+      {
+        "id": "your-content",
+        "title": "Photos, videos, voice notes and messages",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "Your content is used only to build your greeting and show it to whoever opens the card.",
+              "Media files are kept in private storage and delivered through short-lived links, created each time the greeting is opened.",
+              "If your greeting includes other people’s photos, video or voice, you are responsible for having their permission (see our [Terms](/terms)).",
+              "Partner shops can’t see greeting content; they only see whether a card has been used."
+            ]
+          },
+          { "type": "decision", "ref": "M4", "text": "Who at QR Starr may access greeting content, and in which situations (for example, to handle a report or a legal request), will be stated here." }
+        ]
+      },
+      {
+        "id": "qr-links",
+        "title": "QR links and sharing",
+        "blocks": [
+          { "type": "callout", "tone": "important", "title": "The card is the key", "text": "Anyone who holds an activated card, or has its link, can open the greeting. There is no password or PIN. Give the card only to the person it is meant for, and don’t share photos of its QR code or its link." },
+          { "type": "p", "text": "The link in each QR code is long and random, so it can’t practically be guessed. But once it is shared, in a photo, a message or a social media post, anyone who sees it can open the greeting." },
+          { "type": "p", "text": "Before payment, a draft can only be edited from the device that started it." }
+        ]
+      },
+      {
+        "id": "accounts-and-providers",
+        "title": "Accounts, storage and service providers",
+        "blocks": [
+          { "type": "p", "text": "Senders and recipients don’t need an account. Partner and administrator accounts sign in with an email address and password through Supabase Auth." },
+          {
+            "type": "table",
+            "head": ["Provider", "Role"],
+            "rows": [
+              ["Supabase", "Database, storage of greeting media, and partner and administrator sign-in"],
+              ["Bank of Georgia", "Card payments, as an independent controller under its own privacy policy"]
+            ]
+          },
+          { "type": "decision", "ref": "M3", "text": "The hosting provider, the email delivery provider and the countries where data is stored will be listed here once confirmed." },
+          { "type": "review", "text": "The legal basis for transferring data to providers outside Georgia, and the data processing agreements with them." }
+        ]
+      },
+      {
+        "id": "cookies",
+        "title": "Cookies and local storage",
+        "blocks": [
+          { "type": "p", "text": "We use only what the service needs to work. We don’t use advertising or analytics cookies." },
+          {
+            "type": "table",
+            "head": ["Name", "Purpose", "Lifetime"],
+            "rows": [
+              ["NEXT_LOCALE", "Remembers your language (Georgian or English)", "1 year"],
+              ["qr_edit_…", "Your private access to edit a greeting before paying; afterwards, it lets you see the “sent by you” note", "{{fact.editAccessDays}} days"],
+              ["qrs:message:… (local storage)", "Keeps an unsent message on your own device if the page reloads; removed once the message is saved", "Until saved"],
+              ["Supabase sign-in cookies, active_partner_id", "Partner and administrator accounts only: keeping you signed in and remembering the selected partner", "Session; 90 days"]
+            ]
+          },
+          { "type": "review", "text": "Whether a consent banner is required for strictly necessary cookies." }
+        ]
+      },
+      {
+        "id": "payments",
+        "title": "Payments",
+        "blocks": [
+          { "type": "p", "text": "Card details are entered on the payment page of the bank that processes the payment. QR Starr never receives or stores full card numbers or security codes." },
+          { "type": "p", "text": "We keep a record of each payment (amount, currency, time, the bank’s reference and, where provided, the card brand and last 4 digits) for refunds, accounting and disputes." },
+          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before this policy is published." }
+        ]
+      },
+      {
+        "id": "retention",
+        "title": "How long we keep data",
+        "blocks": [
+          { "type": "p", "text": "We do not currently delete greetings, media, payment records or logs automatically." },
+          { "type": "decision", "ref": "D1", "text": "Retention periods for activated greetings and their media, unpaid drafts, payment records and security logs will be set and stated here." }
+        ]
+      },
+      {
+        "id": "your-rights",
+        "title": "Your rights",
+        "blocks": [
+          { "type": "p", "text": "Under the Law of Georgia on Personal Data Protection you can ask us to:" },
+          {
+            "type": "list",
+            "items": [
+              "tell you whether we process your data, and give you access to it or a copy of it;",
+              "correct, update or complete it;",
+              "delete it;",
+              "restrict (block) its processing;",
+              "transfer it, where that right applies."
+            ]
+          },
+          { "type": "p", "text": "Where processing is based on your consent, you can withdraw it at any time. You can also lodge a complaint with the Personal Data Protection Service of Georgia." },
+          { "type": "review", "text": "The full list of rights, response deadlines and any exceptions must be confirmed against the Law of Georgia on Personal Data Protection." }
+        ]
+      },
+      {
+        "id": "requests",
+        "title": "How to make a request",
+        "blocks": [
+          { "type": "p", "text": "Write to {{merchant.privacyEmail}}. So that we can find a greeting without asking you for more personal data, please include the card’s link. We may need to confirm that the request comes from you." },
+          { "type": "p", "text": "If an activated greeting is removed at your request, it will no longer open from the card for anyone. Payment records are kept for as long as the law requires." },
+          { "type": "decision", "ref": "D8", "text": "Who handles data requests, and within what time, will be stated here." }
+        ]
+      },
+      {
+        "id": "security",
+        "title": "Security",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "The website is served over HTTPS.",
+              "Greeting media is kept in private storage and delivered only through short-lived links.",
+              "Access to data in our database is restricted by role.",
+              "We never receive full card details."
+            ]
+          },
+          { "type": "review", "text": "Notification duties towards the Personal Data Protection Service and affected people in the event of a data breach." }
+        ]
+      },
+      {
+        "id": "children",
+        "title": "Children",
+        "blocks": [
+          { "type": "decision", "ref": "D2", "text": "The minimum age to create and pay for a greeting will be stated here." },
+          { "type": "p", "text": "A greeting may, of course, be made for a child." }
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "Changes to this policy",
+        "blocks": [
+          { "type": "p", "text": "We will publish any changes on this page with a new effective date." },
+          { "type": "review", "text": "Whether material changes require advance notice." }
+        ]
+      }
+    ]
+  },
+  "terms": {
+    "metaTitle": "Terms and conditions",
+    "metaDescription": "The terms for creating, paying for and opening QR Starr digital greetings.",
+    "eyebrow": "Policy",
+    "title": "Terms and conditions",
+    "lead": "These terms apply when you use qrapp.ge to create, activate or open a digital greeting on a QR Starr card.",
+    "sections": [
+      {
+        "id": "who-we-are",
+        "title": "Who we are",
+        "blocks": [
+          { "type": "p", "text": "The service is provided by {{merchant.legalName}}, identification code {{merchant.idCode}}, {{merchant.legalAddress}} (“QR Starr”, “we”). Contact: {{merchant.supportEmail}}, {{merchant.phone}}." }
+        ]
+      },
+      {
+        "id": "service",
+        "title": "The service",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "A QR Starr card is a physical card with a QR code, which you receive from one of our partner shops.",
+              "By scanning an unused card you can create a **digital greeting**: a written message, up to {{fact.photoCount}} photos, one video and one voice note, in a design you choose.",
+              "To make the greeting available on the card you pay a one-time **activation fee**, shown in Georgian lari (GEL) before you pay.",
+              "The greeting is delivered digitally and immediately: it becomes available on the card as soon as payment is confirmed, and the recipient opens it by scanning the same card."
+            ]
+          },
+          { "type": "p", "text": "What a greeting can hold, and its limits, are described on [How it works](/how-it-works)." }
+        ]
+      },
+      {
+        "id": "eligibility",
+        "title": "Who can use the service",
+        "blocks": [
+          { "type": "decision", "ref": "D2", "text": "The minimum age to create and pay for a greeting will be stated here." },
+          { "type": "p", "text": "You must give accurate information when you pay or contact us." }
+        ]
+      },
+      {
+        "id": "responsibilities",
+        "title": "Your responsibilities",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "**The card is the key.** Anyone who holds the activated card, or has its link, can open the greeting. Give the card only to the person it is meant for, and don’t share photos of its QR code or its link.",
+              "**Check the preview.** A greeting can’t be changed after activation.",
+              "**Keep your editing device.** Before payment, editing access is kept on the device you started on, for {{fact.editAccessDays}} days. If you change device or clear your browser data, you may not be able to continue."
+            ]
+          }
+        ]
+      },
+      {
+        "id": "payment",
+        "title": "Payment and activation",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "The price is shown on the card’s start screen and at checkout, before you pay. There is no subscription and no recurring charge.",
+              "Your greeting is activated only after the payment is confirmed. If a payment fails, nothing is activated and you can try again.",
+              "If you are charged twice for the same greeting, or for a greeting that could not be activated, the extra payment is returned (see [Delivery and refunds](/delivery-and-refunds))."
+            ]
+          },
+          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before these terms are published." }
+        ]
+      },
+      {
+        "id": "withdrawal",
+        "title": "Right of withdrawal",
+        "blocks": [
+          { "type": "review", "text": "The greeting is digital content supplied immediately at your request. Whether the right to withdraw ends once it is activated, and the consent this requires before payment, must be confirmed under the Law of Georgia on the Protection of Consumer Rights." },
+          { "type": "p", "text": "Nothing in these terms limits your rights as a consumer under Georgian law." }
+        ]
+      },
+      {
+        "id": "your-content",
+        "title": "Your content",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "You are responsible for everything you put in a greeting. You confirm that you have the right to use every photo, video, recording and text you upload, including the permission of the people who appear in them.",
+              "You keep ownership of your content. You give us a limited permission to store, process and display it, only to provide the greeting to whoever opens the card."
+            ]
+          },
+          { "type": "review", "text": "The scope and duration of the permission you grant us to use your content." }
+        ]
+      },
+      {
+        "id": "prohibited",
+        "title": "Prohibited content and activities",
+        "blocks": [
+          { "type": "p", "text": "You must not use QR Starr to create or share content that:" },
+          {
+            "type": "list",
+            "items": [
+              "is unlawful, or promotes or incites violence or hatred;",
+              "harasses, threatens or defames anyone;",
+              "is sexual content involving minors, or otherwise exploits children;",
+              "infringes anyone else’s rights, including copyright, trademarks or privacy;",
+              "contains malware, or links intended to deceive or cause harm."
+            ]
+          },
+          { "type": "p", "text": "You must also not try to access greetings or cards you aren’t entitled to, interfere with the service or its security, or use the service in a way that breaks the law." }
+        ]
+      },
+      {
+        "id": "intellectual-property",
+        "title": "Intellectual property",
+        "blocks": [
+          { "type": "p", "text": "The QR Starr name, logo, designs, animations and website belong to us or our licensors. You may use them only to create and view greetings through the service. Some fonts and design materials are used under third-party licences." }
+        ]
+      },
+      {
+        "id": "moderation",
+        "title": "Moderation",
+        "blocks": [
+          { "type": "p", "text": "We may block a greeting that breaks these terms or the law, or when an authority lawfully requires it. A blocked greeting no longer opens from its card. To report a greeting, email {{merchant.supportEmail}} with the card’s link." },
+          { "type": "decision", "ref": "M5", "text": "Whether the activation fee is refunded when a greeting is blocked for breaking these terms will be stated here." }
+        ]
+      },
+      {
+        "id": "availability",
+        "title": "Service availability",
+        "blocks": [
+          { "type": "p", "text": "We work to keep greetings available at all times, but we can’t guarantee uninterrupted access. The service may be briefly unavailable for maintenance or because of a fault." },
+          { "type": "decision", "ref": "D1", "text": "How long an activated greeting remains available will be stated here." },
+          { "type": "review", "text": "Your remedies if a technical fault on our side stops an activated greeting from opening." }
+        ]
+      },
+      {
+        "id": "liability",
+        "title": "Liability",
+        "blocks": [
+          { "type": "p", "text": "Nothing in these terms limits liability that can’t be limited under Georgian law, including your rights as a consumer." },
+          { "type": "p", "text": "We are not responsible for the physical card, its loss, or someone opening a greeting with a card or link you shared." },
+          { "type": "review", "text": "Any further limitation of liability (for example, to the activation fee paid) and whether it is enforceable." }
+        ]
+      },
+      {
+        "id": "law-and-disputes",
+        "title": "Applicable law and disputes",
+        "blocks": [
+          { "type": "p", "text": "These terms are governed by the law of Georgia. If something goes wrong, please contact us first; most issues can be resolved quickly." },
+          { "type": "decision", "ref": "D6", "text": "The competent court and any alternative dispute resolution will be stated here." }
+        ]
+      },
+      {
+        "id": "changes",
+        "title": "Changes and language",
+        "blocks": [
+          { "type": "p", "text": "We may update these terms. The version in force when you paid applies to that greeting." },
+          { "type": "review", "text": "Which language version prevails if the Georgian and English versions differ." }
+        ]
+      },
+      {
+        "id": "contact",
+        "title": "Contact",
+        "blocks": [
+          { "type": "p", "text": "Questions about these terms: {{merchant.supportEmail}}, {{merchant.phone}}. Full company details are on our [Contact](/contact) page." }
+        ]
+      }
+    ]
+  },
+  "landing": {
+    "metaTitle": "QR Starr — your words, inside the gift",
+    "metaDescription": "A QR Starr card travels with flowers, cakes and gifts. One scan opens a personal greeting: your message, photos, a video and your voice, in a design you chose.",
+    "hero": {
+      "eyebrow": "Digital greeting cards for real gifts",
+      "titleA": "Your words,",
+      "titleB": "inside the gift.",
+      "lead": "A QR Starr card travels with flowers, cakes and gifts. One scan opens your personal greeting: a letter, photos, a video and your voice, in a design you chose.",
+      "primary": "See how it works",
+      "secondary": "For florists and gift shops",
+      "assurances": [
+        "No app to install",
+        "Preview before you pay",
+        "Georgian and English"
+      ],
+      "visualLabel": "A QR Starr card beside a phone showing an opened greeting",
+      "sampleTag": "Example",
+      "sampleTo": "For Ana",
+      "sampleText": "Every ordinary day is better with you.",
+      "sampleSign": "With love",
+      "sampleVoice": "Voice note",
+      "cardLine": "Scan me",
+      "cardHint": "A greeting is waiting inside",
+      "recipientHint": "Received a QR Starr card? Scan its code with your phone’s camera, and your greeting opens on its own.",
+      "photoAlt": "Red tulips wrapped in kraft paper, with a QR Starr card tucked beside them",
+      "badgeScan": "Opens in the phone’s browser",
+      "badgeVoice": "Voice note",
+      "secondaryLink": "For florists and gift shops",
+      "plateAlt": "A Redouté rose engraving, 1817–24, laid beneath a bouquet of tulips"
+    },
+    "demo": {
+      "eyebrow": "After the scan",
+      "title": "What happens when they scan the card",
+      "lead": "No app and no sign-in. The phone’s camera reads the card and the greeting opens straight in the browser.",
+      "tabsLabel": "The four moments of opening a greeting",
+      "beats": [
+        {
+          "label": "Scan",
+          "title": "The camera finds the card",
+          "text": "Any phone camera reads the QR code on the card. A tap on the link, and the greeting opens."
+        },
+        {
+          "label": "Open",
+          "title": "A moment of anticipation",
+          "text": "Each design has its own opening animation, so the greeting unfolds before a single word appears."
+        },
+        {
+          "label": "Read",
+          "title": "Your words, beautifully set",
+          "text": "Your message arrives as a letter, in typography made for reading in Georgian and English."
+        },
+        {
+          "label": "Keep",
+          "title": "Photos, video and your voice",
+          "text": "Then the keepsakes: up to {{fact.photoCount}} photos, a video and a voice note. They can scan the card and open it again whenever they like."
+        }
+      ],
+      "screenScan": "Opening your greeting…",
+      "screenOpen": "Tap to open",
+      "previous": "Previous moment",
+      "next": "Next moment",
+      "photoAlt": "A woman leaning in to admire a bouquet of pink roses"
+    },
+    "steps": {
+      "eyebrow": "How it works",
+      "title": "Three steps, from shop to smile",
+      "items": [
+        {
+          "title": "Choose a gift with a card",
+          "text": "Partner florists, bakeries and gift shops include a QR Starr card with flowers, cakes and gifts."
+        },
+        {
+          "title": "Scan it and make it yours",
+          "text": "Write your message, add photos, a video or your voice, and pick a design. Preview it exactly as they will see it, then pay once."
+        },
+        {
+          "title": "They scan, it opens",
+          "text": "The same card opens your greeting on their phone, at the very moment the gift arrives."
+        }
+      ],
+      "more": "The full details: what a greeting holds, activation and limits",
+      "alts": [
+        "A florist arranging peonies in soft light",
+        "A QR Starr card tucked into an envelope sealed with wax",
+        "A woman reading at a café table beside a bouquet of tulips"
+      ]
+    },
+    "experiences": {
+      "eyebrow": "Inside a greeting",
+      "title": "Everything you’d want to say, beautifully kept",
+      "lead": "Six designs, each a complete world with its own typography, colour and opening. Then your words, your photos, a video and your voice. Only the message is required.",
+      "message": {
+        "title": "A letter",
+        "text": "Up to {{fact.messageMaxLength}} characters, set like a handwritten note on paper."
+      },
+      "photos": {
+        "title": "Photos",
+        "text": "Up to {{fact.photoCount}} photos, shown as prints they can look through."
+      },
+      "video": {
+        "title": "A video",
+        "text": "One video, up to {{fact.videoMaxMb}} MB: a wave, a song, a toast."
+      },
+      "voice": {
+        "title": "Your voice",
+        "text": "Record up to {{fact.voiceMaxSeconds}} seconds right in the browser, or upload a file."
+      },
+      "designs": {
+        "title": "{{fact.themeCount}} designs",
+        "text": "Each with its own typography, colours and opening animation. Change it as often as you like before paying."
+      },
+      "letterSample": "I wish I could be there to see your face when you open this…",
+      "stackLabel": "Photos in a greeting. Drag a print, or use the arrow keys, to look through them.",
+      "stackHint": "Drag the prints",
+      "stackAlts": [
+        "Friends laughing together on a picnic blanket",
+        "Two friends hugging on a beach",
+        "A bouquet of white roses held in a garden",
+        "A hand holding a pink and peach bouquet"
+      ],
+      "videoAlt": "A woman smiling as she smells a bouquet of roses",
+      "designsLabel": "The six greeting designs",
+      "designsCounter": "Design {n} of {total}",
+      "designAlt": "The {name} greeting design, as the recipient sees it",
+      "letterLabel": "Your letter",
+      "letterLimit": "Up to {{fact.messageMaxLength}} characters",
+      "photosLabel": "Up to {{fact.photoCount}} photos",
+      "videoTitle": "A video, as they will see it",
+      "videoLimit": "One video, up to {{fact.videoMaxMb}} MB",
+      "videoPlay": "Play the video",
+      "videoClose": "Close the video",
+      "voiceTitle": "A voice note",
+      "voiceLimit": "Record up to {{fact.voiceMaxSeconds}} seconds in the browser, or upload a file",
+      "voiceCredit": "Demo recording: Sonnet 43 by Elizabeth Barrett Browning, read for LibriVox (public domain)",
+      "voicePlay": "Play the voice note",
+      "voicePause": "Pause the voice note",
+      "voiceSeek": "Position in the voice note"
+    },
+    "occasions": {
+      "eyebrow": "Occasions",
+      "title": "For every reason to give",
+      "lead": "Any design works for any occasion. These are the pairings we love.",
+      "listLabel": "Occasions and the designs that suit them",
+      "items": [
+        {
+          "title": "Birthdays",
+          "text": "Candles, cake and a message they can replay all year."
+        },
+        {
+          "title": "Flowers and love",
+          "text": "The bouquet says it beautifully. Your voice says the rest."
+        },
+        {
+          "title": "Anniversaries",
+          "text": "Years of memories, gathered in photos and a few careful words."
+        },
+        {
+          "title": "Weddings",
+          "text": "A toast for the couple that stays long after the day."
+        },
+        {
+          "title": "Celebrations",
+          "text": "Graduations, new jobs, big wins: mark the moment properly."
+        },
+        {
+          "title": "Just because",
+          "text": "Sometimes a single sentence is the whole gift."
+        }
+      ],
+      "designLabel": "Design",
+      "previous": "Previous occasions",
+      "next": "More occasions",
+      "alts": [
+        "A hand lighting the candles on a birthday cake",
+        "A hand holding a pink and peach bouquet",
+        "Hands holding red and cream roses",
+        "A bride and groom, the bride holding a soft beige bouquet",
+        "Champagne being poured into a row of glasses",
+        "A small paper parcel tied with string, held in window light"
+      ],
+      "open": "Open the {title} postcard",
+      "close": "Close the postcard",
+      "postcard": "Postcard",
+      "from": "A greeting in the {design} design",
+      "plateAlt": "A Redouté rose engraving from Les Roses, 1817–24"
+    },
+    "partners": {
+      "eyebrow": "For florists, bakeries and gift shops",
+      "title": "Give every gift you sell a personal voice",
+      "lead": "QR Starr cards travel with your flowers, cakes and gifts. Your customers add the personal greeting on their own phones, and the card does the rest.",
+      "items": [
+        {
+          "title": "A personal touch, ready to go",
+          "text": "A ready-made way to add a personal, digital greeting to the gifts you already sell."
+        },
+        {
+          "title": "Printable card batches",
+          "text": "Create and print QR card batches yourself, in the partner dashboard."
+        },
+        {
+          "title": "Inventory and sales at a glance",
+          "text": "See your cards and their sales reporting in the partner dashboard."
+        },
+        {
+          "title": "Private by design",
+          "text": "You see whether a card has been used, never what a greeting says or shows."
+        }
+      ],
+      "terms": "Partnership terms are agreed individually.",
+      "primary": "Become a partner",
+      "secondary": "Partner sign in",
+      "sheetLabel": "A printed sheet of QR Starr cards",
+      "cards": [
+        {
+          "title": "In the workshop",
+          "caption": "A card goes in as the bouquet is wrapped."
+        },
+        {
+          "title": "On the shelf",
+          "caption": "Cards wait beside the gifts, ready for any order."
+        },
+        {
+          "title": "At the counter",
+          "caption": "Your customer personalises it later, on their own phone."
+        }
+      ],
+      "photoAlts": [
+        "A florist arranging pink roses",
+        "Roses and peonies, freshly arranged",
+        "A flower stall lit at dusk on a wet city square"
+      ]
+    },
+    "pricing": {
+      "eyebrow": "Pricing",
+      "title": "One greeting, one price",
+      "lead": "You pay once, after you’ve previewed your greeting. No subscription and no account.",
+      "label": "Standard price",
+      "price": "{{price}}",
+      "unit": "per greeting, one-time activation",
+      "included": [
+        "A message, up to {{fact.photoCount}} photos, one video and one voice note",
+        "Any of the {{fact.themeCount}} designs",
+        "A preview before you pay",
+        "Opened as often as the recipient likes"
+      ],
+      "note": "The price for your card is shown on its start screen and again at checkout, before you pay.",
+      "more": "Pricing details",
+      "compositeAlt": "A QR Starr card on a wax-sealed envelope, laid on an antique lace valentine"
+    },
+    "trust": {
+      "eyebrow": "Peace of mind",
+      "title": "Clear, private and simple",
+      "items": [
+        {
+          "title": "See it before you pay",
+          "text": "The preview shows the greeting exactly as the recipient will see it."
+        },
+        {
+          "title": "Private from the shop",
+          "text": "Partner shops see whether a card has been used, never your message, photos or voice."
+        },
+        {
+          "title": "Nothing to install",
+          "text": "Senders and recipients use the camera and browser already on their phone."
+        },
+        {
+          "title": "Nothing charged unless you finish",
+          "text": "If a payment fails, nothing is activated and you can try again."
+        }
+      ],
+      "faqTitle": "Questions people ask",
+      "faq": [
+        {
+          "q": "Where do I get a QR Starr card?",
+          "a": "From a partner shop: the card comes with your flowers, cake or gift."
+        },
+        {
+          "q": "Does the recipient need an app or an account?",
+          "a": "No. They scan the card with their phone camera and the greeting opens in the browser."
+        },
+        {
+          "q": "Can I edit my greeting after paying?",
+          "a": "Before paying you can change everything, as often as you like. Once a greeting is activated it can’t be edited, so the preview is your final check."
+        },
+        {
+          "q": "Can I start on one phone and finish on another?",
+          "a": "Editing access stays on the device you started on, for {{fact.editAccessDays}} days. If you switch devices or clear your browser data before paying, you won’t be able to continue the draft."
+        },
+        {
+          "q": "Who can open the greeting?",
+          "a": "Anyone who holds the activated card, or has its link. There is no password, so give the card only to the person it is meant for."
+        }
+      ]
+    },
+    "finale": {
+      "title": "Next time, let the gift speak in your words.",
+      "body": "Ask for a QR Starr card at a partner shop, or bring QR Starr to yours.",
+      "primary": "How it works",
+      "secondary": "Become a partner",
+      "photoAlt": "Hands passing a gift box tied with red ribbon across a café table",
+      "postcardsLabel": "Postcards: botanical engravings and gifting moments",
+      "postcardAlts": [
+        "A Redouté pompon rose engraving",
+        "Pink roses tucked into an envelope",
+        "A Redouté rose engraving",
+        "A wax seal on an olive ribbon",
+        "A Redouté cabbage rose engraving"
+      ]
+    },
+    "moments": {
+      "label": "Gift-giving moments",
+      "alts": [
+        "Hands wrapping gifts in kraft paper with red ribbon",
+        "Pink roses and peonies in soft light",
+        "A gift box with a burgundy ribbon being opened",
+        "A wax seal on an olive ribbon with dried flowers",
+        "Pink roses tucked into an envelope",
+        "A bouquet of white roses and hydrangea held in a garden"
+      ]
+    },
+    "transform": {
+      "eyebrow": "From paper to screen",
+      "title": "The card in their hands. Your words on their phone.",
+      "lead": "Drag across: the same moment, before and after the scan.",
+      "paper": "On paper",
+      "screen": "On their phone",
+      "slider": "Compare the card on paper with the greeting on the phone",
+      "value": "{value}% of the greeting shown",
+      "paperAlt": "A sealed letter on a writing desk with a QR Starr card beside it"
+    }
+  }
+}

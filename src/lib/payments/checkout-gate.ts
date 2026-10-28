@@ -15,7 +15,11 @@ export class CheckoutUnavailableError extends Error {
 }
 
 export function isCheckoutOpen(): boolean {
-  return env.PAYMENTS_PROVIDER === "TEST" || env.CHECKOUT_ENABLED;
+  // TEST is refused outright in production (provider-factory.ts), so a
+  // production deployment without a real provider is simply closed: the
+  // sender sees "payments open soon" rather than a provider error.
+  if (env.PAYMENTS_PROVIDER === "TEST") return env.NODE_ENV !== "production";
+  return env.CHECKOUT_ENABLED;
 }
 
 export function assertCheckoutOpen(): void {

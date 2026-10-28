@@ -149,7 +149,10 @@
       "stillVerifyingBody": "If you paid, it will be confirmed shortly — please don't pay again. Check again in a moment.",
       "checkAgain": "Check again",
       "closedTitle": "Payments open soon",
-      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged."
+      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged.",
+      "orderKicker": "Your order",
+      "design": "Design",
+      "contents": "Contents"
     },
     "preview": {
       "edit": "Back to editing",
@@ -169,7 +172,56 @@
     },
     "toPreview": "See preview",
     "skipToPreview": "Skip to preview",
-    "livePreview": "Live preview"
+    "livePreview": "Live preview",
+    "sig": {
+      "steps": {
+        "theme": "Design",
+        "create": "Words",
+        "preview": "Preview"
+      },
+      "stepLabel": "Step {n} of 3 · {label}",
+      "chosen": "Selected",
+      "memories": "Memories",
+      "addPhoto": "Photo",
+      "addVideo": "Video",
+      "addVoice": "Voice",
+      "slotPhoto": "{count} / {max}",
+      "slotVideo": "1 clip",
+      "slotVoice": "Up to 1 min",
+      "full": "Added",
+      "addAriaPhoto": "Add a photo ({count} of {max})",
+      "addAriaVideo": "Add a video",
+      "addAriaVoice": "Record a voice message",
+      "photoN": "Photo {n}",
+      "videoLabel": "Video",
+      "voiceLabel": "Voice message",
+      "ready": "Ready",
+      "preparing": "Preparing…",
+      "uploadingPct": "Uploading · {pct}%",
+      "uploadFailed": "Didn't upload — check your connection",
+      "retryUpload": "Retry",
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "removed": "{name} removed",
+      "undo": "Undo",
+      "failedBlock": "One file didn't upload. Retry it or remove it.",
+      "waiting": "{count, plural, one {Waiting for the upload…} other {Waiting for # uploads…}}",
+      "removeError": "We couldn't remove it. Check your connection and try again.",
+      "voiceClose": "Close",
+      "previewKicker": "Preview",
+      "previewTitle": "How it will reach them",
+      "previewLede": "They scan the card — and this envelope opens for them alone.",
+      "watch": "See it as the recipient",
+      "editText": "Text",
+      "editMedia": "Memories",
+      "editDesign": "Design",
+      "editNav": "Edit your greeting",
+      "contents": "Your greeting: {items}",
+      "itemsText": "text",
+      "itemsPhotos": "{count, plural, one {# photo} other {# photos}}",
+      "itemsVideo": "video",
+      "itemsVoice": "voice"
+    }
   },
   "greeting": {
     "tapToOpen": "Tap to open",
@@ -185,7 +237,17 @@
     "pause": "Pause",
     "seek": "Playback position",
     "madeWith": "Made with QR Starr",
-    "letterLabel": "Message"
+    "letterLabel": "Message",
+    "forYou": "For you",
+    "keepsakes": "Keepsakes",
+    "keepsakePhoto": "Photo",
+    "keepsakeVideo": "Video",
+    "keepsakeVoice": "Voice",
+    "closingTitle": "This letter is yours to keep.",
+    "closingBody": "Scan the card again whenever you'd like to open it.",
+    "toLetter": "Your letter",
+    "postmark": "QR STARR · LUXURY VINTAGE · KEEPSAKE · ",
+    "printsLabel": "Photos. Press Enter for the next one."
   },
   "themes": {
     "romantic": {
@@ -229,11 +291,19 @@
       "opening": "A few words, just for you",
       "ending": "With warmest wishes",
       "sample": "With admiration, and every good wish."
+    },
+    "luxury-vintage": {
+      "name": "Luxury Vintage",
+      "tagline": "An antique letter, sealed in wax",
+      "opening": "A letter kept just for you",
+      "ending": "Yours, always",
+      "sample": "Some words are meant to be kept for a lifetime."
     }
   },
   "success": {
     "banner": "This is exactly what they'll see. Give the gift with the card — they scan it and it opens.",
-    "title": "Your greeting is live"
+    "title": "Your greeting is live",
+    "kicker": "Activated"
   },
   "partner": {
     "notAdmin": "Signed in as {email}, but not an admin.",
@@ -601,7 +671,16 @@
     "title": "Digital greetings for physical gifts",
     "body": "QR Starr adds a personal message, photos, video and a voice note to flowers, cakes and gifts — revealed with a single scan.",
     "partnerCta": "Partner sign in",
-    "adminCta": "Admin"
+    "adminCta": "Admin",
+    "kicker": "QR Starr · the words that come with a gift",
+    "how": {
+      "card": "The card",
+      "cardLine": "A QR card comes with the gift",
+      "words": "The words",
+      "wordsLine": "The giver writes and adds memories",
+      "opening": "The opening",
+      "openingLine": "The recipient scans and opens it"
+    }
   },
   "batchPerformance": {
     "summary": "{distributed} distributed · {scanned} scanned · {paid} paid · {conversion} conversion · {commission} commission"

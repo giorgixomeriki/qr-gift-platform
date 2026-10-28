@@ -1,4 +1,10 @@
-import { appUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "../src/lib/env-guards";
+import {
+  appUrlProblems,
+  clientIpConfigProblems,
+  databaseUrlProblems,
+  isHostedEnvironment,
+  supabaseUrlProblems,
+} from "../src/lib/env-guards";
 
 /**
  * Deployment-safety env guards (src/lib/env-guards.ts). Pure — no database,
@@ -67,6 +73,36 @@ console.log("NEXT_PUBLIC_SUPABASE_URL");
 check("dev: local Supabase is fine", supabaseUrlProblems("http://127.0.0.1:54321", { hosted: false }).length === 0);
 check("hosted: local Supabase is refused", supabaseUrlProblems("http://127.0.0.1:54321", { hosted: true }).length === 2);
 check("hosted: a Supabase project URL is accepted", supabaseUrlProblems("https://abcd.supabase.co", { hosted: true }).length === 0);
+
+console.log("Hosted detection (any platform, not just Vercel)");
+check("Vercel (VERCEL=1) is hosted", isHostedEnvironment({ VERCEL: "1" }));
+check("Render (RENDER=true) is hosted", isHostedEnvironment({ RENDER: "true" }));
+check("any platform can opt in with APP_HOSTED=true", isHostedEnvironment({ APP_HOSTED: "true" }));
+check("a dev machine is not hosted", !isHostedEnvironment({}));
+check("look-alike values don't count", !isHostedEnvironment({ VERCEL: "0", RENDER: "false", APP_HOSTED: "1" }));
+check(
+  "on Render the database guard is active: a local database is refused",
+  databaseUrlProblems("postgresql://app_runtime:x@127.0.0.1:54322/postgres", {
+    production: true,
+    hosted: isHostedEnvironment({ RENDER: "true" }),
+  }).length === 1,
+);
+check(
+  "on Render the app-URL guard is active: http is refused",
+  appUrlProblems("http://qrapp.ge", { production: true, hosted: isHostedEnvironment({ RENDER: "true" }) }).length === 1,
+);
+
+console.log("Client IP configuration");
+const ipCfg = (o: Partial<Parameters<typeof clientIpConfigProblems>[0]>) =>
+  clientIpConfigProblems({ hosted: true, vercel: false, header: undefined, proxyCount: undefined, ...o });
+check("Render with neither setting is refused", ipCfg({}).length === 1);
+check("Render with TRUSTED_PROXY_COUNT=1 is accepted", ipCfg({ proxyCount: "1" }).length === 0);
+check("Render with CLIENT_IP_HEADER is accepted", ipCfg({ header: "true-client-ip" }).length === 0);
+check("Vercel needs neither (it overwrites X-Forwarded-For)", ipCfg({ vercel: true }).length === 0);
+check("dev needs neither", ipCfg({ hosted: false }).length === 0);
+check("TRUSTED_PROXY_COUNT=0 is refused", ipCfg({ proxyCount: "0" }).length === 1);
+check("TRUSTED_PROXY_COUNT=abc is refused", ipCfg({ proxyCount: "abc" }).length === 1);
+check("a header name with odd characters is refused", ipCfg({ header: "x-ip: evil" }).length === 1);
 
 console.log(`\n${passed} passed, ${failed} failed`);
 process.exit(failed === 0 ? 0 : 1);

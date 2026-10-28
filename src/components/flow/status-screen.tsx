@@ -1,20 +1,26 @@
 import type { ReactNode } from "react";
-import { FlowShell } from "./shell";
+import { Brand, SealedEnvelope, SigRoot } from "@/components/signature/chrome";
+import "@/components/signature/status.css";
 
 /**
  * One consistent layout for every terminal/blocked state on /g/* (not found,
- * unavailable, in progress, errors): an icon, a serif headline, one sentence,
- * and at most one action. Warm, never an error-page dead end.
+ * unavailable, in progress, errors) — in the Signature paper: a paper object
+ * (the sealed envelope for a greeting still being written, otherwise a paper
+ * disc with the state's mark), a serif headline, one sentence, an optional
+ * hint slip and at most one action. Warm, never an error-page dead end.
  */
 export function StatusScreen({
   icon,
+  envelope = false,
   title,
   body,
   hint,
   action,
   headerEnd,
 }: {
-  icon: ReactNode;
+  icon?: ReactNode;
+  /** Show the sealed envelope instead of an icon (a greeting exists but isn't ready to open). */
+  envelope?: boolean;
   title: ReactNode;
   body: ReactNode;
   hint?: ReactNode;
@@ -22,16 +28,30 @@ export function StatusScreen({
   headerEnd?: ReactNode;
 }) {
   return (
-    <FlowShell headerEnd={headerEnd}>
-      <div className="stagger flex flex-1 flex-col items-center justify-center py-16 text-center">
-        <div className="mb-8 grid size-20 place-items-center rounded-full bg-sunken text-ink-2 [&_svg]:size-8 [&_svg]:stroke-[1.5]">
-          {icon}
-        </div>
-        <h1 className="text-h1 max-w-sm">{title}</h1>
-        <p className="mt-3 max-w-sm text-body text-ink-2">{body}</p>
-        {hint && <p className="mt-6 max-w-xs rounded-md bg-sunken px-4 py-3 text-body-sm text-ink-2">{hint}</p>}
-        {action && <div className="mt-8 w-full max-w-xs">{action}</div>}
+    <SigRoot>
+      <div className="sig-page sig-status-page">
+        <header className="sig-mast">
+          <div className="sig-mast__start">
+            <Brand />
+          </div>
+          <div className="sig-mast__end">{headerEnd}</div>
+        </header>
+        <main className="sig-status-screen" data-testid="status-screen">
+          {envelope ? (
+            <div className="sig-status-screen__env">
+              <SealedEnvelope small />
+            </div>
+          ) : (
+            <div className="sig-status-screen__mark" aria-hidden>
+              {icon}
+            </div>
+          )}
+          <h1 className="sig-title">{title}</h1>
+          <p className="sig-status-screen__body">{body}</p>
+          {hint && <p className="sig-status-screen__hint">{hint}</p>}
+          {action && <div className="sig-status-screen__action">{action}</div>}
+        </main>
       </div>
-    </FlowShell>
+    </SigRoot>
   );
 }

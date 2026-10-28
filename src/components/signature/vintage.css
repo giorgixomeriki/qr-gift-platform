@@ -1,0 +1,81 @@
+/* ===========================================================================
+ * Luxury Vintage on the sender's screens: the world's own materials (Linotype
+ * vine border, Redouté rose, Paper006 fibre; licences in
+ * public/customer/LICENSES.md) dress the letter field and the envelope when
+ * the chosen world's composition is `keepsake`. Scoped by composition, so the
+ * six other worlds never match these rules, and their images are only
+ * requested once an element does.
+ * ======================================================================== */
+:is(.sigf-create, .sig-window, .reveal)[data-composition="keepsake"] {
+  --vt-rose: image-set(url(/customer/vintage/redoute-rose-720.avif) type("image/avif"), url(/customer/vintage/redoute-rose-720.webp) type("image/webp"));
+  --vt-rose-small: image-set(url(/customer/vintage/redoute-rose-seal-160.avif) type("image/avif"), url(/customer/vintage/redoute-rose-seal-160.webp) type("image/webp"));
+  --vt-vine-h: image-set(url(/customer/vintage/linotype-vine-h.avif) type("image/avif"), url(/customer/vintage/linotype-vine-h.webp) type("image/webp"));
+  --vt-fibre: image-set(url(/customer/vintage/parchment-fibre-512.avif) type("image/avif"), url(/customer/vintage/parchment-fibre-512.webp) type("image/webp"));
+  --vt-gold: linear-gradient(135deg, #8a6420 0%, #d9b878 28%, #a8823c 52%, #e8cf96 74%, #8a6420 100%);
+  --vt-parchment: #f3e7cf;
+  --vt-ink: #3b2217;
+}
+
+/* ---- Create: the letter is written on parchment under a gold vine, a rose at its foot. */
+.sigf-create[data-composition="keepsake"] .sig-letter-field {
+  overflow: hidden;
+  background:
+    var(--vt-fibre) 0 0 / 220px 220px,
+    var(--vt-parchment);
+  background-blend-mode: soft-light, normal;
+}
+.sigf-create[data-composition="keepsake"] .sig-letter-field::before {
+  left: 0;
+  right: 0;
+  width: auto;
+  height: 0.875rem;
+  background: var(--vt-gold);
+  -webkit-mask: var(--vt-vine-h) 0 0 / auto 100% repeat-x;
+  mask: var(--vt-vine-h) 0 0 / auto 100% repeat-x;
+}
+.sigf-create[data-composition="keepsake"] .sig-letter-field::after {
+  content: "";
+  position: absolute;
+  right: -0.75rem;
+  bottom: 3.25rem;
+  width: 5rem;
+  aspect-ratio: 720 / 899;
+  rotate: 8deg;
+  background: var(--vt-rose) center / contain no-repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  pointer-events: none;
+}
+.sigf-create[data-composition="keepsake"] .sig-letter-field__input {
+  position: relative;
+  z-index: 1;
+  color: var(--vt-ink);
+  font-family: "QS Vintage", "QS Serif Georgian", "Noto Serif Georgian", Georgia, serif;
+}
+.sigf-create[data-composition="keepsake"] .sig-letter-field__foot {
+  position: relative;
+  z-index: 1;
+}
+.sigf-create[data-composition="keepsake"] .sig-letter-field__head {
+  color: #7a5a2c;
+  font-family: "QS Vintage Script", "QS Serif Georgian", Georgia, serif;
+  font-size: 1.125rem;
+}
+
+/* ---- Preview window: the rose is pressed onto the envelope's pocket. */
+.sig-window[data-composition="keepsake"] .sig-env__pocket::after {
+  content: "";
+  position: absolute;
+  left: 4%;
+  bottom: -6%;
+  width: 32%;
+  aspect-ratio: 720 / 899;
+  rotate: -10deg;
+  background: var(--vt-rose) center / contain no-repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}
+.sig-window[data-composition="keepsake"] .sig-window__line {
+  font-family: "QS Vintage Script", "QS Serif Georgian", Georgia, serif;
+  font-size: 1.375rem;
+}

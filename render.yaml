@@ -1,0 +1,59 @@
+# Render Blueprint: QR Starr owner review at https://qrapp.ge, checkout disabled.
+# Procedure, env checklist and IP verification: docs/RENDER_DEPLOYMENT.md.
+#
+# Values marked `sync: false` are entered in the Render dashboard when the
+# Blueprint is first applied; they never live in this file. `generateValue`
+# makes Render create a random secret (visible to the owner in the dashboard).
+services:
+  - type: web
+    name: qr-starr
+    runtime: node
+    plan: free # $0; sleeps after 15 min idle (~1 min cold start). "starter" (~$7/mo) stays on.
+    region: frankfurt # next to Supabase eu-central-1
+    branch: feat/render-low-cost-hosting
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start # next start listens on $PORT, which Render sets
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://qrapp.ge
+
+      # Supabase (project settings → API / Database). DATABASE_URL is the
+      # rotated app_runtime transaction-pooler URL, never the postgres user.
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: greeting-media
+
+      - key: EDIT_TOKEN_SECRET
+        generateValue: true
+
+      # Checkout disabled: TEST is refused in production, so checkout is closed
+      # ("Payments open soon") and no BOG variable exists to call a bank.
+      - key: PAYMENTS_PROVIDER
+        value: TEST
+      - key: ALLOW_TEST_PAYMENTS
+        value: "false"
+      - key: CHECKOUT_ENABLED
+        value: "false"
+
+      # Verified on Render 2026-10-16 (docs/RENDER_DEPLOYMENT.md §4): Render
+      # APPENDS to a client-supplied X-Forwarded-For ("client, Cloudflare edge,
+      # Render internal"). Cloudflare sets CF-Connecting-IP and rejects
+      # requests that try to supply it (error 1000), so it is the trusted
+      # source; 3 hops is the fallback. Diagnostics stay off once verified.
+      - key: CLIENT_IP_HEADER
+        value: cf-connecting-ip
+      - key: TRUSTED_PROXY_COUNT
+        value: "3"
+      - key: CLIENT_IP_DIAGNOSTICS
+        value: "false"
+

@@ -1140,3 +1140,222 @@
     display: block;
   }
 }
+
+/* ===========================================================================
+ * Luxury Vintage — "The keepsake letter" (composition `keepsake`).
+ * An antique letter on parchment, framed in a gold vine border from
+ * Mergenthaler Linotype's 1922 border proofs (public domain), with a
+ * Redouté rose (Les Roses, 1817–24; Cleveland Museum of Art, CC0) printed
+ * into the page, sealed in wax. Fibre: ambientCG Paper006 (CC0). Type:
+ * IM Fell English (Igino Marini, OFL) with a Pinyon Script hand (OFL);
+ * Georgian in the serif worlds' Noto Serif Georgian. Licences:
+ * public/customer/LICENSES.md, public/fonts/themes/OFL-*.txt.
+ * ======================================================================== */
+@font-face {
+  font-family: "QS Vintage";
+  font-weight: 300 500;
+  font-display: fallback;
+  src: url(/fonts/themes/im-fell-english-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "QS Vintage Script";
+  font-weight: 300 500;
+  font-display: fallback;
+  src: url(/fonts/themes/pinyon-script-latin.woff2) format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+20BE, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+.tw--keepsake {
+  --parchment-fibre: image-set(url(/customer/vintage/parchment-fibre-512.avif) type("image/avif"), url(/customer/vintage/parchment-fibre-512.webp) type("image/webp"));
+  --vine-h: image-set(url(/customer/vintage/linotype-vine-h.avif) type("image/avif"), url(/customer/vintage/linotype-vine-h.webp) type("image/webp"));
+  --vine-v: image-set(url(/customer/vintage/linotype-vine-v.avif) type("image/avif"), url(/customer/vintage/linotype-vine-v.webp) type("image/webp"));
+  --gold-leaf: linear-gradient(135deg, #8a6420 0%, #d9b878 28%, #a8823c 52%, #e8cf96 74%, #8a6420 100%);
+}
+.tw--keepsake .tw__ground {
+  background: radial-gradient(110% 85% at 50% 18%, var(--w-ground) 0%, color-mix(in oklab, var(--w-ground) 45%, var(--w-ground-deep)) 55%, var(--w-ground-deep) 100%);
+}
+/* A pool of candlelight on the desk, behind the letter. */
+.tw__candle {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: 120cqw;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, color-mix(in oklab, var(--w-light) 30%, transparent), transparent);
+  pointer-events: none;
+}
+.tw--keepsake .tw__opening {
+  position: absolute;
+  left: 8cqw;
+  right: 8cqw;
+  top: 5.5cqw;
+  z-index: 1;
+  text-align: center;
+  color: var(--w-on-ground);
+  font-size: 8.6cqw;
+  line-height: 1.12;
+  font-weight: 400;
+}
+:lang(ka) .tw--keepsake .tw__opening {
+  top: 6.5cqw;
+  font-size: 6cqw;
+  line-height: 1.32;
+  font-weight: 300;
+}
+.tw--keepsake .tw__card {
+  left: 10cqw;
+  top: 24cqw;
+  width: 80cqw;
+  height: 94cqw;
+  rotate: -1.2deg;
+  border-radius: 0.4cqw;
+  box-shadow:
+    0 0.3cqw 0.5cqw rgb(var(--w-shadow) / 0.3),
+    0 4cqw 9cqw -3cqw rgb(var(--w-shadow) / 0.75);
+}
+/* Parchment: Paper006's fibres through soft-light, and age gathered at the edges. */
+.tw--keepsake .tw__card::before {
+  background: var(--parchment-fibre) 0 0 / 220px 220px;
+  opacity: 0.9;
+}
+.tw--keepsake .tw__card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: radial-gradient(120% 95% at 50% 45%, transparent 55%, rgb(140 96 52 / 0.28) 100%);
+  mix-blend-mode: multiply;
+}
+/* The gold vine frame: the Linotype border as a mask, filled with gold leaf. */
+.tw__vine {
+  position: absolute;
+  inset: 4cqw;
+  pointer-events: none;
+}
+.tw__vine i {
+  position: absolute;
+  display: block;
+  background: var(--gold-leaf);
+  filter: drop-shadow(0.08cqw 0.1cqw 0 rgb(var(--w-shadow) / 0.35));
+}
+.tw__vine i:nth-child(1),
+.tw__vine i:nth-child(3) {
+  left: 0;
+  right: 0;
+  height: 4.6cqw;
+  -webkit-mask: var(--vine-h) 0 0 / auto 100% repeat-x;
+  mask: var(--vine-h) 0 0 / auto 100% repeat-x;
+}
+.tw__vine i:nth-child(1) {
+  top: 0;
+}
+.tw__vine i:nth-child(3) {
+  bottom: 0;
+  rotate: 180deg;
+}
+.tw__vine i:nth-child(2),
+.tw__vine i:nth-child(4) {
+  top: 4.6cqw;
+  bottom: 4.6cqw;
+  width: 4.6cqw;
+  -webkit-mask: var(--vine-v) 0 0 / 100% auto repeat-y;
+  mask: var(--vine-v) 0 0 / 100% auto repeat-y;
+}
+.tw__vine i:nth-child(2) {
+  right: 0;
+}
+.tw__vine i:nth-child(4) {
+  left: 0;
+  rotate: 180deg;
+}
+/* The Redouté rose, printed into the parchment (its paper multiplies away). */
+/* Kept inside the card: the card (rotated) is its own blend group, so beyond its edge the
+   plate's paper would not multiply away. */
+.tw__rose {
+  position: absolute;
+  left: 3.5cqw;
+  bottom: 2.5cqw;
+  width: 32cqw;
+  aspect-ratio: 720 / 899;
+  rotate: -4deg;
+  background: image-set(url(/customer/vintage/redoute-rose-720.avif) type("image/avif"), url(/customer/vintage/redoute-rose-720.webp) type("image/webp")) center / contain no-repeat;
+  mix-blend-mode: multiply;
+  opacity: 0.94;
+  pointer-events: none;
+}
+.tw--keepsake .tw__message {
+  position: absolute;
+  left: 13cqw;
+  right: 12cqw;
+  top: 15cqw;
+  z-index: 1;
+  color: var(--w-ink);
+  font-size: 5cqw;
+  line-height: 1.5;
+  font-weight: 400;
+  text-wrap: pretty;
+}
+:lang(ka) .tw--keepsake .tw__message {
+  font-size: 4.3cqw;
+  line-height: 1.62;
+  font-weight: 360;
+}
+.tw--keepsake .tw__mark {
+  left: calc(50% - 1.5cqw);
+  top: 9.6cqw;
+  width: 3cqw;
+  color: var(--w-accent);
+}
+/* QR Starr's wax seal, pressed at the letter's foot. */
+.tw__wax {
+  position: absolute;
+  right: 6cqw;
+  bottom: 5cqw;
+  z-index: 2;
+  width: 17cqw;
+  aspect-ratio: 1;
+  rotate: 10deg;
+  filter: drop-shadow(0 0.5cqw 0.6cqw rgb(var(--w-shadow) / 0.45));
+}
+.tw__wax svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* Far from the viewport (and in selector tiles) the rose is the 3 KB seal crop, not the full plate. */
+.tw:not([data-near]) .tw__rose {
+  background-image: image-set(url(/customer/vintage/redoute-rose-seal-160.avif) type("image/avif"), url(/customer/vintage/redoute-rose-seal-160.webp) type("image/webp"));
+}
+.tw:not([data-near]) .tw__vine i {
+  -webkit-mask-image: none;
+  mask-image: none;
+  background: var(--w-accent);
+  opacity: 0.35;
+}
+
+/* Selector seal: the parchment with the rose. */
+.tw-seal--keepsake {
+  background: radial-gradient(110% 90% at 50% 20%, var(--w-ground), var(--w-ground-deep));
+}
+.tw-seal--keepsake .tw-seal__card {
+  inset: 14% 18%;
+  overflow: hidden;
+  background: var(--w-card);
+  box-shadow: 0 1px 2px rgb(var(--w-shadow) / 0.35), inset 0 0 0 2px var(--w-accent);
+}
+.tw-seal--keepsake .tw-seal__rose {
+  left: -8%;
+  bottom: -10%;
+  width: 90%;
+  aspect-ratio: 160 / 135;
+  background: image-set(url(/customer/vintage/redoute-rose-seal-160.avif) type("image/avif"), url(/customer/vintage/redoute-rose-seal-160.webp) type("image/webp")) center / contain no-repeat;
+  mix-blend-mode: multiply;
+}
+
+/* Finale — keepsake seal: the candle burns a little lower; the seal is set. */
+.tw[data-finale="keepsake-seal"]:not([data-scene="finale-pending"]) .tw__candle {
+  opacity: 0.7;
+}
