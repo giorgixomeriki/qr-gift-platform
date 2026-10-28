@@ -2,7 +2,15 @@
 
 Every image, ornament, texture and font the redesigned home page uses (`src/components/site/home`). Last updated 2026-10-22 (luxury-vintage pass). Re-check a source before reusing an asset elsewhere.
 
-## Photographs: Unsplash (24), in `public/site/photos/`
+## Hero still life: owner-supplied, in `public/site/photos/`
+
+| File | Source | Rights | Subject | Processing |
+|---|---|---|---|---|
+| `hero-roses` | `QR_Starr_Dark_Burgundy_Roses.png`, supplied and approved by the owner on 2026-10-29 (1536×1024 PNG, sha256 `1d4dfcdc15b6dd933698d4f0a8d3d31292643480deea83a4f5bdd1bf2adaffed`) | AI-generated still life commissioned by the owner; not stock, no third-party photographer. Usage rights follow the generator's terms as accepted by the owner | Dark burgundy roses with eucalyptus in champagne paper, wine satin ribbon | Cropped to the tall hero frame (x 470–1250, full height → 780×1024), no grade (approved as is), AVIF q50 / WebP q76 at 560 and 780 wide (29–44 KB AVIF) |
+
+Replaced `hero-tulips` (Unsplash 6-12MRO2ru0, Slava) in the hero; those files were removed.
+
+## Photographs: Unsplash (23), in `public/site/photos/`
 
 Each photo page was checked one by one and reads "Free to use under the Unsplash License" (https://unsplash.com/license); none is Unsplash+. Commercial use is allowed and attribution is not required (credited here anyway).
 
@@ -15,7 +23,6 @@ Processing: downloaded from each photo's own `images.unsplash.com` file; then a 
 
 | File | Source | Photographer | Subject | Used for |
 |---|---|---|---|---|
-| `hero-tulips` | https://unsplash.com/photos/6-12MRO2ru0 | Slava (@slava27) | flower petals on brown paper bag | Hero photograph |
 | `gift-hands-cafe` | https://unsplash.com/photos/FDTlWHmwIz8 | Vitaly Gariev (@silverkblack) | hands presenting a gift box in a cafe | Video tile poster; keep-screen video |
 | `gift-parcel` | https://unsplash.com/photos/zYPixh1jN9w | Liana S (@cherstve_pechivo) | hand holding a small paper package | Occasions: Just because |
 | `occasion-birthday` | https://unsplash.com/photos/d8s13D29QiE | Aneta Pawlik (@anetakpawlik) | hand lighting candles on a birthday cake | Occasions: Birthdays |

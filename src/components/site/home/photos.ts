@@ -5,7 +5,7 @@
  * given). Do not edit by hand.
  */
 export const PHOTOS = {
-  "hero-tulips": { w: 2400, h: 3020, widths: [560, 900, 1400] },
+  "hero-roses": { w: 780, h: 1024, widths: [560, 780] },
   "gift-hands-cafe": { w: 2400, h: 1350, widths: [640, 1000, 1600] },
   "gift-parcel": { w: 2400, h: 1644, widths: [560, 900] },
   "occasion-birthday": { w: 2400, h: 2537, widths: [480, 720, 1000] },

@@ -8,7 +8,7 @@ import { HeroStage } from "./motion";
 
 /**
  * The opening view, composed like a campaign: a photograph of a real gift
- * (tulips in kraft paper), our QR card tucked beside it, and the phone that
+ * (dark burgundy roses in champagne paper), our QR card tucked beside it, and the phone that
  * card opens, breaking out of the photograph's frame. One primary action;
  * partners get a quiet link. On phones the order is words, action, the note
  * for someone holding a card, then the picture.
@@ -44,7 +44,7 @@ export async function Hero() {
         <HeroStage
           label={`${text("hero.photoAlt")}. ${text("hero.plateAlt")}`}
           plate={<Photo name="redoute-josephine" alt="" sizes="(min-width: 62rem) 18vw, 40vw" />}
-          photo={<Photo name="hero-tulips" alt="" priority sizes="(min-width: 62rem) 34vw, 78vw" position="40% 40%" />}
+          photo={<Photo name="hero-roses" alt="" priority sizes="(min-width: 62rem) 34vw, 78vw" position="56% 50%" />}
           card={<QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} />}
           phone={
             <PhoneShell>
