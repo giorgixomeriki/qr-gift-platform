@@ -14,6 +14,11 @@ export type SiteContext = {
   facts: Record<FactToken, string>;
   /** Undefined when the page doesn't show a price; null when no valid price is configured. */
   price: StandardPrice | null | undefined;
+  /**
+   * Internal review mode (SITE_REVIEW_MARKERS=1 or the demo merchant profile, never on the public site): pages show their review and decision
+   * notes, the draft banner and "not yet published" markers. Off, a page shows only what is confirmed and set.
+   */
+  review: boolean;
   labels: {
     pending: string;
     pendingHint: string;
@@ -32,6 +37,8 @@ export async function getSiteContext({ withPrice = false }: { withPrice?: boolea
     merchant: getMerchantInfo(),
     facts: getProductFacts(),
     price: withPrice ? await getStandardPrice() : undefined,
+    // The fictional demo profile is an internal preview too (refused on production, lib/merchant/info.ts).
+    review: process.env.SITE_REVIEW_MARKERS === "1" || getMerchantInfo().mode === "demo",
     labels: {
       pending: t("status.pending"),
       pendingHint: t("status.pendingHint"),
