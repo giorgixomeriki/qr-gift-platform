@@ -251,7 +251,17 @@ test.describe("One complete, readable letter — reduced motion and keyboard", (
     await more.focus();
     await page.keyboard.press("Enter");
     await expect.poll(() => letter.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
-    // The sheet itself scrolls by keyboard to its end, where the control leaves.
+    // Pressing it until the end: the control leaves and focus lands on the letter, not the top of the page.
+    for (let i = 0; i < 10 && (await more.count()) > 0; i++) {
+      await page.keyboard.press("Enter");
+      await page.waitForTimeout(400);
+    }
+    await expect(more).toHaveCount(0);
+    await expect(letter).toBeFocused();
+    // The sheet itself scrolls by keyboard: back to the top and down to the end again.
+    await page.keyboard.press("Home");
+    await expect.poll(() => letter.evaluate((el) => el.scrollTop)).toBe(0);
+    await expect(more).toBeVisible();
     await letter.focus();
     await page.keyboard.press("End");
     await expect.poll(() => letter.evaluate((el) => el.scrollHeight - el.clientHeight - el.scrollTop)).toBeLessThanOrEqual(8);

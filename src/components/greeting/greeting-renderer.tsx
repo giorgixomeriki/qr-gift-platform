@@ -425,11 +425,14 @@ function reducedMotion() {
  * than the screen it scrolls inside its sheet (touch, wheel, keyboard — the
  * sheet is focusable), and a "continue reading" control sits at its foot until
  * the end is reached: visible, labelled and operable, not a hint only a
- * mouse would find. It moves the reading on by most of a page.
+ * mouse would find. It moves the reading on by most of a page; when the end
+ * is reached and the control leaves, focus moves to the letter, so a keyboard
+ * user is never dropped at the top of the page.
  */
 function ReadingLetter({ message, label, moreLabel }: { message: string; label: string; moreLabel: string }) {
   const id = useId();
   const scrollRef = useRef<HTMLElement>(null);
+  const moreFocused = useRef(false);
   const [more, setMore] = useState(false);
   useEffect(() => {
     const el = scrollRef.current;
@@ -445,6 +448,12 @@ function ReadingLetter({ message, label, moreLabel }: { message: string; label: 
       ro.disconnect();
     };
   }, [message]);
+  // The control unmounts at the end of the letter; a removed element fires no blur, so the flag is still set.
+  useEffect(() => {
+    if (more || !moreFocused.current) return;
+    moreFocused.current = false;
+    scrollRef.current?.focus({ preventScroll: true });
+  }, [more]);
   return (
     <div className="reveal__letter" data-more={more || undefined}>
       <article ref={scrollRef} id={id} className="reveal__letter-scroll" tabIndex={0} aria-label={label} data-testid="greeting-letter">
@@ -456,6 +465,8 @@ function ReadingLetter({ message, label, moreLabel }: { message: string; label: 
           type="button"
           className="reveal__letter-more"
           aria-controls={id}
+          onFocus={() => (moreFocused.current = true)}
+          onBlur={() => (moreFocused.current = false)}
           onClick={() => {
             const el = scrollRef.current;
             if (el) el.scrollBy({ top: el.clientHeight * 0.8, behavior: reducedMotion() ? "auto" : "smooth" });
