@@ -10,9 +10,11 @@ import type { MerchantToken } from "@/lib/merchant/info";
  *   decision  something only the merchant can decide (ref = README D-number
  *             or BOG question, e.g. "D1", "C4")
  *
- * Both are rendered visibly, and any of them on a page marks the whole page
- * as a draft (components/site/draft-banner.tsx). They disappear only by
- * editing the copy after the review or decision, never by a flag.
+ * Both are internal: they are shown, with the draft banner, only in review
+ * mode (SITE_REVIEW_MARKERS=1). The public page leaves them out
+ * (publishableSections) and a policy states "Not yet in effect" until it is
+ * published with an effective date. They are resolved by editing the copy
+ * after the review or decision.
  */
 
 const blockSchema = z.discriminatedUnion("type", [
@@ -70,4 +72,38 @@ export function analyseSections(sections: Section[], extraStrings: string[] = []
     links: [...new Set(inline.flatMap(linksIn))],
     inline,
   };
+}
+
+/**
+ * The part of a page that can be published as it stands (audit UX-01): review and decision notes are internal
+ * and never shown; a paragraph, callout, list item or table row that names a merchant detail which is not set is
+ * left out rather than shown with a placeholder — nothing is invented, and nothing unfinished is presented. A
+ * section left without blocks is left out. Missing details are reported to the owner instead
+ * (`npm run ops:check-merchant-info`).
+ */
+export function publishableSections(sections: Section[], isSet: (token: MerchantToken) => boolean): Section[] {
+  const ok = (text: string) => merchantTokensIn(parseInline(text)).every(isSet);
+  const keep = (block: Block): Block | null => {
+    switch (block.type) {
+      case "review":
+      case "decision":
+        return null;
+      case "p":
+        return ok(block.text) ? block : null;
+      case "callout":
+        return ok(block.text) && (!block.title || ok(block.title)) ? block : null;
+      case "list": {
+        const items = block.items.filter(ok);
+        return items.length ? { ...block, items } : null;
+      }
+      case "table": {
+        const rows = block.rows.filter((r) => r.every(ok));
+        return rows.length && block.head.every(ok) ? { ...block, rows } : null;
+      }
+    }
+  };
+  return sections.flatMap((s) => {
+    const blocks = s.blocks.map(keep).filter((b): b is Block => b !== null);
+    return blocks.length ? [{ ...s, blocks }] : [];
+  });
 }
