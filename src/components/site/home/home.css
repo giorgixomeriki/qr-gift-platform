@@ -405,78 +405,44 @@
   color: var(--hm-wine-2);
 }
 
-/* The stage, composed like a campaign photograph: the gift (a licensed
-   photo) in a tall frame, our card tucked against it, the phone breaking
-   out of the frame. Measured in container units, so one composition serves
-   every width. */
+/* The stage: the gift as it arrives (the bouquet, our card tied to it, the
+   phone showing the greeting), cut out of its photograph with its own
+   contact shadow so it sits straight on the page, no frame. The source
+   crops the bouquet at its right edge, so the stage runs to the viewport's
+   right edge and that cut reads as the scene continuing past the screen. */
+.hm-hero {
+  overflow-x: clip;
+}
 .hm-hstage {
   position: relative;
-  width: 100%;
-  max-width: 30rem;
-  justify-self: center;
-  aspect-ratio: 1 / 1.1;
-  container-type: inline-size;
+  display: flex;
+  justify-content: flex-end;
+  margin-right: calc(-1 * var(--hm-gutter));
 }
 @media (min-width: 62rem) {
   .hm-hstage {
-    max-width: none;
+    margin-right: calc(-1 * max(var(--hm-gutter), (100vw - var(--hm-max)) / 2));
   }
 }
 .hm-hstage__photo {
-  position: absolute;
-  left: 8cqw;
-  top: 0;
-  width: 70cqw;
-  height: 100%;
-  border-radius: 1.5rem;
-  overflow: hidden;
-  box-shadow: var(--hm-shadow-object);
-  transform-origin: 50% 30%;
+  position: relative;
+  width: min(100%, 40rem);
 }
-.hm-hstage__photo .hm-photo,
-.hm-hstage__photo img {
-  width: 100%;
-  height: 100%;
+@media (min-width: 62rem) {
+  .hm-hstage__photo {
+    width: min(100%, 46rem);
+  }
 }
-.hm-hstage__photo::after {
-  /* a breath of the page's warmth over the photograph's lower edge */
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 55%, rgb(46 15 25 / 0.18));
-  pointer-events: none;
+.hm-hstage__photo .hm-photo {
+  background: none;
 }
-.hm-hstage__card {
-  position: absolute;
-  z-index: 2;
-  left: 0;
-  bottom: 9cqw;
-  width: 30cqw;
-}
-.hm-hstage__card .hm-qrcard {
-  transform: rotate(-7deg);
-  font-size: clamp(0.42rem, 2cqw, 0.8rem);
-}
-.hm-hstage__phone {
-  position: absolute;
-  z-index: 3;
-  right: 0;
-  bottom: -2cqw;
-  width: 37cqw;
-}
-.hm-hstage__phone .hm-iphone {
-  transform: rotate(4deg);
+.hm-hstage__photo .hm-photo img {
+  height: auto;
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .hm-hstage__photo {
-    animation: hm-photo-in 1100ms var(--ease-out) both;
-  }
-  .hm-hstage__card .hm-qrcard {
-    animation: hm-card-land 900ms var(--ease-out) 260ms both;
-  }
-  .hm-hstage__phone .hm-iphone {
-    animation: hm-phone-rise 1000ms var(--ease-out) 380ms both;
+    animation: hm-lift 900ms var(--ease-out) both;
   }
 
   /* Movement only, no fade: the headline and lead are the page's largest
@@ -494,40 +460,12 @@
     animation-delay: 210ms;
   }
 }
-@keyframes hm-photo-in {
-  from {
-    clip-path: inset(8% 6% 8% 6% round 1.5rem);
-  }
-  to {
-    clip-path: inset(0 round 1.5rem);
-  }
-}
 @keyframes hm-lift {
   from {
     transform: translateY(14px);
   }
   to {
     transform: none;
-  }
-}
-@keyframes hm-card-land {
-  from {
-    opacity: 0;
-    transform: translateY(18px) rotate(-12deg);
-  }
-  to {
-    opacity: 1;
-    transform: rotate(-7deg);
-  }
-}
-@keyframes hm-phone-rise {
-  from {
-    opacity: 0;
-    transform: translateY(32px) rotate(7deg);
-  }
-  to {
-    opacity: 1;
-    transform: rotate(4deg);
   }
 }
 .hm-hero__actions {
@@ -1994,11 +1932,6 @@
   right: -0.75rem;
   transform: scaleX(-1);
 }
-.hm-gilt--photo {
-  top: -1.1rem;
-  left: calc(78cqw - 3.6rem);
-  transform: scaleX(-1);
-}
 
 .hm-divider {
   display: block;
@@ -2011,24 +1944,6 @@
   opacity: 0.85;
 }
 
-/* Hero: a Redouté plate laid under the photograph, like a print on the table. */
-.hm-hstage__plate {
-  position: absolute;
-  z-index: 0;
-  left: -3cqw;
-  top: -5cqw;
-  width: 33cqw;
-  padding: 1.1cqw;
-  background: #fbf7f0;
-  box-shadow: var(--hm-shadow-soft);
-  rotate: -6deg;
-}
-.hm-hstage__plate .hm-photo {
-  aspect-ratio: 2699 / 3680;
-}
-.hm-hstage__photo {
-  z-index: 1;
-}
 
 /* ---------------------------------------------------- paper to screen */
 .hm-transform {
@@ -2953,7 +2868,6 @@ html.hm-dialog-open {
 .hm-step__frame,
 .hm-occ,
 .hm-focus__card,
-.hm-hstage__photo,
 .hm-demo-stage__photo,
 .hm-pricing__photo,
 .hm-ds__card,
@@ -3215,34 +3129,6 @@ html.hm-dialog-open {
   to {
     clip-path: inset(0 0 0 0);
     opacity: 1;
-  }
-}
-.hm-hstage__photo::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-  background: linear-gradient(105deg, transparent 35%, rgb(255 236 214 / 0.28) 50%, transparent 65%);
-  transform: translateX(-120%);
-  opacity: 0;
-}
-@media (prefers-reduced-motion: no-preference) {
-  .hm-hstage__photo::before {
-    animation: hm-light 2400ms var(--ease-paper) 700ms 1 both;
-  }
-}
-@keyframes hm-light {
-  0% {
-    transform: translateX(-120%);
-    opacity: 0;
-  }
-  30% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateX(120%);
-    opacity: 0;
   }
 }
 

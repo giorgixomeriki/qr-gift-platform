@@ -90,7 +90,7 @@ The minimal CSS-only illustrations were replaced by photographic storytelling. T
 
 | Section | Before | Now |
 |---|---|---|
-| Hero | CSS card + CSS phone + ribbon | Campaign composition: dark burgundy roses in champagne paper (owner-supplied still life, 2026-10-29; was tulips in kraft paper), QR Starr card, Magic UI iPhone breaking the frame, two badges; scroll parallax (Motion). One primary CTA, partners as a quiet link |
+| Hero | CSS card + CSS phone + ribbon | One owner-supplied photograph of the gift (roses, QR Starr card tied on, phone showing the greeting), cut out with its contact shadow and set frameless on the ivory, bleeding off the right edge (2026-10-29; replaced the layered photo + card + phone composition). One primary CTA, partners as a quiet link |
 | Moments (new) | — | Magic UI Marquee ribbon of six gifting photographs as tilted prints; pauses on hover/focus, static under reduced motion |
 | How it works | Text columns | Three photographs telling the journey (florist → product mockup → recipient), numerals over the photo, BlurFade reveals; swipeable on phones |
 | After the scan | CSS phone | Magic UI iPhone; scan screen shows the card over a real (blurred) table; the letter writes itself in (Motion Primitives TextEffect); a recipient photo behind the phone on desktop |

@@ -860,11 +860,10 @@
       "cardLine": "Scan me",
       "cardHint": "A greeting is waiting inside",
       "recipientHint": "Received a QR Starr card? Scan its code with your phone’s camera, and your greeting opens on its own.",
-      "photoAlt": "Dark burgundy roses wrapped in champagne paper, with a QR Starr card tucked beside them",
+      "photoAlt": "Dark burgundy roses wrapped in champagne paper with a wine ribbon, a QR Starr card tied to the bouquet, and a phone showing the greeting it opens: a letter, photos and a voice note",
       "badgeScan": "Opens in the phone’s browser",
       "badgeVoice": "Voice note",
-      "secondaryLink": "For florists and gift shops",
-      "plateAlt": "A Redouté rose engraving, 1817–24, laid beneath a bouquet of roses"
+      "secondaryLink": "For florists and gift shops"
     },
     "demo": {
       "eyebrow": "After the scan",

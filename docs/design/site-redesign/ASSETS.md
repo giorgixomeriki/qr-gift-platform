@@ -2,13 +2,19 @@
 
 Every image, ornament, texture and font the redesigned home page uses (`src/components/site/home`). Last updated 2026-10-22 (luxury-vintage pass). Re-check a source before reusing an asset elsewhere.
 
-## Hero still life: owner-supplied, in `public/site/photos/`
+## Hero image: owner-supplied, in `public/site/photos/`
 
 | File | Source | Rights | Subject | Processing |
 |---|---|---|---|---|
-| `hero-roses` | `QR_Starr_Dark_Burgundy_Roses.png`, supplied and approved by the owner on 2026-10-29 (1536×1024 PNG, sha256 `1d4dfcdc15b6dd933698d4f0a8d3d31292643480deea83a4f5bdd1bf2adaffed`) | AI-generated still life commissioned by the owner; not stock, no third-party photographer. Usage rights follow the generator's terms as accepted by the owner | Dark burgundy roses with eucalyptus in champagne paper, wine satin ribbon | Cropped to the tall hero frame (x 470–1250, full height → 780×1024), no grade (approved as is), AVIF q50 / WebP q76 at 560 and 780 wide (29–44 KB AVIF) |
+| `hero-bouquet` | `Burgundy Roses and Digital Love Note.png`, the owner's final approved hero image (2026-10-29), kept as `docs/design/site-redesign/sources/hero-love-note.png` (1312×1199 PNG, sha256 `d2eff3642d43780a5b68…`) | AI-generated, commissioned by the owner; not stock, no third-party photographer. Usage rights follow the generator's terms as accepted by the owner | Dark burgundy roses in champagne paper with a wine ribbon, a QR Starr card tied on with string, a phone showing a greeting (letter, couple photos, voice note) | Georgian text corrected (below), then cut out of its background: Apple Vision foreground mask (`sources/hero-lift.swift`), then `sources/hero-cutout.py` tightens and decontaminates the edge, keeps a contact shadow from the photo's own table darkening plus a soft silhouette occlusion, and fades the ribbon where the source frame cuts it. The master is `sources/hero-bouquet-cutout.png` (RGBA 1247×1194, trimmed). The pixels are not regraded. AVIF q54 with alpha / WebP q80 (alpha q80) at 640, 960 and 1247 wide (45–92 KB AVIF) |
 
-Replaced `hero-tulips` (Unsplash 6-12MRO2ru0, Slava) in the hero; those files were removed.
+The QR code and phone screen in this image are painted pixels, not working UI, and the code has not been verified as scannable; nothing uses it.
+
+Georgian correction (owner-approved 2026-10-29): the AI-rendered Georgian was misspelled, so `sources/hero-fix-georgian.py` erases those lines and re-sets them in the site's Google Sans Georgian (SIL OFL, `public/fonts/OFL-googlesans.txt`) at the original angle, size and colour. The card now reads "შენი მილოცვა გელოდება" and the phone note "ყველა ჩვეულებრივი / დღე შენთან ერთად / უფრო ლამაზია.". All three message lines are re-set; the original third line was also misspelled (roughly "ლაშაშია"). The period comes from the Latin cut of the same family, because the Georgian subset has no ".". It also redraws the note's two faint ruled lines (measured from the original), only where they were missing. Only pixels inside the two text areas change. The result is `sources/hero-love-note-corrected.png`, and the cutout is made from it with the same mask.
+
+The bouquet runs off the source's right edge, so the hero places that edge against the viewport's right edge.
+
+It replaces the layered hero (photo, Redouté plate, CSS card and CSS phone). Before it: `hero-roses` (an owner-supplied rose still life, commit a049c84), and before that `hero-tulips` (Unsplash 6-12MRO2ru0, Slava). Both sets of files were removed.
 
 ## Photographs: Unsplash (23), in `public/site/photos/`
 
