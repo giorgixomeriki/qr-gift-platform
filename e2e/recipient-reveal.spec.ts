@@ -3,8 +3,8 @@ import { createAvailableQr } from "./fixtures";
 
 /**
  * The reveal is told inside the chosen world (GreetingRenderer): sealed →
- * the world's scene with the sender's message on its card → (a long message)
- * the whole letter in the world's paper. Driven through Preview, which runs
+ * the world's scene with the sender's message on its card, or (a long
+ * message) the whole letter in the world's paper from the beat's first frame. Driven through Preview, which runs
  * the same renderer the recipient gets (greeting-flow.spec.ts covers the
  * activated recipient page itself). Behaviour only, no pixels.
  */
@@ -172,13 +172,15 @@ test.describe("Recipient reveal", () => {
     await expect(beat.locator(".sr-only")).toHaveText(SHORT);
   });
 
-  test("a message longer than the card arrives as a letter once the scene is at rest", async ({ page }) => {
+  test("a message longer than the card is one whole letter from the first frame of the beat", async ({ page }) => {
     await openPreview(page, "birthday", LONG);
     await page.getByTestId("greeting-tap-to-open").click();
     const beat = page.getByTestId("greeting-message-beat");
-    await expect(beat.locator(".tw")).toHaveAttribute("data-overflow", "");
+    // The card steps aside for the letter: never a clipped copy behind it (one-letter.spec.ts covers this in depth).
+    await expect(beat.locator(".tw")).toHaveAttribute("data-letter", "");
+    await expect(beat.locator(".tw")).not.toHaveAttribute("data-overflow", /.*/);
     const letter = page.getByTestId("greeting-letter");
-    await expect(letter).toBeVisible({ timeout: 12_000 });
+    await expect(letter).toBeVisible({ timeout: 2_500 });
     await expect(letter).toContainText("With all my love, Giorgi");
     await page.getByTestId("greeting-continue").click();
     await expect(page.getByTestId("greeting-ending-beat")).toBeVisible();

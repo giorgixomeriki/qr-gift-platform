@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties } from "react";
 import { preload } from "react-dom";
 import { ChevronDown, ChevronLeft, RotateCcw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
@@ -9,7 +9,7 @@ import { ThemeWorld } from "@/components/themes/theme-world";
 import { Spark } from "@/components/ui/logo";
 import { DEFAULT_TEMPLATE_ID, getTemplate, restAssets } from "@/lib/templates/catalog";
 import { roomVars } from "@/lib/templates/room";
-import { ASSETS, COMPOSITIONS, ROOM_TEXTURE_ASSETS } from "@/lib/templates/vocabulary";
+import { ASSETS, ROOM_TEXTURE_ASSETS } from "@/lib/templates/vocabulary";
 import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
 import { tick } from "@/lib/client/haptics";
 import { useChromeTint } from "@/lib/client/use-chrome-tint";
@@ -41,8 +41,6 @@ type Beat =
  */
 const ENVELOPE_OPEN_MS = 950;
 const ENVELOPE_OPEN_REDUCED_MS = 180;
-/** If a scene never reports rest (a stalled runtime), the letter still arrives this long after the scene should have ended. */
-const REST_GRACE_MS = 1800;
 /**
  * A beat ignores Continue/Previous for this long after it arrives. The Open
  * button and Continue share one spot under the thumb: without this, the
@@ -67,14 +65,17 @@ const FINALE_CAP_MS = 5200;
  *   a seal in the world's accent). Opening it plays the world's signature
  *   scene with the sender's own message on the card.
  * - **Message:** a message that fits the card is read there. A longer one
- *   (up to 600 characters) keeps its beginning on the card, and once the
- *   scene comes to rest the whole letter rises in the world's paper, ink and
- *   type.
+ *   (up to 600 characters) is one whole letter from the first frame of the
+ *   beat: it rises in the world's paper, ink and type while the world's scene
+ *   plays around it, and the card and headline step aside (never a clipped or
+ *   faded copy of the words behind it). A letter taller than the screen
+ *   scrolls, with a visible "continue reading" control until its end.
  * - **Photos, video, voice:** one beat each, framed as the composition
  *   frames media (`mediaFrame`: vellum mount, cut-paper slip, deckle mount,
  *   full bleed, inset hairline, plain).
- * - **Ending:** the world returns, the sender's words still on its card, and
- *   closes with its own **finale** (the template's `finale`: evening falls,
+ * - **Ending:** the world returns — the sender's words on its card when they
+ *   fit, otherwise the card sealed with the world's mark (the whole letter is
+ *   in the closing below, never a clipped copy) — and closes with its own **finale** (the template's `finale`: evening falls,
  *   paper encore, vellum close, afterglow, gallery doors, full stop), the
  *   template's closing line set in the world's headline. Then replay.
  *
@@ -126,7 +127,6 @@ export function GreetingRenderer({
   const locale = useLocale();
   const template = (themeVersion !== undefined && getTemplate(themeKey, themeVersion)) || getTemplate(themeKey) || getTemplate(DEFAULT_TEMPLATE_ID)!;
   const world = getThemeWorld(template.id, template.version);
-  const composition = COMPOSITIONS[world.composition];
 
   const beats = useMemo<Beat[]>(() => {
     const list: Beat[] = [{ kind: "opening" }];
@@ -142,9 +142,13 @@ export function GreetingRenderer({
   const [pressing, setPressing] = useState(false);
   /** Bumped each time the greeting is opened, so the world's scene plays again on replay. */
   const [runId, setRunId] = useState(0);
-  /** The message does not fit the card: it is presented as a letter once the world is at rest. */
-  const [long, setLong] = useState(false);
-  const [atRest, setAtRest] = useState(false);
+  /**
+   * The message does not fit the card, so it is presented as a letter. Measured
+   * before the beat's first paint and kept for that message: once a letter, it
+   * never turns back into a card (no swap of the words in front of the reader).
+   */
+  const [longMessage, setLongMessage] = useState<string | null>(null);
+  const long = !!content.message && longMessage === content.message;
   /** The ending's finale has come to rest: only then do its controls (replay, the sender's Activate) arrive. */
   const [endingRest, setEndingRest] = useState(false);
   const beat = beats[beatIndex] ?? beats[0]!;
@@ -176,7 +180,6 @@ export function GreetingRenderer({
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     window.setTimeout(() => {
       setPressing(false);
-      setAtRest(false);
       setRunId((n) => n + 1);
       beatAtRef.current = performance.now();
       setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
@@ -184,7 +187,6 @@ export function GreetingRenderer({
   }
   function restart() {
     playedRef.current = new Set();
-    setAtRest(false);
     setBeatIndex(0);
   }
   function notifyPlayed(type: "video" | "audio") {
@@ -225,14 +227,6 @@ export function GreetingRenderer({
 
   // While the world is sealed, fetch the scene runtime so opening it starts at once.
   useEffect(() => prefetchMotion(), []);
-
-  // Safety: the letter must arrive even if a scene never reports rest.
-  const onMessage = beat.kind === "message";
-  useEffect(() => {
-    if (!onMessage || atRest) return;
-    const timer = window.setTimeout(() => setAtRest(true), composition.sceneMs + REST_GRACE_MS);
-    return () => window.clearTimeout(timer);
-  }, [onMessage, atRest, runId, composition.sceneMs]);
 
   // The world's rest-state assets. The room's texture and the paper tooth paint at once (the
   // envelope lies on them), so they are preloaded. The world's own artwork only paints once the
@@ -306,27 +300,20 @@ export function GreetingRenderer({
         )}
 
         {beat.kind === "message" && content.message && (
-          <div key={`message-${runId}`} className="reveal__frame" data-testid="greeting-message-beat" data-reading={(long && atRest) || undefined}>
+          <div key={`message-${runId}`} className="reveal__frame" data-testid="greeting-message-beat" data-reading={long || undefined}>
             <ThemeWorld
               themeKey={template.id}
               version={template.version}
               opening={openingLine}
               message={content.message}
               active
-              onFit={(fits) => setLong(!fits)}
-              onRest={() => setAtRest(true)}
+              overflow="letter"
+              onFit={(fits) => {
+                if (!fits) setLongMessage(content.message);
+              }}
               className="reveal__world"
             />
-            {long ? (
-              atRest && (
-                <article className="reveal__letter" tabIndex={0} aria-label={t("letterLabel")} data-testid="greeting-letter">
-                  <Spark className="reveal__letter-mark" />
-                  <p>{content.message}</p>
-                </article>
-              )
-            ) : (
-              <p className="sr-only">{content.message}</p>
-            )}
+            {long ? <ReadingLetter message={content.message} label={t("letterLabel")} moreLabel={t("continueReading")} /> : <p className="sr-only">{content.message}</p>}
           </div>
         )}
 
@@ -364,7 +351,7 @@ export function GreetingRenderer({
                   finale={template.spec.finale}
                   active
                   onRest={() => setEndingRest(true)}
-                  fit
+                  overflow="signoff"
                   className="reveal__world"
                 />
                 {endingLine && <p className="sr-only">{endingLine}</p>}
@@ -431,6 +418,56 @@ export function GreetingRenderer({
 
 function reducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+/**
+ * The whole letter, in the world's paper, ink and type. When it is taller
+ * than the screen it scrolls inside its sheet (touch, wheel, keyboard — the
+ * sheet is focusable), and a "continue reading" control sits at its foot until
+ * the end is reached: visible, labelled and operable, not a hint only a
+ * mouse would find. It moves the reading on by most of a page.
+ */
+function ReadingLetter({ message, label, moreLabel }: { message: string; label: string; moreLabel: string }) {
+  const id = useId();
+  const scrollRef = useRef<HTMLElement>(null);
+  const [more, setMore] = useState(false);
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const measure = () => setMore(el.scrollHeight - el.clientHeight - el.scrollTop > 8);
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    void document.fonts?.ready.then(measure);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro.disconnect();
+    };
+  }, [message]);
+  return (
+    <div className="reveal__letter" data-more={more || undefined}>
+      <article ref={scrollRef} id={id} className="reveal__letter-scroll" tabIndex={0} aria-label={label} data-testid="greeting-letter">
+        <Spark className="reveal__letter-mark" />
+        <p>{message}</p>
+      </article>
+      {more && (
+        <button
+          type="button"
+          className="reveal__letter-more"
+          aria-controls={id}
+          onClick={() => {
+            const el = scrollRef.current;
+            if (el) el.scrollBy({ top: el.clientHeight * 0.8, behavior: reducedMotion() ? "auto" : "smooth" });
+          }}
+          data-testid="greeting-letter-more"
+        >
+          {moreLabel}
+          <ChevronDown className="size-4" aria-hidden />
+        </button>
+      )}
+    </div>
+  );
 }
 
 /** A photo or video, framed the way the world frames media (reveal.css, [data-frame]). */

@@ -1046,18 +1046,60 @@
 .tw[data-sealed] .tw__card > * {
   visibility: hidden;
 }
-/* A sender's own message keeps its line breaks. */
+/* A sender's own message keeps its line breaks, and a long unbroken string
+   wraps on the card (so it is measured, and never runs off the side). */
 .tw__message {
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
-/* A message longer than the card: the card keeps its beginning, fading out
-   at the foot; the reveal then presents the whole letter. */
+/* A message longer than the card, in a selector or the composer: the card
+   keeps its beginning, fading out at the foot. */
 .tw[data-overflow] .tw__message {
   max-height: var(--msg-max);
   overflow: hidden;
   text-wrap: pretty;
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 2.6em), transparent);
+}
+/* The reveal reading a letter longer than the card: the world keeps its room
+   and artwork, and its card and headline step aside for the letter, so no
+   clipped or faded copy of the words ever sits behind it. (!important: the
+   scene animates these elements with inline styles.) */
+.tw[data-letter] :is(.tw__card, .tw__opening) {
+  visibility: hidden !important;
+}
+/* The world closing a letter longer than the card: the card is sealed with
+   the world's mark instead of a clipped copy of the words (the whole letter
+   follows in the closing). display: none, so a finale that measures the
+   message (Minimal's full stop) finds no line to travel to. */
+.tw__signoff {
+  display: none;
+}
+.tw[data-signoff] .tw__message {
+  display: none;
+}
+.tw[data-signoff] .tw__signoff {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 9cqw;
+  height: 9cqw;
+  margin: auto;
+  fill: var(--w-accent);
+  opacity: 0.9;
+}
+/* Worlds whose card already carries a seal or a point: that is the mark. */
+.tw--keepsake[data-signoff] .tw__signoff,
+.tw--just-words[data-signoff] .tw__signoff {
+  display: none;
+}
+.tw--just-words[data-signoff] .tw__point {
+  left: calc(50% - 1.6cqw);
+  top: calc(50% - 1.6cqw);
+  width: 3.2cqw;
+}
+.tw--just-words[data-signoff] .tw__mark {
+  display: none;
 }
 
 /* ===========================================================================
@@ -1105,6 +1147,11 @@
 /* Wedding — vellum close: the vellum back over the card, sealed. */
 .tw[data-finale="vellum-close"]:not([data-scene="finale-pending"]) .tw__veil {
   visibility: visible;
+}
+/* Under the closed vellum the card carries only the closing line on the sheet:
+   the words withdrew as it closed, so none of them shows through as a ghost. */
+.tw[data-finale="vellum-close"]:not([data-scene="finale-pending"]) .tw__message {
+  opacity: 0;
 }
 
 /* Celebration — afterglow: a warm glow remains around the Starr. */
