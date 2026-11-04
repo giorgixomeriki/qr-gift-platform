@@ -43,9 +43,9 @@ explains what each one means for a *production* deploy specifically.
       `npm run db:migrate` at deploy time. Not needed by the running app
       server itself — do not expose it to application runtime if the
       hosting platform lets you scope env vars per build-step vs. runtime.
-- [ ] `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` — the
+- [ ] `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — the
       production Supabase project's values.
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` — production service-role key. Treat as a
+- [ ] `SUPABASE_SECRET_KEY` — production secret key (`sb_secret_…`). Treat as a
       full-database-bypass secret; it is never sent to the client
       (`lib/env.ts` is `server-only`) but confirm your hosting platform
       doesn't leak server env vars into client bundles or logs.

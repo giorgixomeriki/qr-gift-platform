@@ -1,6 +1,7 @@
 import Module from "node:module";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import { resolveSecretKey, resolvePublishableKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,8 +29,8 @@ const { eq } = require("drizzle-orm") as typeof import("drizzle-orm");
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = resolvePublishableKey(process.env)?.key;
+const serviceKey = resolveSecretKey(process.env)?.key;
 const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
 if (!migrationsUrl || !supabaseUrl || !anonKey || !serviceKey) throw new Error("MIGRATIONS_DATABASE_URL and Supabase env vars are required");
 const admin = postgres(migrationsUrl, { max: 1 });

@@ -9,7 +9,7 @@ import { env } from "@/lib/env";
  * BEFORE ever calling into Storage. Never accept a client-supplied storage key
  * for signing without that check — see architecture plan §9.
  */
-const storageClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+const storageClient = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SECRET_KEY, {
   auth: { persistSession: false },
 });
 

@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { writeFileSync } from "node:fs";
 import postgres from "postgres";
 import { createClient } from "@supabase/supabase-js";
+import { resolveSecretKey } from "../../src/lib/supabase/keys";
 
 /**
  * OWNER-REVIEW deployments only (docs/OWNER_REVIEW_DEPLOYMENT.md). Creates the
@@ -10,7 +11,7 @@ import { createClient } from "@supabase/supabase-js";
  * to the --out file (mode 0600), never printed. Idempotent: existing users
  * keep their password unless --reset-passwords is passed.
  *
- *   MIGRATIONS_DATABASE_URL=… NEXT_PUBLIC_SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… \
+ *   MIGRATIONS_DATABASE_URL=… NEXT_PUBLIC_SUPABASE_URL=… SUPABASE_SECRET_KEY=… \
  *     npx tsx scripts/ops/seed-owner-review.ts --confirm-ref=<project-ref> --out=<file>
  *
  * Never run against a production project that holds real customers.
@@ -27,11 +28,11 @@ function arg(name: string): string | undefined {
 async function main() {
   const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = resolveSecretKey(process.env)?.key;
   const out = arg("out");
   const confirmRef = arg("confirm-ref");
   if (!migrationsUrl || !supabaseUrl || !serviceRoleKey) {
-    throw new Error("MIGRATIONS_DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
+    throw new Error("MIGRATIONS_DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) are required");
   }
   if (!out || !confirmRef) throw new Error("--out=<file> and --confirm-ref=<project-ref> are required");
   if (new URL(supabaseUrl).hostname !== `${confirmRef}.supabase.co`) {
