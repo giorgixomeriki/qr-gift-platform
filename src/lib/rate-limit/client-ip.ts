@@ -1,28 +1,74 @@
 import "server-only";
+import { isIP } from "node:net";
 
 /**
- * Extracts the caller's IP from `x-forwarded-for`. This header is trivially
- * spoofable by the CLIENT — it is only trustworthy when a proxy in front of
- * this app OVERWRITES it itself before forwarding the request (Vercel, most
- * PaaS load balancers, and a correctly configured nginx/Cloudflare all do
- * this). Deploying this app directly (bare Node, no such proxy) would let any
- * caller claim any IP by simply setting this header themselves.
+ * Where the trusted proxy in front of the app puts the caller's IP. Set per
+ * deployment (lib/env-guards.ts clientIpConfigProblems requires one of them
+ * on any hosted platform other than Vercel):
  *
- * This is a deployment-topology fact, not something code alone can verify —
- * see docs/ENVIRONMENT_MATRIX.md and docs/STAGING_SETUP_RUNBOOK.md for the
- * explicit requirement that the chosen hosting platform terminates/rewrites
- * this header before it reaches the app.
+ * - `header`: a single-value header the proxy sets and the client cannot
+ *   (e.g. `true-client-ip`).
+ * - `proxyCount`: how many trusted proxies APPEND to X-Forwarded-For. The
+ *   client is then the entry that many places from the right; everything to
+ *   its left came from the client and is ignored, so a spoofed header buys
+ *   nothing. Set too high, the chosen entry is one of our own proxies, so the
+ *   rate limit gets coarser, never bypassable.
+ * - neither (Vercel, local dev): the first X-Forwarded-For entry. Safe only
+ *   where the proxy OVERWRITES the header, which Vercel does.
+ *
+ * With both set, the header wins and proxyCount is the fallback. Anything
+ * missing or not an IP lands in one shared "unattributed" bucket, which keeps
+ * the limit meaningful (a fresh key per request would never collide).
+ * Verification on a new host: docs/RENDER_DEPLOYMENT.md (/api/ops/client-ip).
  */
-export function getClientIp(headers: Headers): string {
-  const forwardedFor = headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    const first = forwardedFor.split(",")[0]?.trim();
-    if (first) return first;
+export type ClientIpConfig = { header?: string; proxyCount?: number };
+
+const UNATTRIBUTED = "unattributed";
+
+export function clientIpConfigFromEnv(env: Record<string, string | undefined> = process.env): ClientIpConfig {
+  const proxyCount = Number(env.TRUSTED_PROXY_COUNT);
+  return {
+    header: env.CLIENT_IP_HEADER?.toLowerCase() || undefined,
+    proxyCount: Number.isInteger(proxyCount) && proxyCount > 0 ? proxyCount : undefined,
+  };
+}
+
+function asIp(candidate: string | null | undefined): string | null {
+  const value = candidate?.trim();
+  return value && isIP(value) ? value : null;
+}
+
+export function getClientIp(headers: Headers, config: ClientIpConfig = clientIpConfigFromEnv()): string {
+  if (config.header) {
+    const fromHeader = asIp(headers.get(config.header));
+    if (fromHeader) return fromHeader;
+    // The first X-Forwarded-For entry is not trustworthy on a host that
+    // needs a dedicated header, so only proxyCount may stand in for it.
+    if (!config.proxyCount) return UNATTRIBUTED;
   }
-  // No proxy header present — either a direct local connection (dev) or a
-  // misconfigured deployment. Falling back to a single shared bucket here
-  // rather than "unknown" per-request keeps the rate limit meaningful (one
-  // bucket for all unattributable traffic) instead of accidentally becoming
-  // a no-op (a fresh "unknown-<random>" key every time would never collide).
-  return "unattributed";
+
+  const entries = (headers.get("x-forwarded-for") ?? "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter(Boolean);
+
+  if (config.proxyCount) {
+    // Fewer entries than trusted hops: the request didn't come through the
+    // expected chain, so nothing in it can be trusted.
+    if (entries.length < config.proxyCount) return UNATTRIBUTED;
+    return asIp(entries[entries.length - config.proxyCount]) ?? UNATTRIBUTED;
+  }
+  return asIp(entries[0]) ?? UNATTRIBUTED;
+}
+
+/** What the request carried, for /api/ops/client-ip (verifying the settings on a new host). */
+export function clientIpDiagnostics(headers: Headers) {
+  const config = clientIpConfigFromEnv();
+  return {
+    config,
+    resolved: getClientIp(headers, config),
+    headers: Object.fromEntries(
+      ["x-forwarded-for", "x-real-ip", "true-client-ip", "cf-connecting-ip", "x-envoy-external-address"].map((h) => [h, headers.get(h)]),
+    ),
+  };
 }

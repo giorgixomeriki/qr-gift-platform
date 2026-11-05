@@ -28,10 +28,12 @@ test.describe("Admin chargeback", () => {
     await page.getByTestId("start-greeting-button").click();
     await page.getByTestId("theme-option-minimal").click();
     await page.getByTestId("wizard-continue").click();
+    // Message and media are one Create screen, then the Preview screen.
+    await expect(page.getByTestId("media-step")).toBeVisible();
     await page.getByTestId("message-textarea").fill("Chargeback end-to-end test greeting.");
     await page.getByTestId("wizard-continue").click();
-    await expect(page.getByTestId("media-step")).toBeVisible();
-    await page.getByTestId("wizard-continue").click();
+    await expect(page.getByTestId("preview-step")).toBeVisible();
+    await page.getByTestId("preview-watch").click();
     await page.getByTestId("greeting-tap-to-open").click();
     await page.getByTestId("greeting-continue").click();
     await page.getByTestId("preview-activate-cta").click();

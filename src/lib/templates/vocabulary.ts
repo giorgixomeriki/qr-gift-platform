@@ -29,6 +29,11 @@ export const ASSETS = {
   "romantic-leaves-rest": { href: "/customer/scenes/romantic-leaves-rest.webp", type: "image/webp" },
   "celebration-sky-rest": { href: "/customer/scenes/celebration-sky-rest.webp", type: "image/webp" },
   "celebration-room": { href: "/customer/scenes/celebration-room.webp", type: "image/webp" },
+  /** Luxury Vintage (public/customer/LICENSES.md, "vintage/"). The vine and fibre are CSS masks/blends. */
+  "redoute-rose": { href: "/customer/vintage/redoute-rose-720.avif", type: "image/avif" },
+  "linotype-vine-h": { href: "/customer/vintage/linotype-vine-h.avif", type: "image/avif", crossOrigin: true },
+  "linotype-vine-v": { href: "/customer/vintage/linotype-vine-v.avif", type: "image/avif", crossOrigin: true },
+  "parchment-fibre": { href: "/customer/vintage/parchment-fibre-512.avif", type: "image/avif" },
 } as const satisfies Record<string, { href: string; type: string; crossOrigin?: boolean }>;
 export type AssetId = keyof typeof ASSETS;
 
@@ -47,7 +52,7 @@ export type CompositionMeta = {
   /** The world's one-line signature, for docs and debugging. */
   signature: string;
   material: "linen" | "paper" | "ink";
-  artwork: "honeysuckle-engraving" | "cut-paper" | "olive-engraving" | "burst" | "rules" | "point";
+  artwork: "honeysuckle-engraving" | "cut-paper" | "olive-engraving" | "burst" | "rules" | "point" | "rose-engraving";
   /** Character of its motion (QR-STARR-MOTION-LANGUAGE.md). */
   motion: "breathe" | "pop" | "ceremonial" | "strike" | "assemble" | "still";
   /** Footage or light layered into the world, played once by its scene. */
@@ -156,6 +161,20 @@ export const COMPOSITIONS = {
     sceneMs: 4500,
     preload: [],
   },
+  keepsake: {
+    signature: "The keepsake letter",
+    material: "paper",
+    artwork: "rose-engraving",
+    motion: "ceremonial",
+    ambience: "none",
+    mediaFrame: "deckle-mount",
+    messageLines: 5,
+    messageReveal: "inked-lines",
+    reveal: "vellum-lift",
+    tier: "rich",
+    sceneMs: 4600,
+    preload: ["parchment-fibre", "redoute-rose", "linotype-vine-h", "linotype-vine-v"],
+  },
 } as const satisfies Record<string, CompositionMeta>;
 export type CompositionId = keyof typeof COMPOSITIONS;
 export const COMPOSITION_IDS = Object.keys(COMPOSITIONS) as [CompositionId, ...CompositionId[]];
@@ -199,6 +218,11 @@ export const FINALES = {
     gesture: "The label and rule withdraw; the vermilion point travels to the end of the message and becomes its full stop",
     compositions: ["just-words"],
     ms: 2600,
+  },
+  "keepsake-seal": {
+    gesture: "The closing words are written in script, the rose comes back into bloom and the wax seal is pressed onto the letter",
+    compositions: ["keepsake"],
+    ms: 3600,
   },
 } as const satisfies Record<string, { gesture: string; compositions: readonly CompositionId[]; ms: number }>;
 export type FinaleId = keyof typeof FINALES;
@@ -250,6 +274,12 @@ export const TYPE_PAIRS = {
     display: '"QS Minimal", system-ui, sans-serif',
     text: '"QS Minimal", system-ui, sans-serif',
     files: { latin: "/fonts/themes/instrument-sans-latin.woff2", georgian: "/fonts/themes/noto-sans-georgian-light.woff2" },
+  },
+  "fell-and-script": {
+    note: "Pinyon Script + IM Fell English / Noto Serif Georgian",
+    display: '"QS Vintage Script", "QS Serif Georgian", Georgia, serif',
+    text: '"QS Vintage", "QS Serif Georgian", Georgia, serif',
+    files: { latin: "/fonts/themes/im-fell-english-latin.woff2", georgian: "/fonts/noto-serif-georgian.woff2" },
   },
 } as const satisfies Record<string, { note: string; display: string; text: string; files: { latin: string; georgian: string } }>;
 export type TypePairId = keyof typeof TYPE_PAIRS;

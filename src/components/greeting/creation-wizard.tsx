@@ -16,16 +16,15 @@ import { getTemplate } from "@/lib/templates/catalog";
 import { roomVars } from "@/lib/templates/room";
 import { ThemeWorld } from "@/components/themes/theme-world";
 import { updateMessageAction, viewPreviewAction } from "@/lib/greetings/actions";
-import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction } from "@/lib/payments/actions";
-import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
-import { CHECKOUT_CLOSED } from "@/lib/payments/checkout-codes";
 import { greetingMessageSchema, MESSAGE_MAX_LENGTH } from "@/lib/validation/greeting-text";
+import { useCheckoutFlow } from "./checkout-flow";
 import { MediaUploadField } from "./media-upload-field";
 import { VoiceRecorder } from "./voice-recorder";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import { LivePreview } from "./live-preview";
 import { LocaleSwitcher } from "./locale-switcher";
 import { ThemePicker } from "./theme-picker";
+import { clearMessageBackup, readMessageBackup, writeMessageBackup } from "./message-backup";
 
 type ExistingItem = { contentId: string; url: string } | null;
 
@@ -48,35 +47,6 @@ const WIZARD_STEPS = ["theme", "message", "media"] as const satisfies readonly S
 /** Server action errors are developer-facing English; consumers always see localized copy. */
 function logActionError(scope: string, error: string) {
   console.error(`[${scope}]`, error);
-}
-
-/**
- * The message as typed, kept on the device until the server has it. Phones
- * discard background tabs freely — a sender who switches to Photos or a chat
- * to copy a line can come back to a reloaded page; what they typed must
- * still be there. Cleared once the message is saved (MessageStep).
- */
-const draftKey = (greetingId: string) => `qrs:message:${greetingId}`;
-function readMessageBackup(greetingId: string): string | null {
-  try {
-    return window.localStorage.getItem(draftKey(greetingId));
-  } catch {
-    return null;
-  }
-}
-function writeMessageBackup(greetingId: string, value: string) {
-  try {
-    window.localStorage.setItem(draftKey(greetingId), value);
-  } catch {
-    /* storage unavailable (private mode, quota): the server copy still saves on Continue */
-  }
-}
-function clearMessageBackup(greetingId: string) {
-  try {
-    window.localStorage.removeItem(draftKey(greetingId));
-  } catch {
-    /* ignore */
-  }
 }
 
 export function CreationWizard({ initial }: { initial: WizardInitialState }) {
@@ -222,7 +192,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
   );
 }
 
-function WizardHeader({ step, wizardStepIndex, onBack }: { step: Step; wizardStepIndex: number; onBack: () => void }) {
+export function WizardHeader({ step, wizardStepIndex, onBack }: { step: Step; wizardStepIndex: number; onBack: () => void }) {
   const t = useTranslations("wizard");
   const showBack = step === "checkout" || wizardStepIndex > 0;
   return (
@@ -478,14 +448,17 @@ function MediaSection({ title, hint, children }: { title: string; hint: string; 
   );
 }
 
-function PreviewStep({
+export function PreviewStep({
   greetingId,
   themeKey,
   content,
   priceLabel,
   onEdit,
   onCheckout,
+  recordView = true,
 }: {
+  /** False when the Signature preview screen in front of this one already recorded PREVIEW_VIEWED. */
+  recordView?: boolean;
   greetingId: string;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
@@ -504,10 +477,10 @@ function PreviewStep({
   // re-run (Phase 2 §13).
   const recordedRef = useRef(false);
   useEffect(() => {
-    if (recordedRef.current) return;
+    if (recordedRef.current || !recordView) return;
     recordedRef.current = true;
     void viewPreviewAction(greetingId);
-  }, [greetingId]);
+  }, [greetingId, recordView]);
 
   // A viewing layer, not an editor: plain bars above and below, and the
   // greeting — exactly as the recipient gets it — in between, untouched.
@@ -579,11 +552,7 @@ function PreviewStep({
   );
 }
 
-/** How many times to poll checkPaymentReturnAction after a real-provider redirect before falling back to showing the normal Checkout screen with a manual retry. */
-const RETURN_POLL_ATTEMPTS = 5;
-const RETURN_POLL_INTERVAL_MS = 2000;
-
-function CheckoutStep({
+export function CheckoutStep({
   greetingId,
   isTestPayments,
   themeKey,
@@ -601,127 +570,7 @@ function CheckoutStep({
   const t = useTranslations("wizard.checkout");
   const tt = useTranslations("themes");
   const locale = useLocale();
-  const searchParams = useSearchParams();
-  // A hint only, for which initial UI to show — never authority. The actual
-  // status always comes from checkPaymentReturnAction/startCheckoutAction,
-  // which re-derive it server-side from the order's own DB state (Phase 5 §5:
-  // "a browser return URL must never be treated as proof of payment").
-  const paymentHint = searchParams.get("payment");
-
-  const [summary, setSummary] = useState<CheckoutOrderSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [verifying, setVerifying] = useState(paymentHint === "return");
-  const [paying, setPaying] = useState(false);
-  const [error, setError] = useState(false);
-  /** Real-money checkout is switched off on this deployment (CHECKOUT_ENABLED). */
-  const [closed, setClosed] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const [cancelled, setCancelled] = useState(paymentHint === "cancelled");
-  const [succeeded, setSucceeded] = useState(false);
-  /**
-   * Back from the provider, but the outcome is not known yet (still pending
-   * after polling, or the status check itself failed). Never offer to pay
-   * again here — a second charge is exactly the risk — only to check again.
-   */
-  const [uncertain, setUncertain] = useState(false);
-  const startedRef = useRef(false);
-
-  const loadSummary = useCallback(async () => {
-    const result = await startCheckoutAction(greetingId).catch(() => null);
-    setLoading(false);
-    if (!result?.ok) {
-      if (result?.error === CHECKOUT_CLOSED) {
-        setClosed(true);
-        return;
-      }
-      if (result) logActionError("startCheckout", result.error);
-      setError(true);
-      return;
-    }
-    setSummary(result.data.summary);
-    if (result.data.recovered) {
-      // A prior payment already succeeded but activation hadn't completed —
-      // it's been reconciled just now. Go straight to the success view.
-      window.location.href = window.location.pathname;
-    }
-  }, [greetingId]);
-
-  useEffect(() => {
-    if (startedRef.current) return;
-    startedRef.current = true;
-
-    if (paymentHint !== "return") {
-      loadSummary();
-      return;
-    }
-    void verifyReturn();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [greetingId, paymentHint, loadSummary]);
-
-  /** Polls the server's own verdict (never the URL) after a provider redirect. */
-  async function verifyReturn() {
-    setUncertain(false);
-    setVerifying(true);
-    for (let attempt = 0; attempt < RETURN_POLL_ATTEMPTS; attempt++) {
-      const result = await checkPaymentReturnAction(greetingId).catch(() => null);
-      if (result?.ok && result.data.status === "PAID") {
-        window.location.href = window.location.pathname;
-        return;
-      }
-      if (result?.ok && (result.data.status === "FAILED" || result.data.status === "CANCELED")) {
-        // Only a definite failure offers paying again.
-        setVerifying(false);
-        setFailed(true);
-        await loadSummary();
-        return;
-      }
-      if (result && !result.ok) logActionError("checkPaymentReturn", result.error);
-      if (attempt < RETURN_POLL_ATTEMPTS - 1) {
-        await new Promise((resolve) => setTimeout(resolve, RETURN_POLL_INTERVAL_MS));
-      }
-    }
-    // Still pending, or the check kept failing: the payment may have gone
-    // through. Hold here rather than show a Pay button.
-    setVerifying(false);
-    setUncertain(true);
-  }
-
-  async function pay(outcome: "success" | "failure") {
-    setPaying(true);
-    setError(false);
-    setFailed(false);
-    const result = await simulateTestPaymentAction(greetingId, outcome).catch(() => null);
-    if (!result?.ok) {
-      if (result) logActionError("simulateTestPayment", result.error);
-      setPaying(false);
-      setError(true);
-      return;
-    }
-    if (result.data.status === "FAILED") {
-      setPaying(false);
-      setFailed(true);
-      return;
-    }
-    setSucceeded(true);
-    // The Greeting is now ACTIVE — reload the same public URL so the
-    // dispatcher (/g/[token]) re-resolves to the Sender Success experience.
-    window.location.href = window.location.pathname;
-  }
-
-  function payReal() {
-    if (!summary?.redirectUrl) return;
-    setPaying(true);
-    window.location.href = summary.redirectUrl;
-  }
-
-  async function retry() {
-    setFailed(false);
-    setCancelled(false);
-    setError(false);
-    setLoading(true);
-    await loadSummary();
-  }
-
+  const { summary, loading, verifying, paying, error, closed, failed, cancelled, succeeded, uncertain, verifyReturn, pay, payReal, retry } = useCheckoutFlow(greetingId);
   const showRealPayButton = !isTestPayments && !failed && !cancelled;
   const amountLabel = summary ? formatMinorAmount(summary.grossAmountMinor, summary.currency, locale) : null;
   const items = [

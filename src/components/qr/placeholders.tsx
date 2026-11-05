@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Ban, Hourglass } from "lucide-react";
+import { Ban } from "lucide-react";
 import { StatusScreen } from "@/components/flow/status-screen";
 import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
 
@@ -14,7 +14,7 @@ export async function DraftNoAccessPlaceholder() {
   const t = await getTranslations("sender.noAccess");
   return (
     <StatusScreen
-      icon={<Hourglass aria-hidden />}
+      envelope
       title={t("title")}
       body={t("body")}
       hint={t("hint")}

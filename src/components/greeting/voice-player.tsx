@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Pause, Play } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
+import { useWaveformPeaks } from "@/lib/client/waveform";
 import { useTranslations } from "next-intl";
 
 function fmt(ms: number) {
@@ -46,16 +47,9 @@ export function VoicePlayer({
   const [mediaDuration, setMediaDuration] = useState<number | null>(null);
   const total = durationMs ?? mediaDuration ?? 0;
 
-  // Stable pseudo-waveform derived from the URL-independent duration.
-  const bars = useMemo(() => {
-    let s = Math.max(1, Math.round(total / 97));
-    return Array.from({ length: BARS }, (_, i) => {
-      s = (s * 9301 + 49297) % 233280;
-      const r = s / 233280;
-      const envelope = Math.sin((i / (BARS - 1)) * Math.PI) * 0.55 + 0.45;
-      return 0.22 + envelope * (0.35 + r * 0.43);
-    });
-  }, [total]);
+  // The note's real loudness (decoded in the browser); a level line until it is known.
+  const peaks = useWaveformPeaks(src, BARS);
+  const bars = peaks ?? Array.from({ length: BARS }, () => 0.12);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -166,7 +160,7 @@ export function VoicePlayer({
       <div className="min-w-0 flex-1">
         <p className={`line-clamp-2 text-label ${themed ? "text-[var(--g-ink)]" : "text-ink"}`}>{title}</p>
         <div className="relative mt-2 h-8">
-          <div className="flex h-full items-center gap-[3px]" aria-hidden>
+          <div className="flex h-full items-center gap-[3px]" aria-hidden data-waveform={peaks ? "real" : "pending"}>
             {bars.map((h, i) => {
               const on = (i + 0.5) / BARS <= progress;
               return (

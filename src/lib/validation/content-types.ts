@@ -22,11 +22,27 @@ const MIME_ALLOWLIST: Record<Exclude<SupportedContentType, "text">, readonly str
   audio: ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg"],
 };
 
+// Video is capped at 50 MB because that is the largest single file Supabase
+// Free stores (its global per-file limit; Pro allows more). The storage bucket
+// is created with MAX_MEDIA_BYTES (db/seed.ts) so app and bucket always agree.
 const SIZE_LIMIT_BYTES: Record<Exclude<SupportedContentType, "text">, number> = {
   photo: 15 * 1024 * 1024,
-  video: 100 * 1024 * 1024,
+  video: 50 * 1024 * 1024,
   audio: 20 * 1024 * 1024,
 };
+
+/** The largest file any content type accepts: the storage bucket's per-file limit. */
+export const MAX_MEDIA_BYTES = Math.max(...Object.values(SIZE_LIMIT_BYTES));
+
+/** How many items of each media type one greeting holds (slots 0..n-1). */
+export const MEDIA_SLOT_LIMITS: Record<Exclude<SupportedContentType, "text">, number> = {
+  photo: 3,
+  video: 1,
+  audio: 1,
+};
+
+/** Longest voice message the in-browser recorder captures. */
+export const VOICE_MAX_DURATION_SECONDS = 60;
 
 export function allowedMimeTypesFor(type: Exclude<SupportedContentType, "text">): readonly string[] {
   return MIME_ALLOWLIST[type];

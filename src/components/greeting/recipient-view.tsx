@@ -1,8 +1,8 @@
 "use client";
 
 import { useCallback } from "react";
-import { CircleCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { WaxSeal } from "@/components/customer/wax-seal";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { recordContentPlayedAction } from "@/lib/greetings/recipient-actions";
@@ -38,15 +38,13 @@ export function RecipientView({
       onContentPlayed={handlePlayed}
       senderBanner={
         isOriginalSender ? (
-          <div
-            className="flex max-w-md items-start gap-3 rounded-[var(--radius-lg)] bg-surface/95 px-4 py-3 text-left text-ink shadow-md ring-1 ring-black/5 backdrop-blur-md"
-            data-testid="sender-success-banner"
-            role="status"
-          >
-            <CircleCheck className="mt-0.5 size-5 shrink-0 text-success" aria-hidden />
+          // The sender's own first look: a paper note with the seal, never a system toast.
+          <div className="sx-banner" data-testid="sender-success-banner" role="status">
+            <WaxSeal className="sx-banner__seal" />
             <div className="min-w-0">
-              <p className="text-label">{t("title")}</p>
-              <p className="mt-0.5 text-caption text-ink-2">{t("banner")}</p>
+              <p className="sx-banner__kicker">{t("kicker")}</p>
+              <p className="sx-banner__title">{t("title")}</p>
+              <p className="sx-banner__body">{t("banner")}</p>
             </div>
           </div>
         ) : undefined

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { appUrlProblems } from "./env-guards";
+import { appUrlProblems, isHostedEnvironment } from "./env-guards";
 
 /**
  * The subset of env vars safe to import from client components (only
@@ -17,7 +17,7 @@ const publicEnvSchema = z.object({
 // codes — rather than inherit the localhost default (lib/env-guards.ts).
 const appUrlIssues = appUrlProblems(process.env.NEXT_PUBLIC_APP_URL, {
   production: process.env.NODE_ENV === "production",
-  hosted: process.env.VERCEL === "1",
+  hosted: isHostedEnvironment(process.env),
 });
 if (appUrlIssues.length > 0) {
   throw new Error(`Unsafe environment configuration:\n- ${appUrlIssues.join("\n- ")}`);

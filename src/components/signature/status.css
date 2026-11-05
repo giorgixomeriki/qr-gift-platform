@@ -1,0 +1,68 @@
+/* Status screens on /g/* and the 404 (components/flow/status-screen.tsx), in the Signature paper. */
+.sig-status-page {
+  min-height: 100dvh;
+}
+.sig-status-screen {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0 auto;
+  padding: 2rem 0 max(2.5rem, var(--safe-bottom));
+  max-width: 24rem;
+  text-align: center;
+}
+.sig-status-screen > .sig-title {
+  margin-top: 1rem;
+  text-wrap: balance;
+}
+.sig-status-screen__mark {
+  display: grid;
+  width: 5rem;
+  height: 5rem;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    var(--sig-card);
+  background-blend-mode: soft-light, normal;
+  color: var(--sig-wine);
+  box-shadow: var(--sig-shadow-object);
+  animation: sig-set-down 700ms var(--sig-settle) both;
+}
+.sig-status-screen__mark svg {
+  width: 1.75rem;
+  height: 1.75rem;
+  stroke-width: 1.5;
+}
+.sig-status-screen__env {
+  display: flex;
+  width: 100%;
+  justify-content: center;
+  padding: 0.5rem 0 0.75rem;
+  animation: sig-set-down 900ms var(--sig-settle) both;
+}
+.sig-status-screen__body {
+  font: 400 0.9375rem/1.6 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-wrap: pretty;
+}
+/* The hint: a small paper slip, not a grey box. */
+.sig-status-screen__hint {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-left: 2px solid var(--sig-wine-2);
+  border-radius: 0 4px 4px 0;
+  background: var(--sig-card);
+  box-shadow: var(--sig-shadow-object);
+  font: 400 0.875rem/1.5 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-align: left;
+}
+.sig-status-screen__action {
+  width: 100%;
+  max-width: 20rem;
+  margin-top: 1.25rem;
+}
