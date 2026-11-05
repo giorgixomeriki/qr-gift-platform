@@ -131,7 +131,9 @@ been made at this point.
 
 ### Stage 2: disable the legacy API keys
 
-Preconditions: Checks A0 and A passed; Render logs clean for ≥ 15 min.
+Preconditions: Checks A0 and A passed; Render logs clean for ≥ 15 min; fresh
+verified production backup (`backup-prod.sh`); owner signed in to the Supabase
+and Render dashboards (the rollback levers).
 
 1. Supabase → Settings → API Keys → disable the legacy `anon` /
    `service_role` keys.
@@ -141,12 +143,17 @@ Preconditions: Checks A0 and A passed; Render logs clean for ≥ 15 min.
 
 ### Stage 3: revoke the leaked HS256 secret
 
-Do this as soon as Stage 2 has been stable for **≥ 15 minutes**:
-- no HS256 user tokens exist (ES256 has signed every session for longer
-  than the 1 h token lifetime);
+Do this once Stage 2 has been stable for **≥ 1 h 15 min** (Supabase's
+documented minimum for a 1 h access-token lifetime; checked 2026-11-05 at
+supabase.com/docs/guides/auth/signing-keys). Supabase also requires the
+legacy `anon` / `service_role` keys to be disabled first (Stage 2).
+- no HS256 user tokens should exist (ES256 has signed every session since
+  project creation), so the wait is a safety margin, not a dependency;
 - the longest-lived signed Storage URL in the app is 10 minutes;
-- the legacy keys are already off;
-- waiting longer only prolongs the exposure.
+- Supabase's docs disagree on whether Storage signed URLs use the legacy
+  secret, so Check C3 is mandatory;
+- revocation is reversible (revoked → standby); only deletion is permanent,
+  and the legacy secret cannot be deleted.
 
 1. Supabase → JWT Keys → previously used `4af57eb8…` → Revoke.
 2. Optional: sign out all existing sessions of the demo accounts.
