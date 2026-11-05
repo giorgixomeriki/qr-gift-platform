@@ -926,7 +926,7 @@
     "experiences": {
       "eyebrow": "Inside a greeting",
       "title": "Everything you’d want to say, beautifully kept",
-      "lead": "Six designs, each a complete world with its own typography, colour and opening. Then your words, your photos, a video and your voice. Only the message is required.",
+      "lead": "{{fact.themeCount}} designs, each a complete world with its own typography, colour and opening. Then your words, your photos, a video and your voice. Only the message is required.",
       "message": {
         "title": "A letter",
         "text": "Up to {{fact.messageMaxLength}} characters, set like a handwritten note on paper."
@@ -957,7 +957,7 @@
         "A hand holding a pink and peach bouquet"
       ],
       "videoAlt": "A woman smiling as she smells a bouquet of roses",
-      "designsLabel": "The six greeting designs",
+      "designsLabel": "The greeting designs",
       "designsCounter": "Design {n} of {total}",
       "designAlt": "The {name} greeting design, as the recipient sees it",
       "letterLabel": "Your letter",

@@ -4,6 +4,7 @@ import { DocumentPage, documentMetadata } from "@/components/site/document-page"
 import { MerchantDetails } from "@/components/site/merchant-details";
 import { getSiteContext } from "@/components/site/context";
 import { DemoNotice } from "@/components/site/demo";
+import { resolveMerchantToken, type MerchantToken } from "@/lib/merchant/info";
 
 /** The merchant's registered details and how to reach support. */
 export async function generateMetadata(): Promise<Metadata> {
@@ -15,11 +16,16 @@ const REQUIRED_DETAILS = ["legalName", "entityType", "idCode", "legalAddress", "
 export default async function Page() {
   const ctx = await getSiteContext();
   const t = await getTranslations("contact");
+  // The public page shows the details box only once there is something set to show (audit UX-01).
+  const anySet = (["legalName", "entityType", "idCode", "legalAddress", "supportEmail", "phone"] as MerchantToken[]).some(
+    (tok) => resolveMerchantToken(ctx.merchant, tok, ctx.locale).value !== null,
+  );
   return (
     <DocumentPage
       namespace="contact"
       introUses={REQUIRED_DETAILS}
       intro={
+        (anySet || ctx.review || ctx.merchant.mode === "demo") && (
         <section aria-labelledby="merchant-details-title" className="max-w-3xl rounded-[var(--radius-xl)] bg-surface px-6 py-5 shadow-xs ring-1 ring-line sm:px-8 sm:py-6">
           <h2 id="merchant-details-title" className="text-eyebrow text-ember">
             {t("detailsTitle")}
@@ -33,6 +39,7 @@ export default async function Page() {
             <MerchantDetails ctx={ctx} />
           </div>
         </section>
+        )
       }
     />
   );

@@ -122,11 +122,11 @@ test("an occasion opens as a postcard dialog, closes on Escape and returns focus
   await expect(trigger).toBeFocused();
 });
 
-test("the six real designs are a keyboard tab list that changes the stage", async ({ page, context }) => {
+test("the real designs are a keyboard tab list that changes the stage", async ({ page, context }) => {
   await useLocale(context, "en");
   await page.goto("/");
   const tabs = page.getByRole("tablist", { name: landing("en").experiences.designsLabel });
-  await expect(tabs.getByRole("tab")).toHaveCount(6);
+  await expect(tabs.getByRole("tab")).toHaveCount(7); // every design in the catalogue, Luxury Vintage included
   const first = page.getByTestId("design-tab-romantic");
   await expect(first).toHaveAttribute("aria-selected", "true");
   await first.focus();

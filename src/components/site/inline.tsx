@@ -36,12 +36,12 @@ function renderNode(node: InlineNode, ctx: SiteContext, key: number): ReactNode 
         <span key={key} className="whitespace-nowrap font-medium text-ink" data-price>
           {formatMinorAmount(ctx.price.amountMinor, ctx.price.currency, ctx.locale)}
         </span>
-      ) : (
+      ) : ctx.review ? (
         <Pending key={key} name="price" label={ctx.labels.priceUnavailable} hint={ctx.labels.pendingHint} />
-      );
+      ) : null;
     case "merchant": {
       const { field, value } = resolveMerchantToken(ctx.merchant, node.name, ctx.locale);
-      if (value === null) return <Pending key={key} name={field} label={ctx.labels.pending} hint={ctx.labels.pendingHint} />;
+      if (value === null) return ctx.review ? <Pending key={key} name={field} label={ctx.labels.pending} hint={ctx.labels.pendingHint} /> : null;
       const shown = renderMerchantValue(node.name, value, ctx, key);
       // Fictional preview data is tagged at every occurrence, not just once per page.
       return ctx.merchant.mode === "demo" ? (

@@ -50,6 +50,8 @@ export const PHOTOS = {
   "design-elegant-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
   "design-minimal-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
   "design-minimal-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-luxury-vintage-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-luxury-vintage-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
 } as const;
 
 export type PhotoName = keyof typeof PHOTOS;

@@ -17,12 +17,16 @@ const ROWS: { token: MerchantToken; label: string; optional?: boolean }[] = [
 /**
  * The merchant's registered identity and contact details as a definition
  * list. Optional rows (actual address, support hours) are omitted when
- * unset rather than marked, since leaving them out claims nothing; required
- * rows always show, with a "not yet published" marker when missing.
+ * unset rather than marked, since leaving them out claims nothing. On the
+ * public site a required row that is not set is left out too (audit UX-01);
+ * only review mode (SITE_REVIEW_MARKERS=1) marks it.
  */
 export async function MerchantDetails({ ctx, compact = false }: { ctx: SiteContext; compact?: boolean }) {
   const t = await getTranslations("site.merchant");
-  const rows = ROWS.filter((r) => !r.optional || resolveMerchantToken(ctx.merchant, r.token, ctx.locale).value !== null);
+  const set = (r: (typeof ROWS)[number]) => resolveMerchantToken(ctx.merchant, r.token, ctx.locale).value !== null;
+  // Public: only the details that are set. Review mode: required rows show their "not yet published" marker.
+  const rows = ROWS.filter((r) => set(r) || (ctx.review && !r.optional));
+  if (rows.length === 0) return null;
   return (
     <dl className={compact ? "space-y-1.5 text-body-sm" : "divide-y divide-line text-body"} data-testid="merchant-details">
       {rows.map((r) => (
