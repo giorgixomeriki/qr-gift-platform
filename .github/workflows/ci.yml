@@ -57,7 +57,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: the key-field names read below (PUBLISHABLE_KEY / SECRET_KEY
+          # from `supabase status -o json`) were verified with this version.
+          version: 2.115.0
 
       - name: Start local Supabase
         run: supabase start
