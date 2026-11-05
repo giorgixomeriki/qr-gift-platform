@@ -1,0 +1,144 @@
+200 robots=noindex, nofollow
+FOOTER: /about /contact /how-it-works /pricing /terms /privacy /delivery-and-refunds /contact
+
+Skip to content
+QR Starr
+About us
+How it works
+Pricing
+Contact
+ქარ
+EN
+Partner sign in
+
+POLICY
+
+Privacy policy
+
+This policy explains what personal data QR Starr processes when you create, pay for or open a greeting, or use a partner account, and the rights you have.
+
+Not yet in effect
+
+ON THIS PAGE
+
+1. What we collect and why
+2. Photos, videos, voice notes and messages
+3. QR links and sharing
+4. Accounts, storage and service providers
+5. Cookies and local storage
+6. Payments
+7. How long we keep data
+8. Your rights
+9. How to make a request
+10. Security
+11. Children
+12. Changes to this policy
+1.What we collect and why
+Whose data	Data	Purpose
+Sender (creates a greeting)	Message, photos, video, voice note and chosen design, including any people, faces or voices in them	Creating the greeting and showing it to whoever opens the card
+Sender	Payment record: amount, currency, time, the bank’s payment reference and, where the bank provides them, the card brand and last 4 digits. Never the full card number	Payment, refunds, accounting and disputes
+Sender	A random editing key stored in a cookie on your device	Making sure only you can edit your greeting before paying
+Recipient (opens the card)	When the greeting is opened, recorded against the card, not against you as a person	Confirming delivery, evidence in payment disputes, usage statistics
+Everyone	IP address, browser information and request logs	Security, preventing abuse (rate limiting) and fixing problems
+Partners and administrators	Email address, sign-in data and actions taken in the dashboard	Running accounts, partner payouts and security
+Anyone who contacts us	Your message and contact details	Answering you
+
+We do not sell personal data, and we do not use advertising or third-party tracking.
+
+2.Photos, videos, voice notes and messages
+Your content is used only to build your greeting and show it to whoever opens the card.
+Media files are kept in private storage and delivered through short-lived links, created each time the greeting is opened.
+If your greeting includes other people’s photos, video or voice, you are responsible for having their permission (see our Terms).
+Partner shops can’t see greeting content; they only see whether a card has been used.
+3.QR links and sharing
+
+The card is the key
+
+Anyone who holds an activated card, or has its link, can open the greeting. There is no password or PIN. Give the card only to the person it is meant for, and don’t share photos of its QR code or its link.
+
+The link in each QR code is long and random, so it can’t practically be guessed. But once it is shared, in a photo, a message or a social media post, anyone who sees it can open the greeting.
+
+Before payment, a draft can only be edited from the device that started it.
+
+4.Accounts, storage and service providers
+
+Senders and recipients don’t need an account. Partner and administrator accounts sign in with an email address and password through Supabase Auth.
+
+Provider	Role
+Supabase	Database, storage of greeting media, and partner and administrator sign-in
+Bank of Georgia	Card payments, as an independent controller under its own privacy policy
+5.Cookies and local storage
+
+We use only what the service needs to work. We don’t use advertising or analytics cookies.
+
+Name	Purpose	Lifetime
+NEXT_LOCALE	Remembers your language (Georgian or English)	1 year
+qr_edit_…	Your private access to edit a greeting before paying; afterwards, it lets you see the “sent by you” note	14 days
+qrs:message:… (local storage)	Keeps an unsent message on your own device if the page reloads; removed once the message is saved	Until saved
+Supabase sign-in cookies, active_partner_id	Partner and administrator accounts only: keeping you signed in and remembering the selected partner	Session; 90 days
+6.Payments
+
+Card details are entered on the payment page of the bank that processes the payment. QR Starr never receives or stores full card numbers or security codes.
+
+We keep a record of each payment (amount, currency, time, the bank’s reference and, where provided, the card brand and last 4 digits) for refunds, accounting and disputes.
+
+7.How long we keep data
+
+We do not currently delete greetings, media, payment records or logs automatically.
+
+8.Your rights
+
+Under the Law of Georgia on Personal Data Protection you can ask us to:
+
+tell you whether we process your data, and give you access to it or a copy of it;
+correct, update or complete it;
+delete it;
+restrict (block) its processing;
+transfer it, where that right applies.
+
+Where processing is based on your consent, you can withdraw it at any time. You can also lodge a complaint with the Personal Data Protection Service of Georgia.
+
+9.How to make a request
+
+If an activated greeting is removed at your request, it will no longer open from the card for anyone. Payment records are kept for as long as the law requires.
+
+10.Security
+The website is served over HTTPS.
+Greeting media is kept in private storage and delivered only through short-lived links.
+Access to data in our database is restricted by role.
+We never receive full card details.
+11.Children
+
+A greeting may, of course, be made for a child.
+
+12.Changes to this policy
+
+We will publish any changes on this page with a new effective date.
+
+QR Starr
+
+A digital greeting inside every gift: a QR card that opens a personal message, photos, video and voice.
+
+COMPANY
+
+About us
+Contact
+
+SERVICE
+
+How it works
+Pricing
+
+POLICIES
+
+Terms and conditions
+Privacy policy
+Delivery and refunds
+
+MERCHANT INFORMATION
+
+Our registered company details are being finalised and will be published here. Contact
+
+All prices are in Georgian lari (GEL).
+
+© 2026 QR Starr
