@@ -1,22 +1,19 @@
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { QrCode } from "@phosphor-icons/react/dist/ssr/QrCode";
-import { getHomeQrSvg, getLanding } from "./copy";
-import { LetterScreen, PhoneShell, QrCard } from "./objects";
+import { getLanding } from "./copy";
 import { Photo } from "./photo";
-import { HeroStage } from "./motion";
 
 /**
- * The opening view, composed like a campaign: a photograph of a real gift
- * (tulips in kraft paper), our QR card tucked beside it, and the phone that
- * card opens, breaking out of the photograph's frame. One primary action;
- * partners get a quiet link. On phones the order is words, action, the note
- * for someone holding a card, then the picture.
+ * The opening view, composed like a campaign: the gift as it arrives (dark
+ * burgundy roses, our card tied to them, the phone showing the greeting it
+ * opens), cut out of its photograph so it sits directly on the page. The
+ * card and screen in it are part of the picture, not working UI. One primary action; partners get a quiet
+ * link. On phones the order is words, action, the note for someone holding
+ * a card, then the picture.
  */
 export async function Hero() {
   const { text, raw } = await getLanding();
-  const svg = await getHomeQrSvg();
-  const sample = { to: text("hero.sampleTo"), text: text("hero.sampleText"), sign: text("hero.sampleSign"), voice: text("hero.sampleVoice"), tag: text("hero.sampleTag") };
 
   return (
     <section className="hm-hero" aria-labelledby="hm-hero-title" data-testid="home-hero">
@@ -41,18 +38,11 @@ export async function Hero() {
           </div>
         </div>
 
-        <HeroStage
-          label={`${text("hero.photoAlt")}. ${text("hero.plateAlt")}`}
-          plate={<Photo name="redoute-josephine" alt="" sizes="(min-width: 62rem) 18vw, 40vw" />}
-          photo={<Photo name="hero-tulips" alt="" priority sizes="(min-width: 62rem) 34vw, 78vw" position="40% 40%" />}
-          card={<QrCard svg={svg} line={text("hero.cardLine")} hint={text("hero.cardHint")} />}
-          phone={
-            <PhoneShell>
-              <LetterScreen copy={sample} />
-            </PhoneShell>
-          }
-          badges={<span className="hm-gilt hm-gilt--photo" aria-hidden />}
-        />
+        <div className="hm-hstage">
+          <div className="hm-hstage__photo">
+            <Photo name="hero-bouquet" alt={text("hero.photoAlt")} priority sizes="(min-width: 62rem) min(46rem, 50vw), min(40rem, calc(100vw - 1rem))" />
+          </div>
+        </div>
 
         <ul className="hm-hero__assure">
           {raw<string[]>("hero.assurances").map((a) => (
