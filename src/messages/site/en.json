@@ -23,7 +23,7 @@
       "service": "Service",
       "legal": "Policies",
       "merchantHeading": "Merchant information",
-      "merchantPending": "Our registered company details are being finalised and will be published here.",
+      "merchantPending": "Our registered business details are being finalised and will be published here.",
       "currency": "All prices are in Georgian lari (GEL).",
       "copyright": "© {year} QR Starr"
     },
@@ -343,7 +343,7 @@
     "metaDescription": "QR Starr merchant information and customer support contacts.",
     "eyebrow": "Contact",
     "title": "Merchant information and support",
-    "lead": "The company behind QR Starr, and how to reach us.",
+    "lead": "Who runs QR Starr, and how to reach us.",
     "detailsTitle": "Merchant information",
     "sections": [
       {
@@ -491,7 +491,7 @@
         "id": "contact",
         "title": "Contact",
         "blocks": [
-          { "type": "p", "text": "Questions about delivery, cancellation or refunds: {{merchant.supportEmail}}, {{merchant.phone}}. Full company details are on our [Contact](/contact) page." }
+          { "type": "p", "text": "Questions about delivery, cancellation or refunds: {{merchant.supportEmail}}, {{merchant.phone}}. Full merchant details are on our [Contact](/contact) page." }
         ]
       }
     ]
@@ -831,7 +831,7 @@
         "id": "contact",
         "title": "Contact",
         "blocks": [
-          { "type": "p", "text": "Questions about these terms: {{merchant.supportEmail}}, {{merchant.phone}}. Full company details are on our [Contact](/contact) page." }
+          { "type": "p", "text": "Questions about these terms: {{merchant.supportEmail}}, {{merchant.phone}}. Full merchant details are on our [Contact](/contact) page." }
         ]
       }
     ]

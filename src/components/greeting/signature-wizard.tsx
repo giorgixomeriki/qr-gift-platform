@@ -166,6 +166,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
           <SignatureCheckout
             greetingId={initial.greetingId}
             isTestPayments={initial.isTestPayments}
+            merchantName={initial.merchantName}
             themeKey={themeKey}
             content={content}
             onBackToPreview={() => goToStep("preview")}
