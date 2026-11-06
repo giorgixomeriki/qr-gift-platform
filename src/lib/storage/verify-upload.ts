@@ -1,5 +1,6 @@
 import "server-only";
 import { env } from "@/lib/env";
+import { apiKeyHeaders } from "@/lib/supabase/keys";
 
 /**
  * Real server-side content verification (Phase 2 §6/§7 — "never trust
@@ -16,11 +17,9 @@ import { env } from "@/lib/env";
 async function readObjectHeaderBytes(storageKey: string, length = 32): Promise<Uint8Array> {
   const url = `${env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${env.SUPABASE_STORAGE_BUCKET}/${storageKey}`;
   const res = await fetch(url, {
-    headers: {
-      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
-      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
-      Range: `bytes=0-${length - 1}`,
-    },
+    // apiKeyHeaders: a new sb_secret_ key goes only in `apikey` (it is not a
+    // JWT); a legacy service_role JWT keeps its Bearer during the migration.
+    headers: { ...apiKeyHeaders(env.SUPABASE_SECRET_KEY), Range: `bytes=0-${length - 1}` },
     cache: "no-store",
   });
   if (!res.ok) throw new Error(`Failed to read uploaded object (${res.status})`);

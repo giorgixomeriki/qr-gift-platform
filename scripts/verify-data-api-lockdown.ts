@@ -1,4 +1,5 @@
 import Module from "node:module";
+import { isNewApiKey, resolvePublishableKey, resolveSecretKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,8 +39,13 @@ const { createClient } = require("@supabase/supabase-js") as typeof import("@sup
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
 const runtimeUrl = process.env.DATABASE_URL;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = resolvePublishableKey(process.env)?.key;
+const serviceKey = resolveSecretKey(process.env)?.key;
+
+/** A new-format key goes only in `apikey` (as the app sends it); a JWT (legacy key or user session) is also the Bearer. */
+function keyHeaders(key: string, bearer: string): Record<string, string> {
+  return isNewApiKey(bearer) ? { apikey: key } : { apikey: key, Authorization: `Bearer ${bearer}` };
+}
 if (!migrationsUrl || !runtimeUrl || !supabaseUrl || !anonKey || !serviceKey) {
   throw new Error("MIGRATIONS_DATABASE_URL, DATABASE_URL and Supabase env vars are required");
 }
@@ -195,8 +201,7 @@ async function rest(method: string, path: string, key: string, bearer: string, b
   const res = await fetch(`${supabaseUrl}${path}`, {
     method,
     headers: {
-      apikey: key,
-      Authorization: `Bearer ${bearer}`,
+      ...keyHeaders(key, bearer),
       "Content-Type": "application/json",
       // return=minimal: with return=representation an INSERT whose new row
       // fails the SELECT policy is rejected anyway, which would hide a write
@@ -315,7 +320,7 @@ async function readOnlyChecks() {
     const readable: string[] = [];
     for (const t of tables) {
       const res = await fetch(`${supabaseUrl}/rest/v1/${t}?select=*&limit=0`, {
-        headers: { apikey: p.key, Authorization: `Bearer ${p.bearer}`, Prefer: "count=exact" },
+        headers: { ...keyHeaders(p.key, p.bearer), Prefer: "count=exact" },
       });
       await res.text();
       if (res.status < 400) readable.push(`${t}:${res.headers.get("content-range") ?? res.status}`);
@@ -323,7 +328,7 @@ async function readOnlyChecks() {
     check(`B1. ${p.label}: no public table is readable (${tables.length} tables)`, readable.length === 0, readable);
     const rpc = await fetch(`${supabaseUrl}/rest/v1/rpc/app_is_admin`, {
       method: "POST",
-      headers: { apikey: p.key, Authorization: `Bearer ${p.bearer}`, "Content-Type": "application/json" },
+      headers: { ...keyHeaders(p.key, p.bearer), "Content-Type": "application/json" },
       body: "{}",
     });
     await rpc.text();

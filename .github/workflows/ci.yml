@@ -43,8 +43,8 @@ jobs:
           # Production builds require an explicit origin (lib/env-guards.ts).
           NEXT_PUBLIC_APP_URL: "https://ci-placeholder.example"
           NEXT_PUBLIC_SUPABASE_URL: "https://ci-placeholder.supabase.co"
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-placeholder-anon-key"
-          SUPABASE_SERVICE_ROLE_KEY: "ci-placeholder-service-role-key"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_ci-placeholder"
+          SUPABASE_SECRET_KEY: "sb_secret_ci-placeholder"
           EDIT_TOKEN_SECRET: "ci-placeholder-edit-token-secret-value"
           PAYMENTS_PROVIDER: "TEST"
           # CI BUILD-ONLY placeholder, not a credential: env.ts requires
@@ -57,7 +57,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned: the key-field names read below (PUBLISHABLE_KEY / SECRET_KEY
+          # from `supabase status -o json`) were verified with this version.
+          version: 2.115.0
 
       - name: Start local Supabase
         run: supabase start
@@ -72,8 +74,10 @@ jobs:
         run: |
           STATUS=$(supabase status -o json)
           echo "NEXT_PUBLIC_SUPABASE_URL=$(echo "$STATUS" | jq -r '.API_URL')" >> "$GITHUB_ENV"
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(echo "$STATUS" | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
-          echo "SUPABASE_SERVICE_ROLE_KEY=$(echo "$STATUS" | jq -r '.SERVICE_ROLE_KEY')" >> "$GITHUB_ENV"
+          # New-format keys only (no legacy anon/service_role), so CI proves the
+          # app runs without the legacy JWT keys (SUPABASE_API_KEY_MIGRATION.md).
+          echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$(echo "$STATUS" | jq -r '.PUBLISHABLE_KEY')" >> "$GITHUB_ENV"
+          echo "SUPABASE_SECRET_KEY=$(echo "$STATUS" | jq -r '.SECRET_KEY')" >> "$GITHUB_ENV"
           echo "MIGRATIONS_DATABASE_URL=$(echo "$STATUS" | jq -r '.DB_URL')" >> "$GITHUB_ENV"
           echo "DATABASE_URL=postgresql://app_runtime:HH1mUPcwnyz1NGyM8jbeLsQqbwc@127.0.0.1:54322/postgres" >> "$GITHUB_ENV"
           echo "SUPABASE_STORAGE_BUCKET=greeting-media" >> "$GITHUB_ENV"

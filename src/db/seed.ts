@@ -3,10 +3,11 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { createClient } from "@supabase/supabase-js";
 import { contentTypes, themes, products, prices } from "./schema";
 import { MAX_MEDIA_BYTES } from "../lib/validation/content-types";
+import { resolveSecretKey } from "../lib/supabase/keys";
 
 async function ensureStorageBucket() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = resolveSecretKey(process.env)?.key;
   const bucketName = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
   if (!supabaseUrl || !serviceRoleKey) {
     console.warn("Skipping storage bucket setup: Supabase env vars not set.");

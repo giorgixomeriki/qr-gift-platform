@@ -1,6 +1,7 @@
 "use client";
 
 import { publicEnv } from "@/lib/env.public";
+import { apiKeyHeaders } from "@/lib/supabase/keys";
 
 /**
  * Direct-to-Storage upload against a Supabase signed upload URL, replicating
@@ -8,10 +9,12 @@ import { publicEnv } from "@/lib/env.public";
  * request shape Storage expects: PUT, multipart/form-data with a
  * `cacheControl` field and the file under an empty field name. Done as a raw
  * XHR — rather than the SDK helper — solely to get real `progress` events,
- * which the SDK does not expose. The `apikey`/`Authorization` headers here
- * are the public anon key (safe in the browser); the actual authorization to
- * write THIS object comes from the one-time `token` already embedded in
- * `uploadUrl` by the server (lib/storage/media.ts's createSignedUploadUrl).
+ * which the SDK does not expose. The key headers carry only the public
+ * publishable key (safe in the browser) — in `apikey` alone for a new
+ * sb_publishable_ key, which is not a JWT (lib/supabase/keys.ts). The actual
+ * authorization to write THIS object comes from the one-time `token` already
+ * embedded in `uploadUrl` by the server (lib/storage/media.ts's
+ * createSignedUploadUrl).
  */
 /** No upload progress for this long means the connection is gone (a phone switching networks often leaves the request hanging rather than failing). */
 const STALL_MS = 30_000;
@@ -43,8 +46,9 @@ export function uploadToSignedUrl(
     const onAbort = () => xhr.abort();
     signal?.addEventListener("abort", onAbort);
     xhr.open("PUT", uploadUrl);
-    xhr.setRequestHeader("apikey", publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-    xhr.setRequestHeader("Authorization", `Bearer ${publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY}`);
+    for (const [name, value] of Object.entries(apiKeyHeaders(publicEnv.SUPABASE_PUBLISHABLE_KEY))) {
+      xhr.setRequestHeader(name, value);
+    }
     xhr.setRequestHeader("x-upsert", "false");
 
     xhr.upload.onprogress = (event) => {

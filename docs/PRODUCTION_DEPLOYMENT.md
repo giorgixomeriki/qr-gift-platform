@@ -47,13 +47,13 @@ write it to a file in the repo.
 ```sh
 export MIGRATIONS_DATABASE_URL='…'     # target project, double-check the <ref>
 export NEXT_PUBLIC_SUPABASE_URL='https://<ref>.supabase.co'
-export SUPABASE_SERVICE_ROLE_KEY='…'   # needed by db:seed to create the private bucket
+export SUPABASE_SECRET_KEY='…'   # sb_secret_…; needed by db:seed to create the private bucket
 npm run db:migrate                     # forward-only; 0000–0017
 npm run db:seed                        # content types, themes, products, 10.00 GEL price, private bucket
 npx tsx scripts/rotate-app-runtime-password.ts \
   --confirm-host=aws-0-eu-central-1.pooler.supabase.com --out=/tmp/qrs-db-url   # F-01
 npm run ops:check-launch-pricing       # read-only: 1000 GEL, no overrides, partners at 3000 bps
-unset MIGRATIONS_DATABASE_URL SUPABASE_SERVICE_ROLE_KEY
+unset MIGRATIONS_DATABASE_URL SUPABASE_SECRET_KEY
 ```
 
 `rotate-app-runtime-password.ts` replaces the public local-dev `app_runtime`
@@ -125,8 +125,8 @@ pilot scale):
 | Variable | Production scope | Preview scope |
 |---|---|---|
 | `DATABASE_URL` | prod `app_runtime.<ref>` pooler URL (6543) | staging equivalent |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | prod project | staging project |
-| `SUPABASE_SERVICE_ROLE_KEY` (Sensitive) | prod | staging |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | prod project | staging project |
+| `SUPABASE_SECRET_KEY` (Sensitive) | prod | staging |
 | `SUPABASE_STORAGE_BUCKET` | `greeting-media` | `greeting-media` |
 | `EDIT_TOKEN_SECRET` (Sensitive) | `openssl rand -hex 32`, unique | a different value |
 | `NEXT_PUBLIC_APP_URL` | `https://qrapp.ge` | the stable branch alias, e.g. `https://qr-gift-platform-git-<branch>-<team>.vercel.app` |

@@ -1,4 +1,5 @@
 import Module from "node:module";
+import { resolveSecretKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -13,8 +14,8 @@ const { createClient } = require("@supabase/supabase-js") as typeof import("@sup
 const { resolveOrInviteUserByEmail } = require("../src/lib/auth/admin-users") as typeof import("../src/lib/auth/admin-users");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!supabaseUrl || !serviceRoleKey) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
+const serviceRoleKey = resolveSecretKey(process.env)?.key;
+if (!supabaseUrl || !serviceRoleKey) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) are required");
 const admin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 
 let passed = 0;

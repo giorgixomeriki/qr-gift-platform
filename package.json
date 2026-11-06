@@ -45,6 +45,7 @@
     "ops:check-merchant-info": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/check-merchant-info.ts",
     "ops:check-launch-pricing": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/check-launch-pricing.ts",
     "verify:low-cost-hosting": "node ./node_modules/.bin/tsx scripts/verify-low-cost-hosting.ts",
+    "verify:supabase-keys": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-supabase-keys.ts",
     "verify:env-guards": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-env-guards.ts",
     "payments:reconcile": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/payments-reconcile.ts",
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test",
