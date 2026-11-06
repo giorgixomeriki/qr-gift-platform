@@ -10,7 +10,16 @@ import { useTranslations } from "next-intl";
  * registered name configured (MERCHANT_LEGAL_NAME_*); nothing is shown in its
  * place otherwise. Links open in a new tab so the checkout is not lost.
  */
-export function CheckoutLegal({ merchantName, className }: { merchantName: string | null; className?: string }) {
+export function CheckoutLegal({
+  merchantName,
+  vatStatus = null,
+  className,
+}: {
+  merchantName: string | null;
+  /** Display only: the price itself always comes from the server (order snapshot). */
+  vatStatus?: "NOT_REGISTERED" | "REGISTERED" | null;
+  className?: string;
+}) {
   const t = useTranslations("wizard.checkout.legal");
   const links = [
     { href: "/terms", label: t("terms"), testId: "checkout-link-terms" },
@@ -19,11 +28,17 @@ export function CheckoutLegal({ merchantName, className }: { merchantName: strin
   ];
   return (
     <div className={className} data-testid="checkout-legal">
-      {merchantName && (
-        <p data-testid="checkout-seller">
-          {t("seller")}: <span className="font-medium">{merchantName}</span>
-        </p>
-      )}
+      <p data-testid="checkout-brand">
+        <span className="font-medium">QR Starr</span>
+        {merchantName && (
+          <span data-testid="checkout-seller">
+            {" · "}
+            {t("seller")}: <span className="font-medium">{merchantName}</span>
+          </span>
+        )}
+      </p>
+      {vatStatus && <p data-testid="checkout-vat">{t(`vat.${vatStatus}`)}</p>}
+      <p data-testid="checkout-age">{t("age")}</p>
       <p>
         {t("policies")}{" "}
         {links.map((l, i) => (

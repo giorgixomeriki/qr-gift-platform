@@ -29,6 +29,7 @@ export function SignatureCheckout({
   greetingId,
   isTestPayments,
   merchantName,
+  merchantVatStatus,
   themeKey,
   content,
   onBackToPreview,
@@ -37,6 +38,7 @@ export function SignatureCheckout({
   greetingId: string;
   isTestPayments: boolean;
   merchantName: string | null;
+  merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
   onBackToPreview: () => void;
@@ -137,7 +139,7 @@ export function SignatureCheckout({
 
           <p className="sig-caption sig-caption--lock">{t("lock")}</p>
 
-          <CheckoutLegal merchantName={merchantName} className="sig-caption space-y-1" />
+          <CheckoutLegal merchantName={merchantName} vatStatus={merchantVatStatus} className="sig-caption space-y-1" />
 
           <div className="sig-co-links">
             <button type="button" className="sig-co-link" onClick={onBackToPreview} data-testid="checkout-back-link">

@@ -41,6 +41,8 @@ export type WizardInitialState = {
   isTestPayments: boolean;
   /** The configured registered seller name in this locale (MERCHANT_LEGAL_NAME_*), or null while unpublished — shown at checkout. */
   merchantName: string | null;
+  /** Owner-declared VAT status (MERCHANT_VAT_STATUS) — display only, never changes the price. */
+  merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
 };
 
 const STEPS = ["theme", "message", "media", "preview", "checkout"] as const;
@@ -152,6 +154,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
               greetingId={initial.greetingId}
               isTestPayments={initial.isTestPayments}
               merchantName={initial.merchantName}
+              merchantVatStatus={initial.merchantVatStatus}
               themeKey={themeKey}
               content={content}
               onBackToPreview={() => goToStep("preview")}
@@ -560,6 +563,7 @@ export function CheckoutStep({
   greetingId,
   isTestPayments,
   merchantName,
+  merchantVatStatus,
   themeKey,
   content,
   onBackToPreview,
@@ -568,6 +572,7 @@ export function CheckoutStep({
   greetingId: string;
   isTestPayments: boolean;
   merchantName: string | null;
+  merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
   onBackToPreview: () => void;
@@ -681,7 +686,7 @@ export function CheckoutStep({
             <p className="mt-4 text-caption text-ink-3">
               {t("explanation")} {t("lock")}
             </p>
-            <CheckoutLegal merchantName={merchantName} className="mt-3 space-y-1 text-caption text-ink-3" />
+            <CheckoutLegal merchantName={merchantName} vatStatus={merchantVatStatus} className="mt-3 space-y-1 text-caption text-ink-3" />
           </section>
 
           <section aria-labelledby="checkout-next">

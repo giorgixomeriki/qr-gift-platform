@@ -12,6 +12,7 @@ const ROWS: { token: MerchantToken; label: string; optional?: boolean }[] = [
   { token: "supportEmail", label: "email" },
   { token: "phone", label: "phone" },
   { token: "supportHours", label: "hours", optional: true },
+  { token: "vatStatus", label: "vatStatus", optional: true },
 ];
 
 /**

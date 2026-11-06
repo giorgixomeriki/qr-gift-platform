@@ -32,16 +32,25 @@
       "entityType": "Legal form",
       "idCode": "Identification code",
       "legalAddress": "Legal address",
-      "actualAddress": "Actual address",
+      "actualAddress": "Contact (operating) address",
       "email": "Email",
       "phone": "Phone",
-      "hours": "Support hours"
+      "hours": "Support hours",
+      "vatStatus": "VAT"
     },
     "entityTypes": {
       "LLC": "Limited Liability Company (LLC)",
       "JSC": "Joint Stock Company (JSC)",
       "IE": "Individual Entrepreneur",
       "OTHER": "Other"
+    },
+    "vatStatuses": {
+      "NOT_REGISTERED": "not registered for VAT",
+      "REGISTERED": "registered for VAT"
+    },
+    "vatNotices": {
+      "NOT_REGISTERED": "The seller is not registered for VAT, so no VAT is added to the price. You pay exactly the amount shown before payment.",
+      "REGISTERED": "The seller is registered for VAT."
     },
     "status": {
       "pending": "Not yet published",
@@ -243,7 +252,7 @@
               "It can be opened again by scanning the card again."
             ]
           },
-          { "type": "decision", "ref": "D1", "text": "How long an activated greeting remains available will be stated here." }
+          { "type": "p", "text": "The greeting is available for 12 months after it is activated." }
         ]
       },
       {
@@ -325,7 +334,7 @@
         "id": "taxes",
         "title": "Taxes",
         "blocks": [
-          { "type": "decision", "ref": "C6", "text": "Tax (VAT) information for this price will be published here once confirmed." }
+          { "type": "p", "text": "{{merchant.vatNotice}}" }
         ]
       },
       {
@@ -417,6 +426,22 @@
         ]
       },
       {
+        "id": "payment-outcomes",
+        "title": "Payment outcomes",
+        "blocks": [
+          {
+            "type": "list",
+            "items": [
+              "**Successful payment:** the greeting is activated only after our server has verified the payment with the bank. Returning from the payment page does not, by itself, activate anything.",
+              "**Activation confirmation:** once activated, you see a confirmation on screen, and scanning the card opens the greeting.",
+              "**Failed or cancelled payment:** nothing is activated and you can try again. If you still notice a charge, contact us.",
+              "**Payment still processing:** if the bank is still processing the payment, the screen shows that we are checking its status. Don’t pay again; we check the status ourselves.",
+              "**Charged twice:** if you are charged twice for the same greeting, the extra payment is refunded in full."
+            ]
+          }
+        ]
+      },
+      {
         "id": "before-payment",
         "title": "Cancelling before payment",
         "blocks": [
@@ -442,10 +467,11 @@
             "type": "list",
             "items": [
               "**you were charged but the greeting could not be activated**, for example because it had already been paid for, or the card had been paused;",
-              "**you were charged more than once** for the same greeting: the extra payment is returned."
+              "**you were charged more than once** for the same greeting: the extra payment is returned.",
+              "**a technical fault on our side** means a paid greeting was not activated or does not open, and access could not be restored without charging you again."
             ]
           },
-          { "type": "decision", "ref": "D4", "text": "Further refund cases, such as a technical fault on our side that stops an activated greeting from opening, and any time limits, will be stated here." }
+          { "type": "review", "text": "No deadline for refund requests is set; any time limit must be agreed with a lawyer in line with consumer protection law." }
         ]
       },
       {
@@ -488,6 +514,22 @@
         ]
       },
       {
+        "id": "interruptions-and-expiry",
+        "title": "Interruptions and availability period",
+        "blocks": [
+          { "type": "p", "text": "The service may be briefly unavailable for maintenance or because of a fault. A paid greeting is not lost during an interruption and opens again once the service is restored." },
+          { "type": "p", "text": "A greeting is available for 12 months after activation. The end of that period is not a reason for a refund." }
+        ]
+      },
+      {
+        "id": "complaints",
+        "title": "Complaints",
+        "blocks": [
+          { "type": "p", "text": "For a complaint, email {{merchant.supportEmail}} or call {{merchant.phone}} ({{merchant.supportHours}}). Include the card’s link, the date of payment and what happened. We review every complaint and reply through the same channel." },
+          { "type": "decision", "ref": "M6", "text": "Our response time for complaints will be stated here." }
+        ]
+      },
+      {
         "id": "contact",
         "title": "Contact",
         "blocks": [
@@ -507,7 +549,9 @@
         "id": "controller",
         "title": "Who is responsible",
         "blocks": [
-          { "type": "p", "text": "The controller of the personal data described here is {{merchant.legalName}}, identification code {{merchant.idCode}}, {{merchant.legalAddress}} (“QR Starr”, “we”). Contact: {{merchant.privacyEmail}}." },
+          { "type": "p", "text": "The controller of the personal data described here is {{merchant.legalName}} (“QR Starr”, “we”)." },
+          { "type": "p", "text": "Identification code: {{merchant.idCode}}. Registered legal address: {{merchant.legalAddress}}." },
+          { "type": "p", "text": "Contact address: {{merchant.actualAddress}}. Email: {{merchant.privacyEmail}}." },
           { "type": "review", "text": "Whether a personal data protection officer must be appointed and, if so, their contact details." }
         ]
       },
@@ -566,11 +610,12 @@
             "type": "table",
             "head": ["Provider", "Role"],
             "rows": [
-              ["Supabase", "Database, storage of greeting media, and partner and administrator sign-in"],
+              ["Supabase", "Database, storage of greeting media, and partner and administrator sign-in (servers in Frankfurt, Germany)"],
+              ["Render", "Website hosting (servers in Frankfurt, Germany)"],
               ["Bank of Georgia", "Card payments, as an independent controller under its own privacy policy"]
             ]
           },
-          { "type": "decision", "ref": "M3", "text": "The hosting provider, the email delivery provider and the countries where data is stored will be listed here once confirmed." },
+          { "type": "p", "text": "Data is stored and processed in Germany (Frankfurt): the website servers by Render, the database and media by Supabase. We do not send emails to senders or recipients." },
           { "type": "review", "text": "The legal basis for transferring data to providers outside Georgia, and the data processing agreements with them." }
         ]
       },
@@ -606,6 +651,7 @@
         "title": "How long we keep data",
         "blocks": [
           { "type": "p", "text": "We do not currently delete greetings, media, payment records or logs automatically." },
+          { "type": "p", "text": "An activated greeting opens from its card for 12 months. The end of that period does **not** mean the data is deleted automatically. You can ask us to delete your data at any time (see “How to make a request”)." },
           { "type": "decision", "ref": "D1", "text": "Retention periods for activated greetings and their media, unpaid drafts, payment records and security logs will be set and stated here." }
         ]
       },
@@ -657,7 +703,7 @@
         "id": "children",
         "title": "Children",
         "blocks": [
-          { "type": "decision", "ref": "D2", "text": "The minimum age to create and pay for a greeting will be stated here." },
+          { "type": "p", "text": "Only people aged 18 or over may create and pay for a greeting. We do not knowingly collect payment or contact data from anyone under 18." },
           { "type": "p", "text": "A greeting may, of course, be made for a child." }
         ]
       },
@@ -682,7 +728,10 @@
         "id": "who-we-are",
         "title": "Who we are",
         "blocks": [
-          { "type": "p", "text": "The service is provided by {{merchant.legalName}}, identification code {{merchant.idCode}}, {{merchant.legalAddress}} (“QR Starr”, “we”). Contact: {{merchant.supportEmail}}, {{merchant.phone}}." }
+          { "type": "p", "text": "The service is provided by {{merchant.legalName}} (“QR Starr”, “we”)." },
+          { "type": "p", "text": "Identification code: {{merchant.idCode}}. Registered legal address: {{merchant.legalAddress}}." },
+          { "type": "p", "text": "Contact address: {{merchant.actualAddress}}." },
+          { "type": "p", "text": "Contact: {{merchant.supportEmail}}, {{merchant.phone}} ({{merchant.supportHours}})." }
         ]
       },
       {
@@ -705,7 +754,8 @@
         "id": "eligibility",
         "title": "Who can use the service",
         "blocks": [
-          { "type": "decision", "ref": "D2", "text": "The minimum age to create and pay for a greeting will be stated here." },
+          { "type": "p", "text": "Only people **aged 18 or over** may create and pay for a greeting. By paying, you confirm that you meet this requirement." },
+          { "type": "review", "text": "Whether an age declaration at payment is sufficient, or further verification is needed, must be confirmed with a lawyer." },
           { "type": "p", "text": "You must give accurate information when you pay or contact us." }
         ]
       },
@@ -798,7 +848,8 @@
         "title": "Service availability",
         "blocks": [
           { "type": "p", "text": "We work to keep greetings available at all times, but we can’t guarantee uninterrupted access. The service may be briefly unavailable for maintenance or because of a fault." },
-          { "type": "decision", "ref": "D1", "text": "How long an activated greeting remains available will be stated here." },
+          { "type": "p", "text": "An activated greeting opens when the card is scanned **for 12 months after activation** (activation happens only after the payment is verified on our server). After that period the greeting no longer opens from the card. The end of this period does not mean your data is deleted automatically: see our [Privacy Policy](/privacy) for how data is kept." },
+          { "type": "p", "text": "If your payment went through but a technical fault on our side means the greeting was not activated or does not open, we check the payment and the activation and try to restore access without charging you again. If delivery cannot be restored, we refund the full amount. See [Delivery and Refunds](/delivery-and-refunds)." },
           { "type": "review", "text": "Your remedies if a technical fault on our side stops an activated greeting from opening." }
         ]
       },

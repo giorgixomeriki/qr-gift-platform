@@ -51,14 +51,20 @@ export const MERCHANT_FIELDS = {
   },
   legalAddressKa: { env: "MERCHANT_LEGAL_ADDRESS_KA", required: true, schema: text, describe: "Registered legal address, in Georgian" },
   legalAddressEn: { env: "MERCHANT_LEGAL_ADDRESS_EN", required: true, schema: text, describe: "Registered legal address, in English" },
-  actualAddressKa: { env: "MERCHANT_ACTUAL_ADDRESS_KA", required: false, schema: text, describe: "Actual (operating) address, in Georgian, if different from the legal address" },
-  actualAddressEn: { env: "MERCHANT_ACTUAL_ADDRESS_EN", required: false, schema: text, describe: "Actual (operating) address, in English, if different from the legal address" },
+  // Shown as the CONTACT / OPERATING address — never labelled or used as the registered legal address.
+  actualAddressKa: { env: "MERCHANT_ACTUAL_ADDRESS_KA", required: false, schema: text, describe: "Contact / operating address, in Georgian (not the registered legal address)" },
+  actualAddressEn: { env: "MERCHANT_ACTUAL_ADDRESS_EN", required: false, schema: text, describe: "Contact / operating address, in English (not the registered legal address)" },
   supportEmail: { env: "MERCHANT_SUPPORT_EMAIL", required: true, schema: z.email().trim(), describe: "Customer support email address" },
   phone: {
     env: "MERCHANT_PHONE",
     required: true,
     // Stored as entered; validated as a Georgian number in international form.
-    schema: z.string().trim().regex(/^\+995[\s-]?\d{3}[\s-]?\d{2}[\s-]?\d{2}[\s-]?\d{2}$/, "+995 followed by 9 digits"),
+    // Any grouping of the 9 digits is accepted ("+995 555 123 456", "+995 555 12 34 56",
+    // "+995555123456"); only the digits are validated, the value is shown as entered.
+    schema: z
+      .string()
+      .trim()
+      .refine((v) => /^\+995\d{9}$/.test(v.replace(/[\s-]/g, "")), "+995 followed by 9 digits"),
     describe: "Customer contact phone, international format: +995 5XX XX XX XX",
   },
   supportHoursKa: { env: "MERCHANT_SUPPORT_HOURS_KA", required: false, schema: text, describe: "Support hours, in Georgian (e.g. ორშ–პარ, 10:00–18:00)" },
@@ -68,6 +74,14 @@ export const MERCHANT_FIELDS = {
     required: false,
     schema: z.email().trim(),
     describe: "Email for personal-data requests (falls back to the support email when unset)",
+  },
+  vatStatus: {
+    env: "MERCHANT_VAT_STATUS",
+    required: false,
+    // Owner-declared VAT registration status. Display only: it never changes a
+    // price, which always comes from the prices table (checkout snapshot).
+    schema: z.enum(["NOT_REGISTERED", "REGISTERED"]),
+    describe: "VAT registration status: NOT_REGISTERED or REGISTERED (as confirmed by the owner / accountant)",
   },
   legalEffectiveDate: {
     env: "LEGAL_EFFECTIVE_DATE",
@@ -165,7 +179,7 @@ const LOCALIZED: Partial<Record<string, { ka: MerchantField; en: MerchantField }
 };
 
 /** The names content may reference as {{merchant.<name>}}. */
-export const MERCHANT_TOKENS = ["legalName", "legalAddress", "actualAddress", "supportHours", "entityType", "idCode", "supportEmail", "phone", "privacyEmail"] as const;
+export const MERCHANT_TOKENS = ["legalName", "legalAddress", "actualAddress", "supportHours", "entityType", "idCode", "supportEmail", "phone", "privacyEmail", "vatStatus", "vatNotice"] as const;
 export type MerchantToken = (typeof MERCHANT_TOKENS)[number];
 
 export function isMerchantToken(name: string): name is MerchantToken {
@@ -179,6 +193,7 @@ export function resolveMerchantToken(info: MerchantInfo, token: MerchantToken, l
     const field = localized[locale];
     return { field, value: info.values[field] };
   }
+  if (token === "vatNotice") return { field: "vatStatus", value: info.values.vatStatus };
   if (token === "privacyEmail" && info.values.privacyEmail === null) {
     return { field: "supportEmail", value: info.values.supportEmail };
   }
