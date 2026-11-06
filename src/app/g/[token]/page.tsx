@@ -12,6 +12,8 @@ import { loadActiveGreetingForRecipient, isOriginalSender, RecipientAccessError 
 import type { WizardInitialState } from "@/components/greeting/creation-wizard";
 import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
 import { signatureUiEnabled } from "@/components/signature/flag";
+import { getMerchantInfo } from "@/lib/merchant/server";
+import { resolveMerchantToken } from "@/lib/merchant/info";
 import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/placeholders";
 
 /**
@@ -96,6 +98,7 @@ export default async function QrEntryPage({
           audio: audioRow ? { contentId: audioRow.id, url: audioRow.signedUrl! } : null,
           priceLabel,
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
+          merchantName: checkoutMerchantName(locale),
         };
 
         return <Suspense>{signatureUiEnabled() ? <SignatureWizard initial={initial} /> : <CreationWizard initial={initial} />}</Suspense>;
@@ -148,4 +151,14 @@ export default async function QrEntryPage({
       }
     }
   }
+}
+
+/**
+ * The registered seller name for the checkout screen: only a real configured
+ * value (never the fictional demo profile, never a placeholder). Null hides the line.
+ */
+function checkoutMerchantName(locale: string): string | null {
+  const info = getMerchantInfo();
+  if (info.mode !== "configured") return null;
+  return resolveMerchantToken(info, "legalName", locale === "en" ? "en" : "ka").value;
 }

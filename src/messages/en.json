@@ -152,7 +152,14 @@
       "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged.",
       "orderKicker": "Your order",
       "design": "Design",
-      "contents": "Contents"
+      "contents": "Contents",
+      "legal": {
+        "seller": "Seller",
+        "policies": "Before paying, please read:",
+        "terms": "Terms and Conditions",
+        "privacy": "Privacy Policy",
+        "refunds": "Delivery and Refunds"
+      }
     },
     "preview": {
       "edit": "Back to editing",
