@@ -32,7 +32,7 @@ const paperEncore: SceneFn = (ctx, tl) => {
     .from(q(ctx, ".tw__mark"), { scale: 0, rotation: -120, duration: 0.6, ease: "back.out(3)" }, 1.9);
 };
 
-/** Wedding — vellum close: the closing line is printed, the vellum is drawn back over the card, the seal is pressed shut. */
+/** Wedding — vellum close: the closing line is printed, the vellum is drawn back over the card (the words withdraw beneath it), the seal is pressed shut. */
 const vellumClose: SceneFn = (ctx, tl) => {
   const { cq } = ctx;
   const opening = q(ctx, ".tw__opening");
@@ -40,6 +40,9 @@ const vellumClose: SceneFn = (ctx, tl) => {
   const veil = q(ctx, ".tw__veil");
   const seal = q(ctx, ".tw__seal");
   if (veil) tl.fromTo(veil, { y: cq(-140), scale: 1.05 }, { y: 0, scale: 1, duration: 1.9, ease: "qs-hand", clearProps: "transform" }, 1.5);
+  // The words go with the card under the vellum: no faded copy of them shows through the sheet (the letter itself follows in the closing).
+  const message = q(ctx, ".tw__message");
+  if (message) tl.fromTo(message, { opacity: 1 }, { opacity: 0, duration: 1.3, ease: "power1.inOut" }, 2.0);
   if (seal) {
     tl.fromTo(seal, { scale: 1.3, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.6, ease: "power2.out" }, 3.2)
       .to(seal, { scale: 0.88, duration: 0.18, ease: "power2.in" }, 3.75)
