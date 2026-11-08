@@ -183,7 +183,7 @@ curl -s -u owner:<gate password> -H 'X-Forwarded-For: 6.6.6.6' https://qrapp.ge/
 - **Payment reconciliation cron:** `vercel.json`'s cron does not run on Render.
   With checkout closed there is nothing to reconcile. Before payments open, add
   a Render Cron Job (or upgrade the host) and set `CRON_SECRET` and
-  `RECONCILE_ADMIN_USER_ID`.
+  `RECONCILE_ADMIN_USER_ID`: `docs/ops/PAYMENT_RECONCILIATION_RUNBOOK.md`.
 - **Going public:** follow `docs/security/SEC-02_PUBLIC_ACCESS.md`, then
   `docs/PRODUCTION_DEPLOYMENT.md` (Supabase Pro with backups, SMTP, legal pages,
   BOG approval).
