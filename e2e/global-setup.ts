@@ -10,7 +10,7 @@
  * against dev rather than a production build.
  */
 export default async function globalSetup() {
-  const baseURL = "http://localhost:3000";
+  const baseURL = `http://localhost:${process.env.E2E_PORT ?? "3000"}`;
   const routes = ["/", "/about", "/how-it-works", "/pricing", "/contact", "/terms", "/privacy", "/delivery-and-refunds", "/partner/login", "/admin/login", "/partner/forgot-password", "/admin/forgot-password", "/reset-password", "/g/warmup-nonexistent-token"];
 
   for (const route of routes) {

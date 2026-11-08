@@ -539,7 +539,33 @@
     "partnerLoginBody": "Manage your cards, sales and commission.",
     "adminLoginBody": "Restricted to QR Starr staff.",
     "areaPartner": "Partner",
-    "areaAdmin": "Admin"
+    "areaAdmin": "Admin",
+    "mfa": {
+      "setupTitle": "Turn on two-step sign-in",
+      "setupBody": "The admin area requires an authenticator app. Scan the QR code, then enter the 6-digit code it shows.",
+      "qrAlt": "QR code for your authenticator app",
+      "secretLabel": "Or enter this key by hand",
+      "codeLabel": "6-digit code",
+      "confirm": "Confirm",
+      "verifying": "Checking…",
+      "preparing": "Preparing…",
+      "challengeTitle": "Enter your security code",
+      "challengeBody": "Open your authenticator app and enter the current 6-digit code.",
+      "factorLabel": "Authenticator",
+      "invalidCode": "That code is wrong or has expired. Try a new one.",
+      "rateLimited": "Too many attempts. Please try again in a few minutes.",
+      "failed": "The security check could not be completed. Please try again.",
+      "securityTitle": "Account security",
+      "securityBody": "The authenticators that protect your admin sign-in. Add a backup so a lost phone cannot lock you out.",
+      "factorsTitle": "Authenticators",
+      "addedOn": "Added {date}",
+      "addBackup": "Add a backup authenticator",
+      "backupTitle": "Scan with your backup device",
+      "backupRecommended": "You have one authenticator. Add a backup on a second device.",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "lastFactor": "The only authenticator cannot be removed."
+    }
   },
   "nav": {
     "adminBrand": "QR Starr — Admin",
@@ -550,7 +576,8 @@
     "signOut": "Sign out",
     "managePartners": "Manage partners",
     "partnerArea": "Partner",
-    "adminArea": "Admin"
+    "adminArea": "Admin",
+    "security": "Security"
   },
   "enums": {
     "partnerStatus": {

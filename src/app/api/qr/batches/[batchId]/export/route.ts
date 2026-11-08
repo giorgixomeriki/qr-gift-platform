@@ -1,5 +1,5 @@
-import { getSessionUser } from "@/lib/auth/session";
-import { checkIsAdmin, withUserContext } from "@/db/client";
+import { resolveOperatorViewer } from "@/lib/auth/admin";
+import { withUserContext } from "@/db/client";
 import { getQrBatch, listQrCodesForBatch, markExported } from "@/lib/qr/batches";
 import { getPartnerById } from "@/lib/partners/service";
 import { buildQrInventoryCsv } from "@/lib/qr/csv";
@@ -21,10 +21,10 @@ import { recordAuditLog } from "@/lib/audit";
 export async function GET(_request: Request, { params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
 
-  const user = await getSessionUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
-
-  const viewer = (await checkIsAdmin(user.id)) ? "ADMIN" : "PARTNER";
+  const operator = await resolveOperatorViewer();
+  if (operator.kind === "ANONYMOUS") return new Response("Unauthorized", { status: 401 });
+  if (operator.kind === "MFA_REQUIRED") return new Response("Multi-factor authentication required", { status: 403, headers: { "Cache-Control": "no-store" } });
+  const { user, kind: viewer } = operator;
 
   const csv = await withUserContext(user.id, async (tx) => {
     const batch = await getQrBatch(tx, batchId);

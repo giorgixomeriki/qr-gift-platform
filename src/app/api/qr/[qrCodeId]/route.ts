@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { getSessionUser } from "@/lib/auth/session";
-import { checkIsAdmin, getPartnerRole, withPublicContext, withUserContext } from "@/db/client";
+import { resolveOperatorViewer } from "@/lib/auth/admin";
+import { getPartnerRole, withPublicContext, withUserContext } from "@/db/client";
 import { getQrCodeById } from "@/lib/qr/batches";
 import { generateQrSvg, generateQrPng } from "@/lib/qr/asset";
 import { isCredentialReleasable } from "@/lib/qr/credential-access";
@@ -23,13 +23,15 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const { qrCodeId } = await params;
   const format = request.nextUrl.searchParams.get("format") === "png" ? "png" : "svg";
 
-  const user = await getSessionUser();
-  if (!user) return new Response("Unauthorized", { status: 401 });
+  const operator = await resolveOperatorViewer();
+  if (operator.kind === "ANONYMOUS") return new Response("Unauthorized", { status: 401 });
+  if (operator.kind === "MFA_REQUIRED") return new Response("Multi-factor authentication required", { status: 403, headers: { "Cache-Control": "no-store" } });
+  const { user } = operator;
 
   const qr = await withPublicContext((tx) => getQrCodeById(tx, qrCodeId));
   if (!qr) return new Response("Not found", { status: 404 });
 
-  const isAdmin = await checkIsAdmin(user.id);
+  const isAdmin = operator.kind === "ADMIN";
   if (!isAdmin) {
     const role = await getPartnerRole(user.id, qr.partnerId);
     if (!role) return new Response("Forbidden", { status: 403 });

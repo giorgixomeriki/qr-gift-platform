@@ -1,10 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { Store } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { checkIsAdmin } from "@/db/client";
-import { getSessionUser } from "@/lib/auth/session";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { listPartners } from "@/lib/partners/service";
 import { CreatePartnerForm } from "@/components/admin/create-partner-form";
 import { DefaultPriceForm } from "@/components/admin/default-price-form";
@@ -15,14 +12,12 @@ import { NotAdmin } from "@/components/admin/not-admin";
 import { Badge, EmptyState, PageHeader, Panel, table } from "@/components/dashboard/ui";
 
 export default async function AdminPartnersPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
+  const { user, isAdmin } = await requireAdminPage();
 
   const t = await getTranslations("admin");
   // Same graceful-degradation guard as the dashboard: a signed-in non-admin
   // sees a plain message instead of requireAdmin's UnauthorizedError crashing
   // into an unhandled server exception / generic error page.
-  const isAdmin = await checkIsAdmin(user.id);
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
   const { partners, defaultPricing, overrides } = await requireAdmin(async (tx) => ({

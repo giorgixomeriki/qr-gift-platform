@@ -1,10 +1,8 @@
 import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { ChevronLeft, Layers } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { checkIsAdmin } from "@/db/client";
-import { getSessionUser } from "@/lib/auth/session";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { getPartnerById, listPartnerMembers } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
 import { toInventoryRow } from "@/lib/qr/credential-access";
@@ -33,11 +31,9 @@ import { adminRefundPaidOrderAction, adminRecordChargebackAction, adminDisputeEv
 export default async function AdminPartnerDetailPage({ params }: { params: Promise<{ partnerId: string }> }) {
   const { partnerId } = await params;
 
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
+  const { user, isAdmin } = await requireAdminPage();
 
   const t = await getTranslations("admin");
-  const isAdmin = await checkIsAdmin(user.id);
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
   const data = await requireAdmin(async (tx) => {

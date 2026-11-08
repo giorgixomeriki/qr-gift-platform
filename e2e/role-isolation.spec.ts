@@ -1,6 +1,7 @@
 import { test, expect, type Page } from "@playwright/test";
 import postgres from "postgres";
 import { DEV_ADMIN_EMAIL, DEV_PARTNER_EMAIL, DEV_PASSWORD } from "./fixtures";
+import { signInAdminWithMfa } from "./admin-session";
 
 /**
  * Cross-role isolation through the real UI and HTTP surface (added with the
@@ -83,7 +84,7 @@ test.describe("Partner", () => {
 
 test.describe("Admin", () => {
   test("reaches every admin page and sees all partners, including the other one", async ({ page }) => {
-    await signIn(page, "admin", DEV_ADMIN_EMAIL);
+    await signInAdminWithMfa(page, DEV_ADMIN_EMAIL, DEV_PASSWORD);
     for (const path of ADMIN_PAGES) {
       await page.goto(path);
       await expect(page.getByText(/but not an admin/), path).toHaveCount(0);
@@ -96,7 +97,7 @@ test.describe("Admin", () => {
   });
 
   test("signing out ends access to the admin dashboard", async ({ page, context }) => {
-    await signIn(page, "admin", DEV_ADMIN_EMAIL);
+    await signInAdminWithMfa(page, DEV_ADMIN_EMAIL, DEV_PASSWORD);
     await context.clearCookies();
     await page.goto("/admin/dashboard");
     await expect(page).toHaveURL(/\/admin\/login/);
