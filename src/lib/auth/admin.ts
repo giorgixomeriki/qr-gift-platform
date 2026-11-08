@@ -1,7 +1,7 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { checkIsAdmin, withAdminContext, type Tx } from "@/db/client";
-import { ADMIN_MFA_CHALLENGE_PATH, ADMIN_MFA_ENROLL_PATH, decideAdminAccess, type AdminAccess } from "./assurance";
+import { ADMIN_MFA_CHALLENGE_PATH, ADMIN_MFA_ENROLL_PATH, ADMIN_MFA_LOCKED_PATH, decideAdminAccess, type AdminAccess } from "./assurance";
 import { getSessionAssurance, type SessionUser, type VerifiedFactor } from "./session";
 
 export class UnauthorizedError extends Error {
@@ -19,16 +19,23 @@ export class MfaRequiredError extends UnauthorizedError {
   }
 }
 
-export type AdminSession = { access: AdminAccess; user: SessionUser | null; factors: VerifiedFactor[] };
+export type AdminSession = { access: AdminAccess; user: SessionUser | null; factors: VerifiedFactor[]; authorizedFactorIds: Set<string> };
 
 /** The one place admin access is decided, from verified server-side facts only. */
 export async function getAdminAccess(): Promise<AdminSession> {
   const session = await getSessionAssurance();
-  if (!session) return { access: "ANONYMOUS", user: null, factors: [] };
+  if (!session) return { access: "ANONYMOUS", user: null, factors: [], authorizedFactorIds: new Set() };
 
   const isAdmin = await checkIsAdmin(session.user.id);
-  const access = decideAdminAccess({ signedIn: true, isAdmin, aal: session.aal, hasVerifiedFactor: session.factors.length > 0 });
-  return { access, user: session.user, factors: session.factors };
+  const access = decideAdminAccess({
+    signedIn: true,
+    isAdmin,
+    aal: session.aal,
+    authorizedFactors: session.factors.length,
+    unauthorizedFactors: session.unauthorizedFactors,
+    enrollmentAuthorized: session.enrollmentAuthorized,
+  });
+  return { access, user: session.user, factors: session.factors, authorizedFactorIds: session.authorizedFactorIds };
 }
 
 /**
@@ -54,6 +61,7 @@ export async function requireAdmin<T>(fn: (tx: Tx, adminUserId: string) => Promi
 export async function requireAdminPage(): Promise<{ user: SessionUser; isAdmin: boolean }> {
   const { access, user } = await getAdminAccess();
   if (!user) redirect("/admin/login");
+  if (access === "MFA_LOCKED") redirect(ADMIN_MFA_LOCKED_PATH);
   if (access === "MFA_ENROLL") redirect(ADMIN_MFA_ENROLL_PATH);
   if (access === "MFA_CHALLENGE") redirect(ADMIN_MFA_CHALLENGE_PATH);
   return { user, isAdmin: access === "GRANTED" };

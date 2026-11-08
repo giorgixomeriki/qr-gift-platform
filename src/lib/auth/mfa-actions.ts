@@ -7,6 +7,7 @@ import { logServerError } from "@/lib/log";
 import { enforceRateLimit, RateLimitedError } from "@/lib/rate-limit";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminAccess } from "./admin";
+import { updateAdminMfaPolicy } from "./admin-mfa-policy";
 
 /**
  * Admin TOTP, on Supabase Auth's own MFA API: no secret is generated, stored
@@ -37,10 +38,10 @@ function failure(scope: string, err: unknown): { ok: false; error: MfaErrorCode 
 }
 
 /**
- * Starts enrolling a factor. Allowed for an admin with no factor yet (first
- * sign-in) or a fully verified admin adding a backup, never for an aal1
- * session on an account that already has a factor, because that would let a
- * stolen password register the attacker's own device.
+ * Starts enrolling a factor. Allowed for an admin holding an operator-issued
+ * grant (MFA_ENROLL) or a fully verified admin adding a backup, never on a
+ * password alone. The new factor is authorized here, by the server that
+ * created it, so one enrolled directly against Supabase never counts.
  */
 export async function startMfaEnrollmentAction(): Promise<EnrollmentResult> {
   try {
@@ -59,6 +60,13 @@ export async function startMfaEnrollmentAction(): Promise<EnrollmentResult> {
 
     const { data, error } = await supabase.auth.mfa.enroll({ factorType: "totp", friendlyName: `totp-${Date.now()}`, issuer: "QR Starr" });
     if (error) throw error;
+    const keep = new Set(existing.all.filter((f) => f.status === "verified").map((f) => f.id));
+    try {
+      await updateAdminMfaPolicy(user.id, (p) => ({ ...p, factor_ids: [...p.factor_ids.filter((id) => keep.has(id)), data.id] }));
+    } catch (err) {
+      await supabase.auth.mfa.unenroll({ factorId: data.id });
+      throw err;
+    }
     return { ok: true, factorId: data.id, qrCode: data.totp.qr_code, secret: data.totp.secret };
   } catch (err) {
     return failure("adminMfaEnroll", err);
@@ -66,10 +74,10 @@ export async function startMfaEnrollmentAction(): Promise<EnrollmentResult> {
 }
 
 /** Shared by enrollment confirmation and sign-in: checks one code against one of this user's own factors. */
-async function verifyCode(factorId: string, code: string, allowedFactorIds: Set<string> | null, userId: string, successAction: string): Promise<MfaResult> {
+async function verifyCode(factorId: string, code: string, allowedFactorIds: Set<string>, userId: string, successAction: string): Promise<MfaResult> {
   await enforceRateLimit({ key: `admin-mfa-verify:${userId}`, ...VERIFY_LIMIT });
   const parsedFactor = factorIdSchema.safeParse(factorId);
-  if (!parsedFactor.success || (allowedFactorIds && !allowedFactorIds.has(parsedFactor.data))) return { ok: false, error: "FORBIDDEN" };
+  if (!parsedFactor.success || !allowedFactorIds.has(parsedFactor.data)) return { ok: false, error: "FORBIDDEN" };
   if (!codeSchema.safeParse(code).success) return { ok: false, error: "INVALID_CODE" };
 
   const supabase = await createSupabaseServerClient();
@@ -84,9 +92,14 @@ async function verifyCode(factorId: string, code: string, allowedFactorIds: Set<
 
 export async function confirmMfaEnrollmentAction(factorId: string, code: string): Promise<MfaResult> {
   try {
-    const { access, user } = await getAdminAccess();
+    const { access, user, authorizedFactorIds } = await getAdminAccess();
     if (!user || (access !== "MFA_ENROLL" && access !== "GRANTED")) return { ok: false, error: "FORBIDDEN" };
-    return await verifyCode(factorId, code, null, user.id, "ADMIN_MFA_ENROLLED");
+    const result = await verifyCode(factorId, code, authorizedFactorIds, user.id, "ADMIN_MFA_ENROLLED");
+    if (result.ok && access === "MFA_ENROLL") {
+      // One grant, one device. If this write fails the grant still expires on its own.
+      await updateAdminMfaPolicy(user.id, (p) => ({ ...p, enrollment_until: null })).catch((err: unknown) => logServerError("adminMfaConsumeGrant", err));
+    }
+    return result;
   } catch (err) {
     return failure("adminMfaConfirm", err);
   }
@@ -112,6 +125,7 @@ export async function removeMfaFactorAction(factorId: string): Promise<MfaResult
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.mfa.unenroll({ factorId });
     if (error) throw error;
+    await updateAdminMfaPolicy(user.id, (p) => ({ ...p, factor_ids: p.factor_ids.filter((id) => id !== factorId) }));
     await audit(user.id, "ADMIN_MFA_REMOVED", factorId);
     return { ok: true };
   } catch (err) {

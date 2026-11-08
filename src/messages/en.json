@@ -564,7 +564,9 @@
       "backupRecommended": "You have one authenticator. Add a backup on a second device.",
       "remove": "Remove",
       "cancel": "Cancel",
-      "lastFactor": "The only authenticator cannot be removed."
+      "lastFactor": "The only authenticator cannot be removed.",
+      "lockedTitle": "Two-step sign-in needs authorization",
+      "lockedBody": "This admin account cannot set up or use two-step sign-in yet. The platform owner must authorize it first."
     }
   },
   "nav": {

@@ -39,7 +39,7 @@ ModuleInternals._load = function (request: string, ...rest: unknown[]) {
 const postgres = require("postgres") as typeof import("postgres");
 const { createClient } = require("@supabase/supabase-js") as typeof import("@supabase/supabase-js");
 const { NextRequest } = require("next/server") as typeof import("next/server");
-const { resolveSecretKey } = require("../src/lib/supabase/keys") as typeof import("../src/lib/supabase/keys");
+const { resolveSecretKey, resolvePublishableKey } = require("../src/lib/supabase/keys") as typeof import("../src/lib/supabase/keys");
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -120,7 +120,7 @@ function filesUnder(dir: string, match: (path: string) => boolean): string[] {
 }
 
 async function main() {
-  const { decideAdminAccess } = require("../src/lib/auth/assurance") as typeof import("../src/lib/auth/assurance");
+  const { decideAdminAccess, readAdminMfaPolicy } = require("../src/lib/auth/assurance") as typeof import("../src/lib/auth/assurance");
   const adminLib = require("../src/lib/auth/admin") as typeof import("../src/lib/auth/admin");
   const { getSessionAssurance } = require("../src/lib/auth/session") as typeof import("../src/lib/auth/session");
   const { createSupabaseServerClient } = require("../src/lib/supabase/server") as typeof import("../src/lib/supabase/server");
@@ -130,10 +130,10 @@ async function main() {
   const { GET: batchExport } = require("../src/app/api/qr/batches/[batchId]/export/route") as typeof import("../src/app/api/qr/batches/[batchId]/export/route");
   const printPage = (require("../src/app/print/batch/[batchId]/page") as typeof import("../src/app/print/batch/[batchId]/page")).default;
 
-  async function signIn(who: string, jar = new Jar()): Promise<Jar> {
+  async function signIn(who: string, jar = new Jar(), password = PASSWORD): Promise<Jar> {
     currentJar = jar;
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.signInWithPassword({ email: email(who), password: PASSWORD });
+    const { error } = await supabase.auth.signInWithPassword({ email: email(who), password });
     if (error) throw error;
     await sleep(30); // @supabase/ssr flushes cookies on the auth-state event
     return jar;
@@ -143,25 +143,36 @@ async function main() {
     currentJar = jar;
     return (await adminLib.getAdminAccess()).access;
   };
+  const grant = (who: string) => adminAccessCli(["grant-enrollment", "--email", email(who), "--reason", "verify suite", "--minutes", "15", "--apply"]);
+  const appMetadata = async (id: string) => (await authAdmin.auth.admin.getUserById(id)).data.user!.app_metadata as { admin_mfa?: { enrollment_until: string | null; factor_ids: string[] } };
   const qr = () => qrAsset(new NextRequest(`http://local.test/api/qr/${created.qrId}`), { params: Promise.resolve({ qrCodeId: created.qrId }) });
   const exportCsv = () => batchExport(new Request("http://local.test/x"), { params: Promise.resolve({ batchId: created.batchId }) });
   const print = () => printPage({ params: Promise.resolve({ batchId: created.batchId }) });
 
   console.log("\n--- 1. Decision table ---");
-  const d = (signedIn: boolean, isAdmin: boolean, aal: "aal1" | "aal2" | null, hasVerifiedFactor: boolean) => decideAdminAccess({ signedIn, isAdmin, aal, hasVerifiedFactor });
-  check("1a. no session → ANONYMOUS", d(false, false, null, false) === "ANONYMOUS");
-  check("1b. non-admin, even aal2 → NOT_ADMIN", d(true, false, "aal2", true) === "NOT_ADMIN");
-  check("1c. admin, aal1, no factor → MFA_ENROLL", d(true, true, "aal1", false) === "MFA_ENROLL");
-  check("1d. admin, aal1, factor → MFA_CHALLENGE", d(true, true, "aal1", true) === "MFA_CHALLENGE");
-  check("1e. admin, unknown aal, factor → MFA_CHALLENGE", d(true, true, null, true) === "MFA_CHALLENGE");
-  check("1f. admin, aal2, factor → GRANTED", d(true, true, "aal2", true) === "GRANTED");
-  check("1g. admin, aal2, factor since removed → MFA_ENROLL", d(true, true, "aal2", false) === "MFA_ENROLL");
+  const d = (signedIn: boolean, isAdmin: boolean, aal: "aal1" | "aal2" | null, authorizedFactors: number, unauthorizedFactors = 0, enrollmentAuthorized = false) =>
+    decideAdminAccess({ signedIn, isAdmin, aal, authorizedFactors, unauthorizedFactors, enrollmentAuthorized });
+  check("1a. no session → ANONYMOUS", d(false, false, null, 0) === "ANONYMOUS");
+  check("1b. non-admin, even aal2 → NOT_ADMIN", d(true, false, "aal2", 1) === "NOT_ADMIN");
+  check("1c. admin, password only, no grant → MFA_LOCKED", d(true, true, "aal1", 0) === "MFA_LOCKED");
+  check("1d. admin, no factor, grant → MFA_ENROLL", d(true, true, "aal1", 0, 0, true) === "MFA_ENROLL");
+  check("1e. admin, aal1, authorized factor → MFA_CHALLENGE", d(true, true, "aal1", 1) === "MFA_CHALLENGE");
+  check("1f. admin, unknown aal, authorized factor → MFA_CHALLENGE", d(true, true, null, 1) === "MFA_CHALLENGE");
+  check("1g. admin, aal2, authorized factor → GRANTED", d(true, true, "aal2", 1) === "GRANTED");
+  check("1h. admin, aal2, factor since removed, no grant → MFA_LOCKED", d(true, true, "aal2", 0) === "MFA_LOCKED");
+  check("1i. aal2 with any unauthorized factor → MFA_LOCKED", d(true, true, "aal2", 1, 1) === "MFA_LOCKED");
+  check("1j. an unauthorized factor beats a grant", d(true, true, "aal1", 0, 1, true) === "MFA_LOCKED");
+  const future = new Date(Date.now() + 60_000).toISOString();
+  check("1k. malformed policy grants nothing", !readAdminMfaPolicy({ admin_mfa: { enrollment_until: "soon", factor_ids: "x" } }).enrollmentAuthorized && readAdminMfaPolicy({ admin_mfa: { factor_ids: "x" } }).factorIds.size === 0 && !readAdminMfaPolicy(null).enrollmentAuthorized);
+  check("1l. expired grant is no grant", !readAdminMfaPolicy({ admin_mfa: { enrollment_until: new Date(Date.now() - 1000).toISOString() } }).enrollmentAuthorized && readAdminMfaPolicy({ admin_mfa: { enrollment_until: future } }).enrollmentAuthorized);
 
   console.log("\nSetting up fixtures...");
   const adminId = await createUser("admin");
   const partnerUserId = await createUser("partner");
   const limitedId = await createUser("limited");
-  await pg`insert into admin_users (user_id) values (${adminId}), (${limitedId})`;
+  const demoId = await createUser("demo");
+  const rogueId = await createUser("rogue");
+  await pg`insert into admin_users (user_id) values (${adminId}), (${limitedId}), (${demoId}), (${rogueId})`;
   await pg`insert into partners (id, slug, name, commission_rate_bps, status) values (${created.partnerId}, ${`verify-mfa-${RUN}`}, 'Verify MFA', 3000, 'ACTIVE')`;
   await pg`insert into partner_members (partner_id, user_id, role) values (${created.partnerId}, ${partnerUserId}, 'OWNER')`;
   await pg`insert into qr_batches (id, partner_id, label, quantity) values (${created.batchId}, ${created.partnerId}, 'verify-mfa', 1)`;
@@ -187,14 +198,20 @@ async function main() {
   check("3g. operator tool refuses to promote a partner", !cliPartner.ok && /partner/.test(cliPartner.out), cliPartner.out);
   check("3h. …and no admin row appeared", (await pg`select 1 from admin_users where user_id = ${partnerUserId}`).length === 0);
 
-  console.log("\n--- 4. Admin with a password only ---");
+  console.log("\n--- 4. Admin with a password only, no grant ---");
   const firstJar = await signIn("admin");
-  check("4a. state is MFA_ENROLL", (await access(firstJar)) === "MFA_ENROLL");
+  check("4a. state is MFA_LOCKED", (await access(firstJar)) === "MFA_LOCKED");
   check("4b. requireAdmin refuses with MfaRequiredError", (await caught(requireOk)).name === "MfaRequiredError");
-  check("4c. admin page redirects to setup", redirectTarget(await caught(adminLib.requireAdminPage)).endsWith("/admin/mfa/setup"));
+  check("4c. admin page redirects to the locked screen", redirectTarget(await caught(adminLib.requireAdminPage)).endsWith("/admin/mfa/locked"));
   check("4d. QR asset refused (403), RLS not reached", (await qr()).status === 403);
   check("4e. batch export refused (403)", (await exportCsv()).status === 403);
   check("4f. print sheet redirects to MFA", redirectTarget(await caught(print)).endsWith("/admin/mfa"));
+  const noGrant = await actions.startMfaEnrollmentAction();
+  check("4g. the app will not start enrollment", !noGrant.ok && noGrant.error === "FORBIDDEN", noGrant);
+  const granted = grant("admin");
+  check("4h. operator grant issued", granted.ok, granted.out);
+  check("4i. the same session may now enroll", (await access(firstJar)) === "MFA_ENROLL");
+  check("4j. still no admin access", (await caught(requireOk)).name === "MfaRequiredError" && (await qr()).status === 403);
 
   console.log("\n--- 5. Enrollment ---");
   const enrollment = await actions.startMfaEnrollmentAction();
@@ -216,6 +233,7 @@ async function main() {
   check("5i. QR asset 200", (await qr()).status === 200);
   check("5j. batch export 200", (await exportCsv()).status === 200);
   check("5k. print sheet renders", (await print()) != null);
+  check("5k2. the grant is single-use", (await appMetadata(adminId)).admin_mfa?.enrollment_until === null, (await appMetadata(adminId)).admin_mfa);
   check("5l. enrollment audited", (await pg`select 1 from audit_logs where actor_id = ${adminId} and action = 'ADMIN_MFA_ENROLLED'`).length === 1);
 
   console.log("\n--- 6. Next sign-in: password alone is not enough ---");
@@ -243,14 +261,17 @@ async function main() {
 
   console.log("\n--- 7. Tampered and downgraded sessions ---");
   const forgedJar = await signIn("admin");
-  const [chunkName] = forgedJar.getAll().filter((c) => c.name.includes("auth-token")).map((c) => c.name);
-  const raw = forgedJar.get(chunkName!)!.value;
+  // The session cookie is split into .0, .1… chunks once the token grows.
+  const chunks = forgedJar.getAll().filter((c) => c.name.includes("auth-token")).sort((x, y) => x.name.localeCompare(y.name));
+  const baseName = chunks[0]!.name.replace(/\.\d+$/, "");
+  const raw = chunks.map((c) => c.value).join("");
   const session = JSON.parse(Buffer.from(raw.replace(/^base64-/, ""), "base64url").toString("utf8"));
   const [h, p, s] = session.access_token.split(".");
   const claims = JSON.parse(Buffer.from(p, "base64url").toString("utf8"));
   claims.aal = "aal2";
   session.access_token = `${h}.${Buffer.from(JSON.stringify(claims)).toString("base64url")}.${s}`;
-  forgedJar.set(chunkName!, `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`);
+  for (const c of chunks) forgedJar.set(c.name, "");
+  forgedJar.set(baseName, `base64-${Buffer.from(JSON.stringify(session)).toString("base64url")}`);
   check("7a. an edited cookie claiming aal2 does not get in", (await access(forgedJar)) !== "GRANTED", await access(forgedJar));
   currentJar = secondJar;
   const header = JSON.parse(Buffer.from(h, "base64url").toString("utf8"));
@@ -285,6 +306,7 @@ async function main() {
   check("8f. the last factor cannot be removed", !lastOne.ok && lastOne.error === "LAST_FACTOR", lastOne);
 
   console.log("\n--- 9. Rate limit ---");
+  grant("limited");
   const limitedJar = await signIn("limited");
   currentJar = limitedJar;
   const lim = await actions.startMfaEnrollmentAction();
@@ -325,42 +347,180 @@ async function main() {
 
   console.log("\n--- 11. Owner recovery (lost authenticators) ---");
   const stuckJar = await signIn("admin");
-  const dryReset = adminAccessCli(["reset-mfa", "--email", email("admin"), "--reason", "lost phone"]);
+  const resetFile = join(tempDir, "reset.txt");
+  const dryReset = adminAccessCli(["reset-mfa", "--email", email("admin"), "--reason", "lost phone", "--credential-file", resetFile]);
   const { data: before } = await authAdmin.auth.admin.mfa.listFactors({ userId: adminId });
   check("11a. dry run removes nothing", dryReset.ok && before?.factors.length === 1, dryReset.out);
-  check("11b. a reason is mandatory", !adminAccessCli(["reset-mfa", "--email", email("admin"), "--apply"]).ok);
-  check("11c. a non-admin cannot be reset", !adminAccessCli(["reset-mfa", "--email", email("partner"), "--reason", "x", "--apply"]).ok);
-  const reset = adminAccessCli(["reset-mfa", "--email", email("admin"), "--reason", "lost phone", "--apply"]);
+  check("11b. a reason is mandatory", !adminAccessCli(["reset-mfa", "--email", email("admin"), "--credential-file", resetFile, "--apply"]).ok);
+  check("11b2. password rotation is mandatory", !adminAccessCli(["reset-mfa", "--email", email("admin"), "--reason", "x", "--apply"]).ok);
+  check("11c. a non-admin cannot be reset", !adminAccessCli(["reset-mfa", "--email", email("partner"), "--reason", "x", "--credential-file", resetFile, "--apply"]).ok);
+  const reset = adminAccessCli(["reset-mfa", "--email", email("admin"), "--reason", "lost phone", "--credential-file", resetFile, "--apply"]);
   const { data: afterReset } = await authAdmin.auth.admin.mfa.listFactors({ userId: adminId });
   check("11d. removes every factor", reset.ok && afterReset?.factors.length === 0, reset.out);
   check("11e. ends every existing session", (await access(stuckJar)) === "ANONYMOUS", await access(stuckJar));
-  const recoveredJar = await signIn("admin");
-  check("11f. sign-in requires enrolling again", (await access(recoveredJar)) === "MFA_ENROLL");
+  const oldPassword = await caught(() => signIn("admin"));
+  check("11e2. the old password no longer works", /invalid/i.test(oldPassword.message), oldPassword.message);
+  const newPassword = readFileSync(resetFile, "utf8").trim().split("\n")[1]!;
+  check("11e3. temporary password is never printed", !reset.out.includes(newPassword));
+  const recoveredJar = await signIn("admin", new Jar(), newPassword);
+  check("11f. sign-in with the new password may enroll again", (await access(recoveredJar)) === "MFA_ENROLL");
   currentJar = recoveredJar;
   const again = await actions.startMfaEnrollmentAction();
   if (!again.ok) throw new Error("re-enroll failed");
   check("11g. owner is back in after re-enrolling", (await actions.confirmMfaEnrollmentAction(again.factorId, totp(again.secret))).ok && (await sleep(30), await access(recoveredJar)) === "GRANTED");
   check("11h. reset is audited with its reason", (await pg`select 1 from audit_logs where target_id = ${adminId} and action = 'ADMIN_MFA_RESET' and metadata->>'reason' = 'lost phone'`).length === 1);
+  const refusedGrant = grant("admin");
+  check("11i. a grant is refused once a factor exists", !refusedGrant.ok, refusedGrant.out);
 
-  console.log("\n--- 12. Revocation ---");
+  console.log("\n--- 12. Retiring an admin, and lockout prevention ---");
   const revokedJar = await signIn("limited");
   const others = await pg<{ user_id: string }[]>`select user_id from admin_users where user_id <> ${limitedId}`;
-  await pg`delete from admin_users where user_id <> ${limitedId}`;
-  let lastAdmin;
+  let lastAdmin, noWorkingMfa;
   try {
+    await pg`delete from admin_users where user_id <> ${limitedId}`;
     lastAdmin = adminAccessCli(["revoke", "--email", email("limited"), "--reason", "t", "--apply"]);
+    await pg`insert into admin_users (user_id) values (${ownerRow!.id})`; // an admin who never enrolled
+    noWorkingMfa = adminAccessCli(["revoke", "--email", email("limited"), "--reason", "t", "--apply"]);
+    await pg`delete from admin_users where user_id = ${ownerRow!.id}`;
   } finally {
-    for (const o of others) await pg`insert into admin_users (user_id) values (${o.user_id})`;
+    for (const o of others) await pg`insert into admin_users (user_id) values (${o.user_id}) on conflict do nothing`;
   }
   check("12a. the last admin can never be removed", !lastAdmin.ok && /last admin/.test(lastAdmin.out), lastAdmin.out);
+  check("12b. nor retired while the remaining admin has no working MFA", !noWorkingMfa.ok && /working MFA/.test(noWorkingMfa.out), noWorkingMfa.out);
   const revoked = adminAccessCli(["revoke", "--email", email("limited"), "--reason", "demo account retired", "--apply"]);
-  check("12b. revoke removes admin access", revoked.ok && (await pg`select 1 from admin_users where user_id = ${limitedId}`).length === 0, revoked.out);
-  check("12c. and ends its sessions", (await access(revokedJar)) === "ANONYMOUS");
+  check("12c. with a verified owner, revoke removes admin access", revoked.ok && (await pg`select 1 from admin_users where user_id = ${limitedId}`).length === 0, revoked.out);
+  check("12d. and ends its sessions", (await access(revokedJar)) === "ANONYMOUS");
+
+  console.log("\n--- 14. Demo password alone cannot claim the first device ---");
+  const demoJar = await signIn("demo");
+  check("14a. demo admin with no grant is locked", (await access(demoJar)) === "MFA_LOCKED");
+  const demoStart = await actions.startMfaEnrollmentAction();
+  check("14b. app enrollment refused", !demoStart.ok && demoStart.error === "FORBIDDEN", demoStart);
+  currentJar = new Jar();
+  const direct2 = createClient(supabaseUrl!, resolvePublishableKey(process.env)!.key, { auth: { persistSession: false } });
+  await direct2.auth.signInWithPassword({ email: email("demo"), password: PASSWORD });
+  await direct2.auth.updateUser({ data: { admin_mfa: { enrollment_until: new Date(Date.now() + 3_600_000).toISOString(), factor_ids: ["forged"] } } });
+  const metaAfter = await signIn("demo");
+  check("14c. user_metadata can't forge a grant", (await access(metaAfter)) === "MFA_LOCKED");
+  const rogueEnroll = await direct2.auth.mfa.enroll({ factorType: "totp", friendlyName: "attacker" });
+  if (rogueEnroll.error) throw rogueEnroll.error;
+  const unverifiedForm = await actions.confirmMfaEnrollmentAction(rogueEnroll.data.id, totp(rogueEnroll.data.totp.secret));
+  check("14d. the app won't confirm a factor it didn't create", !unverifiedForm.ok, unverifiedForm);
+  const rogueVerified = await direct2.auth.mfa.challengeAndVerify({ factorId: rogueEnroll.data.id, code: totp(rogueEnroll.data.totp.secret) });
+  check("14e. (Supabase itself accepts direct enrollment: this is the attack)", rogueVerified.error === null, rogueVerified.error?.message);
+  const rogueSession = rogueVerified.data!;
+  const rogueJar = await signIn("demo");
+  await (await createSupabaseServerClient()).auth.setSession({ access_token: rogueSession.access_token, refresh_token: rogueSession.refresh_token });
+  await sleep(30);
+  const roguePayload = JSON.parse(Buffer.from(rogueSession.access_token.split(".")[1]!, "base64url").toString("utf8"));
+  check("14f. the attacker really holds an aal2 session", roguePayload.aal === "aal2", roguePayload.aal);
+  check("14g. and it is still locked out", (await access(rogueJar)) === "MFA_LOCKED", await access(rogueJar));
+  check("14h. requireAdmin refuses", (await caught(requireOk)).name === "MfaRequiredError");
+  check("14i. QR asset and export refused", (await qr()).status === 403 && (await exportCsv()).status === 403);
+  check("14j. admin page goes to locked", redirectTarget(await caught(adminLib.requireAdminPage)).endsWith("/admin/mfa/locked"));
+  const blockedGrant = grant("demo");
+  check("14k. an operator grant can't launder the rogue device", !blockedGrant.ok, blockedGrant.out);
+  const statusOut = adminAccessCli(["status"]).out;
+  check("14l. status surfaces the unauthorized factor", new RegExp(`${demoId}.*UNAUTHORIZED factors: 1`).test(statusOut), statusOut);
+
+  const rogueGrantJar = await signIn("rogue");
+  grant("rogue");
+  currentJar = rogueGrantJar;
+  const rogueDirect = createClient(supabaseUrl!, resolvePublishableKey(process.env)!.key, { auth: { persistSession: false } });
+  await rogueDirect.auth.signInWithPassword({ email: email("rogue"), password: PASSWORD });
+  const inWindow = await rogueDirect.auth.mfa.enroll({ factorType: "totp", friendlyName: "attacker-window" });
+  if (inWindow.error) throw inWindow.error;
+  const forged = await actions.confirmMfaEnrollmentAction(inWindow.data.id, totp(inWindow.data.totp.secret));
+  check("14m. even during a grant, only a server-created factor is accepted", !forged.ok && forged.error === "FORBIDDEN", forged);
+  await rogueDirect.auth.mfa.challengeAndVerify({ factorId: inWindow.data.id, code: totp(inWindow.data.totp.secret) });
+  // Supabase ends the account's other sessions when a first factor is verified, hence the fresh sign-in.
+  const afterRogue = await signIn("rogue");
+  check("14n. a rogue device added during a grant locks the account", (await access(afterRogue)) === "MFA_LOCKED", await access(afterRogue));
+  await authAdmin.auth.admin.updateUserById(rogueId, { app_metadata: { admin_mfa: { enrollment_until: new Date(Date.now() - 1000).toISOString(), factor_ids: [] } } });
+  await authAdmin.auth.admin.mfa.deleteFactor({ id: inWindow.data.id, userId: rogueId });
+  const expiredJar = await signIn("rogue");
+  check("14o. an expired grant can't enroll", (await access(expiredJar)) === "MFA_LOCKED", await access(expiredJar));
+
+  console.log("\n--- 15. Every privileged action refuses below aal2 ---");
+  const adminActions = {
+    ...(require("../src/lib/partners/actions") as typeof import("../src/lib/partners/actions")),
+    ...(require("../src/lib/payments/admin-actions") as typeof import("../src/lib/payments/admin-actions")),
+    ...(require("../src/lib/payments/payout-actions") as typeof import("../src/lib/payments/payout-actions")),
+    ...(require("../src/lib/payments/pricing-actions") as typeof import("../src/lib/payments/pricing-actions")),
+    ...(require("../src/lib/moderation/actions") as typeof import("../src/lib/moderation/actions")),
+    ...(require("../src/lib/qr/actions") as typeof import("../src/lib/qr/actions")),
+  };
+  const pid = created.partnerId;
+  const anyId = randomUUID();
+  const period = { currency: "GEL", periodFrom: "2026-01-01", periodTo: "2026-01-02" };
+  const matrix: Record<string, () => Promise<unknown>> = {
+    adminCreatePartnerAction: () => adminActions.adminCreatePartnerAction({ slug: `mx-${RUN}`, name: "x" }),
+    adminUpdatePartnerAction: () => adminActions.adminUpdatePartnerAction(pid, { name: "changed" }),
+    adminSetPartnerStatusAction: () => adminActions.adminSetPartnerStatusAction(pid, "SUSPENDED"),
+    adminAddPartnerMemberAction: () => adminActions.adminAddPartnerMemberAction(pid, { userId: anyId }),
+    adminAddPartnerMemberByEmailAction: () => adminActions.adminAddPartnerMemberByEmailAction(pid, { email: `mx-${RUN}@verify.test` }),
+    adminUpdatePartnerMemberRoleAction: () => adminActions.adminUpdatePartnerMemberRoleAction(pid, anyId, "STAFF"),
+    adminRemovePartnerMemberAction: () => adminActions.adminRemovePartnerMemberAction(pid, anyId),
+    reconcileActivationsAction: () => adminActions.reconcileActivationsAction(),
+    adminReconcilePaymentAction: () => adminActions.adminReconcilePaymentAction(anyId),
+    adminRefundPaidOrderAction: () => adminActions.adminRefundPaidOrderAction(anyId),
+    adminRecordChargebackAction: () => adminActions.adminRecordChargebackAction(anyId, { reference: "x", disputedOn: "2026-01-01" }),
+    adminDisputeEvidenceAction: () => adminActions.adminDisputeEvidenceAction(anyId),
+    adminRecordPayoutAction: () => adminActions.adminRecordPayoutAction(pid, { ...period, expectedAmountMinor: 1, expectedLedgerEntryIds: [anyId] }),
+    adminListPartnerPayoutsAction: () => adminActions.adminListPartnerPayoutsAction(pid),
+    adminGetPartnerUnpaidBalanceAction: () => adminActions.adminGetPartnerUnpaidBalanceAction(pid, "GEL"),
+    adminGetPayoutStatementAction: () => adminActions.adminGetPayoutStatementAction(pid, period),
+    adminSetDefaultPriceAction: () => adminActions.adminSetDefaultPriceAction({ amountMinor: 1000, expectedAmountMinor: 1000 }),
+    adminSetPartnerPriceAction: () => adminActions.adminSetPartnerPriceAction(pid, { amountMinor: 1000, expectedAmountMinor: 1000 }),
+    adminSetPartnerCommissionAction: () => adminActions.adminSetPartnerCommissionAction(pid, { commissionRateBps: 3000, expectedCommissionRateBps: 3000 }),
+    lookupGreetingAction: () => adminActions.lookupGreetingAction("x"),
+    listModerationOverviewAction: () => adminActions.listModerationOverviewAction(),
+    blockGreetingAction: () => adminActions.blockGreetingAction(anyId, "x"),
+    unblockGreetingAction: () => adminActions.unblockGreetingAction(anyId, "x"),
+    adminCreateBatchAction: () => adminActions.adminCreateBatchAction(pid, { label: "x", quantity: 1 }),
+    adminMarkDistributedAction: () => adminActions.adminMarkDistributedAction(pid, { qrCodeIds: [anyId] }),
+  };
+  const privileged = Object.keys(adminActions).filter((n) => /^admin|^(reconcileActivations|lookupGreeting|listModerationOverview|blockGreeting|unblockGreeting)Action$/.test(n)).sort();
+  check(`15a. the matrix lists every privileged action (${privileged.length})`, privileged.join() === Object.keys(matrix).sort().join(), privileged.filter((n) => !(n in matrix)));
+  const outcome = async (fn: () => Promise<unknown>) => {
+    try {
+      const r = (await fn()) as { ok?: boolean; error?: string };
+      return r?.ok === false ? String(r.error) : "ALLOWED";
+    } catch (e) {
+      return (e as Error).message;
+    }
+  };
+  const statusBefore = await pg`select status from partners where id = ${pid}`;
+  const challengeJar = await signIn("admin", new Jar(), newPassword);
+  check("15b. test session is MFA_CHALLENGE", (await access(challengeJar)) === "MFA_CHALLENGE");
+  const notRefused: Record<string, string> = {};
+  for (const [name, fn] of Object.entries(matrix)) {
+    const r = await outcome(fn);
+    if (!/Multi-factor authentication required/.test(r)) notRefused[name] = r;
+  }
+  check("15c. aal1 admin: all refused by the MFA guard", Object.keys(notRefused).length === 0, notRefused);
+  currentJar = await signIn("demo");
+  const lockedNotRefused: Record<string, string> = {};
+  for (const [name, fn] of Object.entries(matrix)) {
+    const r = await outcome(fn);
+    if (!/Multi-factor authentication required/.test(r)) lockedNotRefused[name] = r;
+  }
+  check("15d. locked admin: all refused by the MFA guard", Object.keys(lockedNotRefused).length === 0, lockedNotRefused);
+  const statusAfter = await pg`select status from partners where id = ${pid}`;
+  check("15e. no side effect on the partner", statusBefore[0]!.status === statusAfter[0]!.status);
+  check("15f. no partner created", (await pg`select 1 from partners where slug = ${`mx-${RUN}`}`).length === 0);
+  currentJar = partnerJar;
+  const partnerRefused = await outcome(matrix.adminSetDefaultPriceAction!);
+  check("15g. partner owner refused as a non-admin", partnerRefused === "Not an admin", partnerRefused);
+  const fullJar = await signIn("admin", new Jar(), newPassword);
+  const verifiedAgain = await actions.verifyMfaChallengeAction((await adminLib.getAdminAccess()).factors[0]!.id, totp(again.secret, 1));
+  await sleep(30);
+  check("15h. positive control: the same call passes at aal2", verifiedAgain.ok && (await access(fullJar)) === "GRANTED" && Array.isArray(await adminActions.adminListPartnerPayoutsAction(pid)), verifiedAgain);
 
   console.log("\n--- 13. No privileged path skips the guard ---");
   const root = process.cwd();
   const pages = filesUnder(join(root, "src/app/(admin)/admin"), (p) => p.endsWith("page.tsx")).map((p) => relative(root, p));
-  const exempt = /\/admin\/(login|forgot-password|mfa(\/setup)?)\/page\.tsx$/;
+  const exempt = /\/admin\/(login|forgot-password|mfa(\/setup|\/locked)?)\/page\.tsx$/;
   const unguarded = pages.filter((p) => !exempt.test(p) && !readFileSync(p, "utf8").includes("requireAdminPage()"));
   check(`13a. all ${pages.length - pages.filter((p) => exempt.test(p)).length} protected admin pages use requireAdminPage`, unguarded.length === 0, unguarded);
   const source = filesUnder(join(root, "src"), (p) => /\.tsx?$/.test(p)).map((p) => relative(root, p));
@@ -371,6 +531,16 @@ async function main() {
   const allowedAdminContext = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/auth/mfa-actions.ts", "src/lib/payments/service.ts", "src/lib/payments/reconcile.ts", "src/lib/payments/reconcile-alerts.ts", "src/lib/payments/dispute-evidence.ts", "src/lib/payments/refunds.ts"]);
   const contexts = source.filter((p) => !allowedAdminContext.has(p) && /\bwithAdmin(Payment)?Context\(/.test(readFileSync(p, "utf8")));
   check("13c. admin DB context only where reviewed", contexts.length === 0, contexts);
+  const routes = filesUnder(join(root, "src/app"), (p) => p.endsWith("route.ts")).map((p) => relative(root, p)).sort();
+  check(
+    "13e. API routes are exactly the reviewed set",
+    routes.join() ===
+      ["src/app/api/cron/payments-reconcile/route.ts", "src/app/api/health/route.ts", "src/app/api/ops/client-ip/route.ts", "src/app/api/qr/[qrCodeId]/route.ts", "src/app/api/qr/batches/[batchId]/export/route.ts", "src/app/api/webhooks/payments/[provider]/route.ts", "src/app/auth/confirm/route.ts"].sort().join(),
+    routes,
+  );
+  for (const r of ["src/app/api/qr/[qrCodeId]/route.ts", "src/app/api/qr/batches/[batchId]/export/route.ts", "src/app/print/batch/[batchId]/page.tsx"]) {
+    check(`13f. ${r} uses resolveOperatorViewer`, readFileSync(r, "utf8").includes("resolveOperatorViewer()"));
+  }
   const actionFiles = source.filter((p) => /actions\.ts$/.test(p));
   const grants = source.filter((p) => /insert\s+into\s+admin_users|insert\(adminUsers\)/i.test(readFileSync(p, "utf8")) && p !== "src/db/dev-bootstrap.ts");
   check(`13d. nothing in the app can grant admin (${actionFiles.length} action files scanned)`, grants.length === 0, grants);

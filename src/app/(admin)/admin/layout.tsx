@@ -8,7 +8,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   // No navigation until sign-in is complete. Presentation only: every page
   // and action enforces access itself (requireAdminPage / requireAdmin).
-  if (access === "ANONYMOUS" || access === "MFA_ENROLL" || access === "MFA_CHALLENGE") {
+  if (access === "ANONYMOUS" || access === "MFA_LOCKED" || access === "MFA_ENROLL" || access === "MFA_CHALLENGE") {
     return <div className="flex min-h-dvh flex-col">{children}</div>;
   }
 

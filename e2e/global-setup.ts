@@ -1,3 +1,5 @@
+import { resetSuiteAdmin } from "./admin-session";
+const DEV_ADMIN_EMAIL = "admin@dev.local";
 /**
  * Pre-compiles every route the suite touches, once, before any test's
  * assertions start racing the clock. `next dev` compiles each route on its
@@ -10,6 +12,7 @@
  * against dev rather than a production build.
  */
 export default async function globalSetup() {
+  await resetSuiteAdmin(DEV_ADMIN_EMAIL);
   const baseURL = `http://localhost:${process.env.E2E_PORT ?? "3000"}`;
   const routes = ["/", "/about", "/how-it-works", "/pricing", "/contact", "/terms", "/privacy", "/delivery-and-refunds", "/partner/login", "/admin/login", "/partner/forgot-password", "/admin/forgot-password", "/reset-password", "/g/warmup-nonexistent-token"];
 

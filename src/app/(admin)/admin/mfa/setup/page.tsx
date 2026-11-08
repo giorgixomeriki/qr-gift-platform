@@ -5,13 +5,14 @@ import { MfaEnrollment } from "@/components/auth/mfa-forms";
 import { Button } from "@/components/ui/button";
 import { getAdminAccess } from "@/lib/auth/admin";
 import { signOutAction } from "@/lib/auth/actions";
-import { ADMIN_MFA_CHALLENGE_PATH } from "@/lib/auth/assurance";
+import { ADMIN_MFA_CHALLENGE_PATH, ADMIN_MFA_LOCKED_PATH } from "@/lib/auth/assurance";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMfaSetupPage() {
   const { access, user } = await getAdminAccess();
   if (!user) redirect("/admin/login");
+  if (access === "MFA_LOCKED") redirect(ADMIN_MFA_LOCKED_PATH);
   if (access === "MFA_CHALLENGE") redirect(ADMIN_MFA_CHALLENGE_PATH);
   if (access !== "MFA_ENROLL") redirect("/admin/dashboard");
 

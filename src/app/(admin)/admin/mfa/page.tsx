@@ -5,13 +5,14 @@ import { MfaChallengeForm } from "@/components/auth/mfa-forms";
 import { Button } from "@/components/ui/button";
 import { getAdminAccess } from "@/lib/auth/admin";
 import { signOutAction } from "@/lib/auth/actions";
-import { ADMIN_MFA_ENROLL_PATH } from "@/lib/auth/assurance";
+import { ADMIN_MFA_ENROLL_PATH, ADMIN_MFA_LOCKED_PATH } from "@/lib/auth/assurance";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMfaChallengePage() {
   const { access, user, factors } = await getAdminAccess();
   if (!user) redirect("/admin/login");
+  if (access === "MFA_LOCKED") redirect(ADMIN_MFA_LOCKED_PATH);
   if (access === "MFA_ENROLL") redirect(ADMIN_MFA_ENROLL_PATH);
   if (access !== "MFA_CHALLENGE") redirect("/admin/dashboard");
 
