@@ -5,6 +5,7 @@ import postgres from "postgres";
 import { createAvailableQr } from "./fixtures";
 import { formatMinorAmount } from "../src/lib/format/money";
 import { SITE_PAGES } from "../src/lib/site/routes";
+import { publishableSections, sectionsSchema } from "../src/lib/site/document";
 import { DEFAULT_PRODUCT_KEY } from "../src/lib/greetings/constants";
 
 /**
@@ -53,9 +54,12 @@ for (const locale of ["ka", "en"] as const) {
         await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", msg(locale, ns, "metaDescription"));
         await expect(page.getByRole("main")).toBeVisible();
         await expect(page.getByTestId("site-footer")).toBeVisible();
-        // Every section of the copy is on the page.
-        const sections = messages[locale][ns]!.sections as { id: string; title: string }[];
+        // Every publishable section of the copy is on the page: without merchant details (and outside review/demo
+        // mode) a section made only of internal notes or passages naming an unset detail is left out (OD-17).
+        const all = sectionsSchema.parse(messages[locale][ns]!.sections ?? []);
+        const sections = demoMode ? all : publishableSections(all, () => merchantConfigured);
         for (const s of sections) await expect(page.locator(`section#${s.id} h2`)).toContainText(s.title);
+        for (const s of all.filter((x) => !sections.some((y) => y.id === x.id))) await expect(page.locator(`section#${s.id}`)).toHaveCount(0);
         await expectNoRawPlaceholders(page);
       });
     }
@@ -206,14 +210,14 @@ test.describe("missing merchant information", () => {
   test.skip(merchantConfigured, "the server under test has merchant details configured");
   test.beforeEach(async ({ context }) => useLocale(context, "en"));
 
-  test("the contact page marks every required detail as not yet published, and shows no invented values", async ({ page }) => {
+  // design-95 OD-17 (audit UX-01): the public site shows only what is confirmed. Missing details are left out —
+  // never invented, never shown as a "not yet published" placeholder; review mode (SITE_REVIEW_MARKERS=1, or the
+  // demo profile) still marks them for the owner.
+  test("the contact page shows no invented values and no placeholders for details that are not set", async ({ page }) => {
     await page.goto("/contact");
-    const details = page.getByTestId("merchant-details");
-    for (const field of ["legalNameEn", "entityType", "idCode", "legalAddressEn", "supportEmail", "phone"]) {
-      await expect(details.locator(`[data-pending="${field}"]`)).toHaveText(siteText("en", "status", "pending"));
-    }
     await expect(page.locator('a[href^="mailto:"], a[href^="tel:"]')).toHaveCount(0);
-    await expect(page.getByTestId("draft-banner")).toBeVisible();
+    await expect(page.locator("main").locator("[data-pending], [data-marker], [data-testid=draft-banner]")).toHaveCount(0);
+    await expect(page.getByTestId("merchant-details")).toHaveCount(0);
   });
 
   test("the footer says the details are being finalised, instead of showing markers", async ({ page }) => {
@@ -223,12 +227,13 @@ test.describe("missing merchant information", () => {
     await expect(footer.getByTestId("merchant-details")).toHaveCount(0);
   });
 
-  test("policies are shown as drafts, not in effect, with their review markers visible", async ({ page }) => {
+  test("policies say they are not yet in effect, without internal review notes or decision codes", async ({ page }) => {
     for (const path of ["/terms", "/privacy", "/delivery-and-refunds"]) {
       await page.goto(path);
-      await expect(page.getByTestId("draft-banner")).toBeVisible();
       await expect(page.getByText(siteText("en", "status", "notYetEffective"), { exact: true })).toBeVisible();
-      expect(await page.locator('[data-marker="review"], [data-marker="decision"]').count()).toBeGreaterThan(0);
+      await expect(page.getByTestId("draft-banner")).toHaveCount(0);
+      await expect(page.locator('[data-marker="review"], [data-marker="decision"]')).toHaveCount(0);
+      expect(await page.locator("main").innerText()).not.toMatch(/\((?:M|D|C)\d{1,2}\)/);
     }
   });
 });

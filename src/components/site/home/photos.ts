@@ -5,7 +5,7 @@
  * given). Do not edit by hand.
  */
 export const PHOTOS = {
-  "hero-tulips": { w: 2400, h: 3020, widths: [560, 900, 1400] },
+  "hero-bouquet": { w: 1247, h: 1194, widths: [640, 960, 1247] },
   "gift-hands-cafe": { w: 2400, h: 1350, widths: [640, 1000, 1600] },
   "gift-parcel": { w: 2400, h: 1644, widths: [560, 900] },
   "occasion-birthday": { w: 2400, h: 2537, widths: [480, 720, 1000] },
@@ -50,6 +50,8 @@ export const PHOTOS = {
   "design-elegant-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
   "design-minimal-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
   "design-minimal-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-luxury-vintage-en": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
+  "design-luxury-vintage-ka": { w: 1088, h: 1362, widths: [400, 720], dir: "designs" },
 } as const;
 
 export type PhotoName = keyof typeof PHOTOS;

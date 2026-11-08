@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import { resolveMerchantToken } from "@/lib/merchant/info";
-import { analyseSections, sectionsSchema } from "@/lib/site/document";
+import { analyseSections, publishableSections, sectionsSchema } from "@/lib/site/document";
 import { getSiteContext } from "./context";
 import { Inline } from "./inline";
 import { PageHeader } from "./page-header";
@@ -44,11 +44,16 @@ export async function DocumentPage({
   const markers = analysis.reviews + analysis.decisions.length;
   const isDraft = markers > 0 || unpublished.length > 0 || (isPolicy && !effectiveDate);
 
+  // A policy always states whether it is in effect — "Not yet in effect" until it is published with an
+  // effective date, so a page without its internal notes never reads as an operative policy (audit UX-01/UX-011).
   const status = isPolicy
     ? effectiveDate && !isDraft
       ? ts("status.effectiveFrom", { date: formatEffectiveDate(effectiveDate, ctx.locale) })
       : ts("status.notYetEffective")
     : undefined;
+  // The public page shows only what is confirmed and set: review/decision notes and passages naming an unset
+  // merchant detail are left out (lib/site/document.ts publishableSections); review mode shows everything.
+  const shown = ctx.review ? sections : publishableSections(sections, (tok) => resolveMerchantToken(ctx.merchant, tok, ctx.locale).value !== null);
 
   return (
     <>
@@ -57,12 +62,12 @@ export async function DocumentPage({
         title={t("title")}
         lead={<Inline text={lead} ctx={ctx} />}
         status={status}
-        draft={isDraft ? { title: ts("status.draftTitle"), body: isPolicy ? ts("status.draftPolicyBody") : ts("status.draftPageBody") } : undefined}
+        draft={isDraft && ctx.review ? { title: ts("status.draftTitle"), body: isPolicy ? ts("status.draftPolicyBody") : ts("status.draftPageBody") } : undefined}
       />
       {intro && <div className="pt-10">{intro}</div>}
       <div className="pt-12">
         <SiteDocument
-          sections={sections}
+          sections={shown}
           ctx={ctx}
           numbered={isPolicy}
           labels={{ onThisPage: ts("status.onThisPage"), review: ts("status.review"), decision: ts("status.decision") }}

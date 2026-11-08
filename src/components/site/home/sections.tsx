@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { getCollection } from "@/lib/templates/catalog";
 import { ArrowRight } from "@phosphor-icons/react/dist/ssr/ArrowRight";
 import { Check } from "@phosphor-icons/react/dist/ssr/Check";
 import { HandSwipeRight } from "@phosphor-icons/react/dist/ssr/HandSwipeRight";
@@ -178,10 +179,11 @@ export async function Demo() {
 
 /* -------------------------------------------------------- experiences */
 const STACK: PhotoName[] = ["keepsake-hug", "bouquet-garden", "keepsake-picnic", "occasion-love"];
-const DESIGN_ORDER = ["romantic", "birthday", "wedding", "celebration", "elegant", "minimal"] as const;
+/** The home page's preferred order; any other design in the catalogue follows in catalogue order. */
+const DESIGN_ORDER: readonly string[] = ["romantic", "birthday", "wedding", "celebration", "elegant", "minimal"];
 
 /**
- * Inside a greeting: the six real designs as the centrepiece, then an
+ * Inside a greeting: every real design in the catalogue as the centrepiece, then an
  * editorial spread of what a greeting holds: the letter, photo prints, a
  * real video and a real voice note. No identical cards.
  */
@@ -190,7 +192,10 @@ export async function Experiences() {
   const tApp = await getTranslations("themes");
   const stackAlts = raw<string[]>("experiences.stackAlts");
   const loc = ctx.locale;
-  const designs = DESIGN_ORDER.map((key) => {
+  // The designs come from the catalogue the picker uses, so the page can never name a different number (audit HOME-02).
+  const ids = getCollection("launch").map((t) => t.id);
+  const ordered = [...DESIGN_ORDER.filter((k) => ids.includes(k)), ...ids.filter((k) => !DESIGN_ORDER.includes(k))];
+  const designs = ordered.map((key) => {
     const name = tApp(`${key}.name`);
     return {
       key,
@@ -205,7 +210,7 @@ export async function Experiences() {
   return (
     <section className="hm-section hm-inside" id="greetings" aria-labelledby="hm-exp-title">
       <div className="hm-wrap">
-        <Head id="hm-exp-title" eyebrow={text("experiences.eyebrow")} title={text("experiences.title")} lead={text("experiences.lead")} />
+        <Head id="hm-exp-title" eyebrow={text("experiences.eyebrow")} title={text("experiences.title")} lead={rich("experiences.lead")} />
         <DesignShowcase designs={designs} label={text("experiences.designsLabel")} counter={text("experiences.designsCounter")} />
 
         <div className="hm-spread">
