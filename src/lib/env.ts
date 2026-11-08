@@ -103,6 +103,9 @@ const envSchema = z.object({
   // reconciliation report and refund bookkeeping run in an admin context).
   CRON_SECRET: z.string().min(32).optional(),
   RECONCILE_ADMIN_USER_ID: z.string().uuid().optional(),
+  // Optional: where reconciliation alerts are POSTed (docs/ops/PAYMENT_RECONCILIATION_RUNBOOK.md).
+  // Treat it as a secret. Unset: alerts go to the structured log only.
+  PAYMENT_ALERT_WEBHOOK_URL: z.string().url().optional(),
 
   // Where the trusted proxy puts the caller's IP (lib/rate-limit/client-ip.ts).
   // Format-checked, and required outside Vercel, by clientIpConfigProblems
