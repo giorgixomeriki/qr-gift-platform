@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createAvailableQr, moneyTrailFor, DEV_ADMIN_EMAIL, DEV_PASSWORD } from "./fixtures";
+import { signInAdminWithMfa } from "./admin-session";
 
 /**
  * Chargeback administration through the real admin UI: a card is sold
@@ -42,10 +43,7 @@ test.describe("Admin chargeback", () => {
 
     // The admin records the bank's chargeback.
     await page.context().clearCookies();
-    await page.goto("/admin/login");
-    await page.getByTestId("login-email").fill(DEV_ADMIN_EMAIL);
-    await page.getByTestId("login-password").fill(DEV_PASSWORD);
-    await page.getByTestId("login-submit").click();
+    await signInAdminWithMfa(page, DEV_ADMIN_EMAIL, DEV_PASSWORD);
     await expect(page).toHaveURL(/\/admin\/dashboard/);
     await page.goto(`/admin/partners/${qr.partnerId}`);
 

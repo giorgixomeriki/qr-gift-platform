@@ -1,8 +1,5 @@
-import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
-import { checkIsAdmin } from "@/db/client";
-import { getSessionUser } from "@/lib/auth/session";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { listOpenReports, listStaleDrafts } from "@/lib/moderation/service";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { ModerationSearch, OpenReportsList, StaleDraftsList } from "@/components/admin/moderation-panel";
@@ -15,11 +12,9 @@ import { PageHeader, Panel } from "@/components/dashboard/ui";
  * automatic recycling.
  */
 export default async function AdminModerationPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
+  const { user, isAdmin } = await requireAdminPage();
 
   const t = await getTranslations("admin");
-  const isAdmin = await checkIsAdmin(user.id);
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
   const { reports, staleDrafts } = await requireAdmin(async (tx) => ({

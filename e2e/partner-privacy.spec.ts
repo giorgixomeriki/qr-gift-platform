@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { createPartnerBatchWithLiveCard, DEV_ADMIN_EMAIL, DEV_PARTNER_EMAIL, DEV_PASSWORD } from "./fixtures";
+import { signInAdminWithMfa } from "./admin-session";
 
 /**
  * QA-01 V1 privacy hardening: partner surfaces release a card's credential
@@ -79,7 +80,7 @@ test.describe("Partner credential exposure", () => {
   });
 
   test("admin keeps full credential access for support and reprints", async ({ page }) => {
-    await signIn(page, "/admin/login", DEV_ADMIN_EMAIL, /\/admin\/dashboard/);
+    await signInAdminWithMfa(page, DEV_ADMIN_EMAIL, DEV_PASSWORD);
     const csv = await (await page.request.get(`/api/qr/batches/${fixture.batchId}/export`)).text();
     expect(csv).toContain(fixture.liveToken);
     expect(csv).toContain("ACTIVE");

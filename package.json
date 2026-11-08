@@ -22,6 +22,8 @@
     "verify:phase3": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-phase3-security.ts",
     "verify:phase4": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-phase4-security.ts",
     "verify:phase5": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-phase5-security.ts",
+    "verify:admin-mfa": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-admin-mfa.ts",
+    "ops:admin-access": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/ops/admin-access.ts",
     "verify:password-reset": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-password-reset.ts",
     "verify:payout-concurrency": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payout-concurrency.ts",
     "verify:admin-pagination": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-admin-pagination.ts",
