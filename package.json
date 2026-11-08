@@ -39,6 +39,7 @@
     "verify:bog-adapter": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-bog-adapter.ts",
     "verify:bog-integration": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-bog-integration.ts",
     "verify:ops-preflight": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-ops-preflight.ts",
+    "verify:greeting-availability": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-greeting-availability.ts",
     "verify:chargebacks": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-chargebacks.ts",
     "ops:preflight": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/ops-preflight.ts",
     "verify:site-content": "node ./node_modules/.bin/tsx scripts/verify-site-content.ts",

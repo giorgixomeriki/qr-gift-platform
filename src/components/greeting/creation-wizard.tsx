@@ -24,6 +24,7 @@ import { GreetingRenderer, type GreetingRenderContent } from "./greeting-rendere
 import { LivePreview } from "./live-preview";
 import { LocaleSwitcher } from "./locale-switcher";
 import { ThemePicker } from "./theme-picker";
+import { CheckoutLegal } from "./checkout-legal";
 import { clearMessageBackup, readMessageBackup, writeMessageBackup } from "./message-backup";
 
 type ExistingItem = { contentId: string; url: string } | null;
@@ -38,6 +39,10 @@ export type WizardInitialState = {
   priceLabel: string | null;
   /** Whether the configured PaymentProvider is TEST — decided server-side (env.PAYMENTS_PROVIDER), never client-guessable. Gates the dev-only simulate-payment controls in CheckoutStep. */
   isTestPayments: boolean;
+  /** The configured registered seller name in this locale (MERCHANT_LEGAL_NAME_*), or null while unpublished — shown at checkout. */
+  merchantName: string | null;
+  /** Owner-declared VAT status (MERCHANT_VAT_STATUS) — display only, never changes the price. */
+  merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
 };
 
 const STEPS = ["theme", "message", "media", "preview", "checkout"] as const;
@@ -148,6 +153,8 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
             <CheckoutStep
               greetingId={initial.greetingId}
               isTestPayments={initial.isTestPayments}
+              merchantName={initial.merchantName}
+              merchantVatStatus={initial.merchantVatStatus}
               themeKey={themeKey}
               content={content}
               onBackToPreview={() => goToStep("preview")}
@@ -555,6 +562,8 @@ export function PreviewStep({
 export function CheckoutStep({
   greetingId,
   isTestPayments,
+  merchantName,
+  merchantVatStatus,
   themeKey,
   content,
   onBackToPreview,
@@ -562,6 +571,8 @@ export function CheckoutStep({
 }: {
   greetingId: string;
   isTestPayments: boolean;
+  merchantName: string | null;
+  merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
   onBackToPreview: () => void;
@@ -675,6 +686,7 @@ export function CheckoutStep({
             <p className="mt-4 text-caption text-ink-3">
               {t("explanation")} {t("lock")}
             </p>
+            <CheckoutLegal merchantName={merchantName} vatStatus={merchantVatStatus} className="mt-3 space-y-1 text-caption text-ink-3" />
           </section>
 
           <section aria-labelledby="checkout-next">

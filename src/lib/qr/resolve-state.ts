@@ -2,12 +2,15 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { withPublicContext } from "@/db/client";
 import { qrCodes, greetings } from "@/db/schema";
+import { isGreetingExpired } from "@/lib/greetings/availability";
 
 export type QrResolution =
   | { kind: "not_found" }
   | { kind: "available"; qrId: string; partnerId: string }
   | { kind: "draft"; qrId: string; greetingId: string; partnerId: string }
   | { kind: "active"; qrId: string; greetingId: string; partnerId: string }
+  /** Paid and activated, but past its availability window (lib/greetings/availability.ts). Nothing is deleted. */
+  | { kind: "expired"; qrId: string; greetingId: string; partnerId: string }
   | { kind: "blocked" };
 
 /**
@@ -52,12 +55,13 @@ export async function resolveQrState(publicToken: string): Promise<QrResolution>
       case "DRAFT":
       case "ACTIVE": {
         const [greeting] = await tx
-          .select({ id: greetings.id, status: greetings.status })
+          .select({ id: greetings.id, status: greetings.status, activatedAt: greetings.activatedAt })
           .from(greetings)
           .where(eq(greetings.qrCodeId, qr.id))
           .limit(1);
         if (!greeting) return { kind: "blocked" }; // inconsistent state — fail closed, not found-shaped
         if (qr.status === "ACTIVE" && greeting.status === "ACTIVE") {
+          if (isGreetingExpired(greeting.activatedAt)) return { kind: "expired", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
           return { kind: "active", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
         }
         return { kind: "draft", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
