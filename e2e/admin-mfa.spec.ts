@@ -12,6 +12,7 @@ async function logIn(page: import("@playwright/test").Page, path: string, email:
 
 test.describe("Admin MFA", () => {
   test("enroll, sign out, then a password alone is challenged and a code gets in", async ({ page }) => {
+    test.setTimeout(90_000); // two sign-ins and six pages, on a dev server that compiles on first hit
     await resetAdminFactors(DEV_ADMIN_EMAIL);
     await logIn(page, "/admin/login", DEV_ADMIN_EMAIL);
     await expect(page.getByTestId("mfa-qr")).toBeVisible();

@@ -1,6 +1,7 @@
 import { createHmac } from "node:crypto";
 import { expect, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import postgres from "postgres";
 import { resolveSecretKey } from "../src/lib/supabase/keys";
 
 /** Test-only RFC 6238: the app never computes codes, Supabase Auth does. */
@@ -23,7 +24,7 @@ function authAdmin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }
 
-/** Clears a test admin's factors so each spec enrolls from a known state (workers: 1). */
+/** Clears a test admin's factors and MFA rate-limit counters so each spec starts from a known state (workers: 1). */
 export async function resetAdminFactors(email: string) {
   const admin = authAdmin();
   const { data, error } = await admin.auth.admin.listUsers({ perPage: 200 });
@@ -32,6 +33,10 @@ export async function resetAdminFactors(email: string) {
   if (!user) throw new Error(`${email} not found; run npm run db:dev-bootstrap`);
   const { data: factors } = await admin.auth.admin.mfa.listFactors({ userId: user.id });
   for (const f of factors?.factors ?? []) await admin.auth.admin.mfa.deleteFactor({ id: f.id, userId: user.id });
+
+  const sql = postgres(process.env.MIGRATIONS_DATABASE_URL!, { max: 1 });
+  await sql`delete from rate_limit_hits where key like ${`admin-mfa-%:${user.id}`}`;
+  await sql.end();
 }
 
 /** Completes the enrollment screen and returns the secret. */
