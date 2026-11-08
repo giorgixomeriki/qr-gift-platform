@@ -364,9 +364,11 @@ async function main() {
   const unguarded = pages.filter((p) => !exempt.test(p) && !readFileSync(p, "utf8").includes("requireAdminPage()"));
   check(`13a. all ${pages.length - pages.filter((p) => exempt.test(p)).length} protected admin pages use requireAdminPage`, unguarded.length === 0, unguarded);
   const source = filesUnder(join(root, "src"), (p) => /\.tsx?$/.test(p)).map((p) => relative(root, p));
-  const checkers = source.filter((p) => p !== "src/db/client.ts" && p !== "src/lib/auth/admin.ts" && /\bcheckIsAdmin\(/.test(readFileSync(p, "utf8")));
-  check("13b. only the guard calls checkIsAdmin", checkers.length === 0, checkers);
-  const allowedAdminContext = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/auth/mfa-actions.ts", "src/lib/payments/service.ts", "src/lib/payments/reconcile.ts", "src/lib/payments/dispute-evidence.ts", "src/lib/payments/refunds.ts"]);
+  // reconcile.ts has no session: it checks the identity configured beside CRON_SECRET.
+  const allowedCheckers = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/payments/reconcile.ts"]);
+  const checkers = source.filter((p) => !allowedCheckers.has(p) && /\bcheckIsAdmin\(/.test(readFileSync(p, "utf8")));
+  check("13b. only the guard (and the session-less reconcile job) call checkIsAdmin", checkers.length === 0, checkers);
+  const allowedAdminContext = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/auth/mfa-actions.ts", "src/lib/payments/service.ts", "src/lib/payments/reconcile.ts", "src/lib/payments/reconcile-alerts.ts", "src/lib/payments/dispute-evidence.ts", "src/lib/payments/refunds.ts"]);
   const contexts = source.filter((p) => !allowedAdminContext.has(p) && /\bwithAdmin(Payment)?Context\(/.test(readFileSync(p, "utf8")));
   check("13c. admin DB context only where reviewed", contexts.length === 0, contexts);
   const actionFiles = source.filter((p) => /actions\.ts$/.test(p));
