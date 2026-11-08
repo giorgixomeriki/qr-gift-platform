@@ -10,7 +10,7 @@ the Auth admin API (create users, reset passwords, issue magic links for the
 real admin). Severity: **CRITICAL** until Stage 3 is done.
 
 Code branch: `security/supabase-api-keys-v2` — `e1287fc` (Stage 0, originally
-cut from `b042e08`) merged onto the production baseline `894f2ac`, plus
+cut from `b042e08`) merged onto the production baseline `894f2ac` (re-merged with the current live `f819c91` on 2026-11-08), plus
 `b3b1001` (lockdown check reads keys through the resolver).
 
 ## Facts
@@ -21,9 +21,9 @@ Labels: **[V 2026-11-05]** verified read-only against production on that date
 
 | Item | State |
 |---|---|
-| Live commit / deploy branch | `894f2ac` on `feat/render-low-cost-hosting` (Render auto-deploys every push to it) [V 2026-11-05] |
+| Live commit / deploy branch | `f819c91` on `feat/render-low-cost-hosting` (Render auto-deploys every push to it) [V 2026-11-08: bundle still ships the legacy HS256 anon JWT, no `sb_publishable_` key] |
 | Browser bundle key | exactly one legacy JWT: `alg HS256`, `role anon`, ref `uxqkolrklmbyyrbnhpcf`, exp 2036; no `sb_publishable_` [V 2026-11-05] |
-| Server key | legacy `service_role` (the `894f2ac` code reads only the legacy variable names) [V 2026-11-05, by code] |
+| Server key | legacy `service_role` (the `f819c91` code reads only the legacy variable names) [V 2026-11-05, by code] |
 | Legacy API keys | enabled: legacy anon on `/auth/v1/settings` → 200 [V 2026-11-05] |
 | Legacy HS256 secret `4af57eb8…` | **still trusted**: legacy anon sent as Bearer to `/auth/v1/user` → 403 "invalid claim: missing sub claim", i.e. its HS256 signature was accepted [V 2026-11-05]. Dashboard status "previously used" [A 2026-10-18] |
 | User session signing key | ES256 `d3a1aabd…`, the only key in the public JWKS [V 2026-11-05]; in use since project creation [A 2026-10-18] |
@@ -104,14 +104,14 @@ Each stage needs the owner's explicit approval. Nothing below has been executed.
    **Keep** the legacy variables for rollback.
 4. Push `security/supabase-api-keys-v2` as its own branch (Render ignores it),
    open a PR into `feat/render-low-cost-hosting`, wait for CI.
-5. Note the current live deploy ID (`894f2ac`) as the rollback target. Warm
+5. Note the current live deploy ID (`f819c91`) as the rollback target. Warm
    the service with `GET /api/health`.
 6. Deploy: fast-forward `feat/render-low-cost-hosting` to the PR head and
    push (that push is the deploy; a fresh build is required because the
    publishable key is inlined at build time).
 7. Verify Checks A0 and A.
 
-**Rollback:** Render → Rollback to the `894f2ac` deploy. The legacy keys are
+**Rollback:** Render → Rollback to the `f819c91` deploy. The legacy keys are
 still valid and still in env, so it works as before. No Supabase change has
 been made at this point.
 
@@ -121,9 +121,9 @@ been made at this point.
 |---|---|
 | **Any push to `feat/render-low-cost-hosting` deploys immediately.** | Push the work branch on its own first; fast-forward the deploy branch only at the agreed moment. |
 | **The publishable key is inlined at build time.** If the deploy builds before the new env vars exist, the bundle silently keeps the legacy anon key. That works now, but breaks at Stage 2. | Env first (Save only), then deploy. **Check A0** confirms the live bundle before Stage 2. |
-| "Save, rebuild and deploy" on the env change rebuilds `894f2ac`. | Harmless (old code ignores the new variables). Still prefer "Save only". |
+| "Save, rebuild and deploy" on the env change rebuilds `f819c91`. | Harmless (old code ignores the new variables). Still prefer "Save only". |
 | New code with only legacy vars: falls back and runs. | None needed. |
-| A malformed or swapped key fails startup. `/api/health` imports `env`, so it returns **500** (the value is not logged) and Render does not promote the deploy. | Confirm in the deploy log that `894f2ac` stayed live; otherwise roll back at once. |
+| A malformed or swapped key fails startup. `/api/health` imports `env`, so it returns **500** (the value is not logged) and Render does not promote the deploy. | Confirm in the deploy log that `f819c91` stayed live; otherwise roll back at once. |
 | A well-formed key from the **wrong project** passes startup and the health check (health only queries Postgres). | Checks A2–A6 catch it within minutes. Roll back. |
 | Rolling back **after Stage 2** to a legacy-only build breaks sign-in, uploads and media. | After Stage 2, re-enable the legacy keys **first**, then roll back. |
 | Free-plan cold start (~1 min) after idle. | Warm with `/api/health` before deploying and before checking. |
@@ -189,7 +189,7 @@ minutes.
 
 | Current stage | First lever | Then |
 |---|---|---|
-| 1 | Render rollback to the `894f2ac` deploy | — |
+| 1 | Render rollback to the `f819c91` deploy | — |
 | 2 | Re-enable legacy API keys | Render rollback only if still broken |
 | 3 | Re-enable legacy keys does **not** help HS256 tokens; check Storage/auth logs | Last resort: un-revoke `4af57eb8…` (re-trusts the leaked secret) |
 | 4 | Redeploy the previous build | Restore the legacy env vars only if also re-enabling Stage 2 |
