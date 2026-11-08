@@ -21,7 +21,9 @@
     "unavailableTitle": "This card isn't available",
     "unavailableBody": "It may have been paused or removed. If it came with a gift, the shop that sold it can help.",
     "notFoundTitle": "We couldn't find this card",
-    "notFoundBody": "Make sure the whole code was scanned, then try again."
+    "notFoundBody": "Make sure the whole code was scanned, then try again.",
+    "expiredTitle": "This greeting's availability has ended",
+    "expiredBody": "A greeting can be opened for 12 months after it is activated, and that period has passed. If you have a question, contact us at qrapp.ge/contact."
   },
   "sender": {
     "entry": {
@@ -152,7 +154,19 @@
       "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged.",
       "orderKicker": "Your order",
       "design": "Design",
-      "contents": "Contents"
+      "contents": "Contents",
+      "legal": {
+        "seller": "Seller",
+        "policies": "Before paying, please read:",
+        "terms": "Terms and Conditions",
+        "privacy": "Privacy Policy",
+        "refunds": "Delivery and Refunds",
+        "age": "Greetings may be bought only by people aged 18 or over.",
+        "vat": {
+          "NOT_REGISTERED": "The seller is not registered for VAT; no VAT is added to the price.",
+          "REGISTERED": "The seller is registered for VAT."
+        }
+      }
     },
     "preview": {
       "edit": "Back to editing",

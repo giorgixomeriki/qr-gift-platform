@@ -58,6 +58,8 @@ function renderNode(node: InlineNode, ctx: SiteContext, key: number): ReactNode 
 
 function renderMerchantValue(token: string, value: string, ctx: SiteContext, key: number): ReactNode {
   if (token === "entityType") return ctx.labels.entityTypes[value] ?? value;
+  if (token === "vatStatus") return ctx.labels.vatStatuses[value] ?? value;
+  if (token === "vatNotice") return ctx.labels.vatNotices[value] ?? value;
   if (token === "supportEmail" || token === "privacyEmail")
     return (
       <a key={key} href={`mailto:${value}`} className={linkClass}>

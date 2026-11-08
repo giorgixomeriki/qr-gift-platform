@@ -24,6 +24,8 @@ export type SiteContext = {
     pendingHint: string;
     priceUnavailable: string;
     entityTypes: Record<string, string>;
+    vatStatuses: Record<string, string>;
+    vatNotices: Record<string, string>;
     demo: { notice: string; body: string; tag: string };
   };
 };
@@ -44,6 +46,8 @@ export async function getSiteContext({ withPrice = false }: { withPrice?: boolea
       pendingHint: t("status.pendingHint"),
       priceUnavailable: t("status.priceUnavailable"),
       entityTypes: { LLC: t("entityTypes.LLC"), JSC: t("entityTypes.JSC"), IE: t("entityTypes.IE"), OTHER: t("entityTypes.OTHER") },
+      vatStatuses: { NOT_REGISTERED: t("vatStatuses.NOT_REGISTERED"), REGISTERED: t("vatStatuses.REGISTERED") },
+      vatNotices: { NOT_REGISTERED: t("vatNotices.NOT_REGISTERED"), REGISTERED: t("vatNotices.REGISTERED") },
       demo: { notice: t("demo.notice"), body: t("demo.body"), tag: t("demo.tag") },
     },
   };

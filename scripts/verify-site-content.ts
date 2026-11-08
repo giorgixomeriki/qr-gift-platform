@@ -133,7 +133,7 @@ function main() {
   const GEORGIAN = /[Ⴀ-ჿᲐ-Ჿ]/;
   // Strings that are legitimately language-neutral: tokens only (e.g. a
   // list of file formats), cookie names, product names, the copyright line.
-  const NEUTRAL = new Set(["NEXT_LOCALE", "qr_edit_…", "Supabase", "© {year} QR Starr"]);
+  const NEUTRAL = new Set(["NEXT_LOCALE", "qr_edit_…", "Supabase", "Render", "© {year} QR Starr"]);
   const neutral = (s: string) => NEUTRAL.has(s) || s.replace(/\{\{[a-zA-Z.]+\}\}/g, "").trim() === "";
   const notGeorgian = strings(site.ka).filter(([, s]) => !GEORGIAN.test(s) && !neutral(s)).map(([p, s]) => `${p}: ${s}`);
   check("C1. Every KA string is written in Georgian", notGeorgian.length === 0, notGeorgian.slice(0, 10));
@@ -181,6 +181,16 @@ function main() {
   check("E6. Invalid values are rejected, reported, and never displayed", rejected === "entityType,idCode,legalEffectiveDate,phone,supportEmail" && bad.values.supportEmail === null && bad.values.phone === null && !bad.complete, bad.invalid);
   check("E7. An individual entrepreneur's 11-digit personal number is accepted", parseMerchantInfo({ MERCHANT_ID_CODE: "01234567890" }).values.idCode === "01234567890");
   check("E8. Every merchant token is backed by a field", MERCHANT_TOKENS.every((t) => resolveMerchantToken(empty, t, "en").field in MERCHANT_FIELDS));
+  const phoneOk = (v: string) => parseMerchantInfo({ MERCHANT_PHONE: v }).values.phone === v;
+  check(
+    "E9. A Georgian phone is accepted in any grouping of its 9 digits, and wrong lengths or prefixes are rejected",
+    ["+995 555 123 456", "+995 555 12 34 56", "+995555123456", "+995-555-123-456"].every(phoneOk) && !["+995 555 123 45", "+995 555 12 34 566", "+994 555 12 34 56", "555 12 34 56"].some(phoneOk),
+  );
+  const vat = parseMerchantInfo({ MERCHANT_VAT_STATUS: "NOT_REGISTERED" });
+  check(
+    "E10. VAT status is an owner-declared enum; the VAT notice reads it, and anything else is rejected",
+    vat.values.vatStatus === "NOT_REGISTERED" && resolveMerchantToken(vat, "vatNotice", "ka").value === "NOT_REGISTERED" && parseMerchantInfo({ MERCHANT_VAT_STATUS: "EXEMPT" }).values.vatStatus === null && empty.values.vatStatus === null,
+  );
 
   console.log("\n--- F. Pricing and claims ---");
   const allCopy = [...strings(site.ka), ...strings(site.en)];

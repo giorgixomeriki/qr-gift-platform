@@ -1,5 +1,5 @@
 import { getTranslations } from "next-intl/server";
-import { Ban } from "lucide-react";
+import { Ban, Hourglass } from "lucide-react";
 import { StatusScreen } from "@/components/flow/status-screen";
 import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
 
@@ -26,4 +26,14 @@ export async function DraftNoAccessPlaceholder() {
 export async function BlockedPlaceholder() {
   const t = await getTranslations("qr");
   return <StatusScreen icon={<Ban aria-hidden />} title={t("unavailableTitle")} body={t("unavailableBody")} headerEnd={<LocaleSwitcher />} />;
+}
+
+/**
+ * An activated greeting past its 12-month availability window
+ * (lib/greetings/availability.ts). Says only that the period has ended — no
+ * sender, content or dates — and where to ask. Nothing has been deleted.
+ */
+export async function ExpiredPlaceholder() {
+  const t = await getTranslations("qr");
+  return <StatusScreen icon={<Hourglass aria-hidden />} title={t("expiredTitle")} body={t("expiredBody")} headerEnd={<LocaleSwitcher />} />;
 }

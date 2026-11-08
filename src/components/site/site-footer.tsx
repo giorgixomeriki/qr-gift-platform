@@ -4,6 +4,7 @@ import { Logo } from "@/components/ui/logo";
 import { SITE_GROUPS, SITE_PAGES } from "@/lib/site/routes";
 import { getSiteContext } from "./context";
 import { MerchantDetails } from "./merchant-details";
+import { MERCHANT_FIELDS, MERCHANT_FIELD_NAMES } from "@/lib/merchant/info";
 import { DemoNotice } from "./demo";
 
 /**
@@ -50,7 +51,9 @@ export async function SiteFooter() {
               </div>
             )}
             <div className="mt-3">
-              {ctx.merchant.complete ? (
+              {/* Confirmed details are shown as soon as they are set (unset rows are left out, never invented);
+                  the "being finalised" note covers the period before any detail exists. */}
+              {ctx.merchant.complete || MERCHANT_FIELD_NAMES.some((f) => MERCHANT_FIELDS[f].required && ctx.merchant.values[f] !== null) ? (
                 <MerchantDetails ctx={ctx} compact />
               ) : (
                 <p data-pending="merchant-details">
