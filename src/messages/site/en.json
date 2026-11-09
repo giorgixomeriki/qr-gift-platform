@@ -652,7 +652,9 @@
         "blocks": [
           { "type": "p", "text": "We do not currently delete greetings, media, payment records or logs automatically." },
           { "type": "p", "text": "An activated greeting opens from its card for 12 months. The end of that period does **not** mean the data is deleted automatically. You can ask us to delete your data at any time (see “How to make a request”)." },
-          { "type": "decision", "ref": "D1", "text": "Retention periods for activated greetings and their media, unpaid drafts, payment records and security logs will be set and stated here." }
+          { "type": "p", "text": "We have not set a fixed deletion period. How long personal data is kept is determined by these criteria:" },
+          { "type": "list", "items": ["Greetings, their media and unpaid drafts are kept until they are deleted at your request.", "Payment records are kept for as long as the law requires.", "Security and technical logs are kept according to our hosting provider's log-retention settings."] },
+          { "type": "p", "text": "If we set fixed retention periods, we will state them here." }
         ]
       },
       {
