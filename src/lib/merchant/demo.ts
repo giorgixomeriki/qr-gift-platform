@@ -16,6 +16,9 @@ export const DEMO_MERCHANT_ENV: Readonly<Record<string, string>> = {
   MERCHANT_ID_CODE: "000000000",
   MERCHANT_LEGAL_ADDRESS_KA: "საქართველო, თბილისი, დემო ქუჩა №1",
   MERCHANT_LEGAL_ADDRESS_EN: "1 Demo Street, Tbilisi, Georgia",
+  // Fictional values, so the demo profile can show the gated rows.
+  MERCHANT_PUBLISH_LEGAL_ADDRESS: "owner-approved",
+  MERCHANT_PUBLISH_ID_CODE: "owner-approved",
   MERCHANT_SUPPORT_EMAIL: "demo@example.com",
   MERCHANT_PHONE: "+995 555 00 00 00",
   MERCHANT_SUPPORT_HOURS_KA: "ორშაბათი–პარასკევი, 10:00–18:00",

@@ -6,6 +6,7 @@ import { createAvailableQr } from "./fixtures";
 import { formatMinorAmount } from "../src/lib/format/money";
 import { SITE_PAGES } from "../src/lib/site/routes";
 import { publishableSections, sectionsSchema } from "../src/lib/site/document";
+import { loadMerchantInfo, resolveMerchantToken } from "../src/lib/merchant/info";
 import { DEFAULT_PRODUCT_KEY } from "../src/lib/greetings/constants";
 
 /**
@@ -37,6 +38,7 @@ async function expectNoRawPlaceholders(page: Page) {
 /** The server under test inherits this process's environment (playwright.config.ts webServer). */
 const demoMode = process.env.MERCHANT_PROFILE === "demo";
 const merchantConfigured = !!process.env.MERCHANT_SUPPORT_EMAIL || demoMode;
+const merchantInfo = loadMerchantInfo(process.env);
 
 for (const locale of ["ka", "en"] as const) {
   test.describe(`information pages (${locale})`, () => {
@@ -57,7 +59,7 @@ for (const locale of ["ka", "en"] as const) {
         // Every publishable section of the copy is on the page: without merchant details (and outside review/demo
         // mode) a section made only of internal notes or passages naming an unset detail is left out (OD-17).
         const all = sectionsSchema.parse(messages[locale][ns]!.sections ?? []);
-        const sections = demoMode ? all : publishableSections(all, () => merchantConfigured);
+        const sections = demoMode ? all : publishableSections(all, (token) => resolveMerchantToken(merchantInfo, token, locale).value !== null);
         for (const s of sections) await expect(page.locator(`section#${s.id} h2`)).toContainText(s.title);
         for (const s of all.filter((x) => !sections.some((y) => y.id === x.id))) await expect(page.locator(`section#${s.id}`)).toHaveCount(0);
         await expectNoRawPlaceholders(page);

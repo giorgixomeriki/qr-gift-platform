@@ -32,7 +32,7 @@
       "entityType": "Legal form",
       "idCode": "Identification code",
       "legalAddress": "Legal address",
-      "actualAddress": "Contact (operating) address",
+      "actualAddress": "Contact address",
       "email": "Email",
       "phone": "Phone",
       "hours": "Support hours",
@@ -786,6 +786,21 @@
             ]
           },
           { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before these terms are published." }
+        ]
+      },
+      {
+        "id": "concluding-the-contract",
+        "title": "How the contract is concluded",
+        "blocks": [
+          { "type": "list", "ordered": true, "items": [
+            "Scan an unused QR Starr card and create your greeting.",
+            "Preview it exactly as the recipient will see it. Until you pay, you can go back and change or correct anything.",
+            "At checkout, check the price and these terms, then complete the payment on the payment page.",
+            "Once your payment is confirmed, the greeting is activated and you see a confirmation on screen."
+          ] },
+          { "type": "p", "text": "The website and these terms are available in Georgian and English." },
+          { "type": "p", "text": "The service has no customer accounts, so we do not keep a personal copy of the contract for you to open later. You can save or print these terms. We keep the payment record of your purchase as described in the [Privacy policy](/privacy)." },
+          { "type": "review", "text": "Whether these steps fully meet Article 8 of the Law of Georgia on Electronic Commerce, and when the contract counts as concluded, must be confirmed by a lawyer." }
         ]
       },
       {

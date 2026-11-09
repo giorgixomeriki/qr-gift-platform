@@ -38,7 +38,7 @@ never through a flag.
 | R11 | Refund and terms links reachable before payment *(typical)* | Footer on public pages | 🟡 **not on the `/g/` checkout screen.** Adding policy links (and the D3 consent step, if required) to checkout changes the payment flow and is left to a separate, approved change |
 | R12 | Card scheme logos / "payments by Bank of Georgia" mark *(typical)* | — | 🔴 BOG to specify which marks are required and supply the artwork |
 | R13 | Customer support contact (email, phone) | `/contact`, footer, each policy's contact section | ✅ built · 🔴 values |
-| R14 | Merchant legal identity (name, legal form, ID code, address) | `/contact`, footer, Terms §1, Privacy §1 | ✅ built · 🔴 values |
+| R14 | Merchant legal identity (name, legal form, ID code, address) | `/contact`, footer, Terms §1, Privacy §1 | ✅ built · 🔴 ID code and registered address are withheld until the owner decides (`docs/bog-merchant-readiness/LEGAL_DISCLOSURE_MATRIX_2026-11-09.md`) |
 
 ## 2. Decision register
 
