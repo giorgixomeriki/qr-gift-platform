@@ -168,6 +168,8 @@ function main() {
     MERCHANT_ID_CODE: "123456789",
     MERCHANT_LEGAL_ADDRESS_KA: "თბილისი, ტესტის ქ. 1",
     MERCHANT_LEGAL_ADDRESS_EN: "1 Test St, Tbilisi",
+    MERCHANT_PUBLISH_LEGAL_ADDRESS: "owner-approved",
+    MERCHANT_PUBLISH_ID_CODE: "owner-approved",
     MERCHANT_SUPPORT_EMAIL: "support@example.test",
     MERCHANT_PHONE: "+995 555 12 34 56",
     LEGAL_EFFECTIVE_DATE: "2027-01-01",
@@ -179,7 +181,7 @@ function main() {
   const bad = parseMerchantInfo({ ...valid, MERCHANT_SUPPORT_EMAIL: "not-an-email", MERCHANT_PHONE: "555", MERCHANT_ID_CODE: "12345", MERCHANT_ENTITY_TYPE: "LTD", LEGAL_EFFECTIVE_DATE: "2027/01/01" });
   const rejected = bad.invalid.map((i) => i.field).sort().join(",");
   check("E6. Invalid values are rejected, reported, and never displayed", rejected === "entityType,idCode,legalEffectiveDate,phone,supportEmail" && bad.values.supportEmail === null && bad.values.phone === null && !bad.complete, bad.invalid);
-  check("E7. An individual entrepreneur's 11-digit personal number is accepted", parseMerchantInfo({ MERCHANT_ID_CODE: "01234567890" }).values.idCode === "01234567890");
+  check("E7. An individual entrepreneur's 11-digit personal number is accepted", parseMerchantInfo({ MERCHANT_ID_CODE: "01234567890", MERCHANT_PUBLISH_ID_CODE: "owner-approved" }).values.idCode === "01234567890");
   check("E8. Every merchant token is backed by a field", MERCHANT_TOKENS.every((t) => resolveMerchantToken(empty, t, "en").field in MERCHANT_FIELDS));
   const phoneOk = (v: string) => parseMerchantInfo({ MERCHANT_PHONE: v }).values.phone === v;
   check(
@@ -190,6 +192,30 @@ function main() {
   check(
     "E10. VAT status is an owner-declared enum; the VAT notice reads it, and anything else is rejected",
     vat.values.vatStatus === "NOT_REGISTERED" && resolveMerchantToken(vat, "vatNotice", "ka").value === "NOT_REGISTERED" && parseMerchantInfo({ MERCHANT_VAT_STATUS: "EXEMPT" }).values.vatStatus === null && empty.values.vatStatus === null,
+  );
+  const unapproved: Record<string, string> = { ...valid };
+  delete unapproved.MERCHANT_PUBLISH_LEGAL_ADDRESS;
+  delete unapproved.MERCHANT_PUBLISH_ID_CODE;
+  const gated = parseMerchantInfo(unapproved);
+  check(
+    "E11. Without recorded owner approval, a configured legal address and ID code are withheld and reported as missing",
+    gated.values.idCode === null && gated.values.legalAddressKa === null && gated.values.legalAddressEn === null && gated.withheld.slice().sort().join(",") === "idCode,legalAddressEn,legalAddressKa" && gated.missing.includes("idCode") && !gated.complete,
+    gated.withheld,
+  );
+  const loose = parseMerchantInfo({ ...unapproved, MERCHANT_PUBLISH_LEGAL_ADDRESS: "true", MERCHANT_PUBLISH_ID_CODE: "1" });
+  check("E12. Only the exact approval value opens a publication gate", loose.values.idCode === null && loose.values.legalAddressEn === null);
+  const onlyAddress = parseMerchantInfo({ ...unapproved, MERCHANT_PUBLISH_LEGAL_ADDRESS: "owner-approved" });
+  check("E13. Each publication gate is independent", onlyAddress.values.legalAddressEn !== null && onlyAddress.values.idCode === null);
+  const contactAddressLabel = (locale: "ka" | "en") => (site[locale] as unknown as { site: { merchant: { actualAddress: string } } }).site.merchant.actualAddress;
+  check(
+    "E14. The public contact address is never labelled as a legal, registered or operating address",
+    !/legal|registered|operating/i.test(contactAddressLabel("en")) && !/იურიდიული|რეგისტრირებული|ფაქტობრივი/.test(contactAddressLabel("ka")),
+  );
+  check("E15. No merchant detail is exposed through a NEXT_PUBLIC_ variable", !/NEXT_PUBLIC_MERCHANT|NEXT_PUBLIC_LEGAL/.test(readFileSync(join(root, "src/lib/merchant/info.ts"), "utf8") + readFileSync(join(root, "next.config.ts"), "utf8")));
+  const layoutSrc = readFileSync(join(root, "src/app/layout.tsx"), "utf8");
+  check(
+    "E16. Information-page copy (with its internal review notes) is never serialized to the client",
+    layoutSrc.includes("messages={clientMessages}") && ["about", "service", "pricing", "contact", "refunds", "privacy", "terms"].every((ns) => layoutSrc.includes(`"${ns}"`)),
   );
 
   console.log("\n--- F. Pricing and claims ---");

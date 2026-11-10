@@ -57,6 +57,8 @@ test.describe("Sender greeting creation -> TEST checkout -> recipient reveal", (
 
     await expect(page.getByTestId("checkout-step")).toBeVisible();
     await expect(page.getByTestId("checkout-amount")).toBeVisible();
+    await expect(page.getByTestId("checkout-link-contact")).toHaveAttribute("href", "/contact");
+    await expect(page.getByTestId("checkout-country")).toHaveCount(process.env.MERCHANT_LEGAL_NAME_KA ? 1 : 0);
     await page.getByTestId("checkout-pay").click();
 
     // simulateTestPaymentAction succeeds -> full reload of /g/{token}, which

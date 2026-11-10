@@ -26,7 +26,9 @@ export async function MerchantDetails({ ctx, compact = false }: { ctx: SiteConte
   const t = await getTranslations("site.merchant");
   const set = (r: (typeof ROWS)[number]) => resolveMerchantToken(ctx.merchant, r.token, ctx.locale).value !== null;
   // Public: only the details that are set. Review mode: required rows show their "not yet published" marker.
-  const rows = ROWS.filter((r) => set(r) || (ctx.review && !r.optional));
+  // The compact (site-wide footer) list leaves out the registered address and ID: for an individual
+  // entrepreneur these are personal data, published only on the legal pages the footer links to.
+  const rows = ROWS.filter((r) => (set(r) || (ctx.review && !r.optional)) && !(compact && (r.token === "idCode" || r.token === "legalAddress")));
   if (rows.length === 0) return null;
   return (
     <dl className={compact ? "space-y-1.5 text-body-sm" : "divide-y divide-line text-body"} data-testid="merchant-details">

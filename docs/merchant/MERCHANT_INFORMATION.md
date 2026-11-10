@@ -20,7 +20,9 @@ Project → Settings → Environment Variables), per environment.
 | `MERCHANT_LEGAL_ADDRESS_EN` | yes | Legal address in English | Legal address (EN) |
 | `MERCHANT_SUPPORT_EMAIL` | yes | Email address | Support email (mailto link) |
 | `MERCHANT_PHONE` | yes | `+995 5XX XX XX XX` (spaces or dashes allowed) | Phone (tel link) |
-| `MERCHANT_ACTUAL_ADDRESS_KA` / `_EN` | no | Only if different from the legal address | Actual address (omitted when unset) |
+| `MERCHANT_PUBLISH_LEGAL_ADDRESS` | no | Exactly `owner-approved` | Without it, the legal address is withheld even when set |
+| `MERCHANT_PUBLISH_ID_CODE` | no | Exactly `owner-approved` | Without it, the identification code is withheld even when set |
+| `MERCHANT_ACTUAL_ADDRESS_KA` / `_EN` | no | Public contact address | Shown as "Contact address" (omitted when unset). Never a substitute for the legal address |
 | `MERCHANT_SUPPORT_HOURS_KA` / `_EN` | no | Free text, e.g. "ორშ–პარ, 10:00–18:00" | Support hours (omitted when unset) |
 | `MERCHANT_PRIVACY_EMAIL` | no | Email address | Privacy contact; falls back to the support email |
 | `LEGAL_EFFECTIVE_DATE` | no | `YYYY-MM-DD` | "In effect from …" on the three policies. **Set only after legal approval.** |

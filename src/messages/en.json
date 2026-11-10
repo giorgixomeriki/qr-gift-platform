@@ -157,6 +157,8 @@
       "contents": "Contents",
       "legal": {
         "seller": "Seller",
+        "country": "Seller's country: Georgia",
+        "contact": "Contact",
         "policies": "Before paying, please read:",
         "terms": "Terms and Conditions",
         "privacy": "Privacy Policy",

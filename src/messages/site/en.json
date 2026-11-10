@@ -32,7 +32,7 @@
       "entityType": "Legal form",
       "idCode": "Identification code",
       "legalAddress": "Legal address",
-      "actualAddress": "Contact (operating) address",
+      "actualAddress": "Contact address",
       "email": "Email",
       "phone": "Phone",
       "hours": "Support hours",
@@ -652,7 +652,9 @@
         "blocks": [
           { "type": "p", "text": "We do not currently delete greetings, media, payment records or logs automatically." },
           { "type": "p", "text": "An activated greeting opens from its card for 12 months. The end of that period does **not** mean the data is deleted automatically. You can ask us to delete your data at any time (see “How to make a request”)." },
-          { "type": "decision", "ref": "D1", "text": "Retention periods for activated greetings and their media, unpaid drafts, payment records and security logs will be set and stated here." }
+          { "type": "p", "text": "We have not set a fixed deletion period. How long personal data is kept is determined by these criteria:" },
+          { "type": "list", "items": ["Greetings, their media and unpaid drafts are kept until they are deleted at your request.", "Payment records are kept for as long as the law requires.", "Security and technical logs are kept according to our hosting provider's log-retention settings."] },
+          { "type": "p", "text": "If we set fixed retention periods, we will state them here." }
         ]
       },
       {
@@ -786,6 +788,21 @@
             ]
           },
           { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before these terms are published." }
+        ]
+      },
+      {
+        "id": "concluding-the-contract",
+        "title": "How the contract is concluded",
+        "blocks": [
+          { "type": "list", "ordered": true, "items": [
+            "Scan an unused QR Starr card and create your greeting.",
+            "Preview it exactly as the recipient will see it. Until you pay, you can go back and change or correct anything.",
+            "At checkout, check the price and these terms, then complete the payment on the payment page.",
+            "Once your payment is confirmed, the greeting is activated and you see a confirmation on screen."
+          ] },
+          { "type": "p", "text": "The website and these terms are available in Georgian and English." },
+          { "type": "p", "text": "The service has no customer accounts, so we do not keep a personal copy of the contract for you to open later. You can save or print these terms. We keep the payment record of your purchase as described in the [Privacy policy](/privacy)." },
+          { "type": "review", "text": "Whether these steps fully meet Article 8 of the Law of Georgia on Electronic Commerce, and when the contract counts as concluded, must be confirmed by a lawyer." }
         ]
       },
       {

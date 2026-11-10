@@ -51,9 +51,9 @@ export const MERCHANT_FIELDS = {
   },
   legalAddressKa: { env: "MERCHANT_LEGAL_ADDRESS_KA", required: true, schema: text, describe: "Registered legal address, in Georgian" },
   legalAddressEn: { env: "MERCHANT_LEGAL_ADDRESS_EN", required: true, schema: text, describe: "Registered legal address, in English" },
-  // Shown as the CONTACT / OPERATING address — never labelled or used as the registered legal address.
-  actualAddressKa: { env: "MERCHANT_ACTUAL_ADDRESS_KA", required: false, schema: text, describe: "Contact / operating address, in Georgian (not the registered legal address)" },
-  actualAddressEn: { env: "MERCHANT_ACTUAL_ADDRESS_EN", required: false, schema: text, describe: "Contact / operating address, in English (not the registered legal address)" },
+  // Shown as the public CONTACT address — never labelled or used as the registered legal address.
+  actualAddressKa: { env: "MERCHANT_ACTUAL_ADDRESS_KA", required: false, schema: text, describe: "Public contact address, in Georgian (not the registered legal address)" },
+  actualAddressEn: { env: "MERCHANT_ACTUAL_ADDRESS_EN", required: false, schema: text, describe: "Public contact address, in English (not the registered legal address)" },
   supportEmail: { env: "MERCHANT_SUPPORT_EMAIL", required: true, schema: z.email().trim(), describe: "Customer support email address" },
   phone: {
     env: "MERCHANT_PHONE",
@@ -94,12 +94,31 @@ export const MERCHANT_FIELDS = {
 export type MerchantField = keyof typeof MERCHANT_FIELDS;
 export const MERCHANT_FIELD_NAMES = Object.keys(MERCHANT_FIELDS) as MerchantField[];
 
+/**
+ * Registered details the owner must explicitly approve before they can appear
+ * on the site. For an individual entrepreneur the registered legal address is
+ * typically a home address and the identification code is the personal number,
+ * so setting the value is not enough: without the matching approval variable
+ * set to exactly PUBLICATION_APPROVED the value is dropped here, before it can
+ * reach any page, payload or log. The fields stay `required`, so a withheld
+ * detail is still reported as missing (ops:check-merchant-info fails, and the
+ * policies cannot read as in effect) and is never omitted silently. See
+ * docs/bog-merchant-readiness/LEGAL_DISCLOSURE_MATRIX_2026-11-09.md.
+ */
+export const PUBLICATION_APPROVED = "owner-approved";
+export const PUBLICATION_GATES: readonly { env: string; fields: readonly MerchantField[] }[] = [
+  { env: "MERCHANT_PUBLISH_LEGAL_ADDRESS", fields: ["legalAddressKa", "legalAddressEn"] },
+  { env: "MERCHANT_PUBLISH_ID_CODE", fields: ["idCode"] },
+];
+
 export type MerchantInfo = {
   values: Record<MerchantField, string | null>;
   /** Required fields that are unset or invalid. */
   missing: MerchantField[];
   /** Fields that were set but rejected, with the reason. Their value is null. */
   invalid: { field: MerchantField; env: string; reason: string }[];
+  /** Fields that were set but have no recorded owner approval to publish. Their value is null. */
+  withheld: MerchantField[];
   complete: boolean;
   /**
    * "demo" when the fictional preview profile is in use (MERCHANT_PROFILE=demo):
@@ -130,8 +149,18 @@ export function parseMerchantInfo(env: Record<string, string | undefined>): Merc
     }
   }
 
+  const withheld: MerchantField[] = [];
+  for (const gate of PUBLICATION_GATES) {
+    if (env[gate.env]?.trim() === PUBLICATION_APPROVED) continue;
+    for (const field of gate.fields) {
+      if (values[field] === null) continue;
+      values[field] = null;
+      withheld.push(field);
+    }
+  }
+
   const missing = MERCHANT_FIELD_NAMES.filter((f) => MERCHANT_FIELDS[f].required && values[f] === null);
-  return { values, missing, invalid, complete: missing.length === 0, mode: "configured" };
+  return { values, missing, invalid, withheld, complete: missing.length === 0, mode: "configured" };
 }
 
 /** Production hosts the demo profile is never allowed on. */
