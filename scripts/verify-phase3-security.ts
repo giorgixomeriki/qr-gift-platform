@@ -3,6 +3,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { resolveSecretKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,7 +25,7 @@ const { confirmPaymentSuccess, activatePaidOrder } = require("../src/lib/payment
 const { loadActiveGreetingForRecipient, RecipientAccessError } = require("../src/lib/greetings/recipient") as typeof import("../src/lib/greetings/recipient");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const serviceRoleKey = resolveSecretKey(process.env)!.key;
 const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
 const storage = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 

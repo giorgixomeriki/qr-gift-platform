@@ -1,0 +1,1461 @@
+/*
+ * QR Starr — Signature Experience, sender surfaces (production).
+ * Ported from the approved Final Polish prototype (design/v2-signature-final-polish
+ * @ 07b10ad: src/components/lab/signature/signature.css + signature-final/final.css),
+ * scoped under .sig. Lab-only rules (the lab flag, the mock-media note, the
+ * rejected filmstrip picker) are not carried over; checkout, the opening and
+ * the finale arrive with their own phases.
+ *
+ * A — paper, ink, wine, light: every sender surface.
+ * C — kickers, numerals, ruled rows: labels and structure.
+ * Only transform / opacity animate. Nothing loops. Decoration never takes pointer events.
+ */
+
+.sig {
+  /* A · paper & ink */
+  --sig-paper: #f6f0e6;
+  --sig-paper-2: #efe6d8;
+  --sig-card: #fbf7f0;
+  --sig-ink: #2a201c; /* 14.0:1 on paper */
+  --sig-ink-2: #5d4f47; /* 6.9:1 */
+  --sig-ink-3: #74655b; /* 4.9:1 — captions only */
+  --sig-line: #e2d6c5;
+  /* A · the one accent: the seal */
+  --sig-wine: #5e1f33;
+  --sig-wine-2: #7a3244; /* 7.8:1 on paper */
+  --sig-wine-ink: #f9ece4;
+  /* B · the room (recipient) — overridden by the world's own room vars */
+  --sig-room-ink: var(--w-on-ground, #fbf0e6);
+  --sig-candle: #f2c99a;
+  --sig-letter: #f7eee2;
+  --sig-letter-ink: #43232c; /* 12.1:1 */
+  /* type */
+  --sig-serif: "Noto Serif Georgian", "Newsreader", Georgia, serif;
+  --sig-italic: "Newsreader", Georgia, serif;
+  --sig-ui: "Google Sans", system-ui, sans-serif;
+  /* material */
+  --sig-tooth: var(--cx-paper-tooth);
+  --sig-shadow-object: 0 1px 1px rgb(60 30 20 / 0.06), 0 18px 36px -20px rgb(60 30 20 / 0.5);
+  --sig-shadow-lifted: 0 2px 3px rgb(60 30 20 / 0.1), 0 30px 50px -24px rgb(60 30 20 / 0.6);
+  --sig-shadow-room: 0 2px 3px rgb(0 0 0 / 0.2), 0 34px 60px -24px rgb(0 0 0 / 0.75);
+  /* shape */
+  --sig-r-paper: 3px;
+  --sig-r-control: 18px;
+  /* motion */
+  --sig-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --sig-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  --sig-settle: var(--qs-ease-settle, cubic-bezier(0.22, 1, 0.36, 1));
+  --sig-snap: var(--qs-ease-snap, cubic-bezier(0.34, 1.4, 0.64, 1));
+
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  color: var(--sig-ink);
+  font-family: var(--sig-ui);
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    var(--sig-paper);
+  background-blend-mode: soft-light, normal;
+  -webkit-tap-highlight-color: transparent;
+}
+/* A · window light across the paper: a still, never animated. */
+.sig[data-side="sender"]::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: image-set(url(/customer/textures/window-light-900.avif) type("image/avif"), url(/customer/textures/window-light-900.webp) type("image/webp")) 70% 0 / cover no-repeat;
+  filter: invert(1) blur(1px);
+  mix-blend-mode: multiply;
+  opacity: 0.05;
+  transform: scaleX(-1);
+}
+/* B · the recipient is in the world's room. */
+.sig[data-side="recipient"] {
+  background: var(--room-glow), var(--room-tex), var(--room);
+  background-blend-mode: normal, var(--room-blend, soft-light), normal;
+  color: var(--sig-room-ink);
+}
+
+.sig-screen {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* Page transition: opacity only, so the screen is usable from its first frame. */
+  animation: sig-fade 240ms var(--sig-out) both;
+}
+.sig-page {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 30rem;
+  margin: 0 auto;
+  padding: var(--safe-top) max(1.375rem, var(--safe-right)) 0 max(1.375rem, var(--safe-left));
+}
+@media (max-width: 370px) {
+  .sig-page {
+    padding-inline: max(1rem, var(--safe-left)) max(1rem, var(--safe-right));
+  }
+  /* The dock's ground matches the narrower gutter (it would otherwise overhang the page by 6px). */
+  .sig .sig-dock::before {
+    inset-inline: -1rem;
+  }
+}
+
+/* ============================================================ chrome */
+.sig-mast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+}
+.sig-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font: 500 1rem/1 var(--sig-ui);
+}
+.sig-brand i {
+  font: italic 400 1.0625rem/1 var(--sig-italic);
+}
+.sig-brand__spark {
+  width: 0.8rem;
+  height: 0.8rem;
+  color: #b4523a;
+}
+.sig-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  margin-left: -0.5rem;
+  padding: 0 0.5rem;
+  border-radius: 12px;
+  font: 500 0.875rem/1 var(--sig-ui);
+  color: var(--sig-ink-2);
+}
+.sig-steps {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font: 500 0.75rem/1 var(--sig-ui);
+  color: var(--sig-ink-3);
+  white-space: nowrap;
+}
+.sig-steps b {
+  font: italic 400 0.95rem/1 var(--sig-italic);
+  color: var(--sig-wine-2);
+}
+.sig-steps__rail {
+  display: inline-flex;
+  gap: 4px;
+}
+.sig-steps__rail i {
+  width: 1.125rem;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--sig-line);
+}
+.sig-steps__rail i[data-on] {
+  background: var(--sig-wine);
+}
+
+/* ============================================================ type */
+/* C · the kicker: a small editorial label with a rule. */
+.sig-kicker {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font: 600 0.75rem/1.3 var(--sig-ui);
+  letter-spacing: 0.02em;
+  color: var(--sig-wine-2);
+}
+.sig-kicker::before {
+  content: "";
+  width: 1.125rem;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.6;
+}
+.sig-kicker--room {
+  color: var(--sig-candle);
+}
+.sig-display {
+  margin-top: 0.75rem;
+  font: 300 clamp(1.625rem, 1.1rem + 2.4vw, 2.25rem) / 1.22 var(--sig-serif);
+  text-wrap: balance;
+}
+.sig-title {
+  margin-top: 0.375rem;
+  font: 300 clamp(1.4375rem, 1.1rem + 1.6vw, 1.625rem) / 1.25 var(--sig-serif);
+  text-wrap: balance;
+}
+:lang(en) .sig-display,
+:lang(en) .sig-title {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.sig-sub,
+.sig-lede {
+  margin-top: 0.4rem;
+  font: 400 0.9375rem/1.6 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-wrap: pretty;
+}
+.sig-lede {
+  margin-top: 0.75rem;
+}
+.sig-caption {
+  font: 400 0.75rem/1.5 var(--sig-ui);
+  color: var(--sig-ink-3);
+}
+.sig-num {
+  font: italic 400 1.0625rem/1 var(--sig-italic);
+  color: var(--sig-wine-2);
+  font-variant-numeric: lining-nums;
+}
+.sig-tnum {
+  font-variant-numeric: tabular-nums;
+}
+.sig-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  font: 500 0.875rem/1.3 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-decoration: underline;
+  text-decoration-color: var(--sig-line);
+  text-underline-offset: 4px;
+}
+.sig-link--center {
+  justify-content: center;
+}
+
+/* ============================================================ actions */
+.sig-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  margin-top: auto;
+  padding: 1rem 0 max(1rem, calc(var(--safe-bottom) + 0.5rem));
+  display: grid;
+  gap: 0.5rem;
+}
+/* Over scrolled content the dock sits on its own ground, so nothing reads through the action. */
+.sig-dock::before {
+  content: "";
+  position: absolute;
+  inset: -1.25rem -1.375rem 0;
+  z-index: -1;
+  background: linear-gradient(to top, var(--sig-paper) 72%, rgb(246 240 230 / 0));
+  pointer-events: none;
+}
+.sig-dock--room::before {
+  background: linear-gradient(to top, var(--room, #2a0e17) 70%, transparent);
+}
+.sig-cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 3.25rem;
+  border-radius: var(--sig-r-control);
+  background: linear-gradient(180deg, #6a2639, #551a2c);
+  color: var(--sig-wine-ink);
+  font: 600 1rem/1.25 var(--sig-ui);
+  text-align: center;
+  text-wrap: balance;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    inset 0 -1px 0 rgb(0 0 0 / 0.25),
+    0 10px 24px -12px rgb(70 15 32 / 0.7),
+    0 2px 4px rgb(70 15 32 / 0.15);
+  transition:
+    transform 90ms ease-out,
+    filter 90ms ease-out;
+  touch-action: manipulation;
+}
+/* Tap feedback: CSS :active, applied at 0 ms — works before hydration. */
+.sig-cta:active:not(:disabled) {
+  transform: scale(0.975);
+  filter: brightness(0.94);
+  transition-duration: 0ms;
+}
+.sig-cta:disabled {
+  cursor: default;
+  opacity: 0.88;
+}
+.sig-cta[aria-busy] {
+  filter: saturate(0.75);
+}
+.sig-cta > span:not(.sig-cta__arrow) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sig-cta__arrow {
+  position: absolute;
+  right: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 0.12);
+}
+.sig-cta--pay {
+  padding: 0 1.25rem;
+}
+.sig-cta--room {
+  background: #f4e9df;
+  color: #2a1218;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.7),
+    0 12px 30px -14px rgb(0 0 0 / 0.65);
+}
+.sig[data-room="light"] .sig-cta--room {
+  background: var(--sig-ink);
+  color: var(--sig-paper);
+}
+.sig-cta--room .sig-cta > span:not(.sig-cta__arrow) {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.sig-cta__arrow {
+  background: rgb(0 0 0 / 0.06);
+}
+.sig-ghost {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3rem;
+  padding: 0 1.125rem;
+  border-radius: 99px;
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, currentColor 38%, transparent);
+  font: 500 0.875rem/1 var(--sig-ui);
+  transition: transform 90ms ease-out;
+}
+.sig-ghost:active {
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+.sig-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.625rem;
+}
+.sig-cta:focus-visible,
+.sig-ghost:focus-visible,
+.sig-back:focus-visible,
+.sig-link:focus-visible,
+.sig-window:focus-visible,
+.sig-edits button:focus-visible,
+.sig-voice__btn:focus-visible {
+  outline: 2px solid var(--sig-wine-2);
+  outline-offset: 3px;
+}
+.sig[data-side="recipient"] :is(.sig-cta, .sig-ghost, .sig-voice__btn):focus-visible {
+  outline-color: var(--sig-candle);
+}
+.sig-hint {
+  text-align: center;
+  font: 400 0.8125rem/1.3 var(--sig-ui);
+  opacity: 0.75;
+}
+.sig-hint--made {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+.sig-hint--made svg {
+  color: var(--sig-candle);
+}
+
+/* ============================================================ 4 · create */
+.sig-letter-field {
+  position: relative;
+  margin-top: 1rem;
+  padding: 1.25rem 1.25rem 0.875rem;
+  border-radius: var(--sig-r-paper);
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    var(--sig-card);
+  background-blend-mode: soft-light, normal;
+  box-shadow: var(--sig-shadow-object);
+}
+.sig-letter-field::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2rem;
+  height: 4px;
+  background: var(--sig-wine);
+}
+.sig-letter-field:focus-within {
+  box-shadow:
+    var(--sig-shadow-object),
+    0 0 0 2px rgb(122 50 68 / 0.35);
+}
+.sig-letter-field[data-invalid] {
+  box-shadow:
+    var(--sig-shadow-object),
+    0 0 0 2px rgb(179 38 30 / 0.45);
+}
+.sig-letter-field__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font: 400 0.75rem/1 var(--sig-ui);
+  color: var(--sig-ink-3);
+}
+.sig-letter-field__head svg {
+  color: var(--sig-wine-2);
+}
+.sig-letter-field__input {
+  display: block;
+  width: 100%;
+  height: calc(2rem * 6);
+  min-height: calc(2rem * 4);
+  border: 0;
+  outline: 0;
+  resize: none;
+  font: 300 1.125rem/2rem var(--sig-serif); /* ≥16px: iOS never zooms on focus */
+  color: #3a2a26;
+  background: repeating-linear-gradient(transparent 0 calc(2rem - 1px), #e9ddcc calc(2rem - 1px) 2rem);
+  background-attachment: local;
+  caret-color: var(--sig-wine);
+}
+@media (max-height: 620px) {
+  .sig-letter-field__input {
+    height: calc(2rem * 4);
+  }
+}
+:lang(en) .sig-letter-field__input {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 400;
+}
+.sig-letter-field__input::placeholder {
+  color: #a8968a;
+}
+.sig-letter-field__foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-top: 0.625rem;
+  font: 400 0.75rem/1.45 var(--sig-ui);
+  color: var(--sig-ink-3);
+}
+.sig-letter-field__foot > span:first-child {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: flex-start;
+}
+.sig-letter-field[data-invalid] .sig-letter-field__foot > span:first-child {
+  color: #a3221b; /* 5.9:1 on card */
+  font-weight: 500;
+}
+.sig-count {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.sig-wave {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  height: 1.5rem;
+}
+.sig-wave i {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 2px;
+  background: currentColor;
+  opacity: 0.45;
+}
+.sig-wave i[data-on] {
+  opacity: 1;
+}
+
+/* ============================================================ 5 · preview */
+.sig-window {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  margin-top: 1.125rem;
+  padding: 1.25rem 1rem 1rem;
+  border-radius: 20px;
+  background: var(--room-glow), var(--room-tex), var(--room);
+  background-blend-mode: normal, var(--room-blend, soft-light), normal;
+  color: var(--w-on-ground, #fbf0e6);
+  box-shadow: var(--sig-shadow-lifted);
+  text-align: center;
+  overflow: hidden;
+  transition: transform 90ms ease-out;
+}
+.sig-window[data-room="light"] {
+  color: var(--sig-ink);
+}
+.sig-window:active {
+  transform: scale(0.985);
+  transition-duration: 0ms;
+}
+.sig-window::before {
+  content: "";
+  position: absolute;
+  inset: -20% -10% 20%;
+  background: radial-gradient(50% 45% at 50% 55%, rgb(242 201 154 / 0.22), transparent 70%);
+  pointer-events: none;
+}
+.sig-window__line {
+  position: relative;
+  margin-bottom: 0.5rem;
+  font: 300 1.0625rem/1.35 var(--sig-serif);
+  text-wrap: balance;
+}
+.sig-window__cta {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 99px;
+  background: rgb(251 247 240 / 0.94);
+  color: var(--sig-ink);
+  font: 600 0.8125rem/1 var(--sig-ui);
+}
+.sig-window__cta svg {
+  color: var(--sig-wine);
+}
+.sig-edits {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.sig-edits button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+  border-radius: 12px;
+  background: var(--sig-card);
+  box-shadow: inset 0 0 0 1px var(--sig-line);
+  font: 500 0.8125rem/1.2 var(--sig-ui);
+  color: var(--sig-ink);
+  transition: transform 90ms ease-out;
+}
+.sig-edits button:active {
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+.sig-edits svg {
+  color: var(--sig-wine-2);
+  flex: none;
+}
+/* Compact phones (and long Georgian labels): the icon sits over its label. */
+@media (max-width: 360px) {
+  .sig-edits button {
+    flex-direction: column;
+    gap: 0.2rem;
+    min-height: 3.25rem;
+    padding: 0.375rem 0.25rem;
+    font-size: 0.75rem;
+  }
+}
+.sig-edits__swatch {
+  width: 0.875rem;
+  flex: none;
+}
+.sig-edits__world {
+  width: 100%;
+  border-radius: 2px;
+}
+
+
+/* ============================================================ envelope (sealed, in the preview window) */
+.sig-env {
+  position: relative;
+  width: min(84%, 21rem, calc((100dvh - 15rem) * 1.42));
+  aspect-ratio: 1.42;
+  rotate: -3deg;
+  cursor: pointer;
+  animation: sig-set-down 900ms var(--sig-settle) 120ms both;
+}
+.sig-env[data-small] {
+  width: min(70%, 15rem);
+  rotate: -2deg;
+  cursor: inherit;
+  animation: none;
+}
+.sig-env > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+}
+.sig-env__back {
+  background: #d8c7af;
+  box-shadow: var(--sig-shadow-room);
+}
+.sig-env__sheet {
+  inset: 6% 7% 8% !important;
+  border-radius: 2px !important;
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    #fbf6ee;
+  background-blend-mode: soft-light, normal;
+  transition:
+    translate 650ms var(--sig-out) 450ms,
+    opacity 300ms linear 900ms;
+}
+.sig-env__pocket {
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    linear-gradient(170deg, #efe4d4, #e2d3bd);
+  background-blend-mode: soft-light, normal;
+  clip-path: polygon(0 18%, 50% 62%, 100% 18%, 100% 100%, 0 100%);
+}
+.sig-env__flap {
+  height: 60%;
+  background: linear-gradient(180deg, #ece0ce, #dfcfb7);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform-origin: 50% 0;
+  filter: drop-shadow(0 2px 2px rgb(60 30 20 / 0.25));
+  transition:
+    scale 420ms var(--sig-inout) 200ms,
+    opacity 160ms linear 520ms;
+}
+.sig-env > .sig-env__seal {
+  inset: auto;
+  left: 50%;
+  top: 58%;
+  width: 24%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+  transition:
+    scale 120ms ease-in,
+    opacity 220ms ease-out 180ms,
+    translate 300ms var(--sig-out) 120ms;
+}
+.sig-env__wax {
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================ 3 · theme picker */
+/* The hero's height is what the screen has left after the title, the grid and the action. */
+.sigf-picker {
+  /* 26.75rem in the prototype, plus the step row production adds under the mast. */
+  --hero-h: clamp(12.5rem, calc(100dvh - 29rem), 30rem);
+}
+/* Compact heights (iPhone SE, small Androids): the subtitle yields its space to the worlds. */
+@media (max-height: 680px) {
+  .sigf-picker {
+    --hero-h: clamp(10rem, calc(100dvh - 24.5rem), 30rem);
+  }
+  .sigf-picker .sig-sub {
+    display: none;
+  }
+}
+.sigf-hero {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  justify-items: center;
+  height: var(--hero-h);
+  margin-top: 1rem;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: var(--sig-shadow-lifted);
+  cursor: pointer;
+}
+@media (max-height: 680px) {
+  .sigf-hero {
+    margin-top: 0.75rem;
+  }
+}
+/* The world's own room. The one we are leaving stays beneath; the new one fades in over it. */
+.sigf-hero__room {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background: var(--room-glow), var(--room-tex), var(--room);
+  background-blend-mode: normal, var(--room-blend, soft-light), normal;
+  pointer-events: none;
+}
+.sigf-hero__room--in {
+  animation: sig-fade 420ms var(--sig-out) both;
+}
+.sigf-hero__light {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 26rem;
+  height: 26rem;
+  margin: -13rem 0 0 -13rem;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(242 201 154 / 0.22), rgb(160 80 70 / 0.06) 60%, transparent);
+  pointer-events: none;
+}
+.sigf-hero[data-room="light"] .sigf-hero__light {
+  background: radial-gradient(closest-side, rgb(255 255 255 / 0.5), transparent);
+}
+.sigf-hero__stage {
+  align-self: end;
+  width: min(78%, calc((var(--hero-h) - 5rem) * 0.8));
+  animation: sig-fade 320ms var(--sig-out) both;
+}
+.sigf-hero__world {
+  width: 100%;
+  border-radius: 6px;
+  box-shadow: var(--sig-shadow-room);
+}
+.sigf-hero__name {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.625rem 1rem 0.75rem;
+  text-align: center;
+  color: #f6ebe1;
+  animation: sig-fade 320ms var(--sig-out) both;
+}
+.sigf-hero[data-room="light"] .sigf-hero__name {
+  color: var(--sig-ink);
+}
+.sigf-hero__name b {
+  font: 400 1.25rem/1.2 var(--sig-serif);
+}
+:lang(en) .sigf-hero__name b {
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 1.3125rem;
+}
+.sigf-hero__name span {
+  font: 400 0.8125rem/1.3 var(--sig-ui);
+  opacity: 0.82;
+}
+
+/* Six named worlds, all visible: a 3 × 2 grid of radios (no horizontal scroll). */
+.sigf-worlds {
+  min-inline-size: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.875rem;
+  border: 0;
+}
+.sigf-tile {
+  position: relative;
+  display: grid;
+  align-content: start;
+  gap: 0.3rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.3rem 0.4rem;
+  border-radius: 12px;
+  background: rgb(251 247 240 / 0.55);
+  box-shadow: inset 0 0 0 1px var(--sig-line);
+  cursor: pointer;
+  transition: transform 90ms ease-out;
+  touch-action: manipulation;
+}
+.sigf-tile:active {
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+.sigf-tile[data-on] {
+  background: var(--sig-card);
+  box-shadow:
+    inset 0 0 0 1.5px var(--sig-wine),
+    0 8px 18px -12px rgb(70 15 32 / 0.55);
+}
+.sigf-tile:has(:focus-visible) {
+  outline: 2px solid var(--sig-wine-2);
+  outline-offset: 2px;
+}
+/* A window onto each world: its room, with its card and artwork cropped through the middle. */
+.sigf-tile__swatch {
+  position: relative;
+  display: block;
+  height: 2.75rem;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--room-tex), var(--room);
+  background-blend-mode: var(--room-blend, soft-light), normal;
+}
+@media (max-height: 680px) {
+  .sigf-tile__swatch {
+    height: 2.125rem;
+  }
+}
+.sigf-tile__world {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 100%;
+  translate: 0 -50%;
+}
+.sigf-tile__check {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: var(--sig-card);
+  color: var(--sig-wine);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+  opacity: 0;
+  scale: 0.6;
+  transition:
+    opacity 160ms var(--sig-out),
+    scale 200ms var(--sig-snap);
+  pointer-events: none;
+}
+.sigf-tile[data-on] .sigf-tile__check {
+  opacity: 1;
+  scale: 1;
+}
+.sigf-tile__name {
+  font: 500 0.75rem/1.25 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-align: center;
+  word-break: keep-all; /* Georgian names wrap between words, never inside one */
+  overflow-wrap: normal;
+  text-wrap: balance;
+}
+.sigf-tile[data-on] .sigf-tile__name {
+  color: var(--sig-wine); /* same weight as the others: a bolder name would re-wrap Georgian on compact phones */
+}
+@media (max-width: 390px) {
+  .sigf-worlds {
+    gap: 0.375rem;
+  }
+  .sigf-tile {
+    padding-inline: 0.2rem;
+  }
+  .sigf-tile__name {
+    letter-spacing: -0.01em;
+  }
+}
+
+/* ============================================================ 4 · create — memories */
+.sigf-memories {
+  margin-top: 1.75rem;
+}
+.sigf-memories__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+/* Three separate, labelled actions — photo, video, voice. */
+.sigf-add {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.sigf-add__btn {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 0.2rem;
+  min-height: 4.75rem;
+  padding: 0.625rem 0.25rem;
+  border-radius: 14px;
+  background: var(--sig-card);
+  box-shadow:
+    inset 0 0 0 1px var(--sig-line),
+    0 1px 2px rgb(60 30 20 / 0.06);
+  color: var(--sig-ink);
+  text-align: center;
+  transition: transform 90ms ease-out;
+  touch-action: manipulation;
+}
+button.sigf-add__btn:active {
+  transform: scale(0.97);
+  transition-duration: 0ms;
+}
+button.sigf-add__btn:focus-visible {
+  outline: 2px solid var(--sig-wine-2);
+  outline-offset: 2px;
+}
+.sigf-add__btn svg {
+  color: var(--sig-wine-2);
+}
+.sigf-add__btn b {
+  font: 600 0.875rem/1.2 var(--sig-ui);
+}
+.sigf-add__btn b > span {
+  color: var(--sig-wine-2);
+}
+.sigf-add__btn small {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font: 400 0.75rem/1.2 var(--sig-ui);
+  color: var(--sig-ink-3);
+}
+.sigf-add__btn[data-full] {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--sig-line);
+  color: var(--sig-ink-2);
+}
+.sigf-add__btn[data-full] small {
+  color: #1f5c40;
+}
+.sigf-add__btn[data-full] small svg {
+  color: inherit;
+}
+/* The mock is never mistaken for the product: a dashed lab note, always shown (also in captures). */
+.sigf-media {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  list-style: none;
+}
+.sigf-row {
+  display: grid;
+  grid-template-columns: 3.25rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 4.25rem;
+  padding: 0.5rem 0.25rem 0.5rem 0.5rem;
+  border-radius: 12px;
+  background: var(--sig-card);
+  box-shadow:
+    inset 0 0 0 1px var(--sig-line),
+    0 1px 2px rgb(60 30 20 / 0.06);
+  animation: sig-set-down 420ms var(--sig-settle) both;
+}
+.sigf-row[data-status="failed"] {
+  background: #fdf3f1;
+  box-shadow: inset 0 0 0 1.5px rgb(179 38 30 / 0.45);
+}
+.sigf-row__thumb {
+  position: relative;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #efe4d8;
+}
+.sigf-row__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.sigf-row:not([data-status="done"]) .sigf-row__thumb img {
+  opacity: 0.6;
+}
+.sigf-row__voice {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.2rem;
+  height: 100%;
+  padding: 0 0.45rem;
+  color: var(--sig-wine-2);
+  background: linear-gradient(180deg, #f6ebe4, #efe0d6);
+}
+.sigf-row__voice .sig-wave {
+  height: 0.875rem;
+}
+.sigf-row__play {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  display: grid;
+  place-items: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  background: rgb(251 247 240 / 0.92);
+  color: var(--sig-wine);
+}
+.sigf-row__body {
+  min-width: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+.sigf-row__name {
+  font: 600 0.875rem/1.25 var(--sig-ui);
+  overflow-wrap: anywhere;
+}
+.sigf-row__name span {
+  font-weight: 400;
+  color: var(--sig-ink-3);
+}
+.sigf-row__status {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.3rem;
+  font: 400 0.75rem/1.35 var(--sig-ui);
+  color: var(--sig-ink-3);
+}
+.sigf-row__status svg {
+  flex: none;
+  margin-top: 0.1rem;
+}
+.sigf-row[data-status="done"] .sigf-row__status svg {
+  color: #1f5c40;
+}
+.sigf-row[data-status="failed"] .sigf-row__status {
+  color: #a3221b; /* 5.6:1 on the failed row */
+  font-weight: 500;
+}
+.sigf-row__bar {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sig-line);
+  overflow: hidden;
+}
+.sigf-row__bar i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--sig-wine);
+  transform-origin: left;
+  transform: scaleX(var(--p, 0));
+  transition: transform 120ms linear;
+}
+.sigf-row__actions {
+  display: flex;
+  align-items: center;
+}
+.sigf-row__text-btn {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border-radius: 10px;
+  font: 600 0.8125rem/1 var(--sig-ui);
+  color: var(--sig-wine-2);
+  touch-action: manipulation;
+}
+.sigf-row__retry {
+  justify-self: start;
+  margin-top: 0.125rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0 0.875rem;
+  border-radius: 99px;
+  background: var(--sig-wine);
+  color: var(--sig-wine-ink);
+  font: 600 0.8125rem/1 var(--sig-ui);
+  transition: transform 90ms ease-out;
+  touch-action: manipulation;
+}
+.sigf-row__remove {
+  display: grid;
+  place-items: center;
+  width: 2.75rem; /* 44px hit area, 30px visual ring */
+  height: 2.75rem;
+  color: var(--sig-ink-2);
+  touch-action: manipulation;
+}
+.sigf-row__remove svg {
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--sig-line);
+}
+:is(.sigf-row__text-btn, .sigf-row__retry, .sigf-row__remove):active {
+  transform: scale(0.95);
+  transition-duration: 0ms;
+}
+:is(.sigf-row__text-btn, .sigf-row__retry, .sigf-row__remove, .sigf-voice button):focus-visible {
+  outline: 2px solid var(--sig-wine-2);
+  outline-offset: 2px;
+}
+.sigf-row--removed {
+  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3rem;
+  padding-left: 0.875rem;
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--sig-line);
+  font: 400 0.8125rem/1.35 var(--sig-ui);
+  color: var(--sig-ink-2);
+  animation: sig-fade 240ms var(--sig-out) both;
+}
+.sigf-dock-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 12px;
+  background: #fae4e2;
+  color: #8f1d17;
+  font: 500 0.8125rem/1.4 var(--sig-ui);
+  animation: sig-set-down 320ms var(--sig-settle) both;
+}
+.sigf-dock-note svg {
+  flex: none;
+  margin-top: 1px;
+}
+/* While the letter is being written, the action steps out of the keyboard's way (it is at the end of the page; see Create's `typing`). */
+.sigf-create[data-typing] .sig-dock {
+  position: relative;
+}
+.sigf-create .sig-letter-field__input {
+  scroll-margin-block: 5rem 2rem;
+}
+/* A row (or the voice panel) scrolled or focused into view stops above the dock, its note included — never under it. */
+.sigf-row,
+.sigf-voice {
+  scroll-margin-block: 1rem 11rem;
+}
+
+/* ============================================================ motion */
+.sig-rise {
+  animation: sig-rise 560ms var(--sig-out) both;
+  animation-delay: var(--d, 0ms);
+}
+@keyframes sig-rise {
+  from {
+    opacity: 0;
+    translate: 0 10px;
+  }
+}
+@keyframes sig-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sig-set-down {
+  from {
+    opacity: 0;
+    translate: 0 14px;
+    scale: 1.02;
+  }
+}
+
+/* ============================================================ production additions */
+/* The page's own step label (Signature's "02 — Words" kicker) sits under the mast on every sender step. */
+.sig-steprow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+/* A row that can't be retried (wrong type, too large): it says why and offers Remove only. */
+.sigf-row[data-status="invalid"] {
+  background: #fdf3f1;
+  box-shadow: inset 0 0 0 1.5px rgb(179 38 30 / 0.45);
+}
+.sigf-row[data-status="invalid"] .sigf-row__status {
+  color: #a3221b;
+  font-weight: 500;
+}
+.sigf-row__thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: #2a201c;
+}
+/* Voice: recording and listening back happen in place, on the same card as the list. */
+.sigf-voice {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  padding: 0.875rem;
+  border-radius: 14px;
+  background: var(--sig-card);
+  box-shadow:
+    inset 0 0 0 1px var(--sig-line),
+    0 1px 2px rgb(60 30 20 / 0.06);
+  animation: sig-set-down 320ms var(--sig-settle) both;
+}
+.sigf-voice__row {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+}
+.sigf-voice__rec {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  background: var(--sig-wine);
+  color: var(--sig-wine-ink);
+  box-shadow: 0 8px 18px -10px rgb(70 15 32 / 0.7);
+  transition: transform 90ms ease-out;
+  touch-action: manipulation;
+}
+.sigf-voice__rec[aria-pressed="true"] {
+  background: var(--sig-ink);
+}
+.sigf-voice__rec:active {
+  transform: scale(0.95);
+  transition-duration: 0ms;
+}
+.sigf-voice__meter {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 1.75rem;
+  color: var(--sig-wine-2);
+}
+.sigf-voice__meter i {
+  flex: 1;
+  min-width: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+.sigf-voice__label {
+  font: 600 0.875rem/1.3 var(--sig-ui);
+}
+.sigf-voice__meta {
+  margin-top: 0.2rem;
+  font: 400 0.75rem/1.35 var(--sig-ui);
+  color: var(--sig-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.sigf-voice__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.sigf-voice__actions > button,
+.sigf-voice__file {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border-radius: 99px;
+  font: 600 0.8125rem/1 var(--sig-ui);
+  box-shadow: inset 0 0 0 1px var(--sig-line);
+  color: var(--sig-ink);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.sigf-voice__actions > button[data-primary] {
+  background: var(--sig-wine);
+  color: var(--sig-wine-ink);
+  box-shadow: none;
+}
+.sigf-voice__file:has(:focus-visible) {
+  outline: 2px solid var(--sig-wine-2);
+  outline-offset: 2px;
+}
+.sigf-voice__error {
+  display: flex;
+  gap: 0.35rem;
+  font: 500 0.8125rem/1.4 var(--sig-ui);
+  color: #a3221b;
+}
+/* Preview, at a glance: what the greeting holds. */
+.sig-contents {
+  margin-top: 0.75rem;
+  font: 400 0.8125rem/1.45 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-align: center;
+}
+.sig-notice {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0.625rem 0.75rem;
+  border-radius: 12px;
+  background: #fae4e2;
+  color: #8f1d17;
+  font: 500 0.8125rem/1.4 var(--sig-ui);
+}
+.sig-notice svg {
+  flex: none;
+  margin-top: 1px;
+}
+/* Reduced motion: designed, not collapsed — every keyframe becomes a short opacity fade; nothing travels or scales. */
+@media (prefers-reduced-motion: reduce) {
+  .sig *,
+  .sig *::before,
+  .sig *::after {
+    animation-duration: 240ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0ms !important;
+    transition-delay: 0ms !important;
+  }
+  @keyframes sig-rise {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes sig-set-down {
+    from {
+      opacity: 0;
+    }
+  }
+}
+
+/* ============================================================ desktop studio (2.0) */
+/* Create: the letter column, and on wide screens the chosen world live beside it. */
+.sig-studio,
+.sig-studio__main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .sig-page[data-studio] {
+    max-width: 59rem;
+  }
+  .sig-studio {
+    display: grid;
+    grid-template-columns: minmax(0, 30rem) minmax(0, 24rem);
+    gap: 5rem;
+  }
+  .sig-studio__aside {
+    position: sticky;
+    top: 1.5rem;
+    align-self: start;
+    display: grid;
+    gap: 0.75rem;
+    padding-top: 0.5rem;
+  }
+  .sig-studio__room {
+    display: grid;
+    place-items: center;
+    padding: 2.25rem 2.5rem;
+    border-radius: 20px;
+    background: var(--room-glow), var(--room-tex), var(--room);
+    background-blend-mode: normal, var(--room-blend, soft-light), normal;
+    box-shadow: var(--sig-shadow-lifted);
+  }
+  .sig-studio__world {
+    width: min(100%, 17rem);
+    border-radius: 6px;
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.16),
+      0 26px 50px -18px rgb(0 0 0 / 0.5);
+  }
+  .sig-studio__name {
+    font: 400 1.0625rem/1.3 var(--sig-serif);
+    color: var(--sig-ink);
+  }
+}
+
+/* Theme picker on wide screens: the chosen world's room large on the left, the six worlds and the action on the right. */
+@media (min-width: 1024px) {
+  .sig-page:has(> .sigf-picker) {
+    max-width: 59rem;
+  }
+  .sigf-picker {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 21rem);
+    grid-template-rows: auto auto 1fr auto;
+    column-gap: 4rem;
+  }
+  .sigf-picker > .sig-title,
+  .sigf-picker > .sig-sub,
+  .sigf-picker > .sig-notice {
+    grid-column: 1;
+  }
+  .sigf-picker > .sigf-hero {
+    --hero-h: clamp(24rem, 100dvh - 15rem, 36rem);
+    grid-column: 1;
+    grid-row: 3 / 5;
+    align-self: start;
+  }
+  .sigf-picker > .sigf-worlds {
+    grid-column: 2;
+    grid-row: 1 / 4;
+    align-self: end;
+  }
+  .sigf-picker > .sig-dock {
+    grid-column: 2;
+    grid-row: 4;
+  }
+}
+.sig-studio__aside > .sig-contents {
+  text-align: left;
+}
+
+/* 320 px phones: a Georgian world name (e.g. «მინიმალისტური», ~95 px at 12 px) can't fit a third of the
+   width and must never break inside a word, so the six worlds sit two to a row with a shorter swatch. */
+@media (max-width: 350px) {
+  .sigf-worlds {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.375rem;
+  }
+  .sigf-tile {
+    grid-template-columns: 2rem minmax(0, 1fr);
+    align-items: center;
+    column-gap: 0.4rem;
+    min-height: 2.75rem;
+  }
+  .sigf-tile__swatch {
+    height: 2rem;
+  }
+  .sigf-tile__name {
+    text-align: left;
+  }
+}
+
+/* A seventh world (Luxury Vintage, added last) gets its own full-width row: a wide window onto its room and
+   its name. The hero gives up that row's height, so all worlds and the action still fit one phone screen.
+   By position, not by template id (the picker never names a world). */
+.sigf-worlds .sigf-tile:nth-child(7) {
+  grid-column: 1 / -1;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  align-items: center;
+  column-gap: 0.75rem;
+  min-height: 2.75rem;
+  padding: 0.3rem 0.75rem 0.3rem 0.3rem;
+}
+.sigf-worlds .sigf-tile:nth-child(7) .sigf-tile__swatch {
+  height: 2.5rem;
+}
+.sigf-worlds .sigf-tile:nth-child(7) .sigf-tile__name {
+  text-align: left;
+  font-size: 0.8125rem;
+}
+.sigf-picker:has(.sigf-tile:nth-child(7)) .sigf-hero {
+  --hero-h: clamp(11rem, calc(100dvh - 32.5rem), 30rem);
+}
+@media (max-height: 680px) {
+  .sigf-picker:has(.sigf-tile:nth-child(7)) .sigf-hero {
+    --hero-h: clamp(7rem, calc(100dvh - 29.5rem), 30rem);
+  }
+  .sigf-picker:has(.sigf-tile:nth-child(7)) .sigf-worlds {
+    gap: 0.3rem;
+    margin-top: 0.625rem;
+  }
+}
+@media (max-width: 350px) {
+  .sigf-worlds .sigf-tile:nth-child(7) {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+  .sigf-worlds .sigf-tile:nth-child(7) .sigf-tile__swatch {
+    height: 2rem;
+  }
+}
+@media (min-width: 1024px) {
+  .sigf-picker:has(.sigf-tile:nth-child(7)) > .sigf-hero {
+    --hero-h: clamp(24rem, calc(100dvh - 15rem), 36rem);
+  }
+}

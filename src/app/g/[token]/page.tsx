@@ -9,10 +9,12 @@ import { getDefaultProductPrice, formatMinorAmount } from "@/lib/payments/displa
 import { editTokenCookieName } from "@/lib/security/edit-token";
 import { loadDraftForEdit, InvalidEditTokenError } from "@/lib/greetings/content";
 import { loadActiveGreetingForRecipient, isOriginalSender, RecipientAccessError } from "@/lib/greetings/recipient";
-import { SenderEntry } from "@/components/greeting/sender-entry";
-import { CreationWizard, type WizardInitialState } from "@/components/greeting/creation-wizard";
-import { RecipientView } from "@/components/greeting/recipient-view";
-import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/placeholders";
+import type { WizardInitialState } from "@/components/greeting/creation-wizard";
+import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
+import { signatureUiEnabled } from "@/components/signature/flag";
+import { getMerchantInfo } from "@/lib/merchant/server";
+import { resolveMerchantToken } from "@/lib/merchant/info";
+import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder } from "@/components/qr/placeholders";
 
 /**
  * The permanent public entry point printed on every physical card
@@ -32,6 +34,7 @@ import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/pl
  */
 export const dynamic = "force-dynamic";
 
+
 export default async function QrEntryPage({
   params,
   searchParams,
@@ -50,6 +53,9 @@ export default async function QrEntryPage({
 
     case "blocked":
       return <BlockedPlaceholder />;
+
+    case "expired":
+      return <ExpiredPlaceholder />;
 
     case "available": {
       await recordAnalyticsEvent({ eventType: "QR_SCANNED", qrCodeId: resolution.qrId }, { partnerId: resolution.partnerId });
@@ -95,13 +101,11 @@ export default async function QrEntryPage({
           audio: audioRow ? { contentId: audioRow.id, url: audioRow.signedUrl! } : null,
           priceLabel,
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
+          merchantName: checkoutMerchantName(locale),
+          merchantVatStatus: checkoutVatStatus(),
         };
 
-        return (
-          <Suspense>
-            <CreationWizard initial={initial} />
-          </Suspense>
-        );
+        return <Suspense>{signatureUiEnabled() ? <SignatureWizard initial={initial} /> : <CreationWizard initial={initial} />}</Suspense>;
       } catch (err) {
         if (err instanceof InvalidEditTokenError) return <DraftNoAccessPlaceholder />;
         throw err;
@@ -151,4 +155,22 @@ export default async function QrEntryPage({
       }
     }
   }
+}
+
+/**
+ * The registered seller name for the checkout screen: only a real configured
+ * value (never the fictional demo profile, never a placeholder). Null hides the line.
+ */
+function checkoutMerchantName(locale: string): string | null {
+  const info = getMerchantInfo();
+  if (info.mode !== "configured") return null;
+  return resolveMerchantToken(info, "legalName", locale === "en" ? "en" : "ka").value;
+}
+
+/** The configured VAT status for the checkout disclosure (display only), never from the demo profile. */
+function checkoutVatStatus(): "NOT_REGISTERED" | "REGISTERED" | null {
+  const info = getMerchantInfo();
+  if (info.mode !== "configured") return null;
+  const v = info.values.vatStatus;
+  return v === "NOT_REGISTERED" || v === "REGISTERED" ? v : null;
 }

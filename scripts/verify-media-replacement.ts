@@ -1,4 +1,5 @@
 import Module from "node:module";
+import { resolveSecretKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -23,7 +24,7 @@ const { startGreeting } = require("../src/lib/greetings/start") as typeof import
 const { loadDraftForEdit, requestMediaUpload, finalizeMediaUpload, deleteContent } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const serviceRoleKey = resolveSecretKey(process.env)!.key;
 const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
 const storage = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 

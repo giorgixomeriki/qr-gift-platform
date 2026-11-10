@@ -21,7 +21,9 @@
     "unavailableTitle": "This card isn't available",
     "unavailableBody": "It may have been paused or removed. If it came with a gift, the shop that sold it can help.",
     "notFoundTitle": "We couldn't find this card",
-    "notFoundBody": "Make sure the whole code was scanned, then try again."
+    "notFoundBody": "Make sure the whole code was scanned, then try again.",
+    "expiredTitle": "This greeting's availability has ended",
+    "expiredBody": "A greeting can be opened for 12 months after it is activated, and that period has passed. If you have a question, contact us at qrapp.ge/contact."
   },
   "sender": {
     "entry": {
@@ -149,7 +151,24 @@
       "stillVerifyingBody": "If you paid, it will be confirmed shortly — please don't pay again. Check again in a moment.",
       "checkAgain": "Check again",
       "closedTitle": "Payments open soon",
-      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged."
+      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged.",
+      "orderKicker": "Your order",
+      "design": "Design",
+      "contents": "Contents",
+      "legal": {
+        "seller": "Seller",
+        "country": "Seller's country: Georgia",
+        "contact": "Contact",
+        "policies": "Before paying, please read:",
+        "terms": "Terms and Conditions",
+        "privacy": "Privacy Policy",
+        "refunds": "Delivery and Refunds",
+        "age": "Greetings may be bought only by people aged 18 or over.",
+        "vat": {
+          "NOT_REGISTERED": "The seller is not registered for VAT; no VAT is added to the price.",
+          "REGISTERED": "The seller is registered for VAT."
+        }
+      }
     },
     "preview": {
       "edit": "Back to editing",
@@ -169,7 +188,56 @@
     },
     "toPreview": "See preview",
     "skipToPreview": "Skip to preview",
-    "livePreview": "Live preview"
+    "livePreview": "Live preview",
+    "sig": {
+      "steps": {
+        "theme": "Design",
+        "create": "Words",
+        "preview": "Preview"
+      },
+      "stepLabel": "Step {n} of 3 · {label}",
+      "chosen": "Selected",
+      "memories": "Memories",
+      "addPhoto": "Photo",
+      "addVideo": "Video",
+      "addVoice": "Voice",
+      "slotPhoto": "{count} / {max}",
+      "slotVideo": "1 clip",
+      "slotVoice": "Up to 1 min",
+      "full": "Added",
+      "addAriaPhoto": "Add a photo ({count} of {max})",
+      "addAriaVideo": "Add a video",
+      "addAriaVoice": "Record a voice message",
+      "photoN": "Photo {n}",
+      "videoLabel": "Video",
+      "voiceLabel": "Voice message",
+      "ready": "Ready",
+      "preparing": "Preparing…",
+      "uploadingPct": "Uploading · {pct}%",
+      "uploadFailed": "Didn't upload — check your connection",
+      "retryUpload": "Retry",
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "removed": "{name} removed",
+      "undo": "Undo",
+      "failedBlock": "One file didn't upload. Retry it or remove it.",
+      "waiting": "{count, plural, one {Waiting for the upload…} other {Waiting for # uploads…}}",
+      "removeError": "We couldn't remove it. Check your connection and try again.",
+      "voiceClose": "Close",
+      "previewKicker": "Preview",
+      "previewTitle": "How it will reach them",
+      "previewLede": "They scan the card — and this envelope opens for them alone.",
+      "watch": "See it as the recipient",
+      "editText": "Text",
+      "editMedia": "Memories",
+      "editDesign": "Design",
+      "editNav": "Edit your greeting",
+      "contents": "Your greeting: {items}",
+      "itemsText": "text",
+      "itemsPhotos": "{count, plural, one {# photo} other {# photos}}",
+      "itemsVideo": "video",
+      "itemsVoice": "voice"
+    }
   },
   "greeting": {
     "tapToOpen": "Tap to open",
@@ -185,7 +253,17 @@
     "pause": "Pause",
     "seek": "Playback position",
     "madeWith": "Made with QR Starr",
-    "letterLabel": "Message"
+    "letterLabel": "Message",
+    "forYou": "For you",
+    "keepsakes": "Keepsakes",
+    "keepsakePhoto": "Photo",
+    "keepsakeVideo": "Video",
+    "keepsakeVoice": "Voice",
+    "closingTitle": "This letter is yours to keep.",
+    "closingBody": "Scan the card again whenever you'd like to open it.",
+    "toLetter": "Your letter",
+    "postmark": "QR STARR · LUXURY VINTAGE · KEEPSAKE · ",
+    "printsLabel": "Photos. Press Enter for the next one."
   },
   "themes": {
     "romantic": {
@@ -229,11 +307,19 @@
       "opening": "A few words, just for you",
       "ending": "With warmest wishes",
       "sample": "With admiration, and every good wish."
+    },
+    "luxury-vintage": {
+      "name": "Luxury Vintage",
+      "tagline": "An antique letter, sealed in wax",
+      "opening": "A letter kept just for you",
+      "ending": "Yours, always",
+      "sample": "Some words are meant to be kept for a lifetime."
     }
   },
   "success": {
     "banner": "This is exactly what they'll see. Give the gift with the card — they scan it and it opens.",
-    "title": "Your greeting is live"
+    "title": "Your greeting is live",
+    "kicker": "Activated"
   },
   "partner": {
     "notAdmin": "Signed in as {email}, but not an admin.",
@@ -469,7 +555,35 @@
     "partnerLoginBody": "Manage your cards, sales and commission.",
     "adminLoginBody": "Restricted to QR Starr staff.",
     "areaPartner": "Partner",
-    "areaAdmin": "Admin"
+    "areaAdmin": "Admin",
+    "mfa": {
+      "setupTitle": "Turn on two-step sign-in",
+      "setupBody": "The admin area requires an authenticator app. Scan the QR code, then enter the 6-digit code it shows.",
+      "qrAlt": "QR code for your authenticator app",
+      "secretLabel": "Or enter this key by hand",
+      "codeLabel": "6-digit code",
+      "confirm": "Confirm",
+      "verifying": "Checking…",
+      "preparing": "Preparing…",
+      "challengeTitle": "Enter your security code",
+      "challengeBody": "Open your authenticator app and enter the current 6-digit code.",
+      "factorLabel": "Authenticator",
+      "invalidCode": "That code is wrong or has expired. Try a new one.",
+      "rateLimited": "Too many attempts. Please try again in a few minutes.",
+      "failed": "The security check could not be completed. Please try again.",
+      "securityTitle": "Account security",
+      "securityBody": "The authenticators that protect your admin sign-in. Add a backup so a lost phone cannot lock you out.",
+      "factorsTitle": "Authenticators",
+      "addedOn": "Added {date}",
+      "addBackup": "Add a backup authenticator",
+      "backupTitle": "Scan with your backup device",
+      "backupRecommended": "You have one authenticator. Add a backup on a second device.",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "lastFactor": "The only authenticator cannot be removed.",
+      "lockedTitle": "Two-step sign-in needs authorization",
+      "lockedBody": "This admin account cannot set up or use two-step sign-in yet. The platform owner must authorize it first."
+    }
   },
   "nav": {
     "adminBrand": "QR Starr — Admin",
@@ -480,7 +594,8 @@
     "signOut": "Sign out",
     "managePartners": "Manage partners",
     "partnerArea": "Partner",
-    "adminArea": "Admin"
+    "adminArea": "Admin",
+    "security": "Security"
   },
   "enums": {
     "partnerStatus": {
@@ -601,7 +716,16 @@
     "title": "Digital greetings for physical gifts",
     "body": "QR Starr adds a personal message, photos, video and a voice note to flowers, cakes and gifts — revealed with a single scan.",
     "partnerCta": "Partner sign in",
-    "adminCta": "Admin"
+    "adminCta": "Admin",
+    "kicker": "QR Starr · the words that come with a gift",
+    "how": {
+      "card": "The card",
+      "cardLine": "A QR card comes with the gift",
+      "words": "The words",
+      "wordsLine": "The giver writes and adds memories",
+      "opening": "The opening",
+      "openingLine": "The recipient scans and opens it"
+    }
   },
   "batchPerformance": {
     "summary": "{distributed} distributed · {scanned} scanned · {paid} paid · {conversion} conversion · {commission} commission"

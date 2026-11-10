@@ -1,10 +1,7 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { checkIsAdmin } from "@/db/client";
-import { getSessionUser } from "@/lib/auth/session";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { getAdminMetrics } from "@/lib/dashboard/admin-metrics";
 import { formatMinorAmount } from "@/lib/format/money";
 import { ReconcileActivationsButton } from "@/components/admin/reconcile-activations-button";
@@ -19,11 +16,9 @@ import { buttonClasses } from "@/components/ui/button";
  * the enforcement boundary.
  */
 export default async function AdminDashboardPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
+  const { user, isAdmin } = await requireAdminPage();
 
   const t = await getTranslations("admin");
-  const isAdmin = await checkIsAdmin(user.id);
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
   const metrics = await requireAdmin((tx) => getAdminMetrics(tx));

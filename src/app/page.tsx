@@ -1,36 +1,56 @@
+import type { Metadata } from "next";
+import { preload } from "react-dom";
 import { getTranslations } from "next-intl/server";
-import { ArrowRight } from "lucide-react";
-import { ThemeSwatch } from "@/components/greeting/theme-swatch";
-import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
-import { ButtonLink } from "@/components/ui/button";
-import { Logo } from "@/components/ui/logo";
+import { SiteHeader } from "@/components/site/site-header";
+import { SiteFooter } from "@/components/site/site-footer";
+import { DemoRibbon } from "@/components/site/demo-ribbon";
+import { Hero } from "@/components/site/home/hero";
+import { Demo, Experiences, Finale, Moments, Occasions, Partners, Pricing, Steps, Transform, Trust } from "@/components/site/home/sections";
+import { MotionRoot } from "@/components/site/home/motion";
+import { RevealObserver } from "@/components/site/home/reveal";
+import "@/components/site/home/home.css";
 
 /**
- * The bare domain. There's no public marketing site yet, so this is a calm
- * brand page that explains the product in one line and routes partners to
- * sign in — recipients and senders always arrive via /g/{token}.
+ * The bare domain: QR Starr's public home page. It tells the whole story —
+ * what the card is, what happens after the scan, what a greeting can hold,
+ * the occasions, the partner offer, the price and the reassurances — and
+ * routes partners to sign in. Recipients and senders still always arrive via
+ * /g/{token}; nothing here creates or opens a greeting.
+ *
+ * Every fact comes from product constants or the pricing data (copy.tsx);
+ * the site footer carries the information pages and the merchant details.
  */
-export default async function RootPage() {
-  const t = await getTranslations("home");
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("landing");
+  return { title: { absolute: t("metaTitle") }, description: t("metaDescription") };
+}
+
+export default function RootPage() {
+  // The Latin display face of this page only (home.css); the headline paints with it.
+  preload("/fonts/cormorant-garamond-latin.woff2", { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   return (
-    <div className="flex min-h-dvh flex-col">
-      <header className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-4 sm:px-6">
-        <Logo className="text-base" />
-        <LocaleSwitcher />
-      </header>
-      <main className="mx-auto grid w-full max-w-5xl flex-1 items-center gap-10 px-4 py-10 sm:px-6 md:grid-cols-[1.1fr_1fr] md:gap-16">
-        <div className="stagger">
-          <p className="text-eyebrow text-ember">{t("eyebrow")}</p>
-          <h1 className="text-display mt-3">{t("title")}</h1>
-          <p className="mt-4 max-w-md text-body text-ink-2">{t("body")}</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ButtonLink href="/partner/login" size="lg" iconEnd={<ArrowRight className="size-4" aria-hidden />}>
-              {t("partnerCta")}
-            </ButtonLink>
-          </div>
-        </div>
-        <ThemeSwatch themeKey="celebration" scale={0.85} className="animate-fade aspect-[4/3] w-full rounded-[var(--radius-lg)] md:aspect-[4/5]" />
+    <div className="hm site-skin flex min-h-dvh flex-col">
+      <DemoRibbon />
+      <SiteHeader />
+      <main id="main" tabIndex={-1} className="flex-1 outline-none">
+        <MotionRoot>
+          <Hero />
+          <Moments />
+          <Steps />
+          <Transform />
+          <Demo />
+          <Experiences />
+          <Occasions />
+          <Partners />
+          <Pricing />
+          <Trust />
+          <Finale />
+        </MotionRoot>
       </main>
+      <SiteFooter />
+      <RevealObserver />
     </div>
   );
 }

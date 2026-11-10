@@ -109,6 +109,21 @@ const fullStop: SceneFn = (ctx, tl) => {
     .fromTo(point, { scale: 1 }, { scale: 1.6, duration: 0.14, ease: "power2.out", yoyo: true, repeat: 1 }, 2.0);
 };
 
+/** Luxury Vintage — keepsake seal: the closing words are written in script, the rose comes back into bloom, the wax seal is pressed onto the letter. */
+const keepsakeSeal: SceneFn = (ctx, tl) => {
+  const opening = q(ctx, ".tw__opening");
+  if (opening?.textContent) inkLines(ctx, tl, 0.3, [opening], { stagger: 0.2, duration: 1.4 });
+  const rose = q(ctx, ".tw__rose");
+  if (rose) tl.fromTo(rose, { scale: 0.94, opacity: 0.55 }, { scale: 1, opacity: 1, duration: 1.6, ease: "power2.out", clearProps: "transform,opacity" }, 1.0);
+  settleIntoFinale(ctx, tl, 1.0, [q(ctx, ".tw__candle")], ["opacity"], { duration: 1.6 });
+  const wax = q(ctx, ".tw__wax");
+  if (wax) {
+    tl.fromTo(wax, { scale: 1.35, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.55, ease: "power2.out" }, 2.4)
+      .to(wax, { scale: 0.9, duration: 0.16, ease: "power2.in" }, 2.95)
+      .to(wax, { scale: 1, duration: 0.45, ease: "back.out(3)", clearProps: "transform,opacity" }, 3.11);
+  }
+};
+
 export const FINALE_SCENES: Record<FinaleId, SceneFn> = {
   "evening-falls": eveningFalls,
   "paper-encore": paperEncore,
@@ -116,4 +131,5 @@ export const FINALE_SCENES: Record<FinaleId, SceneFn> = {
   afterglow,
   "gallery-doors": galleryDoors,
   "full-stop": fullStop,
+  "keepsake-seal": keepsakeSeal,
 };

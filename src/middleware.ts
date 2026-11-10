@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   if (pathname.startsWith("/partner") || pathname.startsWith("/admin")) {
-    const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.SUPABASE_PUBLISHABLE_KEY, {
       cookies: {
         getAll() {
           return request.cookies.getAll();

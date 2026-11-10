@@ -5,6 +5,7 @@ import { greetings, greetingContent, themes, qrCodes } from "@/db/schema";
 import { verifyEditToken } from "@/lib/security/edit-token";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { createSignedReadUrl } from "@/lib/storage/media";
+import { isGreetingExpired } from "./availability";
 
 export class RecipientAccessError extends Error {}
 
@@ -23,6 +24,8 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
   return withPublicContext(async (tx) => {
     const [greeting] = await tx.select().from(greetings).where(eq(greetings.id, greetingId)).limit(1);
     if (!greeting || greeting.status !== "ACTIVE") throw new RecipientAccessError("Greeting is not active");
+    // Checked here too, not only in resolveQrState: no signed media URL is ever issued for an expired greeting.
+    if (isGreetingExpired(greeting.activatedAt)) throw new RecipientAccessError("Greeting availability has ended");
 
     const [qr] = await tx.select({ status: qrCodes.status }).from(qrCodes).where(eq(qrCodes.id, greeting.qrCodeId)).limit(1);
     if (!qr || qr.status !== "ACTIVE") throw new RecipientAccessError("QR is not active");

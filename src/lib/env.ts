@@ -1,7 +1,15 @@
 import "server-only";
 import { createPublicKey } from "node:crypto";
 import { z } from "zod";
-import { appUrlProblems, bogUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "./env-guards";
+import {
+  appUrlProblems,
+  bogUrlProblems,
+  clientIpConfigProblems,
+  databaseUrlProblems,
+  isHostedEnvironment,
+  supabaseUrlProblems,
+} from "./env-guards";
+import { publishableKeyProblems, resolvePublishableKey, resolveSecretKey, secretKeyProblems, type KeySource } from "./supabase/keys";
 
 /**
  * Single validated source of truth for SERVER-SIDE environment variables,
@@ -21,10 +29,16 @@ const envSchema = z.object({
   MIGRATIONS_DATABASE_URL: z.string().min(1).optional(),
 
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  // Server-only. Bypasses RLS — used exclusively for signed Storage URL issuance
-  // after the app has already validated ownership in code. Never sent to the client.
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Supabase API keys: the new publishable/secret pair, or (temporarily) the
+  // legacy anon/service_role JWTs. Resolved into SUPABASE_PUBLISHABLE_KEY /
+  // SUPABASE_SECRET_KEY below (lib/supabase/keys.ts); read those, never these.
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  // Server-only. Bypasses RLS — used exclusively for Auth admin lookups and
+  // signed Storage URL issuance after the app has already validated ownership
+  // in code. Never sent to the client.
+  SUPABASE_SECRET_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).default("greeting-media"),
 
   // HMAC key for hashing sender edit tokens before they're stored. See
@@ -89,9 +103,33 @@ const envSchema = z.object({
   // reconciliation report and refund bookkeeping run in an admin context).
   CRON_SECRET: z.string().min(32).optional(),
   RECONCILE_ADMIN_USER_ID: z.string().uuid().optional(),
+  // Optional: where reconciliation alerts are POSTed (docs/ops/PAYMENT_RECONCILIATION_RUNBOOK.md).
+  // Treat it as a secret. Unset: alerts go to the structured log only.
+  PAYMENT_ALERT_WEBHOOK_URL: z.string().url().optional(),
+
+  // Where the trusted proxy puts the caller's IP (lib/rate-limit/client-ip.ts).
+  // Format-checked, and required outside Vercel, by clientIpConfigProblems
+  // (blank counts as unset).
+  CLIENT_IP_HEADER: z.string().optional(),
+  TRUSTED_PROXY_COUNT: z.string().optional(),
+  // "true" exposes /api/ops/client-ip for verifying the two settings above on
+  // a new host. Turn it off again once verified.
+  CLIENT_IP_DIAGNOSTICS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
-export type Env = z.infer<typeof envSchema>;
+type RawEnv = z.infer<typeof envSchema>;
+type LegacyKeyVars = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | "NEXT_PUBLIC_SUPABASE_ANON_KEY" | "SUPABASE_SECRET_KEY" | "SUPABASE_SERVICE_ROLE_KEY";
+export type Env = Omit<RawEnv, LegacyKeyVars> & {
+  /** Low-privilege key: browser and session clients. */
+  SUPABASE_PUBLISHABLE_KEY: string;
+  /** Elevated key (bypasses RLS). Server-only. */
+  SUPABASE_SECRET_KEY: string;
+  /** "legacy" while the anon/service_role fallback is in use (ops:preflight reports it). */
+  SUPABASE_KEY_SOURCE: { publishable: KeySource; secret: KeySource };
+};
 
 function loadEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
@@ -102,14 +140,23 @@ function loadEnv(): Env {
 
   const data = parsed.data;
 
-  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means running on
-  // Vercel (build or runtime, preview or production) — never a dev machine.
+  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means a real
+  // deployment on Vercel, Render or an APP_HOSTED=true platform (build or
+  // runtime), never a dev machine.
   const production = data.NODE_ENV === "production";
-  const hosted = process.env.VERCEL === "1";
+  const hosted = isHostedEnvironment(process.env);
   const problems = [
     ...appUrlProblems(process.env.NEXT_PUBLIC_APP_URL, { production, hosted }),
     ...databaseUrlProblems(data.DATABASE_URL, { production, hosted }),
     ...supabaseUrlProblems(data.NEXT_PUBLIC_SUPABASE_URL, { hosted }),
+    ...publishableKeyProblems(process.env),
+    ...secretKeyProblems(process.env),
+    ...clientIpConfigProblems({
+      hosted,
+      vercel: process.env.VERCEL === "1",
+      header: process.env.CLIENT_IP_HEADER || undefined,
+      proxyCount: process.env.TRUSTED_PROXY_COUNT || undefined,
+    }),
   ];
   if (production && data.EDIT_TOKEN_SECRET.length < 32) {
     problems.push("EDIT_TOKEN_SECRET must be at least 32 characters in production (openssl rand -hex 32)");
@@ -146,7 +193,20 @@ function loadEnv(): Env {
     }
   }
 
-  return data;
+  const publishable = resolvePublishableKey(process.env)!;
+  const secret = resolveSecretKey(process.env)!;
+  // Drop the raw variables so nothing can bypass the resolution above.
+  const rest: Partial<RawEnv> = { ...data };
+  delete rest.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  delete rest.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  delete rest.SUPABASE_SECRET_KEY;
+  delete rest.SUPABASE_SERVICE_ROLE_KEY;
+  return {
+    ...(rest as Omit<RawEnv, LegacyKeyVars>),
+    SUPABASE_PUBLISHABLE_KEY: publishable.key,
+    SUPABASE_SECRET_KEY: secret.key,
+    SUPABASE_KEY_SOURCE: { publishable: publishable.source, secret: secret.source },
+  };
 }
 
 export const env = loadEnv();

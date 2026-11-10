@@ -37,8 +37,7 @@ async function openPreview(page: Page, theme: string, message: string) {
   await page.getByTestId("wizard-continue").click();
   await page.getByTestId("message-textarea").fill(message);
   await page.getByTestId("wizard-continue").click();
-  await expect(page.getByTestId("media-step")).toBeVisible();
-  await page.getByTestId("wizard-continue").click();
+  await page.getByTestId("preview-watch").click();
   await expect(page.getByTestId("greeting-renderer")).toBeVisible();
 }
 
@@ -116,6 +115,18 @@ const FINALE_CASES: { theme: string; finale: string; closed: (page: Page) => Pro
       expect(point!.x).toBeGreaterThan(message!.x + message!.width * 0.3);
     },
   },
+  {
+    theme: "luxury-vintage",
+    finale: "keepsake-seal",
+    closed: async (page) => {
+      const beat = page.getByTestId("greeting-ending-beat");
+      // The letter keeps its gold vine frame, its rose and its wax seal; the candle has burned a little lower.
+      await expect(beat.locator(".tw__vine i")).toHaveCount(4);
+      await expect(beat.locator(".tw__rose")).toBeVisible();
+      await expect(beat.locator(".tw__wax svg")).toBeVisible();
+      expect(await beat.locator(".tw__candle").evaluate((e) => Number(getComputedStyle(e).opacity))).toBeCloseTo(0.7, 1);
+    },
+  },
 ];
 
 test.describe("Recipient reveal", () => {
@@ -142,12 +153,13 @@ test.describe("Recipient reveal", () => {
     await expect(ending.locator(".tw")).not.toHaveAttribute("data-scene", /pending|playing/);
   });
 
-  test("opens in the chosen world: sealed, then its scene with the sender's own words", async ({ page }) => {
+  test("opens in the chosen world: a sealed envelope in its room, then its scene with the sender's own words", async ({ page }) => {
     await openPreview(page, "wedding", SHORT);
     const reveal = page.getByTestId("greeting-renderer");
     await expect(reveal).toHaveAttribute("data-composition", "vellum");
     await expect(reveal).toHaveAttribute("data-stage", "closed");
-    await expect(reveal.locator(".tw[data-sealed]")).toHaveCount(1);
+    // Signature 2.0: the envelope (in the world's room) replaces the sealed world card.
+    await expect(reveal.locator('.sx-env[data-state="sealed"]')).toHaveCount(1);
     await expect(reveal).toContainText("A few words for your big day"); // the template's opening line, as real text
 
     await page.getByTestId("greeting-tap-to-open").click();
