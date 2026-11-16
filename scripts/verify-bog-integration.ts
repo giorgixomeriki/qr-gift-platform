@@ -89,7 +89,10 @@ async function main() {
     BOG_WEBHOOK_SIGNING_KEY: publicKey.export({ type: "spki", format: "pem" }).toString(),
     CHECKOUT_ENABLED: "true",
     BOG_REFUNDS_ENABLED: "true",
+    // Real checkout also needs the policies in force (checkout-gate.ts).
+    LEGAL_EFFECTIVE_DATE: "2026-01-01",
   });
+  delete process.env.MERCHANT_PROFILE;
   delete process.env.ALLOW_TEST_PAYMENTS;
   delete process.env.VERCEL;
 
@@ -97,7 +100,7 @@ async function main() {
   const { generatePublicToken } = require("../src/lib/security/public-token") as typeof import("../src/lib/security/public-token");
   const { startGreeting } = require("../src/lib/greetings/start") as typeof import("../src/lib/greetings/start");
   const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
-  const { getOrCreateCheckoutOrder, checkPaymentReturn } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
+  const { getOrCreateCheckoutOrder, checkPaymentReturn, acceptCheckoutTerms, consentTextSha256 } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
   const { CheckoutUnavailableError } = require("../src/lib/payments/checkout-gate") as typeof import("../src/lib/payments/checkout-gate");
   const { refundPaidOrder, findPaymentAnomalies } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
   const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
@@ -137,8 +140,9 @@ async function main() {
   async function newOrder(p = standard) {
     const g = await newGreeting(p);
     const { summary } = await getOrCreateCheckoutOrder(g.greetingId, g.editToken);
+    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "ka");
     const [pay] = await admin`select provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
-    return { ...g, orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl: summary.redirectUrl };
+    return { ...g, orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl };
   }
   const callbackBody = (bogId: string, claim: Record<string, unknown> = {}) =>
     JSON.stringify({ event: "order_payment", zoned_request_time: new Date().toISOString(), body: { order_id: bogId, ...claim } });
@@ -160,6 +164,35 @@ async function main() {
     check("1a. CHECKOUT_ENABLED=false: checkout refused as closed", !r.ok && r.error === new CheckoutUnavailableError().message, r.ok ? "opened" : r.error);
     check("1b. …no order created and nothing sent to BOG", n === 0 && bog.calls.length === before);
     mutableEnv.CHECKOUT_ENABLED = true;
+  }
+
+  console.log("\n--- 1c. Policies must be in force; consent precedes the bank payment ---");
+  {
+    const g = await newGreeting();
+    process.env.LEGAL_EFFECTIVE_DATE = "";
+    const unset = await attempt(() => getOrCreateCheckoutOrder(g.greetingId, g.editToken));
+    process.env.LEGAL_EFFECTIVE_DATE = "2999-01-01";
+    const future = await attempt(() => getOrCreateCheckoutOrder(g.greetingId, g.editToken));
+    process.env.LEGAL_EFFECTIVE_DATE = "2026-01-01";
+    check("1c. Without an effective date, or before it, real checkout is closed", !unset.ok && !future.ok && unset.error === new CheckoutUnavailableError().message && future.error === new CheckoutUnavailableError().message);
+
+    const before = bog.calls.length;
+    const { summary } = await getOrCreateCheckoutOrder(g.greetingId, g.editToken);
+    const [{ n: attemptsBefore }] = (await admin`select count(*)::int as n from payments where order_id = ${summary.orderId}`) as unknown as [{ n: number }];
+    check("1d. Entering checkout opens our order but no BOG payment (no redirect before consent)", attemptsBefore === 0 && bog.calls.filter((c) => c.path === "/ecommerce/orders").length === bog.calls.slice(0, before).filter((c) => c.path === "/ecommerce/orders").length && !("redirectUrl" in summary));
+
+    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "en");
+    const consents = await admin`select order_id, greeting_id, locale, consent_text_sha256, policies_effective_date::text as d, accepted_at from checkout_consents where order_id = ${summary.orderId}`;
+    const [pay] = await admin`select created_at from payments where order_id = ${summary.orderId}`;
+    check(
+      "1e. Consent is recorded against that order (language, hash of the exact sentence, effective date) before the BOG payment",
+      consents.length === 1 && consents[0]!.greeting_id === g.greetingId && consents[0]!.locale === "en" && consents[0]!.consent_text_sha256 === consentTextSha256("en") && consents[0]!.d === "2026-01-01" && !!pay && new Date(consents[0]!.accepted_at as string) <= new Date(pay.created_at as string) && redirectUrl?.startsWith("https://payment.bog.ge/") === true,
+      JSON.stringify(consents),
+    );
+    check("1f. The Georgian and English consent sentences hash differently (the evidence names the language shown)", consentTextSha256("ka") !== consentTextSha256("en"));
+    const other = await newGreeting();
+    const forged = await attempt(() => acceptCheckoutTerms(other.greetingId, g.editToken, "ka"));
+    check("1g. Another greeting's edit token cannot record consent", !forged.ok);
   }
 
   console.log("\n--- 2. Checkout ---");
@@ -354,8 +387,9 @@ async function main() {
   console.log("\n--- 16. Second capture on a PAID order ---");
   {
     const o = await newOrder();
-    const again = await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry: a second BOG attempt
-    const [second] = await admin`select provider_payment_id from payments where order_id = ${again.summary.orderId} and status = 'PENDING' and provider_payment_id <> ${o.bogId}`;
+    await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry
+    await acceptCheckoutTerms(o.greetingId, o.editToken, "en"); // consent again: a second BOG attempt
+    const [second] = await admin`select provider_payment_id from payments where order_id = ${o.orderId} and status = 'PENDING' and provider_payment_id <> ${o.bogId}`;
     const bog2 = second!.provider_payment_id as string;
     complete(o.bogId);
     complete(bog2);

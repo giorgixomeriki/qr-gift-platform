@@ -68,6 +68,12 @@ export async function startCheckout(input: {
   greetingId: string;
   editToken: string;
   productId: string;
+  /**
+   * Open the provider payment now (default). False for a real provider at
+   * checkout entry: the bank payment is created only after the buyer's
+   * consent is recorded (acceptCheckoutTerms in ./checkout.ts).
+   */
+  createAttempt?: boolean;
 }): Promise<{ order: Order; redirectUrl?: string }> {
   assertCheckoutOpen();
   const greeting = await verifyGreetingEditAccess(input.greetingId, input.editToken);
@@ -108,6 +114,7 @@ export async function startCheckout(input: {
     return { order: created, qrPublicToken: qr.publicToken };
   });
 
+  if (input.createAttempt === false) return { order };
   const redirectUrl = await createPaymentAttempt(order, qrPublicToken);
   return { order, redirectUrl };
 }

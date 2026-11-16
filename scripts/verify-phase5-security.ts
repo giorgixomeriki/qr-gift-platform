@@ -412,6 +412,7 @@ async function main() {
   await admin`delete from partner_ledger_entries where partner_id in (${partnerA}, ${partnerB})`;
   await admin`delete from partner_payouts where partner_id in (${partnerA}, ${partnerB})`;
   await admin`delete from payments where order_id in (select id from orders where partner_id in (${partnerA}, ${partnerB}))`;
+  await admin`delete from checkout_consents where order_id in (select id from orders where partner_id in (${partnerA}, ${partnerB}))`;
   await admin`delete from orders where partner_id in (${partnerA}, ${partnerB})`;
   if (greetingIds.length > 0) {
     await admin`delete from greeting_content where greeting_id in ${admin(greetingIds)}`;

@@ -1,7 +1,7 @@
 "use server";
 
 import { getEditToken } from "@/lib/greetings/edit-token-cookie";
-import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, type CheckoutOrderSummary } from "./checkout";
+import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, acceptCheckoutTerms, type CheckoutOrderSummary } from "./checkout";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logServerError } from "@/lib/log";
 import { CheckoutUnavailableError } from "./checkout-gate";
@@ -26,6 +26,23 @@ export async function startCheckoutAction(greetingId: string): Promise<ActionRes
     // not a failure — the UI shows "payments open soon", nothing is logged.
     if (err instanceof CheckoutUnavailableError) return { ok: false, error: CHECKOUT_CLOSED };
     return errorResult("startCheckoutAction", err, { greetingId });
+  }
+}
+
+/**
+ * PUBLIC EXPENSIVE: the buyer agreed to the terms and pressed Pay. Records the
+ * consent (server-side evidence, linked to the order) and, for a real
+ * provider, opens the bank payment and returns its page. Keyed by greetingId.
+ */
+export async function acceptCheckoutTermsAction(greetingId: string, locale: string): Promise<ActionResult<{ redirectUrl?: string }>> {
+  try {
+    await enforceRateLimit({ key: `checkout-consent:${greetingId}`, limit: 10, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    const { redirectUrl } = await acceptCheckoutTerms(greetingId, token, locale === "en" ? "en" : "ka");
+    return { ok: true, data: { redirectUrl } };
+  } catch (err) {
+    if (err instanceof CheckoutUnavailableError) return { ok: false, error: CHECKOUT_CLOSED };
+    return errorResult("acceptCheckoutTermsAction", err, { greetingId });
   }
 }
 

@@ -591,7 +591,6 @@ export function CheckoutStep({
   /** Explicit agreement to the terms; the Pay button stays disabled until it is given. */
   const [consent, setConsent] = useState(false);
   const isRetry = failed || cancelled;
-  const showRealPayButton = !isTestPayments && !isRetry;
   const amountLabel = summary ? formatMinorAmount(summary.grossAmountMinor, summary.currency, locale) : null;
   const items = [
     content.message ? t("items.message") : null,
@@ -766,8 +765,8 @@ export function CheckoutStep({
             <Button
               size="lg"
               block
-              onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : payReal())}
-              disabled={(!isRetry && !consent) || (showRealPayButton && !summary.redirectUrl)}
+              onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : void payReal())}
+              disabled={(!isRetry && !consent)}
               loading={paying}
               loadingLabel={t("processing")}
               data-testid={failed || cancelled ? "checkout-retry" : "checkout-pay"}

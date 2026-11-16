@@ -26,7 +26,7 @@ import { join } from "node:path";
 const { parseInline, linksIn, merchantTokensIn } = require("../src/lib/site/inline") as typeof import("../src/lib/site/inline");
 const { sectionsSchema, analyseSections } = require("../src/lib/site/document") as typeof import("../src/lib/site/document");
 const { SITE_PAGES } = require("../src/lib/site/routes") as typeof import("../src/lib/site/routes");
-const { parseMerchantInfo, loadMerchantInfo, resolveMerchantToken, checkoutSeller, MERCHANT_FIELDS, MERCHANT_TOKENS } = require("../src/lib/merchant/info") as typeof import("../src/lib/merchant/info");
+const { parseMerchantInfo, loadMerchantInfo, resolveMerchantToken, checkoutSeller, policiesInEffect, tbilisiDate, MERCHANT_FIELDS, MERCHANT_TOKENS } = require("../src/lib/merchant/info") as typeof import("../src/lib/merchant/info");
 const { DEMO_MERCHANT_ENV } = require("../src/lib/merchant/demo") as typeof import("../src/lib/merchant/demo");
 const { pickStandardPrice } = require("../src/lib/merchant/standard-price") as typeof import("../src/lib/merchant/standard-price");
 const { MEDIA_SLOT_LIMITS } = require("../src/lib/validation/content-types") as typeof import("../src/lib/validation/content-types");
@@ -222,6 +222,14 @@ function main() {
     "E19. No seller block at checkout without a registered name, or from the fictional demo profile",
     checkoutSeller(empty, "en") === null && checkoutSeller(loadMerchantInfo({ MERCHANT_PROFILE: "demo", NEXT_PUBLIC_APP_URL: "http://localhost:3000" }), "en") === null,
   );
+  // Real checkout opens only when the policies are in force (checkout-gate.ts).
+  const eff = (d?: string) => parseMerchantInfo(d ? { LEGAL_EFFECTIVE_DATE: d } : {});
+  const noon = new Date("2027-01-01T08:00:00Z"); // 12:00 in Tbilisi
+  check(
+    "E20. Policies are in effect only once LEGAL_EFFECTIVE_DATE is set and reached in Georgia",
+    !policiesInEffect(eff(), noon) && policiesInEffect(eff("2027-01-01"), noon) && !policiesInEffect(eff("2027-01-02"), noon) && !policiesInEffect(eff("2027/01/01"), noon),
+  );
+  check("E21. The effective date is judged on Tbilisi time (UTC+4)", tbilisiDate(new Date("2026-12-31T21:00:00Z")) === "2027-01-01" && tbilisiDate(new Date("2026-12-31T19:59:00Z")) === "2026-12-31");
   const contactAddressLabel = (locale: "ka" | "en") => (site[locale] as unknown as { site: { merchant: { actualAddress: string } } }).site.merchant.actualAddress;
   check(
     "E14. The public contact address is never labelled as a legal, registered or operating address",

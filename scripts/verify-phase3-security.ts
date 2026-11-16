@@ -251,6 +251,7 @@ async function main() {
   await admin`delete from analytics_events where qr_code_id in (${mainQr.id}, ${blockedQr.id}, ${dupQr.id}, ${draftPrivacyQr.id})`;
   await admin`delete from partner_ledger_entries where partner_id = ${partnerA}`;
   await admin`delete from payments where order_id in (select id from orders where partner_id = ${partnerA})`;
+  await admin`delete from checkout_consents where order_id in (select id from orders where partner_id = ${partnerA})`;
   await admin`delete from orders where partner_id = ${partnerA}`;
   await admin`delete from greeting_content where greeting_id in (${mainGreeting}, ${blockedGreetingId}, ${dupGreeting}, ${draftPrivacyGreeting})`;
   await admin`delete from greetings where qr_code_id in (${mainQr.id}, ${blockedQr.id}, ${dupQr.id}, ${draftPrivacyQr.id})`;

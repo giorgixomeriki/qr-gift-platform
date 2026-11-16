@@ -246,3 +246,20 @@ export function checkoutSeller(info: MerchantInfo, locale: Locale): CheckoutSell
   if (name === null) return null;
   return { name, idCode: info.values.idCode, legalAddress: resolveMerchantToken(info, "legalAddress", locale).value };
 }
+
+/** Today's calendar date in Georgia (Asia/Tbilisi), as YYYY-MM-DD. */
+export function tbilisiDate(now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Tbilisi", year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+}
+
+/**
+ * Are the published Terms / Privacy / Delivery and Refunds policies in force?
+ * Only when LEGAL_EFFECTIVE_DATE is set (it is set only after legal approval,
+ * never guessed) and that date has arrived in Georgia. Real-money checkout
+ * stays closed until then (lib/payments/checkout-gate.ts): a buyer cannot be
+ * asked to agree to terms the site itself labels "not yet in effect".
+ */
+export function policiesInEffect(info: MerchantInfo, now: Date = new Date()): boolean {
+  const date = info.values.legalEffectiveDate;
+  return date !== null && date <= tbilisiDate(now);
+}

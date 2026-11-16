@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction } from "@/lib/payments/actions";
+import { useLocale } from "next-intl";
+import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction, acceptCheckoutTermsAction } from "@/lib/payments/actions";
 import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
 import { CHECKOUT_CLOSED } from "@/lib/payments/checkout-codes";
 
@@ -24,6 +25,7 @@ const RETURN_POLL_INTERVAL_MS = 2000;
 
 export function useCheckoutFlow(greetingId: string) {
   const searchParams = useSearchParams();
+  const locale = useLocale();
   // A hint only, for which initial UI to show — never authority. The actual
   // status always comes from checkPaymentReturnAction/startCheckoutAction,
   // which re-derive it server-side from the order's own DB state (Phase 5 §5:
@@ -108,10 +110,24 @@ export function useCheckoutFlow(greetingId: string) {
     setUncertain(true);
   }
 
+  /** Records the buyer's consent server-side (linked to the order); for a real provider also opens the bank payment. */
+  async function acceptTerms(): Promise<{ redirectUrl?: string } | null> {
+    const result = await acceptCheckoutTermsAction(greetingId, locale).catch(() => null);
+    if (result?.ok) return result.data;
+    if (result?.error === CHECKOUT_CLOSED) setClosed(true);
+    else if (result) logActionError("acceptCheckoutTerms", result.error);
+    return null;
+  }
+
   async function pay(outcome: "success" | "failure") {
     setPaying(true);
     setError(false);
     setFailed(false);
+    if (outcome === "success" && !(await acceptTerms())) {
+      setPaying(false);
+      setError(true);
+      return;
+    }
     const result = await simulateTestPaymentAction(greetingId, outcome).catch(() => null);
     if (!result?.ok) {
       if (result) logActionError("simulateTestPayment", result.error);
@@ -130,10 +146,18 @@ export function useCheckoutFlow(greetingId: string) {
     window.location.href = window.location.pathname;
   }
 
-  function payReal() {
-    if (!summary?.redirectUrl) return;
+  /** Consent first (server-recorded), then the bank's page — the bank payment is created only after the consent row exists. */
+  async function payReal() {
+    if (!summary) return;
     setPaying(true);
-    window.location.href = summary.redirectUrl;
+    setError(false);
+    const accepted = await acceptTerms();
+    if (!accepted?.redirectUrl) {
+      setPaying(false);
+      setError(true);
+      return;
+    }
+    window.location.href = accepted.redirectUrl;
   }
 
   async function retry() {

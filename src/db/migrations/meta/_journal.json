@@ -162,6 +162,13 @@
       "when": 1795161600000,
       "tag": "0022_music_content_type",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795219200000,
+      "tag": "0023_checkout_consents",
+      "breakpoints": true
     }
   ]
 }

@@ -62,6 +62,7 @@ async function main() {
     BOG_OAUTH_TOKEN_URL: `${base}/token`,
     BOG_WEBHOOK_SIGNING_KEY: publicKey.export({ type: "spki", format: "pem" }).toString(),
     CHECKOUT_ENABLED: "true",
+    LEGAL_EFFECTIVE_DATE: "2026-01-01", // real checkout needs the policies in force (checkout-gate.ts)
     BOG_REFUNDS_ENABLED: "true",
   });
   delete process.env.ALLOW_TEST_PAYMENTS;
@@ -73,7 +74,7 @@ async function main() {
   const { generatePublicToken } = require("../src/lib/security/public-token") as typeof import("../src/lib/security/public-token");
   const { startGreeting } = require("../src/lib/greetings/start") as typeof import("../src/lib/greetings/start");
   const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
-  const { getOrCreateCheckoutOrder } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
+  const { getOrCreateCheckoutOrder, acceptCheckoutTerms } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
   const { refundPaidOrder } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
   const { runPaymentReconciliation, ReconcileIdentityError } = require("../src/lib/payments/reconcile") as typeof import("../src/lib/payments/reconcile");
@@ -96,6 +97,7 @@ async function main() {
     const { greetingId, editToken } = await startGreeting(token);
     await updateGreetingMessage(greetingId, editToken, SECRET_MESSAGE);
     const { summary } = await getOrCreateCheckoutOrder(greetingId, editToken);
+    await acceptCheckoutTerms(greetingId, editToken, "ka"); // the BOG payment opens after consent
     const [pay] = await pg`select id, provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
     return { qrId, token, greetingId, editToken, orderId: summary.orderId, paymentId: pay!.id as string, bogId: pay!.provider_payment_id as string };
   }

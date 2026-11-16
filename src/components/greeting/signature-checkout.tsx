@@ -55,7 +55,6 @@ export function SignatureCheckout({
   /** Explicit agreement to the terms; the Pay button stays disabled until it is given. */
   const [consent, setConsent] = useState(false);
   const isRetry = failed || cancelled;
-  const showRealPayButton = !isTestPayments && !isRetry;
   const amountLabel = summary ? formatMinorAmount(summary.grossAmountMinor, summary.currency, locale) : null;
   const contents = [
     content.message ? ts("itemsText") : null,
@@ -185,8 +184,8 @@ export function SignatureCheckout({
             {!isRetry && <CheckoutConsent checked={consent} onChange={setConsent} className="sig-caption" />}
             <SigAction
               className="sig-cta--pay"
-              onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : payReal())}
-              disabled={paying || (!isRetry && !consent) || (showRealPayButton && !summary.redirectUrl)}
+              onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : void payReal())}
+              disabled={paying || (!isRetry && !consent)}
               busy={paying}
               testId={failed || cancelled ? "checkout-retry" : "checkout-pay"}
             >

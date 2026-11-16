@@ -187,7 +187,7 @@ async function catalogChecks() {
     select c.relname, p.priv from pg_class c join pg_namespace n on n.oid = c.relnamespace
     cross join (values ('select'), ('insert'), ('update'), ('delete')) as p(priv)
     where n.nspname = 'public' and c.relkind = 'r' and not has_table_privilege('app_runtime', c.oid, p.priv)
-      and c.relname not in ('partner_payout_items', 'payment_refunds')`;
+      and c.relname not in ('partner_payout_items', 'payment_refunds', 'checkout_consents')`; // checkout_consents: append-only evidence (0022)
   check("A10. app_runtime keeps SELECT/INSERT/UPDATE/DELETE on application tables", runtimeGaps.length === 0, runtimeGaps.slice(0, 5));
   const helperGaps: string[] = [];
   for (const fn of RUNTIME_HELPERS) {
