@@ -8,9 +8,10 @@
  *    publishes (api.bog.ge/docs/en/payments/standard-process/callback),
  *    compared by SHA-256 of its DER encoding.
  * 3. Authentication: one client_credentials token request (no order, no money).
- * 4. Authorization: GET /receipt/<random UUID> with that token. 404 means the
- *    API accepted the token and the order simply does not exist; 401/403 means
- *    the credentials are not authorized for the Payments API.
+ * 4. Authorization: GET /receipt/<random UUID> with that token, contrasted with
+ *    the same call using an invalid token. BOG answers an unknown order with
+ *    400 (observed 2026-11-17) and a bad token with 401, so "valid ≠ 401/403
+ *    and invalid = 401" proves the credentials are authorized.
  *
  * Creates no order, makes no payment or refund, and prints no secret, token
  * or identifier: only PASS/FAIL lines and HTTP status codes.
@@ -76,12 +77,20 @@ async function main() {
     process.exit(1);
   }
 
-  const res = await fetch(`${apiBase}/receipt/${randomUUID()}`, {
-    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    signal: AbortSignal.timeout(15_000),
-  }).catch(() => null);
-  const status = res?.status ?? 0;
-  report("4. Payments API accepts the token (unknown order → 404, not 401/403)", status === 404 || status === 400, `HTTP ${status}`);
+  const probe = async (bearer: string) =>
+    (
+      await fetch(`${apiBase}/receipt/${randomUUID()}`, {
+        headers: { Authorization: `Bearer ${bearer}`, Accept: "application/json" },
+        signal: AbortSignal.timeout(15_000),
+      }).catch(() => null)
+    )?.status ?? 0;
+  const valid = await probe(token);
+  const invalid = await probe("invalid-token");
+  report(
+    "4. Payments API authorizes the token (unknown order → 400/404; invalid token → 401)",
+    (valid === 400 || valid === 404) && invalid === 401,
+    `valid token HTTP ${valid}, invalid token HTTP ${invalid}`,
+  );
 
   console.log(failed === 0 ? "\nAll checks passed. No order was created." : `\n${failed} check(s) failed. No order was created.`);
   process.exit(failed === 0 ? 0 : 1);
