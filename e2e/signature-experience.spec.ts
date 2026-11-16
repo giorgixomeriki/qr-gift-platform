@@ -76,6 +76,8 @@ test.describe("Signature Experience 2.0", () => {
     await page.getByTestId("checkout-retry").click();
     await expect(page.getByTestId("checkout-pay")).toBeVisible();
 
+    await page.getByTestId("checkout-consent").check();
+
     await page.getByTestId("checkout-pay").click();
     await expect(page.getByTestId("sender-success-banner")).toBeVisible({ timeout: 20_000 });
   });

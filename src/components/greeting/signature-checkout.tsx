@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { ErrorIcon, SecureIcon, SuccessIcon, TimeIcon } from "@/components/customer/icons";
 import { WaxSeal } from "@/components/customer/wax-seal";
@@ -9,7 +10,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatMinorAmount } from "@/lib/format/money";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { useCheckoutFlow } from "./checkout-flow";
-import { CheckoutLegal } from "./checkout-legal";
+import { CheckoutConsent, CheckoutLegal } from "./checkout-legal";
+import type { CheckoutSeller } from "@/lib/merchant/info";
 import type { GreetingRenderContent } from "./greeting-renderer";
 import "@/components/signature/checkout.css";
 
@@ -28,7 +30,7 @@ import "@/components/signature/checkout.css";
 export function SignatureCheckout({
   greetingId,
   isTestPayments,
-  merchantName,
+  merchantSeller,
   merchantVatStatus,
   themeKey,
   content,
@@ -37,7 +39,7 @@ export function SignatureCheckout({
 }: {
   greetingId: string;
   isTestPayments: boolean;
-  merchantName: string | null;
+  merchantSeller: CheckoutSeller | null;
   merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
@@ -50,7 +52,10 @@ export function SignatureCheckout({
   const locale = useLocale();
   const { summary, loading, verifying, paying, error, closed, failed, cancelled, succeeded, uncertain, verifyReturn, pay, payReal, retry } = useCheckoutFlow(greetingId);
 
-  const showRealPayButton = !isTestPayments && !failed && !cancelled;
+  /** Explicit agreement to the terms; the Pay button stays disabled until it is given. */
+  const [consent, setConsent] = useState(false);
+  const isRetry = failed || cancelled;
+  const showRealPayButton = !isTestPayments && !isRetry;
   const amountLabel = summary ? formatMinorAmount(summary.grossAmountMinor, summary.currency, locale) : null;
   const contents = [
     content.message ? ts("itemsText") : null,
@@ -140,7 +145,7 @@ export function SignatureCheckout({
 
           <p className="sig-caption sig-caption--lock">{t("lock")}</p>
 
-          <CheckoutLegal merchantName={merchantName} vatStatus={merchantVatStatus} className="sig-caption space-y-1" />
+          <CheckoutLegal seller={merchantSeller} currency={summary.currency} vatStatus={merchantVatStatus} className="sig-caption space-y-1" />
 
           <div className="sig-co-links">
             <button type="button" className="sig-co-link" onClick={onBackToPreview} data-testid="checkout-back-link">
@@ -177,10 +182,11 @@ export function SignatureCheckout({
                 {t("errorGeneric")}
               </p>
             )}
+            {!isRetry && <CheckoutConsent checked={consent} onChange={setConsent} className="sig-caption" />}
             <SigAction
               className="sig-cta--pay"
               onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : payReal())}
-              disabled={paying || (showRealPayButton && !summary.redirectUrl)}
+              disabled={paying || (!isRetry && !consent) || (showRealPayButton && !summary.redirectUrl)}
               busy={paying}
               testId={failed || cancelled ? "checkout-retry" : "checkout-pay"}
             >

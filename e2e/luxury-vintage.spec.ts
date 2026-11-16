@@ -58,6 +58,7 @@ test.describe("Luxury Vintage", () => {
     await expect(page.getByTestId("preview-watch")).toHaveAttribute("data-composition", "keepsake");
     await page.getByTestId("preview-activate-cta").click();
     await expect(page.getByTestId("checkout-step")).toContainText("Luxury Vintage");
+    await page.getByTestId("checkout-consent").check();
     await page.getByTestId("checkout-pay").click();
     await expect(page.getByTestId("sender-success-banner")).toBeVisible({ timeout: 20_000 });
   });
@@ -128,6 +129,7 @@ test.describe("Luxury Vintage", () => {
       await sender.getByTestId("message-textarea").fill("Hello");
       await sender.getByTestId("wizard-continue").click();
       await sender.getByTestId("preview-activate-cta").click();
+      await sender.getByTestId("checkout-consent").check();
       await sender.getByTestId("checkout-pay").click();
       await expect(sender.getByTestId("sender-success-banner")).toBeVisible({ timeout: 20_000 });
 

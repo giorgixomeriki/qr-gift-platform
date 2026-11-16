@@ -38,6 +38,7 @@ test.describe("Admin chargeback", () => {
     await page.getByTestId("greeting-tap-to-open").click();
     await page.getByTestId("greeting-continue").click();
     await page.getByTestId("preview-activate-cta").click();
+    await page.getByTestId("checkout-consent").check();
     await page.getByTestId("checkout-pay").click();
     await expect(page.getByTestId("greeting-renderer")).toBeVisible({ timeout: 15_000 });
 

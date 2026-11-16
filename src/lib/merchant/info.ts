@@ -229,3 +229,20 @@ export function resolveMerchantToken(info: MerchantInfo, token: MerchantToken, l
   const field = token as MerchantField;
   return { field, value: info.values[field] };
 }
+
+/**
+ * The seller identity shown on the checkout screen (E-Commerce Law Art. 4(1)(d)
+ * identification code; Consumer Protection Law Art. 5(1)(b) legal address).
+ * Only a real configured profile qualifies: never the fictional demo profile,
+ * and nothing at all until a registered name is set. The registered address and
+ * ID come from `info.values`, so the publication gates (PUBLICATION_GATES)
+ * already apply: a withheld detail is null here and is simply not rendered.
+ */
+export type CheckoutSeller = { name: string; idCode: string | null; legalAddress: string | null };
+
+export function checkoutSeller(info: MerchantInfo, locale: Locale): CheckoutSeller | null {
+  if (info.mode !== "configured") return null;
+  const name = resolveMerchantToken(info, "legalName", locale).value;
+  if (name === null) return null;
+  return { name, idCode: info.values.idCode, legalAddress: resolveMerchantToken(info, "legalAddress", locale).value };
+}

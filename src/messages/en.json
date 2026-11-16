@@ -157,13 +157,17 @@
       "contents": "Contents",
       "legal": {
         "seller": "Seller",
+        "idCode": "Identification code",
+        "legalAddress": "Legal address",
         "country": "Seller's country: Georgia",
+        "currencyGel": "Price in Georgian lari (GEL).",
         "contact": "Contact",
         "policies": "Before paying, please read:",
         "terms": "Terms and Conditions",
         "privacy": "Privacy Policy",
         "refunds": "Delivery and Refunds",
         "age": "Greetings may be bought only by people aged 18 or over.",
+        "consent": "I agree to the Terms and Conditions and the Delivery and Refunds policy, and I have read the Privacy Policy.",
         "vat": {
           "NOT_REGISTERED": "The seller is not registered for VAT; no VAT is added to the price.",
           "REGISTERED": "The seller is registered for VAT."

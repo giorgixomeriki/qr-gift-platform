@@ -13,7 +13,7 @@ import type { WizardInitialState } from "@/components/greeting/creation-wizard";
 import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
 import { signatureUiEnabled } from "@/components/signature/flag";
 import { getMerchantInfo } from "@/lib/merchant/server";
-import { resolveMerchantToken } from "@/lib/merchant/info";
+import { checkoutSeller } from "@/lib/merchant/info";
 import { parseStoredMusic } from "@/lib/music/spotify";
 import { spotifyEmbedEnabled } from "@/lib/music/flag";
 import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder } from "@/components/qr/placeholders";
@@ -106,7 +106,7 @@ export default async function QrEntryPage({
           spotifyEmbed: spotifyEmbedEnabled(),
           priceLabel,
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
-          merchantName: checkoutMerchantName(locale),
+          merchantSeller: checkoutSeller(getMerchantInfo(), locale === "en" ? "en" : "ka"),
           merchantVatStatus: checkoutVatStatus(),
         };
 
@@ -163,16 +163,6 @@ export default async function QrEntryPage({
       }
     }
   }
-}
-
-/**
- * The registered seller name for the checkout screen: only a real configured
- * value (never the fictional demo profile, never a placeholder). Null hides the line.
- */
-function checkoutMerchantName(locale: string): string | null {
-  const info = getMerchantInfo();
-  if (info.mode !== "configured") return null;
-  return resolveMerchantToken(info, "legalName", locale === "en" ? "en" : "ka").value;
 }
 
 /** The configured VAT status for the checkout disclosure (display only), never from the demo profile. */

@@ -167,7 +167,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
           <SignatureCheckout
             greetingId={initial.greetingId}
             isTestPayments={initial.isTestPayments}
-            merchantName={initial.merchantName}
+            merchantSeller={initial.merchantSeller}
             merchantVatStatus={initial.merchantVatStatus}
             themeKey={themeKey}
             content={content}

@@ -26,7 +26,7 @@ import { join } from "node:path";
 const { parseInline, linksIn, merchantTokensIn } = require("../src/lib/site/inline") as typeof import("../src/lib/site/inline");
 const { sectionsSchema, analyseSections } = require("../src/lib/site/document") as typeof import("../src/lib/site/document");
 const { SITE_PAGES } = require("../src/lib/site/routes") as typeof import("../src/lib/site/routes");
-const { parseMerchantInfo, loadMerchantInfo, resolveMerchantToken, MERCHANT_FIELDS, MERCHANT_TOKENS } = require("../src/lib/merchant/info") as typeof import("../src/lib/merchant/info");
+const { parseMerchantInfo, loadMerchantInfo, resolveMerchantToken, checkoutSeller, MERCHANT_FIELDS, MERCHANT_TOKENS } = require("../src/lib/merchant/info") as typeof import("../src/lib/merchant/info");
 const { DEMO_MERCHANT_ENV } = require("../src/lib/merchant/demo") as typeof import("../src/lib/merchant/demo");
 const { pickStandardPrice } = require("../src/lib/merchant/standard-price") as typeof import("../src/lib/merchant/standard-price");
 const { MEDIA_SLOT_LIMITS } = require("../src/lib/validation/content-types") as typeof import("../src/lib/validation/content-types");
@@ -206,6 +206,22 @@ function main() {
   check("E12. Only the exact approval value opens a publication gate", loose.values.idCode === null && loose.values.legalAddressEn === null);
   const onlyAddress = parseMerchantInfo({ ...unapproved, MERCHANT_PUBLISH_LEGAL_ADDRESS: "owner-approved" });
   check("E13. Each publication gate is independent", onlyAddress.values.legalAddressEn !== null && onlyAddress.values.idCode === null);
+  // Checkout seller disclosure (E-Commerce Law Art. 4(1)(d) ID, Consumer Law Art. 5(1)(b) legal address).
+  const sellerEn = checkoutSeller(full, "en");
+  const sellerKa = checkoutSeller(full, "ka");
+  check(
+    "E16. With both gates approved, checkout shows the registered name, ID code and legal address in the buyer's language",
+    sellerEn?.name === "Test LLC" && sellerEn.idCode === "123456789" && sellerEn.legalAddress === "1 Test St, Tbilisi" && sellerKa?.name === "შპს ტესტი" && sellerKa.legalAddress === "თბილისი, ტესტის ქ. 1",
+    { sellerEn, sellerKa },
+  );
+  const gatedSeller = checkoutSeller(gated, "en");
+  check("E17. Checkout honours the publication gates: an unapproved ID code or legal address never reaches the checkout", gatedSeller?.name === "Test LLC" && gatedSeller.idCode === null && gatedSeller.legalAddress === null, gatedSeller);
+  const halfSeller = checkoutSeller(onlyAddress, "en");
+  check("E18. Checkout gates are independent (address approved, ID withheld)", halfSeller?.legalAddress === "1 Test St, Tbilisi" && halfSeller.idCode === null, halfSeller);
+  check(
+    "E19. No seller block at checkout without a registered name, or from the fictional demo profile",
+    checkoutSeller(empty, "en") === null && checkoutSeller(loadMerchantInfo({ MERCHANT_PROFILE: "demo", NEXT_PUBLIC_APP_URL: "http://localhost:3000" }), "en") === null,
+  );
   const contactAddressLabel = (locale: "ka" | "en") => (site[locale] as unknown as { site: { merchant: { actualAddress: string } } }).site.merchant.actualAddress;
   check(
     "E14. The public contact address is never labelled as a legal, registered or operating address",

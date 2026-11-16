@@ -25,7 +25,8 @@ import { GreetingRenderer, type GreetingRenderContent } from "./greeting-rendere
 import { LivePreview } from "./live-preview";
 import { LocaleSwitcher } from "./locale-switcher";
 import { ThemePicker } from "./theme-picker";
-import { CheckoutLegal } from "./checkout-legal";
+import { CheckoutConsent, CheckoutLegal } from "./checkout-legal";
+import type { CheckoutSeller } from "@/lib/merchant/info";
 import { clearMessageBackup, readMessageBackup, writeMessageBackup } from "./message-backup";
 
 type ExistingItem = { contentId: string; url: string } | null;
@@ -44,8 +45,8 @@ export type WizardInitialState = {
   priceLabel: string | null;
   /** Whether the configured PaymentProvider is TEST — decided server-side (env.PAYMENTS_PROVIDER), never client-guessable. Gates the dev-only simulate-payment controls in CheckoutStep. */
   isTestPayments: boolean;
-  /** The configured registered seller name in this locale (MERCHANT_LEGAL_NAME_*), or null while unpublished — shown at checkout. */
-  merchantName: string | null;
+  /** The configured seller identity in this locale (name, and the registered ID/address once their publication gates are open), or null while unpublished — shown at checkout. */
+  merchantSeller: CheckoutSeller | null;
   /** Owner-declared VAT status (MERCHANT_VAT_STATUS) — display only, never changes the price. */
   merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
 };
@@ -158,7 +159,7 @@ export function CreationWizard({ initial }: { initial: WizardInitialState }) {
             <CheckoutStep
               greetingId={initial.greetingId}
               isTestPayments={initial.isTestPayments}
-              merchantName={initial.merchantName}
+              merchantSeller={initial.merchantSeller}
               merchantVatStatus={initial.merchantVatStatus}
               themeKey={themeKey}
               content={content}
@@ -567,7 +568,7 @@ export function PreviewStep({
 export function CheckoutStep({
   greetingId,
   isTestPayments,
-  merchantName,
+  merchantSeller,
   merchantVatStatus,
   themeKey,
   content,
@@ -576,7 +577,7 @@ export function CheckoutStep({
 }: {
   greetingId: string;
   isTestPayments: boolean;
-  merchantName: string | null;
+  merchantSeller: CheckoutSeller | null;
   merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
@@ -587,7 +588,10 @@ export function CheckoutStep({
   const tt = useTranslations("themes");
   const locale = useLocale();
   const { summary, loading, verifying, paying, error, closed, failed, cancelled, succeeded, uncertain, verifyReturn, pay, payReal, retry } = useCheckoutFlow(greetingId);
-  const showRealPayButton = !isTestPayments && !failed && !cancelled;
+  /** Explicit agreement to the terms; the Pay button stays disabled until it is given. */
+  const [consent, setConsent] = useState(false);
+  const isRetry = failed || cancelled;
+  const showRealPayButton = !isTestPayments && !isRetry;
   const amountLabel = summary ? formatMinorAmount(summary.grossAmountMinor, summary.currency, locale) : null;
   const items = [
     content.message ? t("items.message") : null,
@@ -691,7 +695,7 @@ export function CheckoutStep({
             <p className="mt-4 text-caption text-ink-3">
               {t("explanation")} {t("lock")}
             </p>
-            <CheckoutLegal merchantName={merchantName} vatStatus={merchantVatStatus} className="mt-3 space-y-1 text-caption text-ink-3" />
+            <CheckoutLegal seller={merchantSeller} currency={summary.currency} vatStatus={merchantVatStatus} className="mt-3 space-y-1 text-caption text-ink-3" />
           </section>
 
           <section aria-labelledby="checkout-next">
@@ -758,11 +762,12 @@ export function CheckoutStep({
               </Notice>
             )}
             {error && <Notice tone="danger">{t("errorGeneric")}</Notice>}
+            {!isRetry && <CheckoutConsent checked={consent} onChange={setConsent} className="text-body-sm text-ink" />}
             <Button
               size="lg"
               block
               onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : payReal())}
-              disabled={showRealPayButton && !summary.redirectUrl}
+              disabled={(!isRetry && !consent) || (showRealPayButton && !summary.redirectUrl)}
               loading={paying}
               loadingLabel={t("processing")}
               data-testid={failed || cancelled ? "checkout-retry" : "checkout-pay"}
