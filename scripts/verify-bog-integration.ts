@@ -53,6 +53,10 @@ const postgres = require("postgres") as typeof import("postgres");
  *     receipt lookup, no refund — and nothing is written for them; scoped
  *     reconciliation reports and repairs the fenced partner only; the fenced
  *     partner's own orders still work end to end.
+ * 18. Minimum-amount lifecycle (staging test plan, 1.00 GEL = the app's
+ *     MIN_PRICE_MINOR): BOG receives exactly 1, success / cancel / missed
+ *     callback / full refund all settle on 100 tetri with a 30 / 70 split;
+ *     below the floor is refused by the admin validation.
  */
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -111,6 +115,8 @@ async function main() {
   const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
   const { runPaymentReconciliation, ReconcileScopeError } = require("../src/lib/payments/reconcile") as typeof import("../src/lib/payments/reconcile");
+  const { setPartnerPriceSchema } = require("../src/lib/validation/pricing") as typeof import("../src/lib/validation/pricing");
+  const { MIN_PRICE_MINOR } = require("../src/lib/payments/split") as typeof import("../src/lib/payments/split");
   const { PaymentScopeError } = require("../src/lib/payments/scope") as typeof import("../src/lib/payments/scope");
   const { GET: cronReconcile } = require("../src/app/api/cron/payments-reconcile/route") as typeof import("../src/app/api/cron/payments-reconcile/route");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -484,6 +490,53 @@ async function main() {
     mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = undefined;
     const unfenced = await runPaymentReconciliation(adminUserId, { apply: false });
     check("17n. Without the fence (production) reconciliation is unscoped, as before", unfenced.scope === undefined && unfenced.anomalies.some((a) => a.orderId === outPending.orderId && a.kind === "STALE_PENDING"));
+  }
+
+  console.log("\n--- 18. Minimum-amount lifecycle (1.00 GEL) ---");
+  {
+    check("18a. The app's price floor is 1.00 GEL; 0.10 GEL is refused by the admin price validation", MIN_PRICE_MINOR === 100 && !setPartnerPriceSchema.safeParse({ amountMinor: 10, expectedAmountMinor: 1000 }).success && setPartnerPriceSchema.safeParse({ amountMinor: 100, expectedAmountMinor: 1000 }).success);
+    const minimum = await newPartner(3000, 100);
+    const qrStatus = async (greetingId: string) => (await admin`select q.status from qr_codes q join greetings g on g.qr_code_id = q.id where g.id = ${greetingId}`)[0]!.status as string;
+
+    // Success via callback.
+    const ok = await newOrder(minimum);
+    const create = bog.calls.filter((c) => c.path === "/ecommerce/orders").find((c) => (c.body as { external_order_id: string }).external_order_id === ok.orderId)?.body as { purchase_units: { total_amount: number; basket: { unit_price: number; quantity: number }[] } } | undefined;
+    check("18b. Order snapshot 100 = 30 + 70; BOG receives total_amount 1 and unit_price 1 × 1", (await orderRow(ok.orderId)).gross_amount_minor === 100 && (await orderRow(ok.orderId)).partner_commission_minor === 30 && create?.purchase_units.total_amount === 1 && create.purchase_units.basket[0]!.unit_price === 1 && create.purchase_units.basket[0]!.quantity === 1, JSON.stringify(create?.purchase_units));
+    complete(ok.bogId);
+    const cb = await callback(callbackBody(ok.bogId));
+    const cb2 = await callback(callbackBody(ok.bogId));
+    check("18c. Success callback → PAID, greeting + QR ACTIVE, one 30 commission; duplicate callback changes nothing", cb.status === 200 && cb2.status === 200 && (await orderRow(ok.orderId)).status === "PAID" && (await greetingStatus(ok.greetingId)) === "ACTIVE" && (await qrStatus(ok.greetingId)) === "ACTIVE" && (await ledger(ok.orderId)) === "COMMISSION_EARNED:30");
+
+    // Full refund, asynchronous at BOG.
+    const refundCallsBefore = bog.calls.length;
+    const r = await refundPaidOrder(adminUserId, ok.orderId);
+    const refundCall = bog.calls.slice(refundCallsBefore).find((c) => c.path === `/payment/refund/${ok.bogId}`);
+    check("18d. Full refund sends amount 1 with an Idempotency-Key; pending until BOG confirms; no reversal yet", r.pending === true && (refundCall?.body as { amount: number } | undefined)?.amount === 1 && /^[0-9a-f-]{36}$/.test(refundCall?.headers["idempotency-key"] ?? "") && (await ledger(ok.orderId)) === "COMMISSION_EARNED:30");
+    settleRefund(ok.bogId, "completed");
+    await callback(callbackBody(ok.bogId));
+    check("18e. BOG confirms → REFUNDED, commission reversed exactly once (+30, −30)", (await orderRow(ok.orderId)).status === "REFUNDED" && (await ledger(ok.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+
+    // Cancel on BOG's page, then pay again.
+    const c = await newOrder(minimum);
+    reject(c.bogId);
+    await callback(callbackBody(c.bogId));
+    check("18f. Cancelled/rejected → order FAILED, no commission, greeting DRAFT", (await orderRow(c.orderId)).status === "FAILED" && (await ledger(c.orderId)) === "" && (await greetingStatus(c.greetingId)) === "DRAFT");
+    const retry = await getOrCreateCheckoutOrder(c.greetingId, c.editToken);
+    check("18g. …and Pay works again (a new order at the same 100 snapshot)", retry.summary.orderId !== c.orderId && retry.summary.grossAmountMinor === 100);
+
+    // Missed callback: the return-page check settles from the receipt.
+    const m = await newOrder(minimum);
+    complete(m.bogId);
+    const ret = await checkPaymentReturn(m.greetingId, m.editToken);
+    check("18h. Missed callback → return-page check settles from BOG's receipt (PAID, activated)", ret.status === "PAID" && ret.activated === true && (await ledger(m.orderId)) === "COMMISSION_EARNED:30");
+
+    // A receipt reporting 0.10 for a 1.00 order is refused.
+    const mm = await newOrder(minimum);
+    complete(mm.bogId);
+    bog.transferOverride.set(mm.bogId, 0.1);
+    const mmr = await callback(callbackBody(mm.bogId));
+    bog.transferOverride.delete(mm.bogId);
+    check("18i. BOG reporting 0.10 for a 1.00 order → refused (400), nothing paid", mmr.status === 400 && (await orderRow(mm.orderId)).status === "PENDING_PAYMENT");
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);
