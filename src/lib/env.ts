@@ -49,8 +49,10 @@ const envSchema = z.object({
 
   // Which PaymentProvider to construct (lib/payments/provider-factory.ts).
   // "TEST" is refused at startup when NODE_ENV=production — see that file.
-  // "BOG" is a placeholder adapter (providers/bog-provider.ts) whose methods
-  // are not implemented — selecting it does not mean BOG is integrated.
+  // "BOG" is the Bank of Georgia Payment Manager adapter
+  // (providers/bog-provider.ts): orders, signed callbacks verified against a
+  // fresh receipt, and refunds (only when BOG_REFUNDS_ENABLED=true). Selecting
+  // it requires every BOG_* setting below (checked at startup).
   PAYMENTS_PROVIDER: z.enum(["TEST", "BOG"]).default("TEST"),
 
   // The TEST provider only works when this is explicitly "true" — selecting
@@ -90,8 +92,9 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
-  // BOG refunds are built but off: while false, refundPayment sends nothing
-  // and refunds stay queued for a person (REFUND_REQUIRED / anomalies).
+  // BOG refunds are implemented and off by default: while false,
+  // refundPayment sends nothing and refunds stay queued for a person
+  // (REFUND_REQUIRED / anomalies).
   BOG_REFUNDS_ENABLED: z
     .enum(["true", "false"])
     .default("false")
@@ -106,6 +109,14 @@ const envSchema = z.object({
   // Optional: where reconciliation alerts are POSTed (docs/ops/PAYMENT_RECONCILIATION_RUNBOOK.md).
   // Treat it as a secret. Unset: alerts go to the structured log only.
   PAYMENT_ALERT_WEBHOOK_URL: z.string().url().optional(),
+
+  // Staging-only ownership fence (lib/payments/scope.ts). When set, this
+  // deployment contacts the payment provider (create, verify, refund) and
+  // reconciles ONLY for orders owned by this partner; anything else is
+  // refused before any provider call or database write. For the real-money
+  // BOG staging run on a database that also holds simulator orders. Unset in
+  // production (no fence).
+  PAYMENTS_SCOPE_PARTNER_ID: z.string().uuid().optional(),
 
   // Where the trusted proxy puts the caller's IP (lib/rate-limit/client-ip.ts).
   // Format-checked, and required outside Vercel, by clientIpConfigProblems

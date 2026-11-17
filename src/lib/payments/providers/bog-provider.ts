@@ -14,6 +14,7 @@ import { minorToMajor } from "./bog/money";
 import { mapReceipt } from "./bog/receipt";
 import { callbackSchema, createOrderResponseSchema, receiptSchema, refundResponseSchema } from "./bog/schemas";
 import { BOG_SIGNATURE_HEADER, parseBogPublicKey, verifyBogSignature } from "./bog/signature";
+import { logServerWarning } from "@/lib/log";
 
 /**
  * Bank of Georgia Payment Manager adapter (api.bog.ge/docs/en/payments).
@@ -51,7 +52,16 @@ export type BogConfig = {
   refundsEnabled: boolean;
 };
 
-/** Refunds are prepared but not switched on (BOG_REFUNDS_ENABLED). Nothing was sent to BOG. */
+/**
+ * A provider-supplied code made safe to log: short [A-Za-z0-9_.:-] tokens
+ * only. Anything else (free text, an unexpected object, a long value that
+ * could carry data) is reported as "<unrecognized>", never echoed.
+ */
+export function safeDiagnosticCode(value: unknown): string {
+  return typeof value === "string" && /^[A-Za-z0-9_.:-]{1,64}$/.test(value) ? value : "<unrecognized>";
+}
+
+/** Refunds are implemented but off unless BOG_REFUNDS_ENABLED=true. Nothing was sent to BOG. */
 export class BogRefundsDisabledError extends ProviderNotImplementedError {
   constructor() {
     super("BOG", "refundPayment", "BOG_REFUNDS_ENABLED=true (refunds are not enabled for this deployment)");
@@ -166,7 +176,16 @@ export class BOGPaymentProvider implements PaymentProvider {
     }
     const parsed = callbackSchema.safeParse(JSON.parse(rawBody));
     if (!parsed.success) throw new Error("BOG callback body has an unexpected shape");
-    if (parsed.data.event !== "order_payment") throw new Error(`BOG callback event "${parsed.data.event}" is not handled`);
+    if (parsed.data.event !== "order_payment") {
+      // Diagnostic: the callback IS genuinely BOG's (signature verified), but
+      // carries an event this integration does not know yet. Logged as a
+      // code only — no body, headers, amounts or card data.
+      logServerWarning("bogWebhook", "UNHANDLED_EVENT", {
+        event: safeDiagnosticCode(parsed.data.event),
+        bogOrderId: safeDiagnosticCode(parsed.data.body.order_id),
+      });
+      throw new Error(`BOG callback event "${safeDiagnosticCode(parsed.data.event)}" is not handled`);
+    }
 
     const receipt = await this.fetchReceipt(parsed.data.body.order_id);
     if (!receipt.external_order_id) throw new Error("BOG receipt has no external_order_id");
@@ -191,6 +210,13 @@ export class BOGPaymentProvider implements PaymentProvider {
         refundResponseSchema,
       );
       if (response.key !== "request_received") {
+        // Diagnostic: an answer BOG documents nowhere. Treated as not
+        // accepted (FAILED → REFUND_REJECTED for a person), logged as codes only.
+        logServerWarning("bogRefund", "UNEXPECTED_REFUND_RESPONSE", {
+          bogOrderId: safeDiagnosticCode(providerPaymentId),
+          key: safeDiagnosticCode(response.key),
+          actionIdPresent: !!response.action_id,
+        });
         return { providerPaymentId, refundedAmountMinor: 0, status: "FAILED" };
       }
       return { providerPaymentId, refundedAmountMinor: 0, status: "PENDING", providerActionId: response.action_id ?? undefined };
@@ -199,7 +225,20 @@ export class BOGPaymentProvider implements PaymentProvider {
       // rethrown: BOG may have received it, so the caller keeps the refund
       // REQUESTED and a retry reuses the same Idempotency-Key.
       if (err instanceof BogApiError && err.status >= 400 && err.status < 500) {
+        logServerWarning("bogRefund", "REFUND_REFUSED", {
+          bogOrderId: safeDiagnosticCode(providerPaymentId),
+          httpStatus: err.status,
+          key: safeDiagnosticCode(err.bogKey),
+        });
         return { providerPaymentId, refundedAmountMinor: 0, status: "FAILED" };
+      }
+      if (err instanceof BogApiError && err.status >= 200 && err.status < 300) {
+        // 2xx with a body we cannot read: BOG may have accepted it, so the
+        // caller keeps it REQUESTED (re-sent with the same key later).
+        logServerWarning("bogRefund", "UNREADABLE_REFUND_RESPONSE", {
+          bogOrderId: safeDiagnosticCode(providerPaymentId),
+          httpStatus: err.status,
+        });
       }
       throw err;
     }

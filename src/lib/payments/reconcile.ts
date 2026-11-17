@@ -1,9 +1,10 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { checkIsAdmin, withAdminContext } from "@/db/client";
 import { orders, payments } from "@/db/schema";
 import { activatePaidOrder, findPaymentAnomalies, refundCapturedPayment, verifyAndReconcileOrder, type PaymentAnomalyKind } from "./service";
 import { reconcileOrderRefunds } from "./refunds";
+import { paymentScopePartnerId } from "./scope";
 
 export type PaymentAnomaly = { kind: PaymentAnomalyKind; orderId: string; detail: string };
 export type ReconcileAction = { orderId: string; kind: PaymentAnomalyKind; outcome: string; ok: boolean };
@@ -12,7 +13,49 @@ export type ReconcileReport = {
   actions: ReconcileAction[];
   /** What still needs attention after this run's repairs (equal to anomalies when nothing was applied). */
   remaining: PaymentAnomaly[];
+  /** Set when the run was fenced to one partner: anomalies outside it were neither reported nor acted on. */
+  scope?: { partnerId: string; excluded: number };
 };
+
+/** The requested reconciliation scope contradicts the deployment's PAYMENTS_SCOPE_PARTNER_ID. */
+export class ReconcileScopeError extends Error {
+  constructor() {
+    super("Reconciliation scope does not match PAYMENTS_SCOPE_PARTNER_ID");
+    this.name = "ReconcileScopeError";
+  }
+}
+
+/**
+ * Keeps only anomalies whose order (or, for ACTIVE_WITHOUT_PAYMENT, greeting)
+ * is owned by `partnerId`. Fail-closed: an id whose owner cannot be resolved
+ * is dropped, never assumed in scope.
+ */
+async function filterToPartner(adminUserId: string, anomalies: PaymentAnomaly[], partnerId: string): Promise<{ kept: PaymentAnomaly[]; excluded: number }> {
+  if (anomalies.length === 0) return { kept: [], excluded: 0 };
+  const ids = [...new Set(anomalies.map((a) => a.orderId))].filter((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id));
+  const owners = new Map<string, { order?: string; greeting?: string }>();
+  if (ids.length > 0) {
+    const idList = sql.join(ids.map((id) => sql`${id}::uuid`), sql`, `);
+    const rows = await withAdminContext(adminUserId, (tx) =>
+      tx.execute<{ id: string; kind: "order" | "greeting"; partner_id: string }>(sql`
+        select o.id::text as id, 'order' as kind, o.partner_id::text as partner_id from orders o where o.id in (${idList})
+        union all
+        select g.id::text, 'greeting', q.partner_id::text from greetings g join qr_codes q on q.id = g.qr_code_id where g.id in (${idList})
+      `),
+    );
+    for (const r of rows) {
+      const entry = owners.get(r.id) ?? {};
+      entry[r.kind] = r.partner_id;
+      owners.set(r.id, entry);
+    }
+  }
+  const kept = anomalies.filter((a) => {
+    const owner = owners.get(a.orderId);
+    const partner = a.kind === "ACTIVE_WITHOUT_PAYMENT" ? owner?.greeting : owner?.order;
+    return partner === partnerId;
+  });
+  return { kept, excluded: anomalies.length - kept.length };
+}
 
 /** The configured reconcile identity isn't an admin, so RLS would hide every row and the run would falsely report "no anomalies". */
 export class ReconcileIdentityError extends Error {
@@ -37,12 +80,24 @@ export class ReconcileIdentityError extends Error {
  * Everything else is reported for a person to decide. One order failing never
  * stops the others.
  */
-export async function runPaymentReconciliation(adminUserId: string, opts: { apply: boolean }): Promise<ReconcileReport> {
+export async function runPaymentReconciliation(adminUserId: string, opts: { apply: boolean; partnerId?: string }): Promise<ReconcileReport> {
   if (!(await checkIsAdmin(adminUserId))) throw new ReconcileIdentityError();
 
-  const anomalies = await findPaymentAnomalies(adminUserId);
+  // Scope: the deployment fence (PAYMENTS_SCOPE_PARTNER_ID) always applies;
+  // a caller may ask for the same partner explicitly, never a different one.
+  const fence = paymentScopePartnerId();
+  if (fence && opts.partnerId && opts.partnerId !== fence) throw new ReconcileScopeError();
+  const partnerId = fence ?? opts.partnerId;
+
+  const scoped = async () => {
+    const all = await findPaymentAnomalies(adminUserId);
+    return partnerId ? filterToPartner(adminUserId, all, partnerId) : { kept: all, excluded: 0 };
+  };
+  const first = await scoped();
+  const anomalies = first.kept;
+  const scope = partnerId ? { partnerId, excluded: first.excluded } : undefined;
   const actions: ReconcileAction[] = [];
-  if (!opts.apply) return { anomalies, actions, remaining: anomalies };
+  if (!opts.apply) return { anomalies, actions, remaining: anomalies, ...(scope ? { scope } : {}) };
 
   for (const a of anomalies) {
     const record = (outcome: string, ok = true) => actions.push({ orderId: a.orderId, kind: a.kind, outcome, ok });
@@ -76,6 +131,6 @@ export async function runPaymentReconciliation(adminUserId: string, opts: { appl
       record(`not repaired — ${err instanceof Error ? err.message : String(err)}`, false);
     }
   }
-  const remaining = actions.length > 0 ? await findPaymentAnomalies(adminUserId) : anomalies;
-  return { anomalies, actions, remaining };
+  const remaining = actions.length > 0 ? (await scoped()).kept : anomalies;
+  return { anomalies, actions, remaining, ...(scope ? { scope } : {}) };
 }

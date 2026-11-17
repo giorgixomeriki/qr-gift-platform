@@ -7,6 +7,7 @@ import { logServerError } from "@/lib/log";
 import { getPaymentProvider } from "./provider-factory";
 import { idempotencyKeyFor } from "./idempotency";
 import { ProviderNotImplementedError } from "./types";
+import { assertOrderInPaymentScope } from "./scope";
 
 /**
  * Two-phase provider refunds (migrations/0019, plan §3.6).
@@ -103,6 +104,10 @@ export async function requestChargeRefund(input: {
 }): Promise<RefundOutcome> {
   const { orderId, payment, reason, requestedBy } = input;
   if (!payment.providerPaymentId) throw new RefundWorkflowError(`Payment ${payment.id} has no provider reference`);
+  // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): checked before the refund row
+  // is opened and before the provider is contacted — an out-of-scope charge
+  // (e.g. a simulator-made one) can never produce a real refund request.
+  await assertOrderInPaymentScope(orderId);
   const refund = await openRefund(orderId, payment, reason, requestedBy);
   if (refund.status === "COMPLETED") return "COMPLETED";
   // Already acknowledged by the provider: nothing to send again — completion
@@ -267,6 +272,7 @@ export async function reconcileOrderRefunds(orderId: string): Promise<{ complete
   );
   const counts = { completed: 0, rejected: 0, pending: 0 };
   if (open.length === 0) return counts;
+  await assertOrderInPaymentScope(orderId);
   const provider = getPaymentProvider();
 
   for (const { refund, payment } of open) {

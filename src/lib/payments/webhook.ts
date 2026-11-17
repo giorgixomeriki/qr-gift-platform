@@ -5,6 +5,7 @@ import { getPaymentProvider } from "./provider-factory";
 import { confirmPaymentSuccess, recordProviderFailure, settleConfirmedPayment, PaymentConfirmationError } from "./service";
 import { reconcileOrderRefunds, recordExternalRefund } from "./refunds";
 import { paymentProviderKeySchema, ProviderNotImplementedError } from "./types";
+import { assertOrderInPaymentScope, PaymentScopeError } from "./scope";
 
 export type WebhookResponse = { status: number; body: string | { received: true } };
 
@@ -53,6 +54,11 @@ export async function handleProviderWebhook(providerParam: string, rawBody: stri
   }
 
   try {
+    // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): a genuine callback for an
+    // order this deployment does not own changes nothing here — refused
+    // before any write or refund. No-op in production.
+    await assertOrderInPaymentScope(webhookResult.orderId);
+
     // Asynchronous refunds: our own open refund requests are settled against
     // the provider's state on every callback, not only when it reports a
     // refund state (a REJECTED refund leaves the charge "completed"; only its
@@ -95,6 +101,10 @@ export async function handleProviderWebhook(providerParam: string, rawBody: stri
     await settleConfirmedPayment(confirmation);
     return { status: 200, body: { received: true } };
   } catch (err) {
+    if (err instanceof PaymentScopeError) {
+      console.error(`[webhook] ${providerKey} rejected: order outside this deployment's payment scope`);
+      return { status: 400, body: "Rejected" };
+    }
     if (err instanceof PaymentConfirmationError) {
       // Order not found / amount-currency mismatch / payment-order mismatch:
       // a real rejection that retrying won't change.

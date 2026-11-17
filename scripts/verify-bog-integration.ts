@@ -48,6 +48,11 @@ const postgres = require("postgres") as typeof import("postgres");
  *     (REFUND_PENDING) — that would return the money twice.
  * 16. A second capture on a PAID order is refunded through BOG; while in
  *     flight it is not listed as an unrefunded DUPLICATE_CAPTURE.
+ * 17. Staging payment fence (PAYMENTS_SCOPE_PARTNER_ID): orders of any other
+ *     partner (e.g. simulator leftovers) never reach BOG — no payment, no
+ *     receipt lookup, no refund — and nothing is written for them; scoped
+ *     reconciliation reports and repairs the fenced partner only; the fenced
+ *     partner's own orders still work end to end.
  */
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -105,6 +110,8 @@ async function main() {
   const { refundPaidOrder, findPaymentAnomalies } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
   const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
+  const { runPaymentReconciliation, ReconcileScopeError } = require("../src/lib/payments/reconcile") as typeof import("../src/lib/payments/reconcile");
+  const { PaymentScopeError } = require("../src/lib/payments/scope") as typeof import("../src/lib/payments/scope");
   const { GET: cronReconcile } = require("../src/app/api/cron/payments-reconcile/route") as typeof import("../src/app/api/cron/payments-reconcile/route");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mutableEnv = env as any;
@@ -404,6 +411,79 @@ async function main() {
     await callback(callbackBody(bog2));
     const [p2after] = await admin`select status from payments where provider_payment_id = ${bog2}`;
     check("16c. BOG confirms → that charge REFUNDED; order stays PAID, commission untouched", p2after?.status === "REFUNDED" && (await orderRow(o.orderId)).status === "PAID" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300");
+  }
+
+  console.log("\n--- 17. Staging payment fence (PAYMENTS_SCOPE_PARTNER_ID) ---");
+  {
+    // Out-of-scope fixtures, made BEFORE the fence (as the simulator did):
+    // a PAID order, a pending one, one with a refund stuck REQUESTED, and a
+    // greeting with an open order but no consent yet.
+    const outPaid = await newOrder();
+    complete(outPaid.bogId);
+    await callback(callbackBody(outPaid.bogId));
+    const outPending = await newOrder();
+    const outStuck = await newOrder();
+    complete(outStuck.bogId);
+    await callback(callbackBody(outStuck.bogId));
+    bog.refundFailStatus = 503;
+    await refundPaidOrder(adminUserId, outStuck.orderId);
+    bog.refundFailStatus = null;
+    const outFresh = await newGreeting();
+    await getOrCreateCheckoutOrder(outFresh.greetingId, outFresh.editToken);
+    const outCallbackOrder = await newOrder();
+    complete(outCallbackOrder.bogId);
+    // In-scope fixtures (the fenced partner = `custom`).
+    const inStale = await newOrder(custom);
+    // Both pending attempts look stale (> 30 min) to reconciliation.
+    await admin`update payments set created_at = now() - interval '2 hours' where order_id in (${outPending.orderId}, ${inStale.orderId})`;
+    complete(inStale.bogId);
+
+    mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = custom.partnerId;
+    const counts = async () =>
+      (await admin`select (select count(*) from payment_refunds)::int as refunds, (select count(*) from payments)::int as payments, (select count(*) from checkout_consents)::int as consents, (select count(*) from audit_logs)::int as audits`)[0]!;
+
+    const before = await counts();
+    const callsBefore = bog.calls.length;
+    const refundOut = await attempt(() => refundPaidOrder(adminUserId, outPaid.orderId));
+    const reconOut = await attempt(() => reconcileOrderRefunds(outStuck.orderId));
+    const verifyOut = await attempt(() => checkPaymentReturn(outPending.greetingId, outPending.editToken));
+    const payOut = await attempt(() => acceptCheckoutTerms(outFresh.greetingId, outFresh.editToken, "ka"));
+    const after = await counts();
+    const scopeMsg = (r: { ok: boolean; error?: string }) => !r.ok && /outside this deployment's payment scope/.test((r as { error: string }).error);
+    check("17a. Admin refund of another partner's PAID order: refused, nothing sent to BOG", scopeMsg(refundOut) && !bog.calls.slice(callsBefore).some((c) => c.path.startsWith("/payment/refund/")), JSON.stringify(refundOut));
+    check("17b. A refund stuck REQUESTED on another partner's order: not re-sent, BOG not asked", scopeMsg(reconOut), JSON.stringify(reconOut));
+    check("17c. The return-page check on another partner's pending order: refused, no receipt lookup", scopeMsg(verifyOut), JSON.stringify(verifyOut));
+    check("17d. Pay on another partner's greeting: refused before consent and before any BOG order", scopeMsg(payOut), JSON.stringify(payOut));
+    check("17e. …all four made zero BOG calls and zero writes (refunds, payments, consents, audit log)", bog.calls.length === callsBefore && after.refunds === before.refunds && after.payments === before.payments && after.consents === before.consents && after.audits === before.audits, JSON.stringify({ before, after, calls: bog.calls.length - callsBefore }));
+    check("17f. The stuck refund is still REQUESTED, the PAID order untouched", (await refundRows(outStuck.orderId))[0]?.status === "REQUESTED" && (await orderRow(outPaid.orderId)).status === "PAID" && (await ledger(outPaid.orderId)) === "COMMISSION_EARNED:300");
+
+    const cbBefore = await counts();
+    const cb = await callback(callbackBody(outCallbackOrder.bogId));
+    const cbAfter = await counts();
+    check("17g. A genuine BOG callback for another partner's order: 400, order still PENDING_PAYMENT, nothing written", cb.status === 400 && (await orderRow(outCallbackOrder.orderId)).status === "PENDING_PAYMENT" && cbAfter.payments === cbBefore.payments && cbAfter.refunds === cbBefore.refunds, JSON.stringify(cb));
+
+    const reconCallsFrom = bog.calls.length;
+    const recon = await runPaymentReconciliation(adminUserId, { apply: true });
+    const reconCalls = bog.calls.slice(reconCallsFrom);
+    const touchedOut = recon.actions.some((a) => [outPending.orderId, outStuck.orderId, outPaid.orderId].includes(a.orderId));
+    check("17h. Scoped reconciliation lists only the fenced partner's anomalies", recon.scope?.partnerId === custom.partnerId && recon.anomalies.length > 0 && recon.scope.excluded > 0 && recon.anomalies.every((a) => a.orderId === inStale.orderId), JSON.stringify({ scope: recon.scope, kinds: recon.anomalies.map((a) => a.kind) }));
+    check("17i. …and repairs only it: the in-scope stale order is settled from BOG's receipt", !touchedOut && (await orderRow(inStale.orderId)).status === "PAID" && reconCalls.length > 0 && reconCalls.every((c) => c.path === "/token" || c.path.includes(inStale.bogId)) && (await orderRow(outPending.orderId)).status === "PENDING_PAYMENT" && (await refundRows(outStuck.orderId))[0]?.status === "REQUESTED", JSON.stringify({ actions: recon.actions, paths: reconCalls.map((c) => c.path) }));
+    const mismatch = await attempt(() => runPaymentReconciliation(adminUserId, { apply: false, partnerId: standard.partnerId }));
+    check("17j. Asking reconciliation for a different partner than the fence is refused", !mismatch.ok && mismatch.error === new ReconcileScopeError().message);
+
+    const inPaid = await newOrder(custom);
+    complete(inPaid.bogId);
+    const inCb = await callback(callbackBody(inPaid.bogId));
+    const inRefund = await refundPaidOrder(adminUserId, inPaid.orderId);
+    check("17k. The fenced partner's own order still works: callback → PAID, refund sent to BOG (pending)", inCb.status === 200 && inRefund.pending === true && (await refundRows(inPaid.orderId))[0]?.status === "REQUESTED" && bog.calls.some((c) => c.path === `/payment/refund/${inPaid.bogId}`));
+
+    mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = "not-a-partner";
+    const garbage = await attempt(() => refundPaidOrder(adminUserId, outPaid.orderId));
+    check("17l. A fence that matches no partner refuses everything (fail-closed)", !garbage.ok && garbage.error.includes("payment scope"));
+    check("17m. PaymentScopeError is a distinct, named error", new PaymentScopeError("x").name === "PaymentScopeError");
+    mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = undefined;
+    const unfenced = await runPaymentReconciliation(adminUserId, { apply: false });
+    check("17n. Without the fence (production) reconciliation is unscoped, as before", unfenced.scope === undefined && unfenced.anomalies.some((a) => a.orderId === outPending.orderId && a.kind === "STALE_PENDING"));
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

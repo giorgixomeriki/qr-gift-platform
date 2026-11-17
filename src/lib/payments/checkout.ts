@@ -8,6 +8,7 @@ import { assertGreetingPurchasable } from "./eligibility";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { env } from "@/lib/env";
 import { assertCheckoutOpen } from "./checkout-gate";
+import { assertOrderInPaymentScope } from "./scope";
 import { createHash } from "node:crypto";
 import { loadMerchantInfo } from "@/lib/merchant/info";
 import kaMessages from "@/messages/ka.json";
@@ -139,6 +140,8 @@ export async function acceptCheckoutTerms(
       .limit(1),
   );
   if (!open) throw new CheckoutEntryError("No open order for this greeting");
+  // Staging fence: refused before the consent row and the bank payment.
+  await assertOrderInPaymentScope(open.order.id);
 
   await withEditableGreeting(greetingId, (tx) =>
     tx.insert(checkoutConsents).values({

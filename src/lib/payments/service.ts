@@ -11,6 +11,7 @@ import { sanitizeProviderMetadata, type PaymentProviderKey } from "./types";
 import { getPurchaseBlocker, type PurchaseBlocker } from "./eligibility";
 import { assertCheckoutOpen } from "./checkout-gate";
 import { requestChargeRefund } from "./refunds";
+import { assertOrderInPaymentScope } from "./scope";
 import { logServerError } from "@/lib/log";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 
@@ -130,6 +131,9 @@ export async function startCheckout(input: {
  */
 export async function createPaymentAttempt(order: Order, qrPublicToken: string, locale?: "ka" | "en"): Promise<string | undefined> {
   assertCheckoutOpen();
+  // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): no provider call for an order
+  // this deployment does not own.
+  await assertOrderInPaymentScope(order.id);
   const provider = getPaymentProvider();
   // Amount and currency are the order's own snapshot (gross_amount_minor,
   // resolved once at order creation, partner overrides included) — never a
@@ -374,10 +378,10 @@ async function confirmPaymentSuccessTx(input: Parameters<typeof confirmPaymentSu
  * it. Idempotent: a REFUNDED order is left alone, and the order only moves to
  * REFUNDED once the provider itself reports the full amount refunded.
  *
- * TEST refunds deterministically. A real provider whose refundPayment is not
- * implemented yet (BOG today — see providers/bog-provider.ts) leaves the
- * order in REFUND_REQUIRED — orders in that status are the manual-refund
- * queue until that adapter's refund call exists. The payment is never
+ * TEST refunds deterministically. BOG refunds asynchronously (the order turns
+ * REFUNDED when BOG confirms by callback or receipt). Where refunds cannot be
+ * sent (BOG_REFUNDS_ENABLED=false, or the order is outside the staging
+ * payment scope) the order stays REFUND_REQUIRED — the manual-refund queue. The payment is never
  * marked REFUNDED without the provider confirming it.
  */
 export async function refundIneligiblePayment(orderId: string): Promise<{ status: "REFUNDED" | "REFUND_REQUIRED" }> {
@@ -633,6 +637,7 @@ export async function verifyAndReconcileOrder(
     throw new ReconciliationError(`Order ${orderId} has no pending payment attempt to verify`);
   }
 
+  await assertOrderInPaymentScope(orderId);
   const provider = getPaymentProvider();
   const verification = await provider.verifyPayment(pendingPayment.providerPaymentId);
 
