@@ -2,7 +2,8 @@
 
 import type { CSSProperties } from "react";
 import { useTranslations } from "next-intl";
-import { RecipientView } from "./card-states";
+import { RecipientView, SignatureWizard } from "./card-states";
+import type { ThemeKey } from "@/lib/themes/registry";
 import { SealedEnvelope, SigRoot } from "@/components/signature/chrome";
 import { getTemplate } from "@/lib/templates/catalog";
 import { roomVars } from "@/lib/templates/room";
@@ -47,5 +48,26 @@ export function EnvelopeWindowsLab() {
         ))}
       </main>
     </SigRoot>
+  );
+}
+
+/** Lab only: the production sender wizard (Step 03 · preview) with a mock draft; no server calls until a button that edits or pays is used. */
+export function EnvelopeSenderLab({ theme, env, message }: { theme: string; env: "classic" | "luxe"; message: string }) {
+  const initial = {
+    greetingId: "lab-envelope",
+    themeKey: theme as ThemeKey,
+    message,
+    photos: [null, null, null],
+    video: null,
+    audio: null,
+    priceLabel: "10 ₾",
+    isTestPayments: true,
+    merchantName: null,
+    merchantVatStatus: null,
+  };
+  return (
+    <div data-envelope={env === "classic" ? "classic" : undefined} data-testid="envelope-sender-lab">
+      <SignatureWizard initial={initial} />
+    </div>
   );
 }

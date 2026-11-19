@@ -55,6 +55,11 @@
   opacity: 0;
   transition: opacity 220ms linear 160ms;
 }
+/* Sender preview (Step 03) and status screens: while sealed, only the envelope shows, exactly as on the recipient's
+   screen (whose card is hidden until the flap opens); the letter sheet would otherwise show in the gap under the flap. */
+.sig-env[data-state="sealed"] > .sig-env__sheet:not([data-envelope="classic"] *) {
+  visibility: hidden;
+}
 :is(.sx-env__flap, .sig-env__flap):not([data-envelope="classic"] *) {
   background: url(/customer/envelope/photo/flap.webp) 0 0 / 100% 100% no-repeat;
   filter: none;
