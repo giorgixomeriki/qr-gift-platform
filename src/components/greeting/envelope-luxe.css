@@ -1,19 +1,20 @@
 /*
- * The luxury envelope (rendered artwork) for both envelopes: the recipient's .sx-env and the sender's .sig-env.
+ * The luxury envelope (photographic artwork) for both envelopes: the recipient's .sx-env and the sender's .sig-env.
  * ARTWORK ONLY. Every element, size, angle, proportion, clip-path, transition and animation is the
- * production one (reveal-signature.css, signature.css); this file only swaps what each part is painted with:
- * Blender renders (ivory cotton paper, folds, contact shadow; burgundy wax with the QR STARR spark),
- * made at exactly these proportions (aspect 1.42, pocket V at 18 %/62 %, flap 60 %, seal 24 % at 50 %/58 %).
- * Source: /Users/Shared/qr-starr-envelope-luxe/blender (envelope_luxe.py). CC0 textures (ambientCG Paper006).
+ * production one (reveal-signature.css, signature.css); this file only swaps what each part is painted with.
+ *
+ * Source: the owner's reference photograph "Luxurious Cream Envelope with Wax Seal" (docs/audits/photos).
+ * Its own material was rebuilt at exactly these proportions (aspect 1.42, pocket V at 18 %/62 %, flap 60 %,
+ * seal 24 % at 50 %/58 %): paper texture re-synthesised from the photo (no stretching), the gilded flap edge
+ * and its shadow, the embossed filigree and botanical spray transplanted 1:1, and the burgundy wax cut out
+ * with the QR STARR spark (SPARK_PATH, exact) struck in gold. No background or surrounding UI is included.
+ * Build scripts and evidence: /Users/Shared/qr-starr-envelope-photo.
  *
  * Fallback: anything inside [data-envelope="classic"] keeps the original CSS envelope; removing the import of
  * this file restores it everywhere.
  */
 :is(.sx-env__back, .sig-env__back):not([data-envelope="classic"] *) {
-  background:
-    var(--cx-paper-tooth) 0 0 / 256px 256px,
-    url(/customer/envelope/back.webp) 0 0 / 100% 100% no-repeat;
-  background-blend-mode: soft-light, normal;
+  background: #e3d3bc url(/customer/envelope/photo/back.webp) 0 0 / 100% 100% no-repeat;
 }
 /* the rendered contact shadow replaces the CSS box-shadow (also the light-room override) */
 .reveal .sx-env > .sx-env__back:not([data-envelope="classic"] *),
@@ -29,24 +30,36 @@
   top: -24%;
   width: 130%;
   height: 150%;
-  background: url(/customer/envelope/shadow.webp) 0 0 / 100% 100% no-repeat;
+  background: url(/customer/envelope/photo/contact-shadow.webp) 0 0 / 100% 100% no-repeat;
   pointer-events: none;
 }
 :is(.sx-env__pocket, .sig-env__pocket):not([data-envelope="classic"] *) {
-  /* the product's own paper tooth over the rendered paper: fibre that still reads at phone size */
-  background:
-    var(--cx-paper-tooth) 0 0 / 256px 256px,
-    url(/customer/envelope/pocket.webp) 0 0 / 100% 100% no-repeat;
-  background-blend-mode: soft-light, normal;
+  background: url(/customer/envelope/photo/pocket.webp) 0 0 / 100% 100% no-repeat;
+}
+/* Luxury Vintage lays its own rose over the pocket: the plain pocket keeps the embossed spray from crowding it. */
+:is(.reveal[data-composition="keepsake"] .sx-env__pocket, .sig-window[data-composition="keepsake"] .sig-env__pocket):not([data-envelope="classic"] *) {
+  background-image: url(/customer/envelope/photo/pocket-plain.webp);
+}
+/* The flap's shadow on the envelope (the flap's own clip-path would cut a drop-shadow): painted on the back and on
+   the pocket (clipped by it), it leaves with the flap as the envelope opens. */
+:is(.sx-env__back, .sig-env__back):not([data-envelope="classic"] *)::after,
+:is(.sx-env__pocket, .sig-env__pocket):not([data-envelope="classic"] *)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url(/customer/envelope/photo/flap-shadow.webp) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+.sx-env[data-state="opening"] .sx-env__back::after,
+.sx-env[data-state="opening"] .sx-env__pocket::before {
+  opacity: 0;
+  transition: opacity 220ms linear 160ms;
 }
 :is(.sx-env__flap, .sig-env__flap):not([data-envelope="classic"] *) {
-  background:
-    var(--cx-paper-tooth) 0 0 / 256px 256px,
-    url(/customer/envelope/flap.webp) 0 0 / 100% 100% no-repeat;
-  background-blend-mode: soft-light, normal;
-  filter: drop-shadow(0 1px 1.5px rgb(60 30 20 / 0.22));
+  background: url(/customer/envelope/photo/flap.webp) 0 0 / 100% 100% no-repeat;
+  filter: none;
 }
-/* the wax: the rendered seal is painted by the seal's own box (so press, lift and fade still apply); the SVG stays for layout */
+/* the wax: the photographed seal is painted by the seal's own box (so press, lift and fade still apply); the SVG stays for layout */
 :is(.sx-env__seal, .sig-env > .sig-env__seal):not([data-envelope="classic"] *) {
   overflow: visible;
 }
@@ -54,7 +67,7 @@
   content: "";
   position: absolute;
   inset: -12.5%;
-  background: url(/customer/envelope/seal.webp) center / 100% 100% no-repeat;
+  background: url(/customer/envelope/photo/seal.webp) center / 100% 100% no-repeat;
   pointer-events: none;
 }
 :is(.sx-env__wax, .sig-env__wax):not([data-envelope="classic"] *) {
