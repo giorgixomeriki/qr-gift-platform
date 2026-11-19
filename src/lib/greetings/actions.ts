@@ -12,8 +12,12 @@ import {
   deleteContent,
   markPreviewViewed,
   signDraftVoiceUrl,
+  setGreetingMusic,
+  removeGreetingMusic,
   ContentActionError,
+  MusicLinkError,
 } from "./content";
+import type { SpotifyMusic, SpotifyParseError } from "@/lib/music/spotify";
 import { getEditToken } from "./edit-token-cookie";
 import { editTokenCookieName, EDIT_TOKEN_COOKIE_OPTIONS } from "@/lib/security/edit-token";
 import type { SupportedContentType } from "@/lib/validation/content-types";
@@ -126,6 +130,38 @@ export async function refreshDraftVoiceUrlAction(greetingId: string): Promise<Ac
     return { ok: true, data: { url: await signDraftVoiceUrl(greetingId, token) } };
   } catch (err) {
     return errorResult("refreshDraftVoiceUrlAction", err, { greetingId });
+  }
+}
+
+/**
+ * "Our Song". Keyed by greetingId like uploads: a sender sets a song a
+ * handful of times at most. A rejected link returns its reason code (the
+ * client words it in the sender's language) and is not logged as an error —
+ * a mistyped link is ordinary input, not a fault.
+ */
+export async function setMusicAction(
+  greetingId: string,
+  link: string,
+): Promise<{ ok: true; data: SpotifyMusic } | { ok: false; error: string; code?: SpotifyParseError }> {
+  try {
+    await enforceRateLimit({ key: `greeting-music:${greetingId}`, limit: 20, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    const music = await setGreetingMusic(greetingId, token, typeof link === "string" ? link : "");
+    return { ok: true, data: music };
+  } catch (err) {
+    if (err instanceof MusicLinkError) return { ok: false, error: err.message, code: err.code };
+    return errorResult("setMusicAction", err, { greetingId });
+  }
+}
+
+export async function removeMusicAction(greetingId: string): Promise<ActionResult> {
+  try {
+    await enforceRateLimit({ key: `greeting-music:${greetingId}`, limit: 20, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    await removeGreetingMusic(greetingId, token);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return errorResult("removeMusicAction", err, { greetingId });
   }
 }
 

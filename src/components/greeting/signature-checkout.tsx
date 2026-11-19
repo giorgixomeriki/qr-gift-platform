@@ -57,6 +57,7 @@ export function SignatureCheckout({
     content.photos.length ? ts("itemsPhotos", { count: content.photos.length }) : null,
     content.video ? ts("itemsVideo") : null,
     content.audio ? ts("itemsVoice") : null,
+    content.music ? ts("itemsMusic") : null,
   ].filter(Boolean) as string[];
 
   return (

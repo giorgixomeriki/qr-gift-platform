@@ -16,6 +16,8 @@ import { useChromeTint } from "@/lib/client/use-chrome-tint";
 import { RevealClosing } from "./reveal-closing";
 import { RevealEnvelope } from "./reveal-envelope";
 import { VoicePlayer } from "./voice-player";
+import { OurSong } from "./our-song";
+import type { SpotifyMusic } from "@/lib/music/spotify";
 import "./reveal.css";
 import "./reveal-signature.css";
 import "./envelope-luxe.css";
@@ -26,6 +28,8 @@ export type GreetingRenderContent = {
   video: { url: string } | null;
   /** `refresh` re-signs the voice URL (signed URLs expire; the voice beat may come much later). */
   audio: { url: string; refresh?: () => Promise<string | null> } | null;
+  /** "Our Song": a validated Spotify reference (lib/music/spotify.ts). Optional: older callers and greetings have none. */
+  music?: SpotifyMusic | null;
 };
 
 type Beat =
@@ -34,6 +38,7 @@ type Beat =
   | { kind: "photo"; index: number }
   | { kind: "video" }
   | { kind: "audio" }
+  | { kind: "music" }
   | { kind: "ending" };
 
 /**
@@ -99,6 +104,7 @@ export function GreetingRenderer({
   onBeatChange,
   onContentPlayed,
   onEndingSettled,
+  spotifyEmbed = false,
 }: {
   themeKey: string;
   /** The exact template version to render (a sent greeting's frozen version); latest when omitted. */
@@ -123,6 +129,8 @@ export function GreetingRenderer({
   onContentPlayed?: (type: "video" | "audio") => void;
   /** True once the ending's finale has come to rest (the greeting is complete); false on any other beat. */
   onEndingSettled?: (settled: boolean) => void;
+  /** SPOTIFY_EMBED_ENABLED, decided server-side; off by default (see lib/music/flag.ts). */
+  spotifyEmbed?: boolean;
 }) {
   const t = useTranslations("greeting");
   const tt = useTranslations("themes");
@@ -137,6 +145,7 @@ export function GreetingRenderer({
     content.photos.forEach((_, index) => list.push({ kind: "photo", index }));
     if (content.video) list.push({ kind: "video" });
     if (content.audio) list.push({ kind: "audio" });
+    if (content.music) list.push({ kind: "music" });
     list.push({ kind: "ending" });
     return list;
   }, [content]);
@@ -354,6 +363,12 @@ export function GreetingRenderer({
           </div>
         )}
 
+        {beat.kind === "music" && content.music && (
+          <div key="music" className="reveal__music reveal-enter">
+            <OurSong music={content.music} embedAllowed={spotifyEmbed} variant="beat" />
+          </div>
+        )}
+
         {isEnding && (
           <>
             {/* The world fills the first screen exactly as before the closing arrived, so nothing moves when it does. */}
@@ -382,7 +397,7 @@ export function GreetingRenderer({
                 )}
               </div>
             </div>
-            {endingRest && <RevealClosing ref={closingRef} content={content} signOff={endingLine} onPlayed={notifyPlayed} vintage={world.composition === "keepsake"} />}
+            {endingRest && <RevealClosing ref={closingRef} content={content} signOff={endingLine} onPlayed={notifyPlayed} vintage={world.composition === "keepsake"} spotifyEmbed={spotifyEmbed} />}
           </>
         )}
       </div>

@@ -14,6 +14,8 @@ import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/c
 import { signatureUiEnabled } from "@/components/signature/flag";
 import { getMerchantInfo } from "@/lib/merchant/server";
 import { resolveMerchantToken } from "@/lib/merchant/info";
+import { parseStoredMusic } from "@/lib/music/spotify";
+import { spotifyEmbedEnabled } from "@/lib/music/flag";
 import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder } from "@/components/qr/placeholders";
 
 /**
@@ -83,6 +85,7 @@ export default async function QrEntryPage({
         const videoRow = draft.content.find((c) => c.type === "video" && c.signedUrl);
         const audioRow = draft.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = draft.content.find((c) => c.type === "text");
+        const musicRow = draft.content.find((c) => c.type === "music" && c.status === "READY");
 
         // A message is required before preview/checkout. The server refuses
         // to create an order without one anyway (lib/payments/eligibility.ts);
@@ -99,6 +102,8 @@ export default async function QrEntryPage({
           photos: photoBySlot,
           video: videoRow ? { contentId: videoRow.id, url: videoRow.signedUrl! } : null,
           audio: audioRow ? { contentId: audioRow.id, url: audioRow.signedUrl! } : null,
+          music: parseStoredMusic(musicRow?.textValue),
+          spotifyEmbed: spotifyEmbedEnabled(),
           priceLabel,
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
           merchantName: checkoutMerchantName(locale),
@@ -134,6 +139,7 @@ export default async function QrEntryPage({
         const videoRow = data.content.find((c) => c.type === "video" && c.signedUrl);
         const audioRow = data.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = data.content.find((c) => c.type === "text");
+        const musicRow = data.content.find((c) => c.type === "music" && c.status === "READY");
 
         return (
           <RecipientView
@@ -146,7 +152,9 @@ export default async function QrEntryPage({
               photos,
               video: videoRow ? { url: videoRow.signedUrl! } : null,
               audio: audioRow ? { url: audioRow.signedUrl! } : null,
+              music: parseStoredMusic(musicRow?.textValue),
             }}
+            spotifyEmbed={spotifyEmbedEnabled()}
           />
         );
       } catch (err) {

@@ -13,6 +13,7 @@ export function RecipientView({
   themeVersion,
   content,
   isOriginalSender,
+  spotifyEmbed = false,
 }: {
   greetingId: string;
   themeKey: ThemeKey;
@@ -20,6 +21,7 @@ export function RecipientView({
   themeVersion?: number;
   content: GreetingRenderContent;
   isOriginalSender: boolean;
+  spotifyEmbed?: boolean;
 }) {
   const t = useTranslations("success");
   const handlePlayed = useCallback(
@@ -40,6 +42,7 @@ export function RecipientView({
       themeVersion={themeVersion}
       content={withRefresh}
       mode="recipient"
+      spotifyEmbed={spotifyEmbed}
       onContentPlayed={handlePlayed}
       senderBanner={
         isOriginalSender ? (

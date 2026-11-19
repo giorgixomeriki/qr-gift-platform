@@ -236,7 +236,35 @@
       "itemsText": "ტექსტი",
       "itemsPhotos": "{count} ფოტო",
       "itemsVideo": "ვიდეო",
-      "itemsVoice": "ხმა"
+      "itemsVoice": "ხმა",
+      "itemsMusic": "სიმღერა"
+    },
+    "music": {
+      "title": "ჩვენი სიმღერა",
+      "add": "სიმღერის დამატება",
+      "addHint": "Spotify-ის სიმღერა ან ფლეილისტი",
+      "label": "ჩასვი Spotify-ის ბმული",
+      "hint": "Spotify-ში: გაზიარება → ბმულის კოპირება. ერთი სიმღერა ან ერთი ფლეილისტი.",
+      "save": "დამატება",
+      "saveReplace": "შეცვლა",
+      "saving": "ინახება…",
+      "cancel": "გაუქმება",
+      "replace": "შეცვლა",
+      "remove": "წაშლა",
+      "saved": "შენახულია",
+      "check": "Spotify-ში გახსნა",
+      "kindTrack": "სიმღერა Spotify-ზე",
+      "kindPlaylist": "ფლეილისტი Spotify-ზე",
+      "error": {
+        "empty": "ჯერ ჩასვი Spotify-ის ბმული.",
+        "tooLong": "ბმული ზედმეტად გრძელია — დააკოპირე ხელახლა Spotify-დან.",
+        "notSpotify": "ეს Spotify-ის ბმული არ არის. ჩასვი ბმული open.spotify.com-დან.",
+        "shortLink": "მოკლე ბმულები (spotify.link) არ მიიღება. გახსენი და დააკოპირე სრული open.spotify.com ბმული.",
+        "unsupported": "ამჟამად მხოლოდ სიმღერა ან ფლეილისტი — არა ალბომი, შემსრულებელი ან პოდკასტი.",
+        "invalid": "ბმული ვერ წავიკითხეთ. დააკოპირე ხელახლა Spotify-დან.",
+        "save": "ვერ შევინახეთ. სცადე ხელახლა.",
+        "remove": "ვერ წავშალეთ. სცადე ხელახლა."
+      }
     }
   },
   "greeting": {
@@ -265,7 +293,20 @@
     "closingBody": "როცა მოგინდება, ბარათი ისევ დაასკანერე — წერილი ისევ გაიხსნება.",
     "toLetter": "შენი წერილი",
     "postmark": "QR STARR · ლუქს ვინტაჟი · მოგონება · ",
-    "printsLabel": "ფოტოები. შემდეგისთვის დააჭირე Enter-ს."
+    "printsLabel": "ფოტოები. შემდეგისთვის დააჭირე Enter-ს.",
+    "ourSong": {
+      "title": "ჩვენი სიმღერა",
+      "track": "სიმღერა",
+      "playlist": "ფლეილისტი",
+      "ledeTrack": "შენთვის არჩეული სიმღერა.",
+      "ledePlaylist": "შენთვის არჩეული ფლეილისტი.",
+      "listen": "მოუსმინე Spotify-ზე",
+      "opensSpotify": "იხსნება Spotify-ში",
+      "playHere": "აქვე მოსმენა",
+      "closePlayer": "პლეერის დახურვა",
+      "playerTitle": "Spotify-ის პლეერი",
+      "note": "იხსნება Spotify-ში, რომელმაც შესაძლოა შესვლა მოგთხოვოს. თუ არ გაიხსნა, შესაძლოა იქ აღარ იყოს ხელმისაწვდომი."
+    }
   },
   "themes": {
     "romantic": {

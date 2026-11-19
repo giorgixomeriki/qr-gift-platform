@@ -10,9 +10,16 @@ import { validateMediaUpload, allowedMimeTypesFor, MEDIA_SLOT_LIMITS, type Suppo
 import { buildStorageKey, createSignedUploadUrl, createSignedReadUrl, deleteStorageObject } from "@/lib/storage/media";
 import { verifyUploadedContentMatchesMime, ContentVerificationError } from "@/lib/storage/verify-upload";
 import { recordAnalyticsEvent } from "@/lib/analytics";
+import { parseSpotifyInput, toSpotifyUri, type SpotifyMusic, type SpotifyParseError } from "@/lib/music/spotify";
 
 export { InvalidEditTokenError };
 export class ContentActionError extends Error {}
+/** A rejected Spotify link; `code` is mapped to localized copy by the client (never the raw input). */
+export class MusicLinkError extends ContentActionError {
+  constructor(readonly code: SpotifyParseError) {
+    super(`Invalid music link: ${code}`);
+  }
+}
 
 /**
  * qr_codes is fully publicly readable by RLS design (qr_codes_select: `using
@@ -119,6 +126,44 @@ export async function updateGreetingMessage(greetingId: string, editToken: strin
 
   const partnerId = await getOwningPartnerId(greetingId);
   await recordAnalyticsEvent({ eventType: "CONTENT_CREATED", greetingId }, { partnerId });
+}
+
+/**
+ * "Our Song": attach (or replace) the greeting's one Spotify track/playlist.
+ * Same shape as the message: one greeting_content row (type "music", slot 0,
+ * status READY) whose text_value is the canonical `spotify:<kind>:<id>` —
+ * never the sender's raw input. Serialized per greeting so two quick saves
+ * can never leave two music rows. Other content rows are never touched, so
+ * editing the message/media can't drop the song and vice versa.
+ */
+export async function setGreetingMusic(greetingId: string, editToken: string, rawLink: string): Promise<SpotifyMusic> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  const parsed = parseSpotifyInput(rawLink);
+  if (!parsed.ok) throw new MusicLinkError(parsed.error);
+  const uri = toSpotifyUri(parsed.music);
+
+  await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-music:${greetingId}`}))`);
+    const rows = await tx
+      .select({ id: greetingContent.id })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "music")));
+    const [keep, ...extra] = rows;
+    if (keep) {
+      await tx.update(greetingContent).set({ textValue: uri, slot: 0, status: "READY", updatedAt: sql`now()` }).where(eq(greetingContent.id, keep.id));
+    } else {
+      await tx.insert(greetingContent).values({ greetingId, type: "music", slot: 0, textValue: uri, status: "READY" });
+    }
+    for (const r of extra) await tx.delete(greetingContent).where(eq(greetingContent.id, r.id));
+  });
+
+  return parsed.music;
+}
+
+/** Removes the greeting's song (idempotent: removing nothing is fine). */
+export async function removeGreetingMusic(greetingId: string, editToken: string): Promise<void> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  await withEditableGreeting(greetingId, (tx) => tx.delete(greetingContent).where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "music"))));
 }
 
 /**

@@ -61,6 +61,7 @@ async function main() {
       { key: "photo", category: "media" },
       { key: "video", category: "media" },
       { key: "audio", category: "media" },
+      { key: "music", category: "link" },
     ])
     .onConflictDoNothing();
 

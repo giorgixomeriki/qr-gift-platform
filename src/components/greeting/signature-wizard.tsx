@@ -65,6 +65,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
   const [saving, setSaving] = useState(false);
   const savedMessageRef = useRef(initial.message);
   const media = useMediaUploads(initial.greetingId, initial);
+  const [music, setMusic] = useState(initial.music ?? null);
   /** Desktop studio: the live world beside the letter (never mounted on phones). */
   const wide = useMediaQuery("(min-width: 1024px)");
 
@@ -156,7 +157,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
     [media, goToStep],
   );
 
-  const content: GreetingRenderContent = { message: message.trim() || null, ...media.content };
+  const content: GreetingRenderContent = { message: message.trim() || null, ...media.content, music };
 
   if (step === "checkout") {
     return (
@@ -185,6 +186,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
         themeKey={themeKey}
         content={content}
         priceLabel={initial.priceLabel}
+        spotifyEmbed={initial.spotifyEmbed}
         onClose={() => goToStep("preview")}
         onEdit={() => goToStep("create")}
         onCheckout={() => goToStep("checkout")}
@@ -232,6 +234,9 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
                   media={media}
                   saving={saving}
                   onContinue={() => void continueFromCreate()}
+                  greetingId={initial.greetingId}
+                  music={music}
+                  onMusicChange={setMusic}
                 />
               </div>
               {wide && <StudioAside themeKey={themeKey} content={content} />}
@@ -293,6 +298,7 @@ function SignaturePreview({
     content.photos.length ? ts("itemsPhotos", { count: content.photos.length }) : null,
     content.video ? ts("itemsVideo") : null,
     content.audio ? ts("itemsVoice") : null,
+    content.music ? ts("itemsMusic") : null,
   ].filter(Boolean) as string[];
 
   return (
@@ -357,6 +363,7 @@ function SignatureWatch({
   themeKey,
   content,
   priceLabel,
+  spotifyEmbed,
   onClose,
   onEdit,
   onCheckout,
@@ -364,6 +371,7 @@ function SignatureWatch({
   themeKey: ThemeKey;
   content: GreetingRenderContent;
   priceLabel: string | null;
+  spotifyEmbed?: boolean;
   onClose: () => void;
   onEdit: () => void;
   onCheckout: () => void;
@@ -375,6 +383,7 @@ function SignatureWatch({
       themeKey={themeKey}
       content={content}
       mode="preview"
+      spotifyEmbed={spotifyEmbed}
       chrome={
         <button type="button" onClick={onClose} aria-label={tc("backToPreview")} className="reveal__ghost reveal__ghost--chip" data-testid="preview-close">
           <BackIcon size={16} aria-hidden />

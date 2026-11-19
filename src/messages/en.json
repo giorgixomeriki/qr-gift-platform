@@ -236,7 +236,35 @@
       "itemsText": "text",
       "itemsPhotos": "{count, plural, one {# photo} other {# photos}}",
       "itemsVideo": "video",
-      "itemsVoice": "voice"
+      "itemsVoice": "voice",
+      "itemsMusic": "song"
+    },
+    "music": {
+      "title": "Our song",
+      "add": "Add a song",
+      "addHint": "A Spotify song or playlist",
+      "label": "Paste a Spotify link",
+      "hint": "In Spotify: Share → Copy link. One song or one playlist.",
+      "save": "Add",
+      "saveReplace": "Replace",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "replace": "Replace",
+      "remove": "Remove",
+      "saved": "Saved",
+      "check": "Open in Spotify",
+      "kindTrack": "Song on Spotify",
+      "kindPlaylist": "Playlist on Spotify",
+      "error": {
+        "empty": "Paste a Spotify link first.",
+        "tooLong": "That link is too long — copy it again from Spotify.",
+        "notSpotify": "That isn't a Spotify link. Paste a link from open.spotify.com.",
+        "shortLink": "Short links (spotify.link) aren't accepted. Open it, then copy the full open.spotify.com link.",
+        "unsupported": "Only a song or a playlist for now — not an album, artist or podcast.",
+        "invalid": "We couldn't read that link. Copy it again from Spotify.",
+        "save": "Couldn't save. Please try again.",
+        "remove": "Couldn't remove it. Please try again."
+      }
     }
   },
   "greeting": {
@@ -265,7 +293,20 @@
     "closingBody": "Scan the card again whenever you'd like to open it.",
     "toLetter": "Your letter",
     "postmark": "QR STARR · LUXURY VINTAGE · KEEPSAKE · ",
-    "printsLabel": "Photos. Press Enter for the next one."
+    "printsLabel": "Photos. Press Enter for the next one.",
+    "ourSong": {
+      "title": "Our Song",
+      "track": "A song",
+      "playlist": "A playlist",
+      "ledeTrack": "A song chosen for you.",
+      "ledePlaylist": "A playlist chosen for you.",
+      "listen": "Listen on Spotify",
+      "opensSpotify": "opens in Spotify",
+      "playHere": "Play here",
+      "closePlayer": "Close player",
+      "playerTitle": "Spotify player",
+      "note": "Opens in Spotify, which may ask you to sign in. If it won't open, it may no longer be available there."
+    }
   },
   "themes": {
     "romantic": {

@@ -11,6 +11,8 @@ import { getThemeWorld } from "@/lib/themes/worlds";
 import { useWaveformPeaks } from "@/lib/client/waveform";
 import { SLOT_LIMITS, type MediaItem, type MediaKind, type MediaUploads } from "./use-media-uploads";
 import { SignatureVoiceCapture } from "./signature-voice-capture";
+import { SignatureMusicField } from "./signature-music-field";
+import type { SpotifyMusic } from "@/lib/music/spotify";
 
 const KINDS = ["photo", "video", "audio"] as const;
 
@@ -41,6 +43,9 @@ export function SignatureCreateStep({
   media,
   saving,
   onContinue,
+  greetingId,
+  music,
+  onMusicChange,
 }: {
   themeKey: ThemeKey;
   message: string;
@@ -52,6 +57,10 @@ export function SignatureCreateStep({
   media: MediaUploads;
   saving: boolean;
   onContinue: () => void;
+  greetingId: string;
+  /** "Our song": saved independently of the message and media (signature-music-field.tsx). */
+  music: SpotifyMusic | null;
+  onMusicChange: (music: SpotifyMusic | null) => void;
 }) {
   const t = useTranslations("wizard");
   const tm = useTranslations("wizard.message");
@@ -276,6 +285,8 @@ export function SignatureCreateStep({
           </ul>
         )}
       </section>
+
+      <SignatureMusicField greetingId={greetingId} music={music} onChange={onMusicChange} />
 
       <Dock className="sigf-dock-create">
         {blocked && failed > 0 && (

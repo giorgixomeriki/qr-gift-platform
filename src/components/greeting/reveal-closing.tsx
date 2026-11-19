@@ -6,6 +6,7 @@ import { WaxSeal } from "@/components/customer/wax-seal";
 import { Spark } from "@/components/ui/logo";
 import type { GreetingRenderContent } from "./greeting-renderer";
 import { VoicePlayer } from "./voice-player";
+import { OurSong } from "./our-song";
 
 // Luxury Vintage only: its keepsake components (and `motion`, `canvas-confetti`) load with this world alone.
 const VintagePrints = lazy(() => import("./vintage-keepsake").then((m) => ({ default: m.VintagePrints })));
@@ -30,12 +31,14 @@ export const RevealClosing = forwardRef<
     onPlayed: (type: "video" | "audio") => void;
     /** The Luxury Vintage world (composition `keepsake`): parchment letter, print stack, postmarked seal. */
     vintage?: boolean;
+    /** The official Spotify embed may be offered (SPOTIFY_EMBED_ENABLED); otherwise link only. */
+    spotifyEmbed?: boolean;
   }
->(function RevealClosing({ content, signOff, onPlayed, vintage = false }, ref) {
+>(function RevealClosing({ content, signOff, onPlayed, vintage = false, spotifyEmbed = false }, ref) {
   const t = useTranslations("greeting");
   let n = 0;
   const num = () => String(++n).padStart(2, "0");
-  const hasKeepsakes = content.photos.length > 0 || !!content.video || !!content.audio;
+  const hasKeepsakes = content.photos.length > 0 || !!content.video || !!content.audio || !!content.music;
 
   return (
     <section ref={ref} className="sx-closing" aria-label={t("toLetter")} data-testid="greeting-closing" tabIndex={-1}>
@@ -93,6 +96,7 @@ export const RevealClosing = forwardRef<
               </p>
             </div>
           )}
+          {content.music && <OurSong music={content.music} embedAllowed={spotifyEmbed} variant="keepsake" num={num()} />}
         </div>
       )}
 
