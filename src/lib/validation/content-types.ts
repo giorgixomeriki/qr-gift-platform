@@ -19,7 +19,7 @@ export const contentTypeSchema = z.enum(SUPPORTED_CONTENT_TYPES);
 const MIME_ALLOWLIST: Record<Exclude<SupportedContentType, "text">, readonly string[]> = {
   photo: ["image/jpeg", "image/png", "image/webp"],
   video: ["video/mp4", "video/quicktime", "video/webm"],
-  audio: ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg"],
+  audio: ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg", "audio/wav", "audio/aac"],
 };
 
 // Video is capped at 50 MB because that is the largest single file Supabase

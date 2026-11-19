@@ -66,6 +66,23 @@ export async function loadDraftForEdit(greetingId: string, editToken: string) {
   };
 }
 
+/**
+ * A fresh signed URL for the draft's saved voice message (the sender's
+ * Preview plays it long after the upload signed it). Same edit-token gate and
+ * editable-greeting context as loadDraftForEdit; READY rows only.
+ */
+export async function signDraftVoiceUrl(greetingId: string, editToken: string): Promise<string | null> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  const [row] = await withEditableGreeting(greetingId, (tx) =>
+    tx
+      .select({ storageKey: greetingContent.storageKey })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "audio"), eq(greetingContent.status, "READY")))
+      .limit(1),
+  );
+  return row?.storageKey ? createSignedReadUrl(row.storageKey) : null;
+}
+
 export async function updateGreetingTheme(greetingId: string, editToken: string, themeKey: string) {
   await verifyGreetingEditAccess(greetingId, editToken);
   if (!isThemeKey(themeKey)) throw new ContentActionError("Unknown theme");

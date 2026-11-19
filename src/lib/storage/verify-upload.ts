@@ -47,10 +47,14 @@ const SNIFFERS: Record<string, (b: Uint8Array) => boolean> = {
   "video/mp4": (b) => asciiAt(b, 4, "ftyp"),
   "video/quicktime": (b) => asciiAt(b, 4, "ftyp") || asciiAt(b, 4, "moov") || asciiAt(b, 4, "free"),
   "video/webm": (b) => bytesStartWith(b, 0, [0x1a, 0x45, 0xdf, 0xa3]),
-  "audio/mpeg": (b) => asciiAt(b, 0, "ID3") || bytesStartWith(b, 0, [0xff, 0xfb]) || bytesStartWith(b, 0, [0xff, 0xf3]) || bytesStartWith(b, 0, [0xff, 0xf2]),
+  // ID3 tag, or an MPEG audio Layer III frame header: 11 sync bits, any version (1, 2, 2.5), with or without CRC.
+  "audio/mpeg": (b) => asciiAt(b, 0, "ID3") || (b.length >= 2 && b[0] === 0xff && (b[1]! & 0xe0) === 0xe0 && (b[1]! & 0x18) !== 0x08 && (b[1]! & 0x06) === 0x02),
   "audio/mp4": (b) => asciiAt(b, 4, "ftyp"),
   "audio/webm": (b) => bytesStartWith(b, 0, [0x1a, 0x45, 0xdf, 0xa3]),
   "audio/ogg": (b) => asciiAt(b, 0, "OggS"),
+  "audio/wav": (b) => asciiAt(b, 0, "RIFF") && asciiAt(b, 8, "WAVE"),
+  // Raw AAC (ADTS): 12 sync bits, layer 00.
+  "audio/aac": (b) => b.length >= 2 && b[0] === 0xff && (b[1]! & 0xf6) === 0xf0,
 };
 
 export class ContentVerificationError extends Error {}

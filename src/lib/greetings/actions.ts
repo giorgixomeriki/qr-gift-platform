@@ -11,6 +11,7 @@ import {
   finalizeMediaUpload,
   deleteContent,
   markPreviewViewed,
+  signDraftVoiceUrl,
   ContentActionError,
 } from "./content";
 import { getEditToken } from "./edit-token-cookie";
@@ -114,6 +115,17 @@ export async function deleteContentAction(greetingId: string, contentId: string)
     return { ok: true, data: undefined };
   } catch (err) {
     return errorResult("deleteContentAction", err, { greetingId, contentId });
+  }
+}
+
+/** A fresh signed URL for the draft's voice message (signDraftVoiceUrl); edit token required. */
+export async function refreshDraftVoiceUrlAction(greetingId: string): Promise<ActionResult<{ url: string | null }>> {
+  try {
+    await enforceRateLimit({ key: `voice-url-draft:${greetingId}`, limit: 20, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    return { ok: true, data: { url: await signDraftVoiceUrl(greetingId, token) } };
+  } catch (err) {
+    return errorResult("refreshDraftVoiceUrlAction", err, { greetingId });
   }
 }
 

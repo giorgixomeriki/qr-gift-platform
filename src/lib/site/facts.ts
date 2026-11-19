@@ -20,6 +20,8 @@ const FORMAT_LABELS: Record<string, string> = {
   "audio/mp4": "M4A",
   "audio/webm": "WebM",
   "audio/ogg": "OGG",
+  "audio/wav": "WAV",
+  "audio/aac": "AAC",
 };
 
 const mb = (bytes: number) => String(Math.round(bytes / (1024 * 1024)));

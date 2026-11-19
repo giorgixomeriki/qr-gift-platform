@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { WaxSeal } from "@/components/customer/wax-seal";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import type { ThemeKey } from "@/lib/themes/registry";
-import { recordContentPlayedAction } from "@/lib/greetings/recipient-actions";
+import { recordContentPlayedAction, refreshRecipientVoiceUrlAction } from "@/lib/greetings/recipient-actions";
 
 export function RecipientView({
   greetingId,
@@ -28,12 +28,17 @@ export function RecipientView({
     },
     [greetingId],
   );
+  // The voice is signed when the page renders; the player re-signs it when it is reached later (voice-player.tsx).
+  const withRefresh = useMemo<GreetingRenderContent>(
+    () => (content.audio ? { ...content, audio: { ...content.audio, refresh: () => refreshRecipientVoiceUrlAction(greetingId) } } : content),
+    [content, greetingId],
+  );
 
   return (
     <GreetingRenderer
       themeKey={themeKey}
       themeVersion={themeVersion}
-      content={content}
+      content={withRefresh}
       mode="recipient"
       onContentPlayed={handlePlayed}
       senderBanner={

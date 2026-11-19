@@ -86,7 +86,7 @@ export const RevealClosing = forwardRef<
           )}
           {content.audio && (
             <div className="sx-voice">
-              <VoicePlayer src={content.audio.url} durationMs={null} title={t("voiceTitle")} onPlay={() => onPlayed("audio")} />
+              <VoicePlayer src={content.audio.url} refreshSrc={content.audio.refresh} durationMs={null} title={t("voiceTitle")} onPlay={() => onPlayed("audio")} />
               <p className="sx-caption">
                 <span className="sx-num">{num()}</span>
                 {t("keepsakeVoice")}

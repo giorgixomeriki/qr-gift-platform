@@ -38,6 +38,7 @@
     "verify:payment-integrity": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payment-integrity.ts",
     "verify:partner-pricing": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-pricing.ts",
     "verify:media-replacement": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-media-replacement.ts",
+    "verify:voice": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-voice.ts",
     "verify:bog-adapter": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-bog-adapter.ts",
     "verify:bog-integration": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-bog-integration.ts",
     "verify:reconciliation": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-reconciliation.ts",

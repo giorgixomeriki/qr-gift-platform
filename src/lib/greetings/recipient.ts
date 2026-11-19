@@ -1,5 +1,5 @@
 import "server-only";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { withPublicContext } from "@/db/client";
 import { greetings, greetingContent, themes, qrCodes } from "@/db/schema";
 import { verifyEditToken } from "@/lib/security/edit-token";
@@ -43,6 +43,36 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
     );
 
     return { greeting, themeKey: (themeRow?.key ?? "minimal") as ThemeKey, themeVersion: greeting.themeVersion, content };
+  });
+}
+
+/**
+ * A fresh signed URL for the greeting's voice message, and nothing else.
+ *
+ * The page signs every media URL once, when it renders (READ_URL_TTL_SECONDS,
+ * 10 minutes), but the voice player only mounts at the voice beat or in the
+ * closing keepsake — often after a long reading, a locked phone or a replay —
+ * and an expired URL fails silently. The player asks for a new one shortly
+ * before expiry and after a load error (voice-player.tsx).
+ *
+ * Exactly the page's access rule, re-checked here rather than trusted:
+ * greeting ACTIVE, availability not ended, QR ACTIVE (as
+ * loadActiveGreetingForRecipient). Signs only the READY audio row, so it
+ * reveals nothing the recipient page doesn't already show.
+ */
+export async function signRecipientVoiceUrl(greetingId: string): Promise<string | null> {
+  return withPublicContext(async (tx) => {
+    const [greeting] = await tx.select().from(greetings).where(eq(greetings.id, greetingId)).limit(1);
+    if (!greeting || greeting.status !== "ACTIVE") throw new RecipientAccessError("Greeting is not active");
+    if (isGreetingExpired(greeting.activatedAt)) throw new RecipientAccessError("Greeting availability has ended");
+    const [qr] = await tx.select({ status: qrCodes.status }).from(qrCodes).where(eq(qrCodes.id, greeting.qrCodeId)).limit(1);
+    if (!qr || qr.status !== "ACTIVE") throw new RecipientAccessError("QR is not active");
+    const [row] = await tx
+      .select({ storageKey: greetingContent.storageKey, status: greetingContent.status })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "audio"), eq(greetingContent.status, "READY")))
+      .limit(1);
+    return row?.storageKey ? createSignedReadUrl(row.storageKey) : null;
   });
 }
 

@@ -47,8 +47,8 @@ test.describe("Signature Experience 2.0", () => {
 
     await page.getByTestId("message-textarea").fill(MESSAGE);
     await page.getByTestId("add-audio").click();
-    // Typed as audio/mp4 explicitly: Playwright would infer audio/x-m4a from the extension, which the upload allowlist doesn't list.
-    await page.getByTestId("voice-file-input").setInputFiles({ name: "voice-note.m4a", mimeType: "audio/mp4", buffer: fs.readFileSync(VOICE) });
+    // Labelled audio/x-m4a, as iPhone (Voice Memos) and macOS label .m4a files: the picker names it audio/mp4 for the allowlist.
+    await page.getByTestId("voice-file-input").setInputFiles({ name: "voice-note.m4a", mimeType: "audio/x-m4a", buffer: fs.readFileSync(VOICE) });
     await expect(page.getByTestId("media-ready-audio-0")).toBeVisible({ timeout: 30_000 });
 
     // The row's waveform is decoded from the uploaded audio, not drawn from a formula:
@@ -122,6 +122,30 @@ test.describe("Signature Experience 2.0", () => {
     await expect(closing).toBeInViewport();
     await page.getByTestId("greeting-replay").click();
     await expect(page.locator('.sx-env[data-state="sealed"]')).toBeVisible();
+  });
+
+  test("recipient: an expired voice link is signed again, and the voice still plays", async ({ browser }) => {
+    // The page signs the voice when it renders (10-minute URL); a recipient often reaches the voice much later.
+    // Storage's real answer to an expired token is a JSON 400: the player must fetch a fresh URL, not fail silently.
+    const page = await (await browser.newContext()).newPage();
+    let expired = 0;
+    await page.route(/\/storage\/v1\/object\/sign\//, (route) => {
+      if (expired === 0 && route.request().resourceType() === "media") {
+        expired++;
+        return route.fulfill({ status: 400, contentType: "application/json", body: '{"statusCode":"400","error":"InvalidJWT","message":"\\"exp\\" claim timestamp check failed"}' });
+      }
+      return route.continue();
+    });
+    await page.goto(`/g/${token}`);
+    await page.getByTestId("greeting-tap-to-open").click();
+    await expect(page.getByTestId("greeting-message-beat")).toBeVisible();
+    await page.getByTestId("greeting-continue").click();
+    const beat = page.getByTestId("greeting-audio-beat");
+    await expect(beat).toBeVisible();
+    await expect.poll(() => expired).toBe(1);
+    await beat.getByRole("button", { name: "Play" }).click();
+    await expect.poll(() => beat.locator("audio").evaluate((a: HTMLAudioElement) => a.currentTime), { timeout: 10_000 }).toBeGreaterThan(0);
+    await expect(beat.getByTestId("voice-unavailable")).toHaveCount(0);
   });
 
   test("recipient: keyboard alone opens and reads the greeting", async ({ browser }) => {

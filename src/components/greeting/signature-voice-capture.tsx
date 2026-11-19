@@ -4,13 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ErrorIcon, RecordIcon, ReplayIcon, StopIcon, UploadIcon } from "@/components/customer/icons";
 import { tick } from "@/lib/client/haptics";
+import { AUDIO_ACCEPT, normaliseAudioFile } from "@/lib/client/audio-type";
 import { VoicePlayer } from "./voice-player";
 
 const MAX_DURATION_SECONDS = 60;
 const METER_BARS = 24;
 /** The meter takes a new reading this often: readable, and 20 renders a second instead of 60 on a mid-range phone. */
 const METER_INTERVAL_MS = 50;
-const AUDIO_TYPES = ["audio/mpeg", "audio/mp4", "audio/webm", "audio/ogg"];
 
 /**
  * MediaRecorder support and its preferred mimeType vary across
@@ -166,8 +166,10 @@ export function SignatureVoiceCapture({ onUse, onClose }: { onUse: (blob: Blob, 
 
   function pickFile(file: File) {
     setError(null);
-    if (!AUDIO_TYPES.includes(file.type)) return setError(t("errorType"));
-    onUse(file, null);
+    // iPhone labels .m4a as audio/x-m4a, some Androids send audio/mp3 or no type: named canonically, checked by the server's byte sniff.
+    const audio = normaliseAudioFile(file);
+    if (!audio) return setError(t("errorType"));
+    onUse(audio, null);
   }
 
   return (
@@ -225,7 +227,7 @@ export function SignatureVoiceCapture({ onUse, onClose }: { onUse: (blob: Blob, 
               {supported ? t("orUploadFile") : t("uploadFile")}
               <input
                 type="file"
-                accept={AUDIO_TYPES.join(",")}
+                accept={AUDIO_ACCEPT}
                 className="sr-only"
                 onChange={(e) => {
                   const file = e.target.files?.[0];

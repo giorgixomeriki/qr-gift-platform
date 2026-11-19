@@ -24,7 +24,8 @@ export type GreetingRenderContent = {
   message: string | null;
   photos: { id: string; url: string }[];
   video: { url: string } | null;
-  audio: { url: string } | null;
+  /** `refresh` re-signs the voice URL (signed URLs expire; the voice beat may come much later). */
+  audio: { url: string; refresh?: () => Promise<string | null> } | null;
 };
 
 type Beat =
@@ -348,7 +349,7 @@ export function GreetingRenderer({
           <div key="audio" className="reveal__audio reveal-enter" data-testid="greeting-audio-beat">
             <p className="reveal__line">{t("listen")}</p>
             <div className="reveal__audio-card">
-              <VoicePlayer src={content.audio.url} durationMs={null} title={t("voiceTitle")} onPlay={() => notifyPlayed("audio")} />
+              <VoicePlayer src={content.audio.url} refreshSrc={content.audio.refresh} durationMs={null} title={t("voiceTitle")} onPlay={() => notifyPlayed("audio")} />
             </div>
           </div>
         )}

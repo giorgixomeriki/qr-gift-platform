@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { requestUploadAction, finalizeUploadAction, deleteContentAction } from "@/lib/greetings/actions";
+import { requestUploadAction, finalizeUploadAction, deleteContentAction, refreshDraftVoiceUrlAction } from "@/lib/greetings/actions";
 import { normalisePhoto } from "@/lib/client/normalise-photo";
 import { uploadToSignedUrl, UploadAbortedError } from "@/lib/client/upload-to-signed-url";
 import { allowedMimeTypesFor, sizeLimitFor } from "@/lib/validation/content-types";
@@ -273,9 +273,10 @@ export function useMediaUploads(greetingId: string, initial: { photos: Existing[
         .sort((a, b) => a.slot - b.slot)
         .map((m) => ({ id: m.contentId!, url: m.url! })),
       video: one("video"),
-      audio: one("audio"),
+      // The signed URL ages while the sender keeps editing; Preview's player re-signs it when needed.
+      audio: one("audio") && { ...one("audio")!, refresh: () => refreshDraftVoiceUrlAction(greetingId).then((r) => (r.ok ? r.data.url : null)) },
     };
-  }, [live]);
+  }, [live, greetingId]);
 
   /** A short, stable name for a row: "Photo 2", "Video", "Voice message". */
   const nameOf = useCallback(
