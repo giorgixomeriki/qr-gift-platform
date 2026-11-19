@@ -30,3 +30,18 @@ export function Logo({ className = "", tone = "ink" }: { className?: string; ton
     </span>
   );
 }
+
+/**
+ * The Heritage lockup — the ringed "Q" monogram beside the "QR STARR"
+ * wordmark, fully outlined (no font dependency) in brand burgundy #6d1f33.
+ * The same monogram is the favicon and app icon (src/app/icon.svg,
+ * favicon.ico, apple-icon.png). Served as a cached static SVG rather than
+ * inlined, so it doesn't add ~20 KB of path data to every HTML response.
+ * viewBox 198.05 × 68 → width is height × 2.9125.
+ */
+export function BrandLockup({ className = "h-9 w-auto" }: { className?: string }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- static SVG; next/image adds nothing for a vector
+    <img src="/brand/qr-starr-lockup.svg" alt="QR Starr" width={198} height={68} decoding="async" className={`block select-none ${className}`} draggable={false} />
+  );
+}

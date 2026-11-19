@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { LocaleSwitcher } from "@/components/greeting/locale-switcher";
-import { Logo } from "@/components/ui/logo";
+import { BrandLockup } from "@/components/ui/logo";
 import { SITE_PAGES } from "@/lib/site/routes";
 import { MobileNav } from "./mobile-nav";
 import { NavLinks } from "./nav-links";
@@ -20,8 +20,8 @@ export async function SiteHeader() {
         {t("skipToContent")}
       </a>
       <div className="relative mx-auto flex h-16 w-full max-w-6xl items-center justify-between gap-4 px-page">
-        <Link href="/" className="rounded-md" aria-label={t("home")}>
-          <Logo className="text-base" />
+        <Link href="/" className="shrink-0 rounded-md" aria-label={t("home")}>
+          <BrandLockup className="h-9 w-auto" />
         </Link>
         <nav aria-label={t("primaryLabel")} className="hidden md:block">
           <NavLinks links={primary} />
