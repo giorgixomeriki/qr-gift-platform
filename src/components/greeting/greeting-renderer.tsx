@@ -18,6 +18,7 @@ import { RevealEnvelope } from "./reveal-envelope";
 import { VoicePlayer } from "./voice-player";
 import "./reveal.css";
 import "./reveal-signature.css";
+import "./envelope-luxe.css";
 
 export type GreetingRenderContent = {
   message: string | null;

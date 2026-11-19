@@ -1,0 +1,62 @@
+/*
+ * The luxury envelope (rendered artwork) for both envelopes: the recipient's .sx-env and the sender's .sig-env.
+ * ARTWORK ONLY. Every element, size, angle, proportion, clip-path, transition and animation is the
+ * production one (reveal-signature.css, signature.css); this file only swaps what each part is painted with:
+ * Blender renders (ivory cotton paper, folds, contact shadow; burgundy wax with the QR STARR spark),
+ * made at exactly these proportions (aspect 1.42, pocket V at 18 %/62 %, flap 60 %, seal 24 % at 50 %/58 %).
+ * Source: /Users/Shared/qr-starr-envelope-luxe/blender (envelope_luxe.py). CC0 textures (ambientCG Paper006).
+ *
+ * Fallback: anything inside [data-envelope="classic"] keeps the original CSS envelope; removing the import of
+ * this file restores it everywhere.
+ */
+:is(.sx-env__back, .sig-env__back):not([data-envelope="classic"] *) {
+  background:
+    var(--cx-paper-tooth) 0 0 / 256px 256px,
+    url(/customer/envelope/back.webp) 0 0 / 100% 100% no-repeat;
+  background-blend-mode: soft-light, normal;
+}
+/* the rendered contact shadow replaces the CSS box-shadow (also the light-room override) */
+.reveal .sx-env > .sx-env__back:not([data-envelope="classic"] *),
+.sx-env > .sx-env__back:not([data-envelope="classic"] *),
+.sig-env > .sig-env__back:not([data-envelope="classic"] *) {
+  box-shadow: none;
+}
+:is(.sx-env__back, .sig-env__back):not([data-envelope="classic"] *)::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: -15%;
+  top: -24%;
+  width: 130%;
+  height: 150%;
+  background: url(/customer/envelope/shadow.webp) 0 0 / 100% 100% no-repeat;
+  pointer-events: none;
+}
+:is(.sx-env__pocket, .sig-env__pocket):not([data-envelope="classic"] *) {
+  /* the product's own paper tooth over the rendered paper: fibre that still reads at phone size */
+  background:
+    var(--cx-paper-tooth) 0 0 / 256px 256px,
+    url(/customer/envelope/pocket.webp) 0 0 / 100% 100% no-repeat;
+  background-blend-mode: soft-light, normal;
+}
+:is(.sx-env__flap, .sig-env__flap):not([data-envelope="classic"] *) {
+  background:
+    var(--cx-paper-tooth) 0 0 / 256px 256px,
+    url(/customer/envelope/flap.webp) 0 0 / 100% 100% no-repeat;
+  background-blend-mode: soft-light, normal;
+  filter: drop-shadow(0 1px 1.5px rgb(60 30 20 / 0.22));
+}
+/* the wax: the rendered seal is painted by the seal's own box (so press, lift and fade still apply); the SVG stays for layout */
+:is(.sx-env__seal, .sig-env > .sig-env__seal):not([data-envelope="classic"] *) {
+  overflow: visible;
+}
+:is(.sx-env__seal, .sig-env > .sig-env__seal):not([data-envelope="classic"] *)::before {
+  content: "";
+  position: absolute;
+  inset: -12.5%;
+  background: url(/customer/envelope/seal.webp) center / 100% 100% no-repeat;
+  pointer-events: none;
+}
+:is(.sx-env__wax, .sig-env__wax):not([data-envelope="classic"] *) {
+  opacity: 0;
+}

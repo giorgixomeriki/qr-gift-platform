@@ -9,6 +9,7 @@ import { Spark } from "@/components/ui/logo";
 import { Spinner } from "@/components/ui/spinner";
 import "./signature.css";
 import "./vintage.css";
+import "@/components/greeting/envelope-luxe.css";
 
 /**
  * The Signature Experience's sender chrome (approved Final Polish, ported
