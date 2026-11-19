@@ -189,3 +189,14 @@ export function partnerAuthConfigProblems(input: {
   }
   return problems;
 }
+
+/**
+ * PARTNER_MAP_MOCKS=1 shows test partner locations (lib/partner-locations/flag.ts).
+ * It is for local review only; a hosted deployment refuses to boot with it.
+ */
+export function partnerMapMockProblems(env: Record<string, string | undefined>): string[] {
+  if (env.PARTNER_MAP_MOCKS && isHostedEnvironment(env)) {
+    return ["PARTNER_MAP_MOCKS must not be set on a hosted deployment — it shows test partner locations"];
+  }
+  return [];
+}

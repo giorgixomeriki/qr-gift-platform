@@ -7,6 +7,7 @@ import { DemoRibbon } from "@/components/site/demo-ribbon";
 import { Hero } from "@/components/site/home/hero";
 import { Demo, Experiences, Finale, Moments, Occasions, Partners, Pricing, Steps, Transform, Trust } from "@/components/site/home/sections";
 import { MotionRoot } from "@/components/site/home/motion";
+import { PartnerLocations } from "@/components/site/home/locations/section";
 import { RevealObserver } from "@/components/site/home/reveal";
 import "@/components/site/home/home.css";
 
@@ -45,6 +46,7 @@ export default function RootPage() {
           <Occasions />
           <Partners />
           <Pricing />
+          <PartnerLocations />
           <Trust />
           <Finale />
         </MotionRoot>

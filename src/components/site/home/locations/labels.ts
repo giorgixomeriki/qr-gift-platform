@@ -1,0 +1,44 @@
+import type { LocationCategory } from "@/lib/partner-locations/shared";
+
+/** The section's copy (messages/site/<locale>.json → landing.locations), handed to the client as plain strings. */
+export type LocationsLabels = {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  searchLabel: string;
+  searchPlaceholder: string;
+  filterLabel: string;
+  all: string;
+  categories: Record<LocationCategory, string>;
+  nearMe: string;
+  nearMeActive: string;
+  locating: string;
+  locationFailed: string;
+  locationPrivacy: string;
+  results: string;
+  resultsOne: string;
+  noResults: string;
+  clear: string;
+  directions: string;
+  opensInMaps: string;
+  showOnMap: string;
+  call: string;
+  hours: string;
+  distance: string;
+  availability: { AVAILABLE: string; OUT: string };
+  testBadge: string;
+  mapLabel: string;
+  listLabel: string;
+  loadMap: string;
+  mapLoading: string;
+  mapUnavailable: string;
+  zoomIn: string;
+  zoomOut: string;
+  showAll: string;
+  you: string;
+  gestureMobile: string;
+  gestureWindows: string;
+  gestureMac: string;
+  partnerPrompt: string;
+  partnerLink: string;
+};

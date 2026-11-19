@@ -21,6 +21,8 @@ const eslintConfig = [
       // Supabase CLI's local runtime cache — vendored/generated, not our source.
       "supabase/.temp/**",
       "supabase/.branches/**",
+      // Third-party builds copied verbatim (e.g. MapLibre's worker), checked by verify scripts.
+      "public/vendor/**",
     ],
   },
   {

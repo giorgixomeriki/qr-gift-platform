@@ -8,6 +8,7 @@ import {
   databaseUrlProblems,
   isHostedEnvironment,
   partnerAuthConfigProblems,
+  partnerMapMockProblems,
   supabaseUrlProblems,
 } from "./env-guards";
 import { publishableKeyProblems, resolvePublishableKey, resolveSecretKey, secretKeyProblems, type KeySource } from "./supabase/keys";
@@ -224,6 +225,7 @@ function loadEnv(): Env {
     ...supabaseUrlProblems(data.NEXT_PUBLIC_SUPABASE_URL, { hosted }),
     ...publishableKeyProblems(process.env),
     ...secretKeyProblems(process.env),
+    ...partnerMapMockProblems(process.env),
     ...clientIpConfigProblems({
       hosted,
       vercel: process.env.VERCEL === "1",

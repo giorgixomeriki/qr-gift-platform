@@ -1232,6 +1232,58 @@
       "slider": "Compare the card on paper with the greeting on the phone",
       "value": "{value}% of the greeting shown",
       "paperAlt": "A sealed letter on a writing desk with a QR Starr card beside it"
+    },
+    "locations": {
+      "eyebrow": "Partner shops",
+      "title": "Where to Find QR STARR",
+      "lead": "QR STARR cards wait at our partner shops, next to the flowers and gifts they belong with. Find the one nearest you.",
+      "searchLabel": "Search by shop, city or district",
+      "searchPlaceholder": "e.g. Vake or flowers",
+      "filterLabel": "Shop type",
+      "all": "All",
+      "categories": {
+        "FLOWERS": "Flowers",
+        "GIFTS": "Gifts",
+        "CONFECTIONERY": "Sweets & cakes",
+        "BOOKS": "Books",
+        "JEWELRY": "Jewellery",
+        "CAFE": "Café",
+        "OTHER": "Other"
+      },
+      "nearMe": "Near me",
+      "nearMeActive": "Nearest first",
+      "locating": "Finding your location…",
+      "locationFailed": "We couldn’t get your location. Every shop is still listed below.",
+      "locationPrivacy": "Your location stays on your device.",
+      "results": "{count} shops",
+      "resultsOne": "1 shop",
+      "noResults": "No shop matches this search.",
+      "clear": "Clear search",
+      "directions": "Get directions",
+      "opensInMaps": "(opens Google Maps)",
+      "showOnMap": "Show on map",
+      "call": "Call",
+      "hours": "Opening hours",
+      "distance": "{km} km away",
+      "availability": {
+        "AVAILABLE": "Cards in stock",
+        "OUT": "Temporarily out of cards"
+      },
+      "testBadge": "Test",
+      "mapLabel": "Map of partner shops",
+      "listLabel": "Partner shops",
+      "loadMap": "Show the map",
+      "mapLoading": "Loading the map…",
+      "mapUnavailable": "The map couldn’t load here — every shop is in the list.",
+      "zoomIn": "Zoom in",
+      "zoomOut": "Zoom out",
+      "showAll": "Show all shops",
+      "you": "You are here",
+      "gestureMobile": "Use two fingers to move the map",
+      "gestureWindows": "Use Ctrl + scroll to zoom the map",
+      "gestureMac": "Use ⌘ + scroll to zoom the map",
+      "partnerPrompt": "Have a shop? Offer QR STARR cards to your customers.",
+      "partnerLink": "Become a partner"
     }
   }
 }

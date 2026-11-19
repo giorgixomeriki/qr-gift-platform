@@ -584,6 +584,58 @@
         "PRICING_PARTNER_PRICE_CLEARED": "Custom price removed",
         "PRICING_PARTNER_COMMISSION_UPDATED": "Commission"
       }
+    },
+    "locations": {
+      "title": "Shop locations",
+      "hint": "Physical branches shown on the home page map (“Where to find QR STARR”). A location appears publicly only when its map pin is verified, it is switched to Public and this partner is active.",
+      "stockSummary": "{count} distributed, unsold cards for this partner",
+      "stockHint": "“Cards in stock” is shown only for branches marked as stocking cards while this partner has distributed, unsold cards. Distribution is recorded per partner, not per branch.",
+      "empty": "No shop locations yet.",
+      "add": "Add a location",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "save": "Save location",
+      "create": "Add location",
+      "delete": "Delete",
+      "deleteConfirm": "Delete this location? This cannot be undone.",
+      "verify": "Mark pin as verified",
+      "verifyHint": "Open the pin in Google Maps and confirm it is on the shop’s entrance before verifying.",
+      "checkInMaps": "Check in Google Maps",
+      "publish": "Show on home page",
+      "hide": "Hide from home page",
+      "markOut": "Mark out of cards",
+      "markStocked": "Mark as stocking cards",
+      "status": {
+        "public": "Public",
+        "hidden": "Hidden",
+        "verified": "Pin verified",
+        "unverified": "Pin not verified",
+        "test": "Test fixture",
+        "AVAILABLE": "Shows “Cards in stock”",
+        "OUT": "Shows “Out of cards”",
+        "UNKNOWN": "No availability shown"
+      },
+      "fields": {
+        "branchName": "Branch name (optional)",
+        "category": "Shop type",
+        "addressKa": "Address (Georgian)",
+        "addressEn": "Address (English, optional)",
+        "cityKa": "City (Georgian)",
+        "cityEn": "City (English, optional)",
+        "districtKa": "District (Georgian, optional)",
+        "districtEn": "District (English, optional)",
+        "coordinates": "Map pin — latitude, longitude",
+        "coordinatesHint": "In Google Maps, right-click the shop entrance and click the coordinates to copy them, then paste here. You can also drag the pin below.",
+        "phone": "Public phone (optional)",
+        "hoursKa": "Opening hours (Georgian, optional)",
+        "hoursEn": "Opening hours (English, optional)",
+        "stocksCards": "This branch stocks QR STARR cards"
+      },
+      "coordinatesInvalid": "Enter the pin as two numbers, e.g. 41.7151, 44.8271",
+      "outsideGeorgia": "This pin is outside Georgia — check that latitude and longitude are not swapped.",
+      "movedNotice": "Address or pin changed: the location was hidden and needs verifying again.",
+      "pinMapLabel": "Pin preview — drag the pin to adjust",
+      "pinMapUnavailable": "Map preview unavailable here; use Google Maps to check the pin."
     }
   },
   "print": {
