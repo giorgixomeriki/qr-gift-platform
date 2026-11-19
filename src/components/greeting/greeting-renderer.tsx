@@ -37,10 +37,11 @@ type Beat =
 
 /**
  * The envelope opens before the world takes over: the seal gives, the flap
- * folds back and the chosen card rises out (reveal-signature.css). Short
+ * folds back and the chosen card rises out (reveal-signature.css; the
+ * luxury envelope's 3D turn is in envelope-luxe.css). Short
  * enough to feel like a gesture, not a wait; reduced motion skips it.
  */
-const ENVELOPE_OPEN_MS = 950;
+const ENVELOPE_OPEN_MS = 1100;
 const ENVELOPE_OPEN_REDUCED_MS = 180;
 /** If a scene never reports rest (a stalled runtime), the letter still arrives this long after the scene should have ended. */
 const REST_GRACE_MS = 1800;

@@ -78,3 +78,143 @@
 :is(.sx-env__wax, .sig-env__wax):not([data-envelope="classic"] *) {
   opacity: 0;
 }
+
+/* ===========================================================================
+ * The opening (recipient + Sender Preview, both through the shared renderer), after the owner's reference
+ * "Luxurious Envelope Opening Animation": the seal gives under the touch and stays on the pocket; the flap
+ * lifts off it, turns toward the viewer on its hinge in real perspective, goes edge-on, and folds back over
+ * the top showing its caramel lining, settling with a little paper spring; the letter rises out in front of
+ * it with a slight sway; then the envelope settles away and the world takes over (ENVELOPE_OPEN_MS).
+ * Compositor only: transform / opacity / individual transforms. The flap's z-index flip runs as its own
+ * animation so the transform one stays on the compositor. ~1.1 s from the tap to the world.
+ * ======================================================================== */
+.sx-env:not([data-envelope="classic"] *) > .sx-env__card { z-index: 2; }
+.sx-env:not([data-envelope="classic"] *) > .sx-env__pocket { z-index: 3; }
+.sx-env:not([data-envelope="classic"] *) > .sx-env__flap { z-index: 4; }
+.sx-env:not([data-envelope="classic"] *) > .sx-env__seal { z-index: 5; }
+/* The flap's two faces' light: ::before is its inside (lining, shown once it passes edge-on), ::after the shade
+   it falls into as it turns. Painted while sealed at opacity 0 so the lining is already decoded when it is needed. */
+.sx-env:not([data-envelope="classic"] *) > .sx-env__flap::before,
+.sx-env:not([data-envelope="classic"] *) > .sx-env__flap::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.sx-env:not([data-envelope="classic"] *) > .sx-env__flap::before {
+  background: url(/customer/envelope/photo/flap-inside.webp) 0 0 / 100% 100% no-repeat;
+}
+.sx-env:not([data-envelope="classic"] *) > .sx-env__flap::after {
+  background: linear-gradient(180deg, rgb(48 26 14 / 0.9), rgb(48 26 14 / 0.55));
+}
+
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap {
+  scale: none;
+  opacity: 1;
+  transition: none;
+  animation:
+    sxl-flap 600ms linear 100ms both,
+    sxl-flap-z 600ms linear 100ms both;
+}
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap::before {
+  animation: sxl-lining 600ms linear 100ms both;
+}
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap::after {
+  animation: sxl-shade 600ms linear 100ms both;
+}
+/* The seal gives and recovers; it stays pressed on the pocket, as in the reference. */
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__seal {
+  scale: 1;
+  opacity: 1;
+  translate: -50% -50%;
+  transition: none;
+  animation: sxl-seal 320ms var(--sx-out) both;
+}
+/* The flap's shadow on the pocket leaves as the flap lifts off it. */
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__back::after,
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__pocket::before {
+  transition: opacity 240ms linear 120ms;
+}
+/* The letter: there all along inside, seen once the flap lifts; it rises out in front of the open flap. */
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) > .sx-env__card {
+  transition:
+    translate 620ms var(--sx-settle) 400ms,
+    opacity 160ms linear 160ms;
+}
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__sheet {
+  transform-origin: 50% 100%;
+  animation: sxl-sway 700ms ease-in-out 400ms both;
+}
+.sx-env[data-state="opening"]:not([data-envelope="classic"] *) {
+  animation: sx-env-away 300ms var(--sx-inout) 820ms both;
+}
+
+@keyframes sxl-flap {
+  0% {
+    transform: perspective(70em) rotateX(0deg);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.5, 1);
+  }
+  /* the tip lifts off the seal: a breath before the turn */
+  12% {
+    transform: perspective(70em) rotateX(7deg);
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.55);
+  }
+  /* edge-on: the swap from the outside to the lining happens here, unseen */
+  46% {
+    transform: perspective(70em) rotateX(90deg);
+    animation-timing-function: cubic-bezier(0.1, 0.55, 0.35, 1);
+  }
+  /* folds back past rest, and the paper springs a touch */
+  84% {
+    transform: perspective(70em) rotateX(181deg);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.4, 1);
+  }
+  100% {
+    transform: perspective(70em) rotateX(177deg);
+  }
+}
+@keyframes sxl-flap-z {
+  0%, 46% { z-index: 4; }
+  46.5%, 100% { z-index: 1; }
+}
+@keyframes sxl-lining {
+  0%, 46% { opacity: 0; }
+  46.5%, 100% { opacity: 1; }
+}
+@keyframes sxl-shade {
+  0% { opacity: 0; animation-timing-function: ease-in; }
+  46% { opacity: 0.42; animation-timing-function: ease-out; }
+  100% { opacity: 0.04; }
+}
+@keyframes sxl-seal {
+  0% { scale: 1; }
+  35% { scale: 0.93; }
+  70% { scale: 1.02; }
+  100% { scale: 1; }
+}
+@keyframes sxl-sway {
+  0% { rotate: 0deg; }
+  45% { rotate: -0.7deg; }
+  80% { rotate: 0.35deg; }
+  100% { rotate: 0deg; }
+}
+
+/* Reduced motion: no turn, no travel; the envelope opens in place with the same short fade as before. */
+@media (prefers-reduced-motion: reduce) {
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap,
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap::before,
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap::after,
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__seal,
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__sheet {
+    animation: none !important;
+  }
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) .sx-env__flap {
+    opacity: 0;
+  }
+  .sx-env[data-state="opening"]:not([data-envelope="classic"] *) {
+    animation-duration: 200ms !important;
+    animation-delay: 0ms !important;
+    animation-name: sx-fade !important;
+  }
+}
