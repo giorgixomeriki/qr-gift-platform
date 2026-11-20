@@ -429,6 +429,11 @@ export class RefundError extends Error {}
  */
 export async function refundPaidOrder(adminUserId: string, orderId: string): Promise<{ alreadyRefunded: boolean; pending?: boolean }> {
   const { order, payment } = await withAdminPaymentContext(adminUserId, orderId, async (tx) => {
+    // The payment half of this context can read any one order, so the admin
+    // half is checked here, not only by the caller (FA-02: a revoked admin
+    // must not be able to send money back).
+    const [{ is_admin }] = (await tx.execute(sql`select app_is_admin() as is_admin`)) as unknown as [{ is_admin: boolean }];
+    if (!is_admin) throw new RefundError("Only a platform admin can refund an order");
     const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
     const [p] = await tx
       .select()

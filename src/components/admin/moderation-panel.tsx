@@ -6,11 +6,11 @@ import { Flag, Search, ShieldCheck } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Badge, EmptyState, control, table } from "@/components/dashboard/ui";
 import { Button } from "@/components/ui/button";
-import { lookupGreetingAction, blockGreetingAction, unblockGreetingAction } from "@/lib/moderation/actions";
+import { lookupGreetingAction, blockGreetingAction, unblockGreetingAction, releaseDraftAction } from "@/lib/moderation/actions";
 import type { GreetingLookupResult } from "@/lib/moderation/service";
 
 type Report = { id: string; greetingId: string; reason: string; details: string | null; createdAt: Date };
-type StaleDraft = { greetingId: string; qrPublicToken: string; partnerName: string; createdAt: Date; updatedAt: Date };
+type StaleDraft = { greetingId: string; qrCodeId: string; qrPublicToken: string; partnerName: string; createdAt: Date; updatedAt: Date };
 
 const STATUS_TONE = { AVAILABLE: "neutral", DRAFT: "warning", ACTIVE: "success", BLOCKED: "danger" } as const;
 type QrStatus = keyof typeof STATUS_TONE;
@@ -292,6 +292,9 @@ export function StaleDraftsList({ drafts }: { drafts: StaleDraft[] }) {
             <th className={table.th}>{t("partnerHeader")}</th>
             <th className={table.th}>{t("createdHeader")}</th>
             <th className={table.th}>{t("lastUpdatedHeader")}</th>
+            <th className={table.th}>
+              <span className="sr-only">{t("releaseHeader")}</span>
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -301,10 +304,93 @@ export function StaleDraftsList({ drafts }: { drafts: StaleDraft[] }) {
               <td className={table.td}>{d.partnerName}</td>
               <td className={`${table.td} whitespace-nowrap text-ink-2`}>{fmt(d.createdAt)}</td>
               <td className={`${table.td} whitespace-nowrap text-ink-2`}>{fmt(d.updatedAt)}</td>
+              <td className={table.td}>
+                <ReleaseDraft qrCodeId={d.qrCodeId} />
+              </td>
             </tr>
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/**
+ * FA-01: returns one abandoned draft card to inventory. Inline confirmation
+ * (no browser dialog) with a required reason; the server refuses a draft with
+ * a live order or one edited in the last 24 hours, and erases its content.
+ */
+function ReleaseDraft({ qrCodeId }: { qrCodeId: string }) {
+  const t = useTranslations("admin.moderation");
+  const tCommon = useTranslations("common");
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  if (done) return <span className="text-caption text-ink-3" data-testid="release-draft-done">{t("releasedDraft")}</span>;
+  if (!open) {
+    return (
+      <Button size="sm" variant="secondary" onClick={() => setOpen(true)} data-testid="release-draft-start">
+        {t("releaseDraft")}
+      </Button>
+    );
+  }
+
+  async function doRelease() {
+    if (reason.trim().length < 5) {
+      setError(t("releaseReasonRequired"));
+      return;
+    }
+    setPending(true);
+    setError(null);
+    const res = await releaseDraftAction(qrCodeId, reason);
+    setPending(false);
+    if (!res.ok) {
+      setError(res.error);
+      return;
+    }
+    setDone(true);
+    router.refresh();
+  }
+
+  return (
+    <div className="flex min-w-[16rem] flex-col gap-2">
+      <p className="text-caption text-ink-2">{t("releaseDraftWarning")}</p>
+      <label htmlFor={`release-${qrCodeId}`} className="text-caption font-medium text-ink-2">
+        {t("reasonLabel")}
+      </label>
+      <textarea
+        id={`release-${qrCodeId}`}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={2}
+        className={`${control} h-auto py-2`}
+        data-testid="release-draft-reason"
+      />
+      {error && (
+        <p className="text-caption text-danger" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" onClick={doRelease} loading={pending} data-testid="release-draft-confirm">
+          {t("confirmRelease")}
+        </Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={() => {
+            setOpen(false);
+            setReason("");
+            setError(null);
+          }}
+        >
+          {tCommon("cancel")}
+        </Button>
+      </div>
     </div>
   );
 }

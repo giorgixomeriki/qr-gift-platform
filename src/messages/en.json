@@ -452,7 +452,23 @@
       "salesTitle": "Sales",
       "cardsTitle": "Cards",
       "maintenanceTitle": "Maintenance",
-      "maintenanceHint": "Activates greetings whose payment succeeded but activation didn't complete. Safe to run any time."
+      "maintenanceHint": "Activates greetings whose payment succeeded but activation didn't complete. Safe to run any time.",
+      "reconcile": {
+        "title": "Payment reconciliation",
+        "description": "Hourly check that every bank payment and refund matches the books. Counts only; details: npm run payments:reconcile.",
+        "status": {
+          "OK": "Running, clean",
+          "ATTENTION": "Running, needs attention",
+          "FAILING": "Last run failed",
+          "STALE": "Not running",
+          "NEVER": "Never run"
+        },
+        "lastSuccess": "Last successful run: {when}",
+        "noSuccess": "No successful run recorded",
+        "open": "{count} open item(s)",
+        "notConfigured": "Schedule not configured on this deployment (CRON_SECRET / RECONCILE_ADMIN_USER_ID).",
+        "notConfiguredRequired": "Payments are live but the schedule is not configured: paid orders whose bank callback was missed will not be activated automatically."
+      }
     },
     "partnersPage": {
       "title": "Partners",
@@ -491,8 +507,8 @@
       "subtitle": "Find a Greeting, review reports, and block or unblock as needed.",
       "findTitle": "Find a Greeting",
       "openReportsTitle": "Open reports ({count})",
-      "staleDraftsTitle": "Abandoned drafts — older than 14 days ({count})",
-      "staleDraftsNote": "Visibility only — Greetings left in Draft are never deleted or reused automatically.",
+      "staleDraftsTitle": "Abandoned drafts — untouched for 24 hours or more ({count})",
+      "staleDraftsNote": "Nothing is recycled automatically. Release a card only when its draft is clearly abandoned (for example, a shop test): its content is erased, the old link stops working and the card can be started again. Cards with an order waiting at the bank, paid or refunded cannot be released.",
       "searchPlaceholder": "Public QR token or Greeting ID",
       "searchButton": "Find",
       "noResult": "No Greeting found for that identifier.",
@@ -518,7 +534,13 @@
       "publicTokenHeader": "Public token",
       "partnerHeader": "Partner",
       "createdHeader": "Created",
-      "lastUpdatedHeader": "Last updated"
+      "lastUpdatedHeader": "Last updated",
+      "releaseHeader": "Release",
+      "releaseDraft": "Release card",
+      "releaseDraftWarning": "The draft's text and media will be erased and the card returns to the shelf.",
+      "releaseReasonRequired": "Write a reason (at least 5 characters).",
+      "confirmRelease": "Erase draft and release card",
+      "releasedDraft": "Released"
     },
     "reconcile": {
       "button": "Reconcile stuck activations",

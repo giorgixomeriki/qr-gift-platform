@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { listOpenReports, listStaleDrafts } from "@/lib/moderation/service";
+import { DRAFT_RELEASE_MIN_IDLE_HOURS } from "@/lib/greetings/release";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { ModerationSearch, OpenReportsList, StaleDraftsList } from "@/components/admin/moderation-panel";
 import { PageHeader, Panel } from "@/components/dashboard/ui";
@@ -8,8 +9,9 @@ import { PageHeader, Panel } from "@/components/dashboard/ui";
 /**
  * Admin moderation (Phase 4 §12/§13) — operational metadata only, never
  * Greeting content. Every Block/Unblock is reason-required and audit logged
- * (see lib/moderation/service.ts); "stale drafts" is visibility only, no
- * automatic recycling.
+ * (see lib/moderation/service.ts). Abandoned drafts can be released back to
+ * inventory one by one by an admin (lib/greetings/release.ts); nothing is
+ * recycled automatically.
  */
 export default async function AdminModerationPage() {
   const { user, isAdmin } = await requireAdminPage();
@@ -19,7 +21,7 @@ export default async function AdminModerationPage() {
 
   const { reports, staleDrafts } = await requireAdmin(async (tx) => ({
     reports: await listOpenReports(tx),
-    staleDrafts: await listStaleDrafts(tx, 14),
+    staleDrafts: await listStaleDrafts(tx, DRAFT_RELEASE_MIN_IDLE_HOURS),
   }));
   const tm = await getTranslations("admin.moderation");
 

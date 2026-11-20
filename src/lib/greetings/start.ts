@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { withPublicContext, withClaimableQr, type Tx } from "@/db/client";
 import { qrCodes, greetings, themes, products } from "@/db/schema";
 import { generateEditToken, hashEditToken } from "@/lib/security/edit-token";
@@ -72,16 +72,33 @@ export async function startGreeting(publicToken: string): Promise<{ greetingId: 
       throw new StartGreetingError("This QR was just started by someone else");
     }
 
+    const fresh = {
+      themeId: defaultTheme.id,
+      themeVersion: getTemplate(DEFAULT_THEME_KEY)!.version,
+      productId: defaultProduct.id,
+      status: "DRAFT" as const,
+      editTokenHash,
+    };
+
+    // A card released by an admin (lib/greetings/release.ts, FA-01) keeps its
+    // one greeting row (qr_code_id is unique): it is re-claimed with a fresh
+    // token and the default design. greetings_reclaim_released (migrations/0024)
+    // allows this only for a DRAFT without a token on the card this
+    // transaction has just claimed; anything else matches 0 rows.
+    const [existing] = await tx.select({ id: greetings.id }).from(greetings).where(eq(greetings.qrCodeId, qr.id)).limit(1);
+    if (existing) {
+      const [reclaimed] = await tx
+        .update(greetings)
+        .set({ ...fresh, version: sql`${greetings.version} + 1`, updatedAt: sql`now()` })
+        .where(and(eq(greetings.id, existing.id), eq(greetings.status, "DRAFT"), isNull(greetings.editTokenHash)))
+        .returning({ id: greetings.id });
+      if (!reclaimed) throw new StartGreetingError("This QR is unavailable");
+      return reclaimed.id;
+    }
+
     const [greeting] = await tx
       .insert(greetings)
-      .values({
-        qrCodeId: qr.id,
-        themeId: defaultTheme.id,
-        themeVersion: getTemplate(DEFAULT_THEME_KEY)!.version,
-        productId: defaultProduct.id,
-        status: "DRAFT",
-        editTokenHash,
-      })
+      .values({ qrCodeId: qr.id, ...fresh })
       .returning({ id: greetings.id });
     if (!greeting) throw new StartGreetingError("Failed to create greeting");
     return greeting.id;
