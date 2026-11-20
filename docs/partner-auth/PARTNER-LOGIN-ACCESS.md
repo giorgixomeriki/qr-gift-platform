@@ -95,11 +95,11 @@ It changes no existing row, policy or function. QR activation, orders, payments,
 the ledger and payouts are untouched.
 
 **Ordering (decided 2026-11-21):** production has 23 migrations (last `0022_music_content_type`,
-`when` 1795161600000). The BOG release (`release/bog-payments-f575182`) owns
-`0023_checkout_consents` (`when` 1795219200000) and ships first. This branch is stacked on it
-and ships as **0024** (`when` 1795334400000). `feat/partner-locations-map` becomes **0025**
-with `idx` 25 and a `when` above 1795334400000. Never ship a migration with a `when` lower
-than the last applied one: drizzle would silently skip it.
+`when` 1795161600000). The BOG release (`release/bog-payments-f575182`) owns `0023_checkout_consents`
+and `0024_payment_release_safety` (`when` 1795222800000) and ships first. This branch is stacked on it
+and ships as **0025** (`when` 1795334400000). `feat/partner-locations-map` becomes **0026** with a
+`when` above 1795334400000. Never ship a migration with a `when` lower than the last applied one:
+drizzle would silently skip it.
 
 Steps (after approval):
 1. Verified `pg_dump` backup through `ops-env.sh` (pg_dump 17 inside the qrgate2 container).
