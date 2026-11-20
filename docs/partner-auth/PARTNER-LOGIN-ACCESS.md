@@ -1,6 +1,6 @@
 # Partner login access
 
-Branch `feat/partner-auth`, built from production `7bf144a`. Not deployed.
+Branch `feat/partner-auth`, rebased on production `f575182`. Not deployed.
 
 ## What it does
 

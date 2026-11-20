@@ -7,7 +7,7 @@ Employee management stays off (`PARTNER_TEAM_MEMBERS_ENABLED` unset).
 
 ## State on 2026-11-20 (checked read-only)
 
-- Production: Render `dep-dbvtnll9el5s73ei8qu0`, commit `7bf144a`. This branch is built on it.
+- Production: Render `dep-dc01qme0tbcc73ahmoj0`, commit `f575182` (Our Song + mobile UX). This branch is rebased on it.
 - Prod migrations: 23 rows, last `0022_music_content_type` (`when` 1795161600000).
   No `partner_invitations` or `partner_locations` table yet.
 - **Migration numbering is resolved:** this release ships as `0023_partner_login_access`
@@ -60,7 +60,7 @@ Employee management stays off (`PARTNER_TEAM_MEMBERS_ENABLED` unset).
 
 ## Rollback
 
-- Code: redeploy `dep-dbvtnll9el5s73ei8qu0` (7bf144a) from Render, or push 7bf144a
+- Code: redeploy `dep-dc01qme0tbcc73ahmoj0` (f575182) from Render (a push cannot move the branch backwards)
   to the deploy branch. 0023 may stay: old code ignores its columns, table and functions.
 - Env: removing the three `PARTNER_EMAIL_*`/`RESEND_API_KEY` variables turns email links
   off (the admin UI then says email delivery isn't configured).
