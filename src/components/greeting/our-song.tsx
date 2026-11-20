@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { Spark } from "@/components/ui/logo";
 import { spotifyEmbedUrl, spotifyOpenUrl, type SpotifyMusic } from "@/lib/music/spotify";
 
 /** Pauses every <audio>/<video> on the page — the voice note, the film — so two sources never play at once. */
@@ -20,9 +21,14 @@ function pausePageMedia() {
  *   canonical open.spotify.com URL (opens the app where installed), rebuilt
  *   from the validated id — the sender's text never reaches an href.
  *   Tapping it pauses the voice note / video on the page.
- * - We show no title or artwork: that would mean fetching and displaying
- *   Spotify content. The card says what it is (a song / a playlist) and
- *   Spotify shows the rest.
+ * - We show no Spotify title, artist or cover art. Spotify's Developer
+ *   Policy (IV.2, effective 15 May 2025) does not permit commercial use by
+ *   developer apps beyond narrow cases, and its artwork rules require
+ *   Spotify-supplied, unmodified covers with attribution — so a paid card
+ *   can't fetch them without Spotify's written approval (docs/music/OUR-SONG.md).
+ *   Instead the card is our own object: a QR STARR record sleeve (burgundy
+ *   linen, gold foil, the spark) with the record sliding out; a playlist is
+ *   two sleeves. Spotify shows the rest when it opens.
  * - `embedAllowed` (SPOTIFY_EMBED_ENABLED, off until Spotify confirms
  *   commercial use) adds an explicit "Play here" that loads the official
  *   embed only on tap. The embed's controls can't be driven without
@@ -56,8 +62,19 @@ export function OurSong({ music, embedAllowed = false, variant, num }: { music: 
   return (
     <section className="qs-song" data-variant={variant} data-kind={music.kind} aria-label={t("title")} data-testid={variant === "beat" ? "greeting-music-beat" : "greeting-music-keepsake"} data-spotify-id={music.id}>
       <div className="qs-song__card">
-        <span className="qs-song__record" aria-hidden>
-          <span className="qs-song__label" />
+        <span className="qs-song__art" aria-hidden>
+          {music.kind === "playlist" && <span className="qs-song__jacket qs-song__jacket--back" />}
+          <span className="qs-song__disc">
+            <span className="qs-song__label">
+              <Spark className="qs-song__label-spark" />
+            </span>
+          </span>
+          <span className="qs-song__jacket">
+            <span className="qs-song__foil">
+              <Spark className="qs-song__spark" />
+              <span className="qs-song__jacket-name">{t("title")}</span>
+            </span>
+          </span>
         </span>
         <div className="qs-song__body">
           <p className="qs-song__kicker">{kindLabel}</p>

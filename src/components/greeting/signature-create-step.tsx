@@ -116,6 +116,8 @@ export function SignatureCreateStep({
    * itself would slide the dock under a finger mid-tap and swallow that tap.
    */
   const [typing, setTyping] = useState(false);
+  /** The song form is open: same rule as the letter — the action steps aside so it can't sit over the form above the keyboard. */
+  const [musicEditing, setMusicEditing] = useState(false);
   const typingTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(typingTimer.current), []);
   // Typed before the page finished loading (a slow phone hydrates seconds after the letter is on screen):
@@ -139,7 +141,7 @@ export function SignatureCreateStep({
   }
 
   return (
-    <div className="sigf-create flex flex-1 flex-col" data-typing={typing || undefined} data-composition={getThemeWorld(themeKey).composition} data-testid="create-step">
+    <div className="sigf-create flex flex-1 flex-col" data-typing={typing || musicEditing || undefined} data-composition={getThemeWorld(themeKey).composition} data-testid="create-step">
       <h1 className="sig-title">{tm("title")}</h1>
       <p className="sig-sub">{tm("subtitle")}</p>
 
@@ -286,7 +288,7 @@ export function SignatureCreateStep({
         )}
       </section>
 
-      <SignatureMusicField greetingId={greetingId} music={music} onChange={onMusicChange} />
+      <SignatureMusicField greetingId={greetingId} music={music} onChange={onMusicChange} onEditingChange={setMusicEditing} />
 
       <Dock className="sigf-dock-create">
         {blocked && failed > 0 && (

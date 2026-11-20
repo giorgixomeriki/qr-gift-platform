@@ -70,6 +70,33 @@ Terms. Ask specifically: (1) is the iFrame embed a "Widget" under the Widget Ter
 does Widget Terms IV.3(e) or Policy IV.2 apply when the embed is one optional element of a
 paid personalised greeting; (3) attribution requirements. Keep the reply in `docs/legal/`.
 
+### Title, artist and album artwork on the card (reviewed 2026-11-20): not permitted
+
+The owner asked whether the card may show the song's real cover art, title and artist via
+the official Web API (or oEmbed). The terms read (Developer Policy and Developer Terms v10,
+both effective 15 May 2025; Design & Branding guidelines; Quota modes page) say no for a
+paid product without Spotify's written approval:
+
+| Topic | Published rule | Effect for QR STARR |
+|---|---|---|
+| Commercial use | Policy IV.2: "Except for the limited commercial uses for Non-Streaming SDAs … commercial uses are not permitted for SDAs." IV.3 allows only ads/sponsorships on the app, or selling access to the app itself. Terms III.1.1(i): "for private personal use"; V.5: "You will not sell any Spotify Content". | A paid greeting that displays Spotify cover art/metadata is not clearly within IV.3 → treat as not permitted. |
+| Metadata/cover art as product | Policy II.4.3: "must not offer metadata, cover art … as a standalone service or product." | The keepsake would be part of what the customer pays for. |
+| Storage | Terms IV.3.1.1: don't store Spotify Content "other than as strictly necessary"; "Do not store Spotify Content indefinitely." | A 12-month keepsake would need re-fetching at view time, never copies. |
+| Artwork display | Design guide: artwork from Spotify only, "kept in its original form", no cropping, no overlays, Spotify logo attribution, link back (Policy II.4.1–II.4.2). | Would constrain the card design if ever approved. |
+| API access | Quota modes: dev mode = up to 5 authenticated users; extended quota only for organisations with ≥250k MAU (since 15 May 2025). | Not reachable for QR STARR today. |
+
+Engineering reading, not legal advice. **Decision:** no Spotify API calls, no oEmbed, no
+artwork or metadata. The card is a QR STARR-designed object (record sleeve in burgundy
+linen with gold foil and the spark; a playlist shows two sleeves), with "Listen on
+Spotify". To revisit, get Spotify's written approval for this exact use case first; if
+granted, fetch per view (no stored copies), show unmodified artwork with 4/8px corners,
+Spotify logo attribution and the link back.
+
+**Sender-written title (possible next step, not built):** letting the sender type the
+song's name (their own words, not Spotify data) would make the card personal without
+touching Spotify. It needs a new persisted field. Kept out of this change so the release
+needs no migration, because the Partner Locations Map owns 0023.
+
 When enabled, the embed is loaded **only on tap** ("Play here"), never on open. Its
 controls can't be driven without Spotify's script, so coexistence is explicit: opening it
 pauses page audio/video; any voice/video starting closes it (which stops it).
@@ -84,7 +111,10 @@ the envelope or animations.
 
 - `spotify.link` short links are refused with guidance (open, then copy the full link).
   Resolving them server-side would mean following redirects — deliberately not done.
-- No title/artwork on the card (would require fetching and displaying Spotify Content).
+- No title/artwork on the card: Spotify's terms don't permit it for a paid product without written approval (see §4).
+- Sender field on phones: while the song form is open the Continue dock is not sticky and the
+  form follows the keyboard (visualViewport), so the input, its message, Cancel and "Add song"
+  stay above the keyboard and can't be covered (e2e "song field with the phone keyboard up").
 - Legacy wizard (`SIGNATURE_UI=0`) has no music field; a saved song is still preserved and
   rendered.
 - No analytics event for music in v1 (avoids touching the analytics taxonomy).

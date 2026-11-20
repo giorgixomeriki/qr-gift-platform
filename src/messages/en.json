@@ -245,8 +245,8 @@
       "addHint": "A Spotify song or playlist",
       "label": "Paste a Spotify link",
       "hint": "In Spotify: Share → Copy link. One song or one playlist.",
-      "save": "Add",
-      "saveReplace": "Replace",
+      "save": "Add song",
+      "saveReplace": "Use new link",
       "saving": "Saving…",
       "cancel": "Cancel",
       "replace": "Replace",
@@ -264,7 +264,8 @@
         "invalid": "We couldn't read that link. Copy it again from Spotify.",
         "save": "Couldn't save. Please try again.",
         "remove": "Couldn't remove it. Please try again."
-      }
+      },
+      "added": "Added to your greeting"
     }
   },
   "greeting": {
@@ -296,10 +297,10 @@
     "printsLabel": "Photos. Press Enter for the next one.",
     "ourSong": {
       "title": "Our Song",
-      "track": "A song",
-      "playlist": "A playlist",
-      "ledeTrack": "A song chosen for you.",
-      "ledePlaylist": "A playlist chosen for you.",
+      "track": "A song for you",
+      "playlist": "A playlist for you",
+      "ledeTrack": "Chosen to be heard with this letter.",
+      "ledePlaylist": "Songs chosen to be heard with this letter.",
       "listen": "Listen on Spotify",
       "opensSpotify": "opens in Spotify",
       "playHere": "Play here",

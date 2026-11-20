@@ -19,19 +19,91 @@ type FieldError = SpotifyParseError | "save" | "remove";
  * no fetch to Spotify: the saved row shows the kind and an "Open in Spotify"
  * link so the sender can check it's the right one.
  */
-export function SignatureMusicField({ greetingId, music, onChange }: { greetingId: string; music: SpotifyMusic | null; onChange: (music: SpotifyMusic | null) => void }) {
+/**
+ * Scrolls so `el` sits inside what the sender can actually see: above the
+ * on-screen keyboard (visualViewport — iOS lays the keyboard over the page,
+ * Android shrinks it) and below the top edge. When it can't fit, its top
+ * (label + input) wins over its bottom.
+ */
+function keepInView(el: HTMLElement | null) {
+  if (!el) return;
+  const vv = window.visualViewport;
+  const top = vv ? vv.offsetTop : 0;
+  const bottom = top + (vv ? vv.height : window.innerHeight);
+  const r = el.getBoundingClientRect();
+  const gap = 12;
+  let dy = 0;
+  if (r.bottom + gap > bottom) dy = Math.min(r.bottom + gap - bottom, r.top - top - gap);
+  else if (r.top - gap < top) dy = r.top - top - gap;
+  if (Math.abs(dy) > 1) window.scrollBy({ top: dy, behavior: "instant" });
+}
+
+export function SignatureMusicField({
+  greetingId,
+  music,
+  onChange,
+  onEditingChange,
+}: {
+  greetingId: string;
+  music: SpotifyMusic | null;
+  onChange: (music: SpotifyMusic | null) => void;
+  /** The form is open: Create moves its Continue dock out of the way so it can't cover the form or catch its taps. */
+  onEditingChange?: (editing: boolean) => void;
+}) {
   const t = useTranslations("wizard.music");
   const tc = useTranslations("common");
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const addRef = useRef<HTMLButtonElement>(null);
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState("");
   const [error, setError] = useState<FieldError | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Set by a save in this visit: the row confirms it ("Added to your greeting") and settles in once. */
+  const [justSaved, setJustSaved] = useState(false);
+  const onEditingRef = useRef(onEditingChange);
+  onEditingRef.current = onEditingChange;
 
   useEffect(() => {
-    if (editing) inputRef.current?.focus();
+    onEditingRef.current?.(editing);
+    if (!editing) return;
+    inputRef.current?.focus({ preventScroll: true });
+    // The keyboard arrives a beat after focus and resizes the visual viewport (or the page, on Android):
+    // follow it, so the input, its message and both buttons stay above it.
+    const follow = () => keepInView(formRef.current);
+    const timers = [0, 120, 360, 700].map((ms) => window.setTimeout(follow, ms));
+    const vv = window.visualViewport;
+    vv?.addEventListener("resize", follow);
+    window.addEventListener("resize", follow);
+    return () => {
+      timers.forEach((t) => window.clearTimeout(t));
+      vv?.removeEventListener("resize", follow);
+      window.removeEventListener("resize", follow);
+    };
   }, [editing]);
+  useEffect(() => () => onEditingRef.current?.(false), []);
+
+  // A message appeared (or changed) under the input: it must be visible too.
+  useEffect(() => {
+    if (editing && error) keepInView(formRef.current);
+  }, [editing, error]);
+
+  // Saved: the keyboard closes with the input; bring the confirmed row into view (above the dock, see .sigf-row's scroll margin).
+  useEffect(() => {
+    if (!justSaved || editing) return;
+    const row = rowRef.current;
+    row?.focus({ preventScroll: true });
+    const t = window.setTimeout(() => row?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 250);
+    return () => window.clearTimeout(t);
+  }, [justSaved, editing]);
+
+  function close() {
+    setEditing(false);
+    setValue("");
+    setError(null);
+  }
 
   async function save() {
     const parsed = parseSpotifyInput(value);
@@ -43,8 +115,8 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
     if (!res) return setError("save");
     if (!res.ok) return setError(res.code ?? "save");
     onChange(res.data);
-    setEditing(false);
-    setValue("");
+    setJustSaved(true);
+    close();
   }
 
   async function remove() {
@@ -53,7 +125,9 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
     const res = await removeMusicAction(greetingId).catch(() => null);
     setBusy(false);
     if (!res?.ok) return setError("remove");
+    setJustSaved(false);
     onChange(null);
+    window.setTimeout(() => addRef.current?.focus({ preventScroll: true }), 0);
   }
 
   const kindLabel = music ? (music.kind === "playlist" ? t("kindPlaylist") : t("kindTrack")) : "";
@@ -68,15 +142,24 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
       </div>
 
       {music && !editing && (
-        <div className="sigf-row sigf-music__row" data-status="done" data-testid="music-saved" data-kind={music.kind} data-spotify-id={music.id}>
+        <div
+          ref={rowRef}
+          tabIndex={-1}
+          className="sigf-row sigf-music__row"
+          data-status="done"
+          data-just-saved={justSaved || undefined}
+          data-testid="music-saved"
+          data-kind={music.kind}
+          data-spotify-id={music.id}
+        >
           <span className="sigf-row__thumb sigf-music__thumb" aria-hidden>
             <span />
           </span>
           <span className="sigf-row__body">
             <b className="sigf-row__name">{kindLabel}</b>
-            <span className="sigf-row__status">
+            <span className="sigf-row__status sigf-music__status" role="status" data-testid="music-confirm">
               <SuccessIcon size={13} weight="fill" aria-hidden />
-              {t("saved")}
+              {justSaved ? t("added") : t("saved")}
             </span>
             <span className="sigf-music__links">
               <a href={spotifyOpenUrl(music)} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" data-testid="music-check">
@@ -96,7 +179,7 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
       )}
 
       {!music && !editing && (
-        <button type="button" className="sigf-add__btn sigf-music__add" onClick={() => setEditing(true)} data-testid="music-add">
+        <button ref={addRef} type="button" className="sigf-add__btn sigf-music__add" onClick={() => setEditing(true)} data-testid="music-add">
           <span className="sigf-music__disc" aria-hidden />
           <b>
             <span aria-hidden>+ </span>
@@ -108,6 +191,7 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
 
       {editing && (
         <form
+          ref={formRef}
           className="sigf-music__form"
           onSubmit={(e) => {
             e.preventDefault();
@@ -128,6 +212,7 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
             autoCapitalize="none"
             spellCheck={false}
             maxLength={MUSIC_INPUT_MAX}
+            enterKeyHint="done"
             placeholder="https://open.spotify.com/track/…"
             value={value}
             onChange={(e) => {
@@ -151,11 +236,10 @@ export function SignatureMusicField({ greetingId, music, onChange }: { greetingI
           <div className="sigf-music__buttons">
             <button
               type="button"
-              className="sigf-row__text-btn"
+              className="sigf-music__cancel"
               onClick={() => {
-                setEditing(false);
-                setValue("");
-                setError(null);
+                close();
+                window.setTimeout(() => (music ? rowRef : addRef).current?.focus({ preventScroll: true }), 0);
               }}
               disabled={busy}
               data-testid="music-cancel"

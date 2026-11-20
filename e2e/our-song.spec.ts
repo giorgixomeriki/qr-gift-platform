@@ -262,3 +262,58 @@ test.describe("Our Song — Spotify link keepsake", () => {
     });
   }
 });
+
+/**
+ * Phone keyboard: Android Chrome shrinks the page by the keyboard
+ * (interactive-widget=resizes-content), which used to leave the input and its
+ * buttons under the sticky Continue. With the form open the dock steps aside,
+ * the form follows the keyboard, and a real tap (by coordinates) on "Add song"
+ * reaches it. Then the row confirms the save.
+ */
+test.describe("Our Song — song field with the phone keyboard up", () => {
+  test("input, Cancel and Add stay above the keyboard and uncovered; saving is confirmed", async ({ browser }, info) => {
+    test.skip(info.project.name !== "desktop-chromium", "explicit phone contexts below");
+    for (const vp of [
+      { width: 360, height: 640, kb: 290 },
+      { width: 412, height: 915, kb: 330 },
+    ]) {
+      const qr = await createAvailableQr();
+      const ctx = await browser.newContext({ ...devices["Pixel 5"], viewport: { width: vp.width, height: vp.height }, baseURL: info.project.use.baseURL, reducedMotion: "reduce" });
+      try {
+        const page = await ctx.newPage();
+        await startDraft(page, qr.publicToken);
+        await page.getByTestId("message-textarea").fill(MESSAGE);
+        await page.getByTestId("music-add").scrollIntoViewIfNeeded();
+        await page.getByTestId("music-add").click();
+        await expect(page.getByTestId("music-input")).toBeFocused();
+        await page.setViewportSize({ width: vp.width, height: vp.height - vp.kb });
+        await page.getByTestId("music-input").fill(`https://open.spotify.com/track/${TRACK}?si=kb`);
+        await page.waitForTimeout(800);
+
+        for (const id of ["music-input", "music-cancel", "music-save"]) {
+          const state = await page.evaluate((testId) => {
+            const el = document.querySelector<HTMLElement>(`[data-testid="${testId}"]`)!;
+            const r = el.getBoundingClientRect();
+            const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+            return { inView: r.top >= 0 && r.bottom <= window.innerHeight, hit: !!hit && (hit === el || el.contains(hit)) };
+          }, id);
+          expect(state, `${id} at ${vp.width}x${vp.height - vp.kb}`).toEqual({ inView: true, hit: true });
+        }
+        await expect(page.getByTestId("music-save")).toHaveText("Add song");
+
+        const box = (await page.getByTestId("music-save").boundingBox())!;
+        await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await expect(page.getByTestId("music-saved")).toHaveAttribute("data-just-saved", "true");
+        await expect(page.getByTestId("music-confirm")).toHaveText("Added to your greeting");
+        await page.setViewportSize({ width: vp.width, height: vp.height });
+        // the Continue dock is back and the confirmed row is not under it
+        await expect(page.getByTestId("music-saved")).toBeInViewport();
+        await page.reload();
+        await expect(page.getByTestId("music-confirm")).toHaveText("Saved");
+      } finally {
+        await ctx.close();
+        await qr.cleanup();
+      }
+    }
+  });
+});
