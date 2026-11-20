@@ -62,7 +62,7 @@ export function EnvelopeSenderLab({ theme, env, message }: { theme: string; env:
     audio: null,
     priceLabel: "10 ₾",
     isTestPayments: true,
-    merchantName: null,
+    merchantSeller: null,
     merchantVatStatus: null,
   };
   return (
