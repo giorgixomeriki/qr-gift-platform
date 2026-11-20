@@ -64,16 +64,19 @@ export function PartnerLoginPanel(props: PartnerLoginPanelProps) {
   return (
     <div className="flex flex-col gap-6" data-testid="partner-login-panel">
       <form
-        className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
+        className={`grid gap-3 sm:items-end ${props.phoneEnabled ? "sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto]"}`}
         onSubmit={(e) => {
           e.preventDefault();
-          void run("contacts", () => adminSetPartnerContactsAction(props.partnerId, { email, phone }), () => t("admin.saved"));
+          // Email-only mode keeps any stored phone as it is; it just isn't shown.
+          void run("contacts", () => adminSetPartnerContactsAction(props.partnerId, { email, phone: props.phoneEnabled ? phone : (props.contactPhone ?? "") }), () => t("admin.saved"));
         }}
       >
+        {props.phoneEnabled && (
         <label className={fieldLabel}>
           {t("admin.contactPhone")}
           <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="off" placeholder={t("admin.phonePlaceholder")} className={`${control} tabular-nums`} data-testid="partner-contact-phone" />
         </label>
+        )}
         <label className={fieldLabel}>
           {t("admin.contactEmail")}
           <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" autoComplete="off" autoCapitalize="none" spellCheck={false} className={control} data-testid="partner-contact-email" />
@@ -107,7 +110,6 @@ export function PartnerLoginPanel(props: PartnerLoginPanelProps) {
       </div>
 
       {!props.emailConfigured && <p className="text-caption text-ink-3">{t("admin.emailUnavailable")}</p>}
-      {!props.phoneEnabled && <p className="text-caption text-ink-3">{t("admin.phoneUnavailable")}</p>}
 
       <div className="flex flex-wrap gap-2">
         {!hasLogin && (
@@ -121,16 +123,18 @@ export function PartnerLoginPanel(props: PartnerLoginPanelProps) {
             >
               {t("admin.sendEmail")}
             </Button>
+            {props.phoneEnabled && (
             <Button
               size="sm"
               variant="secondary"
-              disabled={!props.phoneEnabled || !props.contactPhone}
+              disabled={!props.contactPhone}
               loading={busy === "phone"}
               onClick={() => run("phone", () => adminSendActivationAction(props.partnerId, "PHONE"), (r) => t("admin.phoneOpened", { date: date(r.expiresAt) }))}
               data-testid="partner-open-phone-signin"
             >
               {t("admin.openPhone")}
             </Button>
+            )}
           </>
         )}
         {hasLogin && props.contactEmail && (

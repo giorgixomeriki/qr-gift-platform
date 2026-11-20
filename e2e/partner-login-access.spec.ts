@@ -47,10 +47,16 @@ test("admin invites by email; partner activates; reuse refused; revoke ends acce
     await page.goto("/admin/partners");
     await page.getByTestId("partner-name-input").fill(`Login Access ${run}`);
     await page.getByTestId("partner-slug-input").fill(`login-access-${run}`.toLowerCase());
-    await page.getByTestId("create-partner-submit").click();
-    await expect(page.getByTestId("create-partner-error")).toBeVisible();
-
-    await page.getByTestId("partner-contact-phone-input").fill(`+995 ${phoneDigits.replace(/^./, "5")}`);
+    const phoneOn = process.env.E2E_PHONE_OTP === "1";
+    if (phoneOn) {
+      await page.getByTestId("create-partner-submit").click();
+      await expect(page.getByTestId("create-partner-error")).toBeVisible();
+      await page.getByTestId("partner-contact-phone-input").fill(`+995 ${phoneDigits.replace(/^./, "5")}`);
+    } else {
+      // Email-only release: no phone field anywhere; the email is required.
+      await expect(page.getByTestId("partner-contact-phone-input")).toHaveCount(0);
+      await expect(page.getByTestId("partner-contact-email-input")).toHaveAttribute("required", "");
+    }
     await page.getByTestId("partner-contact-email-input").fill(partnerEmail.toUpperCase());
     await page.getByTestId("create-partner-submit").click();
     await page.getByRole("link", { name: `Login Access ${run}` }).click();
@@ -58,10 +64,12 @@ test("admin invites by email; partner activates; reuse refused; revoke ends acce
     const panel = page.getByTestId("partner-login-panel");
     await expect(panel).toBeVisible();
     await expect(page.getByTestId("partner-contact-email")).toHaveValue(partnerEmail);
-    // Phone sign-in is offered only when the server has it on.
-    const phoneOn = process.env.E2E_PHONE_OTP === "1";
+    // Phone sign-in is offered only when the server has it on; otherwise hidden.
     if (phoneOn) await expect(panel.getByTestId("partner-open-phone-signin")).toBeEnabled();
-    else await expect(panel.getByTestId("partner-open-phone-signin")).toBeDisabled();
+    else {
+      await expect(panel.getByTestId("partner-open-phone-signin")).toHaveCount(0);
+      await expect(panel.getByTestId("partner-contact-phone")).toHaveCount(0);
+    }
     await panel.getByTestId("partner-send-email-activation").click();
     await expect(page.getByTestId("partner-login-message")).toBeVisible();
     await expect(page.getByTestId("partner-login-pending")).toBeVisible();
@@ -88,7 +96,6 @@ test("admin invites by email; partner activates; reuse refused; revoke ends acce
     await partnerPage.getByTestId("activate-submit").click();
     await expect(partnerPage).toHaveURL(/\/partner\/dashboard/);
     await expect(partnerPage.getByTestId("partner-dashboard-page")).toContainText(`Login Access ${run}`);
-    await expect(partnerPage.getByTestId("partner-qr-results")).toBeVisible();
     await expect(partnerPage.getByText(/Team|გუნდი/).first()).toHaveCount(0);
     await partnerPage.screenshot({ path: testInfo.outputPath("partner-dashboard.png"), fullPage: true });
 

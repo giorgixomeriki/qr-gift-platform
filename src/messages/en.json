@@ -853,7 +853,8 @@
       "rate_limited": "Too many attempts. Please wait a few minutes and try again.",
       "unauthorized": "You don't have access to do this.",
       "failed": "Something went wrong. Please try again.",
-      "mfa_required": "Finish two-step verification first."
+      "mfa_required": "Finish two-step verification first.",
+      "email_required": "Enter the partner's email — it becomes their login."
     },
     "login": {
       "tabEmail": "Email",
@@ -920,7 +921,9 @@
     "create": {
       "contactEmailLabel": "Email (optional)",
       "contactPhoneLabel": "Mobile (+995)",
-      "contactHint": "At least one contact: a Georgian mobile number or an email. It becomes the partner's login."
+      "contactHint": "At least one contact: a Georgian mobile number or an email. It becomes the partner's login.",
+      "contactEmailRequiredLabel": "Email (login)",
+      "contactHintEmail": "The partner's email becomes their login. We'll send them a one-time activation link."
     },
     "qrResults": {
       "title": "Results by QR card",

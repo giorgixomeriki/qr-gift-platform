@@ -18,7 +18,12 @@ export class EmailNotConfiguredError extends Error {
   }
 }
 
-export class EmailSendError extends Error {}
+export class EmailSendError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "EmailSendError";
+  }
+}
 
 export function emailDeliveryConfigured(): boolean {
   return env.PARTNER_EMAIL_TRANSPORT !== undefined;

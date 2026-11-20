@@ -13,11 +13,11 @@ import type {
 
 export class PartnerServiceError extends Error {}
 
-export async function createPartner(tx: Tx, adminUserId: string, input: CreatePartnerInput) {
+export async function createPartner(tx: Tx, adminUserId: string, input: CreatePartnerInput, opts: { requireEmail?: boolean } = {}) {
   const [existing] = await tx.select({ id: partners.id }).from(partners).where(eq(partners.slug, input.slug)).limit(1);
   if (existing) throw new PartnerServiceError(`Slug "${input.slug}" is already in use`);
   // Throws LoginAccessError (invalid / missing contact) before anything is written.
-  const contacts = parseContacts({ email: input.contactEmail, phone: input.contactPhone });
+  const contacts = parseContacts({ email: input.contactEmail, phone: input.contactPhone }, opts);
 
   let created;
   try {

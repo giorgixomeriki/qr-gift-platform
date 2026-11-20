@@ -42,6 +42,7 @@ export type LoginAccessErrorCode =
   | "recovery_target_mismatch"
   | "no_contact"
   | "contact_required"
+  | "email_required"
   | "contact_in_use"
   | "invalid_email"
   | "invalid_phone"
@@ -108,14 +109,16 @@ export function isWellFormedToken(token: string): boolean {
 export type ContactsInput = { email?: string | null; phone?: string | null };
 
 /** Normalizes admin-entered contacts; at least one is required. */
-export function parseContacts(input: ContactsInput): { email: string | null; phone: string | null } {
+export function parseContacts(input: ContactsInput, opts: { requireEmail?: boolean } = {}): { email: string | null; phone: string | null } {
   const rawEmail = input.email?.trim() ? input.email : null;
   const rawPhone = input.phone?.trim() ? input.phone : null;
   const email = rawEmail === null ? null : normalizeEmail(rawEmail);
   const phone = rawPhone === null ? null : normalizeGeorgianMobile(rawPhone);
   if (rawEmail !== null && email === null) throw new LoginAccessError("invalid_email");
   if (rawPhone !== null && phone === null) throw new LoginAccessError("invalid_phone");
-  if (email === null && phone === null) throw new LoginAccessError("contact_required");
+  if (email === null && phone === null) throw new LoginAccessError(opts.requireEmail ? "email_required" : "contact_required");
+  // With phone sign-in off, a partner without an email could never log in.
+  if (opts.requireEmail && email === null) throw new LoginAccessError("email_required");
   return { email, phone };
 }
 
@@ -124,8 +127,8 @@ function isUniqueViolation(err: unknown): boolean {
   return code === "23505";
 }
 
-export async function setPartnerContacts(tx: Tx, adminUserId: string, partnerId: string, input: ContactsInput) {
-  const { email, phone } = parseContacts(input);
+export async function setPartnerContacts(tx: Tx, adminUserId: string, partnerId: string, input: ContactsInput, opts: { requireEmail?: boolean } = {}) {
+  const { email, phone } = parseContacts(input, opts);
   let updated;
   try {
     [updated] = await tx
@@ -222,10 +225,10 @@ export async function issueActivation(
 ): Promise<{ invitationId: string; channel: "EMAIL" | "PHONE"; expiresAt: Date }> {
   const partner = await lockPartner(tx, partnerId);
   if (partner.status !== "ACTIVE") throw new LoginAccessError("partner_inactive");
-  const contact = channel === "EMAIL" ? partner.contactEmail : partner.contactPhone;
-  if (!contact) throw new LoginAccessError("no_contact");
   if (channel === "EMAIL" && !deps.emailConfigured) throw new LoginAccessError("email_not_configured");
   if (channel === "PHONE" && !deps.phoneEnabled) throw new LoginAccessError("phone_auth_disabled");
+  const contact = channel === "EMAIL" ? partner.contactEmail : partner.contactPhone;
+  if (!contact) throw new LoginAccessError("no_contact");
 
   const [member] = await tx.select({ id: partnerMembers.id }).from(partnerMembers).where(eq(partnerMembers.partnerId, partnerId)).limit(1);
   if (member) throw new LoginAccessError("partner_has_login");

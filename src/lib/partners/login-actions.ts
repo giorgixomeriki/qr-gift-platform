@@ -62,7 +62,7 @@ async function clientIp(): Promise<string> {
 
 export async function adminSetPartnerContactsAction(partnerId: string, input: { email?: string; phone?: string }): Promise<LoginActionResult> {
   try {
-    await requireAdmin((tx, adminUserId) => setPartnerContacts(tx, adminUserId, partnerId, input));
+    await requireAdmin((tx, adminUserId) => setPartnerContacts(tx, adminUserId, partnerId, input, { requireEmail: !env.PARTNER_PHONE_AUTH_ENABLED }));
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {

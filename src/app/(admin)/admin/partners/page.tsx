@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { listPartners } from "@/lib/partners/service";
 import { CreatePartnerForm } from "@/components/admin/create-partner-form";
+import { env } from "@/lib/env";
 import { DefaultPriceForm } from "@/components/admin/default-price-form";
 import { getDefaultPricing, listPartnerPriceOverrides } from "@/lib/payments/pricing-admin";
 import { formatMinorAmount } from "@/lib/format/money";
@@ -39,7 +40,7 @@ export default async function AdminPartnersPage() {
       </Panel>
 
       <Panel title={tp("createTitle")}>
-        <CreatePartnerForm />
+        <CreatePartnerForm phoneEnabled={env.PARTNER_PHONE_AUTH_ENABLED} />
       </Panel>
 
       <Panel flush>

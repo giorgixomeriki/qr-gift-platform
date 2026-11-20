@@ -62,7 +62,7 @@ function assertTeamMembersEnabled() {
 export async function adminCreatePartnerAction(input: unknown): Promise<ActionResult> {
   try {
     const parsed = createPartnerSchema.parse(input);
-    await requireAdmin((tx, adminUserId) => partnerService.createPartner(tx, adminUserId, parsed));
+    await requireAdmin((tx, adminUserId) => partnerService.createPartner(tx, adminUserId, parsed, { requireEmail: !env.PARTNER_PHONE_AUTH_ENABLED }));
     revalidatePath("/admin/partners");
     return { ok: true };
   } catch (err) {

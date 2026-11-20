@@ -18,7 +18,7 @@ function slugify(value: string) {
     .slice(0, 48);
 }
 
-export function CreatePartnerForm() {
+export function CreatePartnerForm({ phoneEnabled = false }: { phoneEnabled?: boolean }) {
   const t = useTranslations("admin.partnersPage");
   const router = useRouter();
   const [slug, setSlug] = useState("");
@@ -44,7 +44,7 @@ export function CreatePartnerForm() {
       slug: slug.trim(),
       name: name.trim(),
       commissionRateBps,
-      contactPhone: contactPhone.trim() || undefined,
+      contactPhone: phoneEnabled ? contactPhone.trim() || undefined : undefined,
       contactEmail: contactEmail.trim() || undefined,
     });
     setPending(false);
@@ -108,23 +108,26 @@ export function CreatePartnerForm() {
           />
         </label>
       </div>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className={`grid gap-3 ${phoneEnabled ? "sm:grid-cols-2" : ""}`}>
+        {phoneEnabled && (
+          <label className={fieldLabel}>
+            {tAccess("create.contactPhoneLabel")}
+            <input
+              value={contactPhone}
+              onChange={(e) => setContactPhone(e.target.value)}
+              inputMode="tel"
+              autoComplete="off"
+              placeholder="+995 5XX XX XX XX"
+              className={`${control} tabular-nums`}
+              data-testid="partner-contact-phone-input"
+            />
+          </label>
+        )}
         <label className={fieldLabel}>
-          {tAccess("create.contactPhoneLabel")}
-          <input
-            value={contactPhone}
-            onChange={(e) => setContactPhone(e.target.value)}
-            inputMode="tel"
-            autoComplete="off"
-            placeholder="+995 5XX XX XX XX"
-            className={`${control} tabular-nums`}
-            data-testid="partner-contact-phone-input"
-          />
-        </label>
-        <label className={fieldLabel}>
-          {tAccess("create.contactEmailLabel")}
+          {phoneEnabled ? tAccess("create.contactEmailLabel") : tAccess("create.contactEmailRequiredLabel")}
           <input
             type="email"
+            required={!phoneEnabled}
             value={contactEmail}
             onChange={(e) => setContactEmail(e.target.value)}
             autoComplete="off"
@@ -135,7 +138,7 @@ export function CreatePartnerForm() {
           />
         </label>
       </div>
-      <p className="text-caption text-ink-3">{tAccess("create.contactHint")}</p>
+      <p className="text-caption text-ink-3">{phoneEnabled ? tAccess("create.contactHint") : tAccess("create.contactHintEmail")}</p>
       <div>
           <Button type="submit" loading={pending} data-testid="create-partner-submit">
             {t("createButton")}
