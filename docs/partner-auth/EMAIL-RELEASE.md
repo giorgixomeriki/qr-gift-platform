@@ -10,7 +10,7 @@ employee management (`PARTNER_TEAM_MEMBERS_ENABLED` unset).
 - Production: Render `dep-dc01qme0tbcc73ahmoj0`, commit `f575182` (checked via the Render
   deploys API). Prod ledger: 23 migrations, last `0022_music_content_type` (`when` 1795161600000).
 - **Branch:** `release/partner-auth-after-bog`, stacked on `release/bog-payments-f575182`
-  (`a690e36`, Session 1's BOG release; it owns 0023 and 0024). `feat/partner-auth`
+  (`4350882`, Session 1's BOG release; it owns 0023 and 0024). `feat/partner-auth`
   (on f575182, migration 0023) is superseded and must not ship.
 - **Migration order (resolved):**
 
@@ -82,8 +82,8 @@ BOG's own variables belong to the BOG release (Session 1), not to this one.
 ## Release steps (after BOG is live and approved)
 
 1. Confirm prod = the BOG release commit with 25 ledger rows (last `0024_payment_release_safety`).
-   If Session 1 shipped a commit other than `a690e36`, rebase this branch onto it:
-   `git rebase --onto <bog-live-commit> a690e36 release/partner-auth-after-bog`. Only
+   If Session 1 shipped a commit other than `4350882`, rebase this branch onto it:
+   `git rebase --onto <bog-live-commit> 4350882 release/partner-auth-after-bog`. Only
    `_journal.json` can conflict: keep every BOG entry, then append this migration as the next
    idx/number with a `when` above BOG's last (rename the .sql file to match).
    Re-run verify:partner-auth / partner-email / admin-mfa / data-api-lockdown and the e2e below.
