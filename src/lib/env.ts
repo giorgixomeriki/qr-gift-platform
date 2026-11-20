@@ -7,6 +7,7 @@ import {
   clientIpConfigProblems,
   databaseUrlProblems,
   isHostedEnvironment,
+  partnerAuthConfigProblems,
   supabaseUrlProblems,
 } from "./env-guards";
 import { publishableKeyProblems, resolvePublishableKey, resolveSecretKey, secretKeyProblems, type KeySource } from "./supabase/keys";
@@ -129,6 +130,36 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+
+  // ---- Partner login access (lib/partners/login-access.ts, migrations/0023)
+  // How partner activation / password-reset links are emailed. Unset = email
+  // invitations are unavailable (the admin UI says so). "resend" sends
+  // through the Resend HTTP API. "log" writes the message to the server log
+  // (and PARTNER_EMAIL_LOG_FILE) for local development only; a hosted
+  // deployment refuses it.
+  PARTNER_EMAIL_TRANSPORT: z.enum(["resend", "log"]).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  // Verified sender, e.g. "QR STARR <partners@qrapp.ge>".
+  PARTNER_EMAIL_FROM: z.string().min(3).optional(),
+  PARTNER_EMAIL_LOG_FILE: z.string().min(1).optional(),
+  // Hours an emailed activation / reset link stays valid (1-168).
+  PARTNER_INVITE_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(72),
+  // SMS one-time-code sign-in for partners. Off by default. The code is sent
+  // and checked by Supabase Auth through the SMS provider configured in the
+  // Supabase project; this app never generates or sees an OTP. Turning it on
+  // in a hosted deployment also requires PARTNER_SMS_PROVIDER, the owner's
+  // statement of which real provider Supabase uses.
+  PARTNER_PHONE_AUTH_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  PARTNER_SMS_PROVIDER: z.enum(["twilio", "twilio_verify", "vonage", "messagebird", "textlocal", "send_sms_hook"]).optional(),
+  // Partner-side team management (inviting staff logins). Off: one partner =
+  // one login. Existing extra members are kept and still work.
+  PARTNER_TEAM_MEMBERS_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
 type RawEnv = z.infer<typeof envSchema>;
@@ -172,6 +203,16 @@ function loadEnv(): Env {
   if (production && data.EDIT_TOKEN_SECRET.length < 32) {
     problems.push("EDIT_TOKEN_SECRET must be at least 32 characters in production (openssl rand -hex 32)");
   }
+  problems.push(
+    ...partnerAuthConfigProblems({
+      hosted,
+      emailTransport: data.PARTNER_EMAIL_TRANSPORT,
+      resendApiKey: data.RESEND_API_KEY,
+      emailFrom: data.PARTNER_EMAIL_FROM,
+      phoneEnabled: data.PARTNER_PHONE_AUTH_ENABLED,
+      smsProvider: data.PARTNER_SMS_PROVIDER,
+    }),
+  );
   if (problems.length > 0) {
     throw new Error(`Unsafe environment configuration:\n- ${problems.join("\n- ")}`);
   }

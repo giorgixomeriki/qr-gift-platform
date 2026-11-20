@@ -176,6 +176,13 @@
       "when": 1795222800000,
       "tag": "0024_payment_release_safety",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795334400000,
+      "tag": "0025_partner_login_access",
+      "breakpoints": true
     }
   ]
 }

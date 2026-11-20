@@ -45,6 +45,10 @@ export const partnerStatusEnum = pgEnum("partner_status", [
   "SUSPENDED",
 ]);
 
+export const partnerInvitationChannelEnum = pgEnum("partner_invitation_channel", ["EMAIL", "PHONE"]);
+export const partnerInvitationPurposeEnum = pgEnum("partner_invitation_purpose", ["ACTIVATION", "RECOVERY"]);
+export const partnerInvitationStatusEnum = pgEnum("partner_invitation_status", ["PENDING", "ACCEPTED", "REVOKED"]);
+
 export const contentStatusEnum = pgEnum("content_status", [
   "PENDING",
   "READY",

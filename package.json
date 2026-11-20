@@ -37,6 +37,7 @@
     "verify:templates": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-templates.ts",
     "verify:payment-integrity": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payment-integrity.ts",
     "verify:partner-pricing": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-pricing.ts",
+    "verify:partner-auth": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-auth.ts",
     "verify:music": "node ./node_modules/.bin/tsx scripts/verify-music-links.ts",
     "verify:music-db": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-music-persistence.ts",
     "verify:media-replacement": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-media-replacement.ts",

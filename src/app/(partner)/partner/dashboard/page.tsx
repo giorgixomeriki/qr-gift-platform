@@ -9,7 +9,9 @@ import {
   ACTIVE_PARTNER_COOKIE,
 } from "@/lib/auth/partner-context";
 import { getPartnerMetrics } from "@/lib/dashboard/partner-metrics";
-import { getBatchPerformance } from "@/lib/dashboard/attribution";
+import { getBatchPerformance, getQrResults } from "@/lib/dashboard/attribution";
+import { env } from "@/lib/env";
+import { QrResultsTable } from "@/components/partners/qr-results-table";
 import { listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
 import { formatBusinessDate, formatBusinessPeriod } from "@/lib/business-calendar";
 import { formatMinorAmount } from "@/lib/format/money";
@@ -60,6 +62,7 @@ export default async function PartnerDashboardPage() {
     const members = await listPartnerMembers(tx, ctx.partnerId);
     const batches = await listQrBatches(tx, ctx.partnerId);
     const performance = await getBatchPerformance(tx, ctx.partnerId);
+    const qrResults = await getQrResults(tx, ctx.partnerId, "PARTNER");
     // Counts only: item rows carry card tokens, which partner views mask once claimed.
     const payouts = (await listPartnerPayoutsWithItems(tx, ctx.partnerId)).map((p) => ({
       id: p.id,
@@ -78,10 +81,13 @@ export default async function PartnerDashboardPage() {
         qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "PARTNER")),
       })),
     );
-    return { partner, metrics, members, batchesWithCodes, performance, payouts, role: ctx.role };
+    return { partner, metrics, members, batchesWithCodes, performance, qrResults, payouts, role: ctx.role };
   }, activePartnerId);
 
   const canManage = (MANAGE_ROLES as readonly string[]).includes(data.role);
+  // One partner = one login: staff logins are managed only when the team
+  // feature is explicitly on (lib/partners/actions.ts enforces the same).
+  const canManageTeam = canManage && env.PARTNER_TEAM_MEMBERS_ENABLED;
   const td = await getTranslations("partner.dashboard");
   const tRole = await getTranslations("enums.partnerRole");
   const locale = await getLocale();
@@ -181,6 +187,8 @@ export default async function PartnerDashboardPage() {
         </div>
       </Panel>
 
+      <QrResultsTable rows={data.qrResults} currency={currency} />
+
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           <h2 className="text-h2">{td("batchesTitle")}</h2>
@@ -211,7 +219,7 @@ export default async function PartnerDashboardPage() {
         )}
       </section>
 
-      {canManage && (
+      {canManageTeam && (
         <Panel title={td("membershipTitle")} description={td("membershipHint")} flush>
           <MembershipManager
             members={data.members}

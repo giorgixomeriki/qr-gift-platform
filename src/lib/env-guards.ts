@@ -159,3 +159,33 @@ export function bogUrlProblems(input: { apiBaseUrl: string; tokenUrl: string; ho
   }
   return problems;
 }
+
+/**
+ * Partner login access (lib/partners/login-access.ts). Email links need a
+ * real transport with its key and a sender; the "log" transport (links in the
+ * server log) exists for local development only. Phone sign-in in a hosted
+ * deployment needs the owner to name the real SMS provider configured in
+ * Supabase Auth: there is no mock OTP path in this app, and this keeps a
+ * test-number setup from being switched on by accident.
+ */
+export function partnerAuthConfigProblems(input: {
+  hosted: boolean;
+  emailTransport?: string;
+  resendApiKey?: string;
+  emailFrom?: string;
+  phoneEnabled: boolean;
+  smsProvider?: string;
+}): string[] {
+  const problems: string[] = [];
+  if (input.emailTransport === "log" && input.hosted) {
+    problems.push("PARTNER_EMAIL_TRANSPORT=log is for local development only; use resend in a hosted deployment");
+  }
+  if (input.emailTransport === "resend") {
+    if (!input.resendApiKey) problems.push("PARTNER_EMAIL_TRANSPORT=resend requires RESEND_API_KEY");
+    if (!input.emailFrom) problems.push("PARTNER_EMAIL_TRANSPORT=resend requires PARTNER_EMAIL_FROM");
+  }
+  if (input.phoneEnabled && input.hosted && !input.smsProvider) {
+    problems.push("PARTNER_PHONE_AUTH_ENABLED=true requires PARTNER_SMS_PROVIDER (the real provider configured in Supabase Auth)");
+  }
+  return problems;
+}

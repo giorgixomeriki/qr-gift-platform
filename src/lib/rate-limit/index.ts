@@ -19,7 +19,7 @@ export class RateLimitedError extends Error {
 }
 
 /** Throws RateLimitedError if the limit is exceeded; otherwise resolves silently. */
-export async function enforceRateLimit(params: { key: string; limit: number; windowSeconds: number }): Promise<void> {
+export async function enforceRateLimit(params: { key: string; limit: number; windowSeconds: number; failClosed?: boolean }): Promise<void> {
   const result = await checkRateLimit(params);
   if (!result.allowed) {
     throw new RateLimitedError(result.retryAfterSeconds ?? params.windowSeconds);

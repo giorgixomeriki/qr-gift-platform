@@ -4,6 +4,7 @@ import type { Tx } from "@/db/client";
 import { partners, partnerMembers } from "@/db/schema";
 import { recordAuditLog } from "@/lib/audit";
 import { resolveOrInviteUserByEmail } from "@/lib/auth/admin-users";
+import { LoginAccessError, parseContacts } from "./login-access";
 import type {
   CreatePartnerInput,
   UpdatePartnerInput,
@@ -15,18 +16,29 @@ export class PartnerServiceError extends Error {}
 export async function createPartner(tx: Tx, adminUserId: string, input: CreatePartnerInput) {
   const [existing] = await tx.select({ id: partners.id }).from(partners).where(eq(partners.slug, input.slug)).limit(1);
   if (existing) throw new PartnerServiceError(`Slug "${input.slug}" is already in use`);
+  // Throws LoginAccessError (invalid / missing contact) before anything is written.
+  const contacts = parseContacts({ email: input.contactEmail, phone: input.contactPhone });
 
-  const [created] = await tx
-    .insert(partners)
-    .values({
-      slug: input.slug,
-      name: input.name,
-      defaultLocale: input.defaultLocale,
-      country: input.country,
-      currency: input.currency,
-      commissionRateBps: input.commissionRateBps,
-    })
-    .returning();
+  let created;
+  try {
+    [created] = await tx
+      .insert(partners)
+      .values({
+        slug: input.slug,
+        name: input.name,
+        defaultLocale: input.defaultLocale,
+        country: input.country,
+        currency: input.currency,
+        commissionRateBps: input.commissionRateBps,
+        contactEmail: contacts.email,
+        contactPhone: contacts.phone,
+      })
+      .returning();
+  } catch (err) {
+    const code = (err as { code?: string; cause?: { code?: string } }).code ?? (err as { cause?: { code?: string } }).cause?.code;
+    if (code === "23505") throw new LoginAccessError("contact_in_use");
+    throw err;
+  }
   if (!created) throw new PartnerServiceError("Failed to create partner");
 
   await recordAuditLog(tx, {
@@ -35,7 +47,13 @@ export async function createPartner(tx: Tx, adminUserId: string, input: CreatePa
     action: "PARTNER_CREATED",
     targetType: "partner",
     targetId: created.id,
-    metadata: { slug: created.slug, name: created.name, commissionRateBps: created.commissionRateBps },
+    metadata: {
+      slug: created.slug,
+      name: created.name,
+      commissionRateBps: created.commissionRateBps,
+      contactEmail: contacts.email !== null,
+      contactPhone: contacts.phone !== null,
+    },
   });
 
   return created;

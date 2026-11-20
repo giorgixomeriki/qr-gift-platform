@@ -449,6 +449,7 @@ async function main() {
     ...(require("../src/lib/payments/pricing-actions") as typeof import("../src/lib/payments/pricing-actions")),
     ...(require("../src/lib/moderation/actions") as typeof import("../src/lib/moderation/actions")),
     ...(require("../src/lib/qr/actions") as typeof import("../src/lib/qr/actions")),
+    ...(require("../src/lib/partners/login-actions") as typeof import("../src/lib/partners/login-actions")),
   };
   const pid = created.partnerId;
   const anyId = randomUUID();
@@ -479,13 +480,19 @@ async function main() {
     unblockGreetingAction: () => adminActions.unblockGreetingAction(anyId, "x"),
     adminCreateBatchAction: () => adminActions.adminCreateBatchAction(pid, { label: "x", quantity: 1 }),
     adminMarkDistributedAction: () => adminActions.adminMarkDistributedAction(pid, { qrCodeIds: [anyId] }),
+    adminSetPartnerContactsAction: () => adminActions.adminSetPartnerContactsAction(pid, { phone: "+995555000000" }),
+    adminSendActivationAction: () => adminActions.adminSendActivationAction(pid, "EMAIL"),
+    adminSendPasswordResetAction: () => adminActions.adminSendPasswordResetAction(pid),
+    adminRevokeInvitationAction: () => adminActions.adminRevokeInvitationAction(pid),
+    adminRevokeLoginAction: () => adminActions.adminRevokeLoginAction(pid),
   };
   const privileged = Object.keys(adminActions).filter((n) => /^admin|^(reconcileActivations|lookupGreeting|listModerationOverview|blockGreeting|unblockGreeting)Action$/.test(n)).sort();
   check(`15a. the matrix lists every privileged action (${privileged.length})`, privileged.join() === Object.keys(matrix).sort().join(), privileged.filter((n) => !(n in matrix)));
   const outcome = async (fn: () => Promise<unknown>) => {
     try {
-      const r = (await fn()) as { ok?: boolean; error?: string };
-      return r?.ok === false ? String(r.error) : "ALLOWED";
+      const r = (await fn()) as { ok?: boolean; error?: string; code?: string };
+      if (r?.ok === false) return r.code === "mfa_required" ? "Multi-factor authentication required" : String(r.error ?? r.code);
+      return "ALLOWED";
     } catch (e) {
       return (e as Error).message;
     }

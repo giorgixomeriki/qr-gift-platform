@@ -9,6 +9,11 @@ import { toInventoryRow } from "@/lib/qr/credential-access";
 import { getPartnerUnpaidBalance, listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
 import { getPartnerPricing, listPricingAuditLog } from "@/lib/payments/pricing-admin";
 import { getBatchPerformance, listPartnerSalesTrace } from "@/lib/dashboard/attribution";
+import { getLoginStatus } from "@/lib/partners/login-access";
+import { authDirectory } from "@/lib/auth/auth-directory";
+import { emailDeliveryConfigured } from "@/lib/notify/email";
+import { env } from "@/lib/env";
+import { PartnerLoginPanel } from "@/components/admin/partner-login-panel";
 import { formatMinorAmount } from "@/lib/format/money";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { PartnerStatusToggle } from "@/components/admin/partner-status-toggle";
@@ -53,11 +58,12 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
     const sales = await listPartnerSalesTrace(tx, partnerId);
     const pricing = await getPartnerPricing(tx, partnerId);
     const pricingHistory = await listPricingAuditLog(tx, partnerId);
-    return { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory };
+    const login = await getLoginStatus(tx, partnerId, authDirectory());
+    return { login, partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory };
   });
 
   if (!data) notFound();
-  const { partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory } = data;
+  const { login, partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory } = data;
   const td = await getTranslations("admin.partnerDetail");
   const tPerf = await getTranslations("batchPerformance");
   const locale = await getLocale();
@@ -73,6 +79,7 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
     });
   };
   const tNav = await getTranslations("nav");
+  const tAccess = await getTranslations("partnerAccess.admin");
 
   const markDistributed = adminMarkDistributedAction.bind(null, partnerId);
   const createBatch = adminCreateBatchAction.bind(null, partnerId);
@@ -93,6 +100,18 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
           actions={<PartnerStatusToggle partnerId={partner.id} status={partner.status} />}
         />
       </div>
+
+      <Panel title={tAccess("title")} description={tAccess("hint")}>
+        <PartnerLoginPanel
+          partnerId={partner.id}
+          contactEmail={login.contactEmail}
+          contactPhone={login.contactPhone}
+          logins={login.logins}
+          pending={login.pending ? { ...login.pending, expiresAt: login.pending.expiresAt.toISOString() } : null}
+          emailConfigured={emailDeliveryConfigured()}
+          phoneEnabled={env.PARTNER_PHONE_AUTH_ENABLED}
+        />
+      </Panel>
 
       <Panel title={td("pricingTitle")} description={td("pricingHint")}>
         <PartnerPricingManager partnerId={partner.id} pricing={pricing} history={pricingHistory} />
@@ -136,9 +155,11 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
         )}
       </section>
 
+      {(env.PARTNER_TEAM_MEMBERS_ENABLED || members.length > 1) && (
       <Panel title={td("membershipTitle")} flush>
         <MembershipManager members={members} addAction={addMember} updateRoleAction={updateMemberRole} removeAction={removeMember} />
       </Panel>
+      )}
     </div>
   );
 }

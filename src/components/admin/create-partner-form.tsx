@@ -25,6 +25,9 @@ export function CreatePartnerForm() {
   const [slugTouched, setSlugTouched] = useState(false);
   const [name, setName] = useState("");
   const [commissionPct, setCommissionPct] = useState("30");
+  const [contactPhone, setContactPhone] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const tAccess = useTranslations("partnerAccess");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -41,12 +44,16 @@ export function CreatePartnerForm() {
       slug: slug.trim(),
       name: name.trim(),
       commissionRateBps,
+      contactPhone: contactPhone.trim() || undefined,
+      contactEmail: contactEmail.trim() || undefined,
     });
     setPending(false);
     if (!result.ok) {
-      setError(result.error);
+      setError(result.code ? tAccess(`errors.${result.code}` as "errors.failed", { min: 0 }) : result.error);
       return;
     }
+    setContactPhone("");
+    setContactEmail("");
     setSlug("");
     setSlugTouched(false);
     setName("");
@@ -55,7 +62,7 @@ export function CreatePartnerForm() {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-3" data-testid="create-partner-form">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem_auto] sm:items-end">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem] sm:items-end">
         <label className={fieldLabel}>
           {t("nameLabel")}
           <input
@@ -100,9 +107,39 @@ export function CreatePartnerForm() {
             data-testid="partner-commission-input"
           />
         </label>
-        <Button type="submit" loading={pending} data-testid="create-partner-submit">
-          {t("createButton")}
-        </Button>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className={fieldLabel}>
+          {tAccess("create.contactPhoneLabel")}
+          <input
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            inputMode="tel"
+            autoComplete="off"
+            placeholder="+995 5XX XX XX XX"
+            className={`${control} tabular-nums`}
+            data-testid="partner-contact-phone-input"
+          />
+        </label>
+        <label className={fieldLabel}>
+          {tAccess("create.contactEmailLabel")}
+          <input
+            type="email"
+            value={contactEmail}
+            onChange={(e) => setContactEmail(e.target.value)}
+            autoComplete="off"
+            autoCapitalize="none"
+            spellCheck={false}
+            className={control}
+            data-testid="partner-contact-email-input"
+          />
+        </label>
+      </div>
+      <p className="text-caption text-ink-3">{tAccess("create.contactHint")}</p>
+      <div>
+          <Button type="submit" loading={pending} data-testid="create-partner-submit">
+            {t("createButton")}
+          </Button>
       </div>
       {error && (
         <p className="text-caption text-danger" role="alert" data-testid="create-partner-error">

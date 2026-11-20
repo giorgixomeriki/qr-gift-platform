@@ -23,6 +23,11 @@ export const createPartnerSchema = z.object({
   // [0, 10000] — a commission rate above 100% of gross is never legitimate.
   // Defaults to the launch rate: 30% of the 10.00 GEL price = 3.00 GEL.
   commissionRateBps: z.number().int().min(0).max(10000).default(3000),
+  // Login contact (migrations/0023): a Georgian mobile and/or an email, at
+  // least one. Normalized and checked by lib/partners/login-access.ts
+  // parseContacts; email is never required on its own.
+  contactEmail: z.string().trim().max(254).optional(),
+  contactPhone: z.string().trim().max(32).optional(),
 });
 export type CreatePartnerInput = z.infer<typeof createPartnerSchema>;
 
