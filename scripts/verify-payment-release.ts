@@ -1,3 +1,4 @@
+import type { TransactionSql } from "postgres";
 import Module from "node:module";
 
 // Same server-only shim as the other verify-*.ts scripts.
@@ -95,7 +96,7 @@ const errText = (r: { ok: boolean; error?: unknown }) => {
 const MESSAGE = `Release suite message ${crypto.randomUUID()}`;
 
 /** Runs SQL as app_runtime with the given transaction-local settings; returns the error text or null. */
-async function asRuntime(settings: Record<string, string>, fn: (sql: postgres.TransactionSql) => Promise<unknown>): Promise<string | null> {
+async function asRuntime(settings: Record<string, string>, fn: (sql: TransactionSql) => Promise<unknown>): Promise<string | null> {
   try {
     await runtime.begin(async (sql) => {
       for (const [k, v] of Object.entries(settings)) await sql`select set_config(${k}, ${v}, true)`;

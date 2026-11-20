@@ -525,10 +525,14 @@ async function main() {
   check(`13a. all ${pages.length - pages.filter((p) => exempt.test(p)).length} protected admin pages use requireAdminPage`, unguarded.length === 0, unguarded);
   const source = filesUnder(join(root, "src"), (p) => /\.tsx?$/.test(p)).map((p) => relative(root, p));
   // reconcile.ts has no session: it checks the identity configured beside CRON_SECRET.
-  const allowedCheckers = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/payments/reconcile.ts"]);
+  // refunds.ts (FA-02): session-less reconciliation asks whether an ADMIN refund's requester is
+  // still an admin, only to REFUSE re-sending money; it never grants anything.
+  const allowedCheckers = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/payments/reconcile.ts", "src/lib/payments/refunds.ts"]);
   const checkers = source.filter((p) => !allowedCheckers.has(p) && /\bcheckIsAdmin\(/.test(readFileSync(p, "utf8")));
   check("13b. only the guard (and the session-less reconcile job) call checkIsAdmin", checkers.length === 0, checkers);
-  const allowedAdminContext = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/auth/mfa-actions.ts", "src/lib/payments/service.ts", "src/lib/payments/reconcile.ts", "src/lib/payments/reconcile-alerts.ts", "src/lib/payments/dispute-evidence.ts", "src/lib/payments/refunds.ts"]);
+  const allowedAdminContext = new Set(["src/db/client.ts", "src/lib/auth/admin.ts", "src/lib/auth/mfa-actions.ts", "src/lib/payments/service.ts", "src/lib/payments/reconcile.ts", "src/lib/payments/reconcile-alerts.ts", "src/lib/payments/dispute-evidence.ts", "src/lib/payments/refunds.ts",
+    // FA-03: the reconcile job's heartbeat, under the session-less reconcile identity (same as reconcile-alerts.ts).
+    "src/lib/payments/reconcile-heartbeat.ts"]);
   const contexts = source.filter((p) => !allowedAdminContext.has(p) && /\bwithAdmin(Payment)?Context\(/.test(readFileSync(p, "utf8")));
   check("13c. admin DB context only where reviewed", contexts.length === 0, contexts);
   const routes = filesUnder(join(root, "src/app"), (p) => p.endsWith("route.ts")).map((p) => relative(root, p)).sort();
