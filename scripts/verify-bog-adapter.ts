@@ -275,7 +275,11 @@ async function main() {
     check("7d. State comes from the receipt, not the body (body said completed/9999 → PENDING/1000)", result.status === "PENDING" && result.amountMinor === 1000);
     check("7e. Our order id comes from the receipt's external_order_id", result.orderId === "11111111-1111-4111-8111-111111111111");
     const otherEvent = JSON.stringify({ event: "something_else", body: { order_id: "bog-1" } });
-    check("7f. An unhandled event type is rejected", !!(await rejects(() => p.handleWebhook(otherEvent, h(signBody(otherEvent))))));
+    const before = bog.calls.length;
+    const otherResult = await p.handleWebhook(otherEvent, h(signBody(otherEvent)));
+    check("7f. A signed callback with another event name is settled from a fresh receipt, like order_payment (FA-03)", otherResult.orderId === "11111111-1111-4111-8111-111111111111" && bog.calls.length === before + 1 && bog.calls[before]!.url.endsWith("/receipt/bog-1"));
+    const forgedOther = await rejects(() => p.handleWebhook(otherEvent, h(signBody(otherEvent, other.privateKey))));
+    check("7f2. …but only when signed by BOG", !!forgedOther && bog.calls.length === before + 1);
     const mismatch = provider(() => ({ status: 200, json: receipt({ order_id: "bog-OTHER" }) }));
     check("7g. A receipt for a different BOG order than asked is refused", !!(await rejects(() => mismatch.p.handleWebhook(raw, h(signBody(raw))))));
     const noExternal = provider(() => ({ status: 200, json: receipt({ external_order_id: null }) }));
@@ -342,8 +346,8 @@ async function main() {
     const w1 = provider(() => ({ status: 200, json: receipt() }));
     const l1 = await captureWarn(() => w1.p.handleWebhook(evt, h(signBody(evt))));
     const j1 = parse(l1[0] ?? "");
-    check("10a. A signed callback with an unknown event logs UNHANDLED_EVENT with the event name and BOG order id", l1.length === 1 && j1.diagnostic === "UNHANDLED_EVENT" && j1.event === "refund_status" && j1.bogOrderId === "bog-1", l1.join("|"));
-    check("10b. …still rejected, BOG not called, and the log carries no body, amounts, card data or secrets", w1.bog.calls.length === 0 && clean(l1), l1.join("|"));
+    check("10a. A signed callback with another event logs OTHER_EVENT with the event name and BOG order id", l1.length === 1 && j1.diagnostic === "OTHER_EVENT" && j1.event === "refund_status" && j1.bogOrderId === "bog-1", l1.join("|"));
+    check("10b. …is settled from one receipt lookup, and the log carries no body, amounts, card data or secrets", w1.bog.calls.length === 1 && clean(l1), l1.join("|"));
 
     const hostile = JSON.stringify({ event: "x\n{\"injected\":true} card 5488 8800 0000 1234", body: { order_id: "bog-1" } });
     const l2 = await captureWarn(() => w1.p.handleWebhook(hostile, h(signBody(hostile))));

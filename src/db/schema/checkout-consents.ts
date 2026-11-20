@@ -5,7 +5,7 @@ import { greetings } from "./greetings";
 
 /**
  * Evidence that the buyer agreed to the Terms and the Delivery and Refunds
- * policy and acknowledged the Privacy Policy before paying (migrations/0022).
+ * policy and acknowledged the Privacy Policy before paying (migrations/0023_checkout_consents).
  * Append-only: app_runtime may insert and select, never update or delete.
  * A row is written by acceptCheckoutTerms (lib/payments/checkout.ts) for the
  * greeting's own PENDING_PAYMENT order, and only then is a real provider

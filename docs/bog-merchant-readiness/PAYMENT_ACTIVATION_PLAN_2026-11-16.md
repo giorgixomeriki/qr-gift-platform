@@ -1,5 +1,7 @@
 # QR Starr — BOG payment activation plan, 2026-11-16 (update)
 
+> **Superseded for the release (2026-11-21):** production took 0022 for Our Song, so the consent migration ships as **0023_checkout_consents**, followed by **0024_payment_release_safety**, rebased onto live f575182. Release plan: `docs/bog-release/BOG_RELEASE_2026-11-21.md`.
+
 This continues `PAYMENT_READINESS_2026-11-16.md`. Production is unchanged:
 2e17037 on Render **Free**, PAYMENTS_PROVIDER=TEST, CHECKOUT_ENABLED=false, no
 BOG_*, CRON_SECRET or RECONCILE_ADMIN_USER_ID set (read via the Render API, values not printed).

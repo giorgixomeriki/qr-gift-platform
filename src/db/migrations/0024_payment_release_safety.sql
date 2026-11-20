@@ -15,7 +15,7 @@
 -- enforce_ledger_entry_integrity (0013) still requires a REFUNDED order, an
 -- earlier COMMISSION_EARNED and the exact negated commission; the partial
 -- unique index still allows one reversal per order.
-create policy partner_ledger_entries_insert_refund_completion on partner_ledger_entries for insert
+create policy partner_ledger_entries_insert_refund_completion on partner_ledger_entries for insert to app_runtime
   with check (
     type = 'COMMISSION_REVERSAL'
     and order_id = nullif(current_setting('app.payment_activation_order_id', true), '')::uuid
@@ -40,7 +40,7 @@ create policy partner_ledger_entries_insert_refund_completion on partner_ledger_
 --
 -- A DRAFT greeting without an edit token hash exists only after a release:
 -- startGreeting always sets one, and no other code path clears it on a draft.
-create policy greetings_reclaim_released on greetings for update
+create policy greetings_reclaim_released on greetings for update to app_runtime
   using (
     status = 'DRAFT'
     and edit_token_hash is null
@@ -85,7 +85,9 @@ begin
   end if;
 
   if old.status = 'DRAFT' and new.status = 'AVAILABLE' then
-    if not (app_is_admin() and new.id = nullif(current_setting('app.draft_release_qr_id', true), '')::uuid) then
+    -- coalesce: with no release flag the comparison is NULL, and NOT NULL
+    -- would let the IF fall through. Fail closed.
+    if not coalesce(app_is_admin() and new.id = nullif(current_setting('app.draft_release_qr_id', true), '')::uuid, false) then
       raise exception 'qr_codes.% can return to AVAILABLE only through an admin draft release', new.id
         using errcode = 'insufficient_privilege';
     end if;
