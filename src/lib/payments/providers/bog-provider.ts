@@ -177,14 +177,16 @@ export class BOGPaymentProvider implements PaymentProvider {
     const parsed = callbackSchema.safeParse(JSON.parse(rawBody));
     if (!parsed.success) throw new Error("BOG callback body has an unexpected shape");
     if (parsed.data.event !== "order_payment") {
-      // Diagnostic: the callback IS genuinely BOG's (signature verified), but
-      // carries an event this integration does not know yet. Logged as a
-      // code only — no body, headers, amounts or card data.
-      logServerWarning("bogWebhook", "UNHANDLED_EVENT", {
+      // FA-03: a signed callback with another event name (BOG has not
+      // confirmed what a refund callback is called) is still BOG telling us
+      // "look at this order". Nothing is taken from it except order_id; the
+      // state comes from the fresh receipt below, exactly as for
+      // order_payment, so it settles payments and refunds alike instead of
+      // being refused with 400. Logged as a code only, to learn the name.
+      logServerWarning("bogWebhook", "OTHER_EVENT", {
         event: safeDiagnosticCode(parsed.data.event),
         bogOrderId: safeDiagnosticCode(parsed.data.body.order_id),
       });
-      throw new Error(`BOG callback event "${safeDiagnosticCode(parsed.data.event)}" is not handled`);
     }
 
     const receipt = await this.fetchReceipt(parsed.data.body.order_id);

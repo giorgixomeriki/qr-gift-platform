@@ -3,10 +3,11 @@ import { ArrowRight } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { getAdminMetrics } from "@/lib/dashboard/admin-metrics";
+import { getReconcileHealth } from "@/lib/payments/reconcile-heartbeat";
 import { formatMinorAmount } from "@/lib/format/money";
 import { ReconcileActivationsButton } from "@/components/admin/reconcile-activations-button";
 import { NotAdmin } from "@/components/admin/not-admin";
-import { PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
+import { Badge, PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
 import { buttonClasses } from "@/components/ui/button";
 
 /**
@@ -15,13 +16,15 @@ import { buttonClasses } from "@/components/ui/button";
  * is re-verified server-side (requireAdmin) — this page's own guard is not
  * the enforcement boundary.
  */
+const RECONCILE_TONE = { OK: "success", ATTENTION: "warning", FAILING: "danger", STALE: "danger", NEVER: "neutral" } as const;
+
 export default async function AdminDashboardPage() {
   const { user, isAdmin } = await requireAdminPage();
 
   const t = await getTranslations("admin");
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
-  const metrics = await requireAdmin((tx) => getAdminMetrics(tx));
+  const { metrics, reconcile } = await requireAdmin(async (tx) => ({ metrics: await getAdminMetrics(tx), reconcile: await getReconcileHealth(tx) }));
   const td = await getTranslations("admin.dashboard");
   const tStage = await getTranslations("admin.dashboard.funnel.stages");
   const tNav = await getTranslations("nav");
@@ -40,6 +43,27 @@ export default async function AdminDashboardPage() {
           </Link>
         }
       />
+
+      <Panel title={td("reconcile.title")} description={td("reconcile.description")} testId="admin-reconcile-health">
+        <div className="flex flex-wrap items-center gap-3 text-body-sm">
+          <span data-testid="reconcile-status">
+            <Badge tone={RECONCILE_TONE[reconcile.status]}>{td(`reconcile.status.${reconcile.status}`)}</Badge>
+          </span>
+          <span className="text-ink-2">
+            {reconcile.lastSuccessAt
+              ? td("reconcile.lastSuccess", { when: reconcile.lastSuccessAt.toLocaleString(locale === "ka" ? "ka-GE" : "en-GB", { timeZone: "Asia/Tbilisi", dateStyle: "medium", timeStyle: "short" }) })
+              : td("reconcile.noSuccess")}
+          </span>
+          {reconcile.lastRemaining !== null && reconcile.lastRemaining > 0 && (
+            <span className="text-danger">{td("reconcile.open", { count: reconcile.lastRemaining })}</span>
+          )}
+        </div>
+        {!reconcile.scheduleConfigured && (
+          <p className={`mt-2 text-caption ${reconcile.required ? "text-danger" : "text-ink-3"}`}>
+            {td(reconcile.required ? "reconcile.notConfiguredRequired" : "reconcile.notConfigured")}
+          </p>
+        )}
+      </Panel>
 
       <StatGroup title={td("salesTitle")}>
         <Stat label={td("stats.successfulSales")} value={metrics.successfulSales} testId="metric-sales" />
