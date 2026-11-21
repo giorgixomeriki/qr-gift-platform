@@ -124,6 +124,54 @@ async function main() {
   check("11. success -> pending invitation whose hash matches the emailed token", stored[0]?.status === "PENDING" && stored[0]?.token_hash === access.hashActivationToken(token));
   check("12. phone channel refused in email-only mode", (await withAdminContext(adminUserId, (tx) => access.issueActivation(tx, adminUserId, partnerId, "PHONE", deps)).then(() => "OK", (e: { code?: string }) => e.code ?? "x")) === "phone_auth_disabled");
   check("13. email-only mode: a phone-only partner is refused", (() => { try { access.parseContacts({ phone: "555123456" }, { requireEmail: true }); return false; } catch (e) { return (e as { code?: string }).code === "email_required"; } })());
+
+  console.log("\n--- Every link email shows the link (initial, resend, reset; ka + en) ---");
+  type Sent = { subject: string; text: string; html: string; headers?: Record<string, string> };
+  const bodyAt = (i: number) => JSON.parse(String(captured.at(i)!.init.body)) as Sent;
+  const linkRe = /https:\/\/qrapp\.ge\/partner\/activate\?token=([A-Za-z0-9_-]{43})/g;
+  function linkShown(b: Sent): { ok: boolean; token: string } {
+    const inText = [...b.text.matchAll(linkRe)].map((m) => m[1]);
+    const hrefs = [...b.html.matchAll(/href="(https:\/\/qrapp\.ge\/partner\/activate\?token=([A-Za-z0-9_-]{43}))"/g)].map((m) => m[2]);
+    const visibleUrl = />https:\/\/qrapp\.ge\/partner\/activate\?token=[A-Za-z0-9_-]{43}</.test(b.html);
+    const token = inText[0] ?? "";
+    // Link first: before the Georgian and English explanations, in both parts.
+    const textFirst = b.text.indexOf(token) < b.text.indexOf("QR STARR") || b.text.indexOf(token) < b.text.search(/გამარჯობა|„/);
+    const htmlFirst = b.html.indexOf("href=") < b.html.search(/გამარჯობა|„/) && b.html.indexOf("href=") < b.html.search(/Hello!|A password reset/);
+    const ok = inText.length === 1 && hrefs.length === 2 && hrefs.every((h) => h === token) && visibleUrl && textFirst && htmlFirst;
+    return { ok, token };
+  }
+  const p2 = randomUUID();
+  const email2 = `pr-${p2.slice(0, 8)}@verify.test`;
+  await admin`insert into partners (id, slug, name, contact_email) values (${p2}, ${`pr-${p2.slice(0, 8)}`}, 'TST Flw', ${email2})`;
+  const before = captured.length;
+  const first = await withAdminContext(adminUserId, (tx) => access.issueActivation(tx, adminUserId, p2, "EMAIL", deps));
+  await new Promise((r) => setTimeout(r, 61_000 - (Date.now() % 60_000) + 50)); // next minute: distinct expiry in the subject
+  const second = await withAdminContext(adminUserId, (tx) => access.issueActivation(tx, adminUserId, p2, "EMAIL", deps));
+  const e1 = bodyAt(-2);
+  const e2 = bodyAt(-1);
+  const s1 = linkShown(e1);
+  const s2 = linkShown(e2);
+  check("18. initial invitation: link in text + clickable button + visible URL, before the explanation", captured.length === before + 2 && s1.ok, e1.text.slice(0, 80));
+  check("19. resend: link in text + clickable button + visible URL, before the explanation", s2.ok, e2.text.slice(0, 80));
+  check("20. resend gets a new single-use token (not the first one)", s1.token !== s2.token && s2.token.length === 43);
+  check("21. resend subject differs (mail apps don't merge and trim it) and is still bilingual", e1.subject !== e2.subject && /გააქტიურება/.test(e2.subject) && /Activate/.test(e2.subject));
+  check("22. each email has its own X-Entity-Ref-ID = invitation id", e1.headers?.["X-Entity-Ref-ID"] === first.invitationId && e2.headers?.["X-Entity-Ref-ID"] === second.invitationId);
+  const hours = (second.expiresAt.getTime() - Date.now()) / 3600_000;
+  check("23. resend expiry = 72 hours, stated in ka and en", hours > 71.9 && hours <= 72 && /მოქმედებს .*-მდე/.test(e2.text) && /expires .* \(Tbilisi time\)/.test(e2.text));
+  const inv = await admin`select id, status, token_hash from partner_invitations where partner_id = ${p2} order by created_at`;
+  check("24. first invitation revoked (REISSUED), only the resend is pending; hash of emailed token stored", inv.length === 2 && inv[0]!.status === "REVOKED" && inv[1]!.status === "PENDING" && inv[1]!.token_hash === access.hashActivationToken(s2.token), inv.map((r) => r.status));
+  check("25. old link -> invalid, resent link -> valid", (await access.previewLink(s1.token)).state === "invalid" && (await access.previewLink(s2.token)).state === "valid");
+  await admin`update partner_invitations set created_at = now() - interval '73 hours', expires_at = now() - interval '1 hour' where id = ${second.invitationId}`;
+  check("26. resent link past 72h -> expired", (await access.previewLink(s2.token)).state === "expired");
+  await admin`update partner_invitations set expires_at = now() + interval '1 hour', status = 'ACCEPTED', accepted_user_id = ${randomUUID()}, accepted_at = now() where id = ${second.invitationId}`;
+  check("27. used resent link -> used", (await access.previewLink(s2.token)).state === "used");
+  const rec = (await import("../src/lib/partners/login-email")).buildPartnerLinkEmail({ to: email2, partnerName: "TST Flw", link: `https://qrapp.ge/partner/activate?token=${"R".repeat(43)}`, purpose: "RECOVERY", expiresAt: new Date(Date.now() + 24 * 3600_000), invitationId: "inv-r" });
+  check("28. reset email shows the link the same way (ka + en)", linkShown(rec).ok && /პაროლის/.test(rec.subject) && /Reset/.test(rec.subject));
+  check("29. no resend token in any log line", logged.every((l) => !l.includes(s1.token) && !l.includes(s2.token)));
+  await admin`delete from audit_logs where target_id = ${p2}`;
+  await admin`delete from partner_invitations where partner_id = ${p2}`;
+  await admin`delete from partners where id = ${p2}`;
+
   check("14. no token, API key or link body in any log line", logged.every((l) => !l.includes(token) && !l.includes("re_test_") && !l.includes("partner/activate?token=")), logged.filter((l) => l.includes("token")));
 
   console.log("\n--- Production configuration guard ---");

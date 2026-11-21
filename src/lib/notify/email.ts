@@ -9,6 +9,8 @@ export type OutgoingEmail = {
   html: string;
   /** Same key = same message: a retried send is not delivered twice. */
   idempotencyKey: string;
+  /** Extra MIME headers (e.g. X-Entity-Ref-ID so mail apps don't merge distinct messages). */
+  headers?: Record<string, string>;
 };
 
 export class EmailNotConfiguredError extends Error {
@@ -77,6 +79,7 @@ async function sendViaResend(message: OutgoingEmail): Promise<void> {
         subject: message.subject,
         text: message.text,
         html: message.html,
+        ...(message.headers ? { headers: message.headers } : {}),
       }),
       signal: controller.signal,
     });
