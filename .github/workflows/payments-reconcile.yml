@@ -4,6 +4,7 @@
 # Inert until the owner sets the repository variable
 # RECONCILE_SCHEDULE_ENABLED=true; until then every run is skipped.
 # The secret lives in the "production-reconcile" environment, restricted to main.
+# Must live on main (the default branch): GitHub schedules only from there.
 name: Payment reconciliation
 
 on:
