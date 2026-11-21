@@ -429,7 +429,7 @@ async function main() {
   const paidRows = await withPartnerContext(loginA, A.id, (tx) => getQrResults(tx, A.id));
   const sold = paidRows.find((r) => r.qrCodeId === soldQr);
   check("9c. confirmed payment: 1 paid activation, revenue + commission on that card", sold?.paidActivations === 1 && sold.grossMinor === order.grossAmountMinor && sold.netCommissionMinor === order.partnerCommissionMinor, sold);
-  check("9d. a used card's token is masked for the partner", Boolean(sold?.label.startsWith("••••")) && sold?.status === "USED");
+  check("9d. a used card's token is masked for the partner", Boolean(sold?.label.startsWith("••••")) && sold?.status === "ACTIVE");
   const metrics = await withPartnerContext(loginA, A.id, (tx) => getPartnerMetrics(tx, A.id));
   check("9e. partner totals: handover counted as distributed, not as a sale", metrics.qrDistributed >= 2 && metrics.successfulSales === 1 && metrics.grossSalesMinor === order.grossAmountMinor);
   const cross = await withPartnerContext(loginA, B.id, (tx) => getQrResults(tx, B.id));

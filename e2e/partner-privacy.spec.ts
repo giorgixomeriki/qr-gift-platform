@@ -4,9 +4,10 @@ import { signInAdminWithMfa } from "./admin-session";
 
 /**
  * QA-01 V1 privacy hardening: partner surfaces release a card's credential
- * (token / URL / QR image) only while the card is unclaimed, never show a
- * claimed card's lifecycle beyond "Used", never serve greeting content, and
- * audit every credential release. Admins keep full access.
+ * (token / URL / QR image) only while the card is unclaimed, show the same
+ * business status as admins (Draft / Activated; a moderated card stays
+ * "Used"), never serve greeting content, and audit every credential release.
+ * Admins keep full access.
  * See docs/PRIVACY_MODEL.md.
  */
 test.use({ locale: "en-US" });
@@ -49,18 +50,17 @@ test.describe("Partner credential exposure", () => {
     expect(dashboardHtml).not.toContain(fixture.message);
     await page.goto("/partner/dashboard");
     const liveRow = page.getByTestId("inventory-row").filter({ hasText: `••••${fixture.liveToken.slice(-4)}` });
-    await expect(liveRow).toContainText("Used");
+    await expect(liveRow).toContainText("Activated");
     await expect(liveRow.getByRole("link")).toHaveCount(0);
     await expect(page.getByTestId("inventory-row").filter({ hasText: fixture.availableToken })).toContainText("Available");
 
-    // CSV — the live card is masked, has no URL and no finer status than USED.
+    // CSV — the live card is masked and has no URL; its status is the business status.
     const csv = await (await page.request.get(`/api/qr/batches/${fixture.batchId}/export`)).text();
     expect(csv).toContain(fixture.availableToken);
     expect(csv).not.toContain(fixture.liveToken);
-    expect(csv).not.toContain("ACTIVE");
     const liveLine = csv.split("\r\n").find((line) => line.startsWith(`••••${fixture.liveToken.slice(-4)}`));
     expect(liveLine?.split(",")[1]).toBe("");
-    expect(liveLine).toContain(",USED,");
+    expect(liveLine).toContain(",ACTIVE,");
 
     // Print sheet — only the unclaimed card is printable (the batch holds two).
     const print = await page.request.get(`/print/batch/${fixture.batchId}`);
