@@ -100,7 +100,7 @@ Verified: a fresh database migrates 0000 → 0024 cleanly (25 rows), with all su
 
 The operational version with commands, pass criteria and rollback is `PRODUCTION_CHECKLIST.md`.
 
-1. **Render Starter** ($7/month). Free spins down after 15 min (~31 s cold start). It also shares 750 h/month with `insurancecomparison-backend`, so it can be suspended before month end. Callbacks and the return check need an awake service.
+1. **Hosting stays on Render Free** (owner decision 2026-11-21; Starter is no longer a prerequisite). Free spins down after 15 min (36.6 s cold start measured). A lost callback is recovered by the return check and by reconciliation, so the reconciliation schedule (step 6) must be live and green before checkout opens. Gates and drill: `RENDER_FREE_PAYMENTS.md`, checklist §C.
 2. **Production backup**: verified `pg_dump` via the migrations role (pg_dump 17 inside the supabase container), with sha256 and restore counts.
 3. **Apply 0023 + 0024** (`npm run db:migrate` with the production migrations URL). Expected result: 25 rows, max `created_at` 1795222800000. Both migrations are additive; old code (f575182) ignores the new table, policies and trigger. Rollback of code alone is safe.
 4. **Render env (Save only, then deploy):**

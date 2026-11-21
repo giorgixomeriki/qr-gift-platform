@@ -13,7 +13,9 @@ Release branch `release/bog-payments-f575182` (local). Companion to `BOG_RELEASE
 | Missing env | `BOG_*`, `BOG_REFUNDS_ENABLED`, `CRON_SECRET`, `RECONCILE_ADMIN_USER_ID`, `LEGAL_EFFECTIVE_DATE` |
 | Migrations | 23 rows, last `created_at` 1795161600000 (0022_music_content_type), per the 2026-11-20 read; re-read in step B |
 | Blueprint | the API lists no Blueprint for this account, so env is dashboard-managed |
-| BOG webhook | `POST /api/webhooks/payments/bog` → 404 today (provider TEST) |
+| BOG webhook | `POST /api/webhooks/payments/BOG` (the provider key is case-sensitive, upper case as sent in `callback_url`) → 404 today (provider TEST) |
+| Cold start | 36.6 s, request held, 200 (2026-11-21); the 2026-11 website audit also saw two 503s during a cold start |
+| Memory | peak 277 MB of 512 MB over 7 days; no OOM or failure events |
 
 ## A. Pre-flight (local, done)
 
@@ -28,6 +30,7 @@ Release branch `release/bog-payments-f575182` (local). Companion to `BOG_RELEASE
 - [x] `verify:low-cost-hosting` 55/55, `tsc` clean.
 - [x] `render.yaml`: `PAYMENTS_PROVIDER` / `CHECKOUT_ENABLED` are `sync: false`, so a future Blueprint sync cannot reset the owner's dashboard values. Unset, both fail closed.
 - [x] `scripts/ops/prod-backup.sh` dry-run on the local stack: MATCH, refuses `app_runtime` URLs.
+- [x] Render Free drill (`npm run drill:free-tier`, production build behind a Free emulator): **20/20** with a ≈1 s boot and **20/20** with a 31 s cold start. Covers lost, timed-out and 503 callbacks, a crash mid-callback, a lost refund callback and a BOG outage during reconcile. `RENDER_FREE_PAYMENTS.md`.
 
 ## B. 🔒 Backup (immediately before migrating)
 
@@ -43,10 +46,15 @@ Pass criteria:
 
 If the ledger count is not 23, **stop**: production changed since this plan.
 
-## C. 🔒 Render Starter ($7/month)
+## C. Hosting: stay on Render Free (owner decision 2026-11-21)
 
-Dashboard → `qr-starr` → Settings → Instance type → **Starter**. Free spins down after 15 min (~31 s cold start), and it shares the 750 free hours with another service. BOG callbacks and the return check need an awake service.
-Check: `/api/health` 200 twice, 20 min apart, with no cold start.
+No plan change. Do **not** upgrade the instance and do not change the hosting configuration. The analysis and drill are in `RENDER_FREE_PAYMENTS.md`. On Free, a BOG callback can be lost to a cold start, and BOG documents no retries. Safety then rests on the return-page check and on scheduled reconciliation, so **step G is a hard gate before step H**.
+
+Free-plan release gates (any failure = **release blocker**, do not open checkout):
+- [ ] C1: `npm run drill:free-tier` passes locally on the release commit (all checks). It needs the local stack and a `next build`.
+- [ ] C2: production cold-start probe after ≥ 20 min idle. `curl -m 120 https://qrapp.ge/api/health` returns 200 within 90 s; 2026-11-21: 36.6 s.
+- [ ] C3: Render Dashboard → Billing → free instance hours used this month < 500. The estimate with hourly reconcile is ~300–350 h of 750; the hours are shared with `insurancecomparison-backend`.
+- [ ] C4: step G is completed and green, including the `workflow_dispatch` run against the cold service.
 
 ## D. 🔒 Apply 0023 + 0024
 
@@ -91,7 +99,7 @@ git push origin <release-commit>:refs/heads/feat/render-low-cost-hosting   # fas
 Live checks:
 - [ ] the deploy is live on the release commit and `/api/health` returns 200;
 - [ ] the checkout page shows "Payments open soon" (CHECKOUT_ENABLED=false);
-- [ ] an unsigned `POST /api/webhooks/payments/bog` gets **400** (before the deploy: 404);
+- [ ] an unsigned `POST /api/webhooks/payments/BOG` gets **400** (before the deploy: 404);
 - [ ] `GET /api/cron/payments-reconcile`: **401** without the bearer, **200** with it (only from the owner's shell, the secret never printed);
 - [ ] the admin dashboard shows the reconciliation heartbeat;
 - [ ] home, `/g/<test token>` and the legal pages render; no new errors in the Render logs for 15 min.
@@ -106,6 +114,8 @@ Live checks:
 The schedule is hourly at :15. The dashboard turns red after 150 min without a successful run.
 
 ## H. 🔒 Open checkout + first real payment (M1-prod)
+
+Precondition: all §C gates (C1–C4) green. On Render Free, step G is what recovers a lost callback; without it, do not open checkout.
 
 1. Check that `LEGAL_EFFECTIVE_DATE` ≤ today (Tbilisi). Set `CHECKOUT_ENABLED=true`, then save and deploy.
 2. The owner pays for one dedicated card at the lowest approved price.
