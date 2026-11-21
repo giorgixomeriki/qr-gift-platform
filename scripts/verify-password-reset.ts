@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { resolveSecretKey, resolvePublishableKey } from "../src/lib/supabase/keys";
 
 /**
  * Verifies the password-reset flow's security invariants directly against
@@ -14,10 +15,10 @@ import { createClient } from "@supabase/supabase-js";
  */
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = resolvePublishableKey(process.env)?.key;
+const serviceRoleKey = resolveSecretKey(process.env)?.key;
 if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-  throw new Error("NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY and SUPABASE_SERVICE_ROLE_KEY are required");
+  throw new Error("NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) are required");
 }
 
 const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });

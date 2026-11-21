@@ -1,0 +1,25 @@
+Source: https://businessmanager.bog.ge/en/products/faq  (rendered 2026-11-06, "Popular Questions" tab, verbatim)
+
+What status of legal entity can use business manager?
+The business manager can be used by a person with any legal status (Ltd., ind. entrepreneur, JSC, etc.). To use the full functionality, you need to be a Bank of Georgia payment recipient. You can become a payment recipient from the Business Manager, completely remotely.
+
+What does "Payment Recipient" mean?
+To be a Bank of Georgia payment recipient, you need to own our POS terminal or use online payment methods.
+
+How do I become a Payment Recipient?
+You can very easily request any of our payment methods completely remotely from the Payments Manager page in Business Manager.
+
+How long does it take to confirm payment methods?
+It takes a maximum of 3 working days to review and confirm the requested payment methods. You will receive an answer in the notifications of the business manager and also by e-mail.
+
+How are payment methods integrated?
+After confirming the request, on the payment methods details page, you will see the parameters for your business that you will need during the integration process. Technical documentation required for integration is available at this link - api.bog.ge/docs
+
+Is it possible to cancel the installments or get a refund from the business manager?
+Yes, we have both functionalities. This can be done by the director and also by the person with the role of accountant. Note that your employee needs to be added as a team member by the Director once before they can access Business Manager. It is possible to add a team member for a certain time.
+
+Is it possible to download the statement?
+It is possible to download both a standard statement and a full report. A full report includes all operations, including user-initiated and unfinished processes.
+
+Who can log in to Business Manager?
+Initially only to the director, or a person authorized to manage the organization. They can also add team members as needed. For example, it is possible to add an accountant as a team member who will be able to perform financial operations. It is also possible to add a programmer and a marketing manager.

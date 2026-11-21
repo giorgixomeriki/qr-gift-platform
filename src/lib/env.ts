@@ -1,7 +1,16 @@
 import "server-only";
 import { createPublicKey } from "node:crypto";
 import { z } from "zod";
-import { appUrlProblems, bogUrlProblems, databaseUrlProblems, supabaseUrlProblems } from "./env-guards";
+import {
+  appUrlProblems,
+  bogUrlProblems,
+  clientIpConfigProblems,
+  databaseUrlProblems,
+  isHostedEnvironment,
+  partnerAuthConfigProblems,
+  supabaseUrlProblems,
+} from "./env-guards";
+import { publishableKeyProblems, resolvePublishableKey, resolveSecretKey, secretKeyProblems, type KeySource } from "./supabase/keys";
 
 /**
  * Single validated source of truth for SERVER-SIDE environment variables,
@@ -21,10 +30,16 @@ const envSchema = z.object({
   MIGRATIONS_DATABASE_URL: z.string().min(1).optional(),
 
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
-  // Server-only. Bypasses RLS — used exclusively for signed Storage URL issuance
-  // after the app has already validated ownership in code. Never sent to the client.
-  SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+  // Supabase API keys: the new publishable/secret pair, or (temporarily) the
+  // legacy anon/service_role JWTs. Resolved into SUPABASE_PUBLISHABLE_KEY /
+  // SUPABASE_SECRET_KEY below (lib/supabase/keys.ts); read those, never these.
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().optional(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional(),
+  // Server-only. Bypasses RLS — used exclusively for Auth admin lookups and
+  // signed Storage URL issuance after the app has already validated ownership
+  // in code. Never sent to the client.
+  SUPABASE_SECRET_KEY: z.string().optional(),
+  SUPABASE_SERVICE_ROLE_KEY: z.string().optional(),
   SUPABASE_STORAGE_BUCKET: z.string().min(1).default("greeting-media"),
 
   // HMAC key for hashing sender edit tokens before they're stored. See
@@ -35,8 +50,10 @@ const envSchema = z.object({
 
   // Which PaymentProvider to construct (lib/payments/provider-factory.ts).
   // "TEST" is refused at startup when NODE_ENV=production — see that file.
-  // "BOG" is a placeholder adapter (providers/bog-provider.ts) whose methods
-  // are not implemented — selecting it does not mean BOG is integrated.
+  // "BOG" is the Bank of Georgia Payment Manager adapter
+  // (providers/bog-provider.ts): orders, signed callbacks verified against a
+  // fresh receipt, and refunds (only when BOG_REFUNDS_ENABLED=true). Selecting
+  // it requires every BOG_* setting below (checked at startup).
   PAYMENTS_PROVIDER: z.enum(["TEST", "BOG"]).default("TEST"),
 
   // The TEST provider only works when this is explicitly "true" — selecting
@@ -76,8 +93,9 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
-  // BOG refunds are built but off: while false, refundPayment sends nothing
-  // and refunds stay queued for a person (REFUND_REQUIRED / anomalies).
+  // BOG refunds are implemented and off by default: while false,
+  // refundPayment sends nothing and refunds stay queued for a person
+  // (REFUND_REQUIRED / anomalies).
   BOG_REFUNDS_ENABLED: z
     .enum(["true", "false"])
     .default("false")
@@ -89,9 +107,71 @@ const envSchema = z.object({
   // reconciliation report and refund bookkeeping run in an admin context).
   CRON_SECRET: z.string().min(32).optional(),
   RECONCILE_ADMIN_USER_ID: z.string().uuid().optional(),
+  // Optional: where reconciliation alerts are POSTed (docs/ops/PAYMENT_RECONCILIATION_RUNBOOK.md).
+  // Treat it as a secret. Unset: alerts go to the structured log only.
+  PAYMENT_ALERT_WEBHOOK_URL: z.string().url().optional(),
+
+  // Staging-only ownership fence (lib/payments/scope.ts). When set, this
+  // deployment contacts the payment provider (create, verify, refund) and
+  // reconciles ONLY for orders owned by this partner; anything else is
+  // refused before any provider call or database write. For the real-money
+  // BOG staging run on a database that also holds simulator orders. Unset in
+  // production (no fence).
+  PAYMENTS_SCOPE_PARTNER_ID: z.string().uuid().optional(),
+
+  // Where the trusted proxy puts the caller's IP (lib/rate-limit/client-ip.ts).
+  // Format-checked, and required outside Vercel, by clientIpConfigProblems
+  // (blank counts as unset).
+  CLIENT_IP_HEADER: z.string().optional(),
+  TRUSTED_PROXY_COUNT: z.string().optional(),
+  // "true" exposes /api/ops/client-ip for verifying the two settings above on
+  // a new host. Turn it off again once verified.
+  CLIENT_IP_DIAGNOSTICS: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+
+  // ---- Partner login access (lib/partners/login-access.ts, migrations/0023)
+  // How partner activation / password-reset links are emailed. Unset = email
+  // invitations are unavailable (the admin UI says so). "resend" sends
+  // through the Resend HTTP API. "log" writes the message to the server log
+  // (and PARTNER_EMAIL_LOG_FILE) for local development only; a hosted
+  // deployment refuses it.
+  PARTNER_EMAIL_TRANSPORT: z.enum(["resend", "log"]).optional(),
+  RESEND_API_KEY: z.string().min(1).optional(),
+  // Verified sender, e.g. "QR STARR <partners@qrapp.ge>".
+  PARTNER_EMAIL_FROM: z.string().min(3).optional(),
+  PARTNER_EMAIL_LOG_FILE: z.string().min(1).optional(),
+  // Hours an emailed activation / reset link stays valid (1-168).
+  PARTNER_INVITE_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(72),
+  // SMS one-time-code sign-in for partners. Off by default. The code is sent
+  // and checked by Supabase Auth through the SMS provider configured in the
+  // Supabase project; this app never generates or sees an OTP. Turning it on
+  // in a hosted deployment also requires PARTNER_SMS_PROVIDER, the owner's
+  // statement of which real provider Supabase uses.
+  PARTNER_PHONE_AUTH_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
+  PARTNER_SMS_PROVIDER: z.enum(["twilio", "twilio_verify", "vonage", "messagebird", "textlocal", "send_sms_hook"]).optional(),
+  // Partner-side team management (inviting staff logins). Off: one partner =
+  // one login. Existing extra members are kept and still work.
+  PARTNER_TEAM_MEMBERS_ENABLED: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((value) => value === "true"),
 });
 
-export type Env = z.infer<typeof envSchema>;
+type RawEnv = z.infer<typeof envSchema>;
+type LegacyKeyVars = "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" | "NEXT_PUBLIC_SUPABASE_ANON_KEY" | "SUPABASE_SECRET_KEY" | "SUPABASE_SERVICE_ROLE_KEY";
+export type Env = Omit<RawEnv, LegacyKeyVars> & {
+  /** Low-privilege key: browser and session clients. */
+  SUPABASE_PUBLISHABLE_KEY: string;
+  /** Elevated key (bypasses RLS). Server-only. */
+  SUPABASE_SECRET_KEY: string;
+  /** "legacy" while the anon/service_role fallback is in use (ops:preflight reports it). */
+  SUPABASE_KEY_SOURCE: { publishable: KeySource; secret: KeySource };
+};
 
 function loadEnv(): Env {
   const parsed = envSchema.safeParse(process.env);
@@ -102,18 +182,37 @@ function loadEnv(): Env {
 
   const data = parsed.data;
 
-  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means running on
-  // Vercel (build or runtime, preview or production) — never a dev machine.
+  // Deployment-safety checks (lib/env-guards.ts). "Hosted" means a real
+  // deployment on Vercel, Render or an APP_HOSTED=true platform (build or
+  // runtime), never a dev machine.
   const production = data.NODE_ENV === "production";
-  const hosted = process.env.VERCEL === "1";
+  const hosted = isHostedEnvironment(process.env);
   const problems = [
     ...appUrlProblems(process.env.NEXT_PUBLIC_APP_URL, { production, hosted }),
     ...databaseUrlProblems(data.DATABASE_URL, { production, hosted }),
     ...supabaseUrlProblems(data.NEXT_PUBLIC_SUPABASE_URL, { hosted }),
+    ...publishableKeyProblems(process.env),
+    ...secretKeyProblems(process.env),
+    ...clientIpConfigProblems({
+      hosted,
+      vercel: process.env.VERCEL === "1",
+      header: process.env.CLIENT_IP_HEADER || undefined,
+      proxyCount: process.env.TRUSTED_PROXY_COUNT || undefined,
+    }),
   ];
   if (production && data.EDIT_TOKEN_SECRET.length < 32) {
     problems.push("EDIT_TOKEN_SECRET must be at least 32 characters in production (openssl rand -hex 32)");
   }
+  problems.push(
+    ...partnerAuthConfigProblems({
+      hosted,
+      emailTransport: data.PARTNER_EMAIL_TRANSPORT,
+      resendApiKey: data.RESEND_API_KEY,
+      emailFrom: data.PARTNER_EMAIL_FROM,
+      phoneEnabled: data.PARTNER_PHONE_AUTH_ENABLED,
+      smsProvider: data.PARTNER_SMS_PROVIDER,
+    }),
+  );
   if (problems.length > 0) {
     throw new Error(`Unsafe environment configuration:\n- ${problems.join("\n- ")}`);
   }
@@ -146,7 +245,20 @@ function loadEnv(): Env {
     }
   }
 
-  return data;
+  const publishable = resolvePublishableKey(process.env)!;
+  const secret = resolveSecretKey(process.env)!;
+  // Drop the raw variables so nothing can bypass the resolution above.
+  const rest: Partial<RawEnv> = { ...data };
+  delete rest.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+  delete rest.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  delete rest.SUPABASE_SECRET_KEY;
+  delete rest.SUPABASE_SERVICE_ROLE_KEY;
+  return {
+    ...(rest as Omit<RawEnv, LegacyKeyVars>),
+    SUPABASE_PUBLISHABLE_KEY: publishable.key,
+    SUPABASE_SECRET_KEY: secret.key,
+    SUPABASE_KEY_SOURCE: { publishable: publishable.source, secret: secret.source },
+  };
 }
 
 export const env = loadEnv();

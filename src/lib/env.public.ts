@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { appUrlProblems } from "./env-guards";
+import { appUrlProblems, isHostedEnvironment } from "./env-guards";
+import { publishableKeyProblems, resolvePublishableKey } from "./supabase/keys";
 
 /**
  * The subset of env vars safe to import from client components (only
@@ -9,7 +10,6 @@ import { appUrlProblems } from "./env-guards";
  */
 const publicEnvSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 });
 
@@ -17,14 +17,30 @@ const publicEnvSchema = z.object({
 // codes — rather than inherit the localhost default (lib/env-guards.ts).
 const appUrlIssues = appUrlProblems(process.env.NEXT_PUBLIC_APP_URL, {
   production: process.env.NODE_ENV === "production",
-  hosted: process.env.VERCEL === "1",
+  hosted: isHostedEnvironment(process.env),
 });
 if (appUrlIssues.length > 0) {
   throw new Error(`Unsafe environment configuration:\n- ${appUrlIssues.join("\n- ")}`);
 }
 
-export const publicEnv = publicEnvSchema.parse({
-  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+// Each NEXT_PUBLIC_ variable is referenced literally so Next.js inlines it
+// into the browser bundle (a computed process.env lookup would be undefined
+// there). The publishable key falls back to the legacy anon key during the
+// key migration (lib/supabase/keys.ts).
+const publicKeys = {
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-});
+};
+const keyIssues = publishableKeyProblems(publicKeys);
+if (keyIssues.length > 0) {
+  throw new Error(`Unsafe environment configuration:\n- ${keyIssues.join("\n- ")}`);
+}
+
+export const publicEnv = {
+  ...publicEnvSchema.parse({
+    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
+  }),
+  /** Low-privilege key for browser and session clients. */
+  SUPABASE_PUBLISHABLE_KEY: resolvePublishableKey(publicKeys)!.key,
+};

@@ -9,10 +9,14 @@ import { getDefaultProductPrice, formatMinorAmount } from "@/lib/payments/displa
 import { editTokenCookieName } from "@/lib/security/edit-token";
 import { loadDraftForEdit, InvalidEditTokenError } from "@/lib/greetings/content";
 import { loadActiveGreetingForRecipient, isOriginalSender, RecipientAccessError } from "@/lib/greetings/recipient";
-import { SenderEntry } from "@/components/greeting/sender-entry";
-import { CreationWizard, type WizardInitialState } from "@/components/greeting/creation-wizard";
-import { RecipientView } from "@/components/greeting/recipient-view";
-import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/placeholders";
+import type { WizardInitialState } from "@/components/greeting/creation-wizard";
+import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
+import { signatureUiEnabled } from "@/components/signature/flag";
+import { getMerchantInfo } from "@/lib/merchant/server";
+import { checkoutSeller } from "@/lib/merchant/info";
+import { parseStoredMusic } from "@/lib/music/spotify";
+import { spotifyEmbedEnabled } from "@/lib/music/flag";
+import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder } from "@/components/qr/placeholders";
 
 /**
  * The permanent public entry point printed on every physical card
@@ -32,6 +36,7 @@ import { BlockedPlaceholder, DraftNoAccessPlaceholder } from "@/components/qr/pl
  */
 export const dynamic = "force-dynamic";
 
+
 export default async function QrEntryPage({
   params,
   searchParams,
@@ -50,6 +55,9 @@ export default async function QrEntryPage({
 
     case "blocked":
       return <BlockedPlaceholder />;
+
+    case "expired":
+      return <ExpiredPlaceholder />;
 
     case "available": {
       await recordAnalyticsEvent({ eventType: "QR_SCANNED", qrCodeId: resolution.qrId }, { partnerId: resolution.partnerId });
@@ -77,6 +85,7 @@ export default async function QrEntryPage({
         const videoRow = draft.content.find((c) => c.type === "video" && c.signedUrl);
         const audioRow = draft.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = draft.content.find((c) => c.type === "text");
+        const musicRow = draft.content.find((c) => c.type === "music" && c.status === "READY");
 
         // A message is required before preview/checkout. The server refuses
         // to create an order without one anyway (lib/payments/eligibility.ts);
@@ -93,15 +102,15 @@ export default async function QrEntryPage({
           photos: photoBySlot,
           video: videoRow ? { contentId: videoRow.id, url: videoRow.signedUrl! } : null,
           audio: audioRow ? { contentId: audioRow.id, url: audioRow.signedUrl! } : null,
+          music: parseStoredMusic(musicRow?.textValue),
+          spotifyEmbed: spotifyEmbedEnabled(),
           priceLabel,
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
+          merchantSeller: checkoutSeller(getMerchantInfo(), locale === "en" ? "en" : "ka"),
+          merchantVatStatus: checkoutVatStatus(),
         };
 
-        return (
-          <Suspense>
-            <CreationWizard initial={initial} />
-          </Suspense>
-        );
+        return <Suspense>{signatureUiEnabled() ? <SignatureWizard initial={initial} /> : <CreationWizard initial={initial} />}</Suspense>;
       } catch (err) {
         if (err instanceof InvalidEditTokenError) return <DraftNoAccessPlaceholder />;
         throw err;
@@ -130,6 +139,7 @@ export default async function QrEntryPage({
         const videoRow = data.content.find((c) => c.type === "video" && c.signedUrl);
         const audioRow = data.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = data.content.find((c) => c.type === "text");
+        const musicRow = data.content.find((c) => c.type === "music" && c.status === "READY");
 
         return (
           <RecipientView
@@ -142,7 +152,9 @@ export default async function QrEntryPage({
               photos,
               video: videoRow ? { url: videoRow.signedUrl! } : null,
               audio: audioRow ? { url: audioRow.signedUrl! } : null,
+              music: parseStoredMusic(musicRow?.textValue),
             }}
+            spotifyEmbed={spotifyEmbedEnabled()}
           />
         );
       } catch (err) {
@@ -151,4 +163,12 @@ export default async function QrEntryPage({
       }
     }
   }
+}
+
+/** The configured VAT status for the checkout disclosure (display only), never from the demo profile. */
+function checkoutVatStatus(): "NOT_REGISTERED" | "REGISTERED" | null {
+  const info = getMerchantInfo();
+  if (info.mode !== "configured") return null;
+  const v = info.values.vatStatus;
+  return v === "NOT_REGISTERED" || v === "REGISTERED" ? v : null;
 }

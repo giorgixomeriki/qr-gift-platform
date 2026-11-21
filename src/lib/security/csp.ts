@@ -19,7 +19,7 @@
  * attributes (which nonces cannot cover), and Supabase is the only external
  * origin (storage media + auth API).
  */
-export function buildContentSecurityPolicy(nonce: string, supabaseUrl: string): string {
+export function buildContentSecurityPolicy(nonce: string, supabaseUrl: string, opts: { spotifyEmbed?: boolean } = {}): string {
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -31,6 +31,9 @@ export function buildContentSecurityPolicy(nonce: string, supabaseUrl: string): 
     `media-src 'self' blob: ${supabaseUrl}`,
     `connect-src 'self' ${supabaseUrl}`,
     "form-action 'self'",
+    // "Our Song": the official Spotify embed is the only frame ever allowed, and only while
+    // SPOTIFY_EMBED_ENABLED=1 (lib/music/flag.ts). Off, frames fall back to default-src 'self'.
+    ...(opts.spotifyEmbed ? ["frame-src https://open.spotify.com"] : []),
   ].join("; ");
 }
 

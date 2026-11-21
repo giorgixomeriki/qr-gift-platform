@@ -1,0 +1,98 @@
+https://businessmanager.bog.ge/en/online-payment
+Home 
+Products 
+Payment Manager 
+Online payments Online installment Buy Now Pay Later API Manager 
+Open Banking Business Internet Banking Services Exchange rates Ads Manager 
+Offers Gift Cards Analytics 
+Customer Analytics Payment Analytics 
+Ads Manager for your business Create offers for your customers 
+For Developers 
+dark 
+Sign In 
+Geo 
+GEO 
+ENG 
+Products 
+Payment Manager 
+API Manager 
+Ads Manager 
+Analytics 
+FAQ 
+Data Protection Notice 
+For developers 
+Documentation 
+Contact us 
+(+995 32) 2 444 242 
+customerservice@bog.ge 
+Subscribe 
+Email 
+false 
+2026 Bank of Georgia 
+Online Payments Display payment buttons on your website and offer the easiest and most diverse ways of digital payments to your customers 
+Terms 
+Add Payment 
+Advantages By integrating online payments, you will simplify the payment process for your customers and increase your business sales 
+Simple Integration Process 
+Simple Integration Process 
+The payment method is requested remotely, and integration takes a few minutes after confirmation 
+Customer Comfort 
+Customer Comfort 
+Customers will be able to purchase a product/service from your platform in seconds without leaving their home 
+Security 
+Security 
+Payment is protected by the 3D protection service, and your customers' personal data is protected by a secure system 
+Simplified Process 
+Simplified Process 
+Your customers will be able to purchase the product/service using their preferred payment method 
+Online Payment Methods 
+Payment by card 
+Payment by BOG authorization 
+Payment by PLUS and MR points 
+Pay with Google Pay 
+Payment with Apple Pay 
+Online installment payment 
+Payment by gift card 
+Buy Now Pay Later 
+How to insert payment button on your website? 
+With the help of a developer 
+With Plugin 
+Short Summary To add payment buttons to your platform, you will need development knowledge, which will help you understand the technical documentation we have prepared and integrate the payment button easily 
+Technical Documentation 
+Add Payment 
+Frequently Asked Questions 
+What kind of legal person can use Payment methods? The online payments can be used by entities with any legal status (individual entrepreneur, LLC, JSC, etc.) 
+What is the needed turnover to use ecommerce? There is no minimum turnover to use ecommerce. 
+Can the customers use foreign cards in case of integrating Bank of Georgia’s ecommerce? For using the foreign cards, the features and terms are agreed individually. 
+Is having an amount on deposit needed? Yes, depositing amount is needed. The amount should be agreed individually. 
+How is the settlement made between bank and the business? The settlement is made on the next calendar day after the transaction. 
+Are there any limits for online payments? Yes, the limits should be agreed individually, based on company’s needs. 
+If you have a business account and you are a director Enter your Bank of Georgia username and password that you use in Business Mobile Bank and Internet Bank and invite your marketing manager, accountant, etc. 
+LOG IN 
+If you don't have a business account Open your first business account and register to access the payments manager 
+OPEN AN ACCOUNT 
+აირჩიეთ მზა-ჩანაწერები (Cookies) 
+ჩვენ ვიყენებთ Cookie ფაილებს, რათა გაგიუმჯობესოთ თქვენი გამოცდილება ჩვენს ვებგვერდზე, შემოგთავაზოთ თქვენს ინტერესებზე მორგებული შეთავაზებები და უზრუნველვყოთ ვებგვერდის გამართული ფუნქციონირება. 
+მზა-ჩანაწერების (Cookie) პოლიტიკას. 
+დადასტურება 
+უარყოფა 
+მართვა 
+LINKS:
+https://businessmanager.bog.ge/en
+https://businessmanager.bog.ge/en/products/payment-manager
+https://businessmanager.bog.ge/en/online-payment
+https://businessmanager.bog.ge/en/online-installment
+https://businessmanager.bog.ge/en/products/bnpl
+https://businessmanager.bog.ge/en/products/api-manager
+https://businessmanager.bog.ge/en/products/openbanking
+https://businessmanager.bog.ge/en/products/bonline
+https://businessmanager.bog.ge/en/products/api-manager?section=exchange_rates
+https://businessmanager.bog.ge/en/products/adsmanager
+https://businessmanager.bog.ge/en/products/campaigns
+https://businessmanager.bog.ge/en/products/giftcards
+https://businessmanager.bog.ge/en/analytics
+https://businessmanager.bog.ge/en/analytics?section=client_analytics
+https://businessmanager.bog.ge/en/analytics?section=payment_analytics
+https://businessmanager.bog.ge/en/products/faq
+https://manager.bog.ge/login?utm_source=businessmanager.bog.ge&utm_medium=button&utm_campaign=Authorization_log_in
+https://bonline.bog.ge/onboarding?utm_source=businessmanager.bog.ge&utm_medium=button&utm_campaign=Online_registration_open_an_account

@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth/partner-context";
 import { getPartnerMetrics } from "@/lib/dashboard/partner-metrics";
 import { getBatchPerformance } from "@/lib/dashboard/attribution";
+import { env } from "@/lib/env";
 import { listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
 import { formatBusinessDate, formatBusinessPeriod } from "@/lib/business-calendar";
 import { formatMinorAmount } from "@/lib/format/money";
@@ -82,6 +83,9 @@ export default async function PartnerDashboardPage() {
   }, activePartnerId);
 
   const canManage = (MANAGE_ROLES as readonly string[]).includes(data.role);
+  // One partner = one login: staff logins are managed only when the team
+  // feature is explicitly on (lib/partners/actions.ts enforces the same).
+  const canManageTeam = canManage && env.PARTNER_TEAM_MEMBERS_ENABLED;
   const td = await getTranslations("partner.dashboard");
   const tRole = await getTranslations("enums.partnerRole");
   const locale = await getLocale();
@@ -211,7 +215,7 @@ export default async function PartnerDashboardPage() {
         )}
       </section>
 
-      {canManage && (
+      {canManageTeam && (
         <Panel title={td("membershipTitle")} description={td("membershipHint")} flush>
           <MembershipManager
             members={data.members}

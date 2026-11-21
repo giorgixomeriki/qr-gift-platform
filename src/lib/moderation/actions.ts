@@ -11,6 +11,9 @@ import {
   type GreetingLookupResult,
 } from "./service";
 import { logServerError } from "@/lib/log";
+import { DRAFT_RELEASE_MIN_IDLE_HOURS, DraftReleaseError, normalizeReleaseReason, releaseAbandonedDraft } from "@/lib/greetings/release";
+import { deleteStorageObject } from "@/lib/storage/media";
+import { enforceRateLimit } from "@/lib/rate-limit";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -33,7 +36,7 @@ export async function listModerationOverviewAction(): Promise<
 > {
   try {
     const data = await requireAdmin(async (tx) => ({
-      staleDrafts: await listStaleDrafts(tx, 14),
+      staleDrafts: await listStaleDrafts(tx, DRAFT_RELEASE_MIN_IDLE_HOURS),
       openReports: await listOpenReports(tx),
     }));
     return { ok: true, data };
@@ -61,5 +64,33 @@ export async function unblockGreetingAction(greetingId: string, reason: string):
     return { ok: true, data: undefined };
   } catch (err) {
     return errorResult("unblockGreetingAction", err, { greetingId });
+  }
+}
+
+/**
+ * FA-01: returns an abandoned draft card to inventory (lib/greetings/release.ts).
+ * Admin-only (MFA), reason-required, rate-limited, audited; refused for a
+ * draft with a live order or one edited in the last 24 hours.
+ */
+export async function releaseDraftAction(qrCodeId: string, reason: string): Promise<ActionResult<{ removedContent: number }>> {
+  try {
+    normalizeReleaseReason(reason);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "A reason is required" };
+  }
+  try {
+    const result = await requireAdmin(async (tx, adminUserId) => {
+      await enforceRateLimit({ key: `draft-release:${adminUserId}`, limit: 30, windowSeconds: 60 });
+      return releaseAbandonedDraft(tx, adminUserId, qrCodeId, reason);
+    });
+    // After commit: the abandoned sender's media is no longer referenced.
+    for (const key of result.storageKeys) {
+      await deleteStorageObject(key).catch((err) => console.warn("[media] released draft object not deleted; needs cleanup", { qrCodeId, key, err: String(err) }));
+    }
+    revalidatePath("/admin/moderation");
+    return { ok: true, data: { removedContent: result.removedContent } };
+  } catch (err) {
+    if (err instanceof DraftReleaseError) return { ok: false, error: err.message };
+    return errorResult("releaseDraftAction", err, { qrCodeId });
   }
 }

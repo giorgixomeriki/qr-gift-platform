@@ -1,13 +1,18 @@
 import "server-only";
 import { and, desc, eq } from "drizzle-orm";
 import { withEditableGreeting, withPaymentActivation } from "@/db/client";
-import { orders, payments, qrCodes } from "@/db/schema";
+import { checkoutConsents, orders, payments, qrCodes } from "@/db/schema";
 import { verifyGreetingEditAccess } from "@/lib/greetings/access";
 import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFailed, createPaymentAttempt, verifyAndReconcileOrder, settleConfirmedPayment, isUniqueViolation } from "./service";
 import { assertGreetingPurchasable } from "./eligibility";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { env } from "@/lib/env";
 import { assertCheckoutOpen } from "./checkout-gate";
+import { assertOrderInPaymentScope } from "./scope";
+import { createHash } from "node:crypto";
+import { loadMerchantInfo } from "@/lib/merchant/info";
+import kaMessages from "@/messages/ka.json";
+import enMessages from "@/messages/en.json";
 
 export class CheckoutEntryError extends Error {}
 
@@ -16,14 +21,14 @@ export type CheckoutOrderSummary = {
   grossAmountMinor: number;
   currency: string;
   status: string;
-  /** Present only for a redirect-based (non-TEST) provider with a live PENDING attempt — where "Pay securely" sends the browser. Safe to expose: it's exactly where the customer is about to be sent anyway. */
-  redirectUrl?: string;
 };
 
-function toSummary(order: { id: string; grossAmountMinor: number; currency: string; status: string }, redirectUrl?: string): CheckoutOrderSummary {
+function toSummary(order: { id: string; grossAmountMinor: number; currency: string; status: string }): CheckoutOrderSummary {
   // Deliberately excludes partnerCommissionMinor/platformShareMinor/priceId/
   // partnerId — the customer never sees internal accounting (Phase 3 §2).
-  return { orderId: order.id, grossAmountMinor: order.grossAmountMinor, currency: order.currency, status: order.status, redirectUrl };
+  // No provider redirect URL either: that exists only after consent
+  // (acceptCheckoutTerms).
+  return { orderId: order.id, grossAmountMinor: order.grossAmountMinor, currency: order.currency, status: order.status };
 }
 
 /**
@@ -73,21 +78,20 @@ export async function getOrCreateCheckoutOrder(
   await assertGreetingPurchasable(greetingId);
 
   if (latest?.status === "PENDING_PAYMENT" && qrPublicToken) {
-    // Re-entry: for a real (non-TEST) provider, the previous redirect URL may
-    // already be expired/consumed, so a fresh attempt is created rather than
-    // reusing it — see createPaymentAttempt's doc comment. TEST never has a
-    // meaningful redirectUrl, so this is a no-op cost there.
-    const redirectUrl = env.PAYMENTS_PROVIDER === "TEST" ? undefined : await createPaymentAttempt(latest, qrPublicToken);
-    return { summary: toSummary(latest, redirectUrl), recovered: false };
+    // Re-entry. A real provider's payment is opened only by
+    // acceptCheckoutTerms (fresh each time, so never an expired redirect).
+    return { summary: toSummary(latest), recovered: false };
   }
 
   // No order yet, or the latest one is terminal (FAILED/CANCELED/REFUNDED) —
   // a genuinely new checkout attempt. productId comes from the Greeting's own
   // row (set at creation, Phase 2) — never accepted as client input here.
   try {
-    const { order, redirectUrl } = await startCheckout({ greetingId, editToken, productId: greeting.productId });
+    // TEST keeps its simulated attempt at entry; a real provider's payment
+    // waits for consent (acceptCheckoutTerms).
+    const { order } = await startCheckout({ greetingId, editToken, productId: greeting.productId, createAttempt: env.PAYMENTS_PROVIDER === "TEST" });
     await recordAnalyticsEvent({ eventType: "CHECKOUT_STARTED", greetingId, orderId: order.id }, { partnerId: order.partnerId });
-    return { summary: toSummary(order, redirectUrl), recovered: false };
+    return { summary: toSummary(order), recovered: false };
   } catch (err) {
     // A simultaneous request (double tap, second tab) opened the order first —
     // orders_one_open_per_greeting refused a second one. Continue with theirs.
@@ -98,6 +102,61 @@ export async function getOrCreateCheckoutOrder(
     if (!open) throw err;
     return { summary: toSummary(open), recovered: false };
   }
+}
+
+const CONSENT_TEXT = {
+  ka: kaMessages.wizard.checkout.legal.consent,
+  en: enMessages.wizard.checkout.legal.consent,
+} as const;
+
+/** SHA-256 of the exact consent sentence the buyer saw, per language. */
+export function consentTextSha256(locale: "ka" | "en"): string {
+  return createHash("sha256").update(CONSENT_TEXT[locale], "utf8").digest("hex");
+}
+
+/**
+ * The buyer ticked "I agree…" and pressed Pay. Records the consent against
+ * the greeting's own open order (checkout_consents, append-only), then — for
+ * a real provider — opens a fresh bank payment and returns where to send the
+ * browser. The bank payment never exists before the consent row, so every
+ * real payment has consent evidence behind it. TEST returns no redirect; the
+ * simulated payment follows separately.
+ */
+export async function acceptCheckoutTerms(
+  greetingId: string,
+  editToken: string,
+  locale: "ka" | "en",
+): Promise<{ orderId: string; redirectUrl?: string }> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  assertCheckoutOpen();
+  await assertGreetingPurchasable(greetingId);
+
+  const [open] = await withEditableGreeting(greetingId, (tx) =>
+    tx
+      .select({ order: orders, qrPublicToken: qrCodes.publicToken })
+      .from(orders)
+      .innerJoin(qrCodes, eq(qrCodes.id, orders.qrCodeId))
+      .where(and(eq(orders.greetingId, greetingId), eq(orders.status, "PENDING_PAYMENT")))
+      .limit(1),
+  );
+  if (!open) throw new CheckoutEntryError("No open order for this greeting");
+  // Staging fence: refused before the consent row and the bank payment.
+  await assertOrderInPaymentScope(open.order.id);
+
+  await withEditableGreeting(greetingId, (tx) =>
+    tx.insert(checkoutConsents).values({
+      orderId: open.order.id,
+      greetingId,
+      locale,
+      consentTextSha256: consentTextSha256(locale),
+      policiesEffectiveDate: loadMerchantInfo(process.env).values.legalEffectiveDate,
+    }),
+  );
+
+  if (env.PAYMENTS_PROVIDER === "TEST") return { orderId: open.order.id };
+  const redirectUrl = await createPaymentAttempt(open.order, open.qrPublicToken, locale);
+  if (!redirectUrl) throw new CheckoutEntryError("The payment provider returned no payment page");
+  return { orderId: open.order.id, redirectUrl };
 }
 
 /**

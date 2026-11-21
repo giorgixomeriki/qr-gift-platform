@@ -21,7 +21,9 @@
     "unavailableTitle": "This card isn't available",
     "unavailableBody": "It may have been paused or removed. If it came with a gift, the shop that sold it can help.",
     "notFoundTitle": "We couldn't find this card",
-    "notFoundBody": "Make sure the whole code was scanned, then try again."
+    "notFoundBody": "Make sure the whole code was scanned, then try again.",
+    "expiredTitle": "This greeting's availability has ended",
+    "expiredBody": "A greeting can be opened for 12 months after it is activated, and that period has passed. If you have a question, contact us at qrapp.ge/contact."
   },
   "sender": {
     "entry": {
@@ -100,7 +102,7 @@
       "micDenied": "Microphone access is blocked. Allow it in your browser settings, or upload an audio file instead.",
       "unsupported": "This browser can't record audio — upload an audio file instead.",
       "uploading": "Uploading…",
-      "errorType": "This audio format isn't supported. Try MP3, M4A, WebM or OGG.",
+      "errorType": "This audio format isn't supported. Try M4A, MP3, WAV, AAC, WebM or OGG.",
       "errorSize": "This recording is too large — the limit is {limit} MB.",
       "errorGeneric": "Upload failed. Check your connection and try again.",
       "stop": "Stop recording",
@@ -149,7 +151,28 @@
       "stillVerifyingBody": "If you paid, it will be confirmed shortly — please don't pay again. Check again in a moment.",
       "checkAgain": "Check again",
       "closedTitle": "Payments open soon",
-      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged."
+      "closedBody": "Your greeting is saved on this card. Online payment isn't open yet. Come back to this card soon to activate it; you haven't been charged.",
+      "orderKicker": "Your order",
+      "design": "Design",
+      "contents": "Contents",
+      "legal": {
+        "seller": "Seller",
+        "idCode": "Identification code",
+        "legalAddress": "Legal address",
+        "country": "Seller's country: Georgia",
+        "currencyGel": "Price in Georgian lari (GEL).",
+        "contact": "Contact",
+        "policies": "Before paying, please read:",
+        "terms": "Terms and Conditions",
+        "privacy": "Privacy Policy",
+        "refunds": "Delivery and Refunds",
+        "age": "Greetings may be bought only by people aged 18 or over.",
+        "consent": "I agree to the Terms and Conditions and the Delivery and Refunds policy, and I have read the Privacy Policy.",
+        "vat": {
+          "NOT_REGISTERED": "The seller is not registered for VAT; no VAT is added to the price.",
+          "REGISTERED": "The seller is registered for VAT."
+        }
+      }
     },
     "preview": {
       "edit": "Back to editing",
@@ -169,7 +192,85 @@
     },
     "toPreview": "See preview",
     "skipToPreview": "Skip to preview",
-    "livePreview": "Live preview"
+    "livePreview": "Live preview",
+    "sig": {
+      "steps": {
+        "theme": "Design",
+        "create": "Words",
+        "preview": "Preview"
+      },
+      "stepLabel": "Step {n} of 3 · {label}",
+      "chosen": "Selected",
+      "memories": "Memories",
+      "addPhoto": "Photo",
+      "addVideo": "Video",
+      "addVoice": "Voice",
+      "slotPhoto": "{count} / {max}",
+      "slotVideo": "1 clip",
+      "slotVoice": "Up to 1 min",
+      "full": "Added",
+      "addAriaPhoto": "Add a photo ({count} of {max})",
+      "addAriaVideo": "Add a video",
+      "addAriaVoice": "Record a voice message",
+      "photoN": "Photo {n}",
+      "videoLabel": "Video",
+      "voiceLabel": "Voice message",
+      "ready": "Ready",
+      "preparing": "Preparing…",
+      "uploadingPct": "Uploading · {pct}%",
+      "uploadFailed": "Didn't upload — check your connection",
+      "retryUpload": "Retry",
+      "cancel": "Cancel",
+      "remove": "Remove",
+      "removed": "{name} removed",
+      "undo": "Undo",
+      "failedBlock": "One file didn't upload. Retry it or remove it.",
+      "waiting": "{count, plural, one {Waiting for the upload…} other {Waiting for # uploads…}}",
+      "removeError": "We couldn't remove it. Check your connection and try again.",
+      "voiceClose": "Close",
+      "previewKicker": "Preview",
+      "previewTitle": "How it will reach them",
+      "previewLede": "They scan the card — and this envelope opens for them alone.",
+      "watch": "See it as the recipient",
+      "editText": "Text",
+      "editMedia": "Memories",
+      "editDesign": "Design",
+      "editNav": "Edit your greeting",
+      "contents": "Your greeting: {items}",
+      "itemsText": "text",
+      "itemsPhotos": "{count, plural, one {# photo} other {# photos}}",
+      "itemsVideo": "video",
+      "itemsVoice": "voice",
+      "itemsMusic": "song"
+    },
+    "music": {
+      "title": "Our song",
+      "add": "Add a song",
+      "addHint": "A Spotify song or playlist",
+      "label": "Paste a Spotify link",
+      "hint": "In Spotify: Share → Copy link. One song or one playlist.",
+      "save": "Add song",
+      "saveReplace": "Use new link",
+      "saving": "Saving…",
+      "cancel": "Cancel",
+      "replace": "Replace",
+      "remove": "Remove",
+      "saved": "Saved",
+      "check": "Open in Spotify",
+      "kindTrack": "Song on Spotify",
+      "kindPlaylist": "Playlist on Spotify",
+      "error": {
+        "empty": "Paste a Spotify link first.",
+        "tooLong": "That link is too long — copy it again from Spotify.",
+        "notSpotify": "That isn't a Spotify link. Paste a link from open.spotify.com.",
+        "shortLink": "Short links (spotify.link) aren't accepted. Open it, then copy the full open.spotify.com link.",
+        "unsupported": "Only a song or a playlist for now — not an album, artist or podcast.",
+        "invalid": "We couldn't read that link. Copy it again from Spotify.",
+        "save": "Couldn't save. Please try again.",
+        "remove": "Couldn't remove it. Please try again."
+      },
+      "added": "Added to your greeting"
+    }
   },
   "greeting": {
     "tapToOpen": "Tap to open",
@@ -184,8 +285,33 @@
     "play": "Play",
     "pause": "Pause",
     "seek": "Playback position",
+    "voiceUnavailable": "This voice message couldn't load.",
+    "voiceRetry": "Try again",
     "madeWith": "Made with QR Starr",
-    "letterLabel": "Message"
+    "letterLabel": "Message",
+    "forYou": "For you",
+    "keepsakes": "Keepsakes",
+    "keepsakePhoto": "Photo",
+    "keepsakeVideo": "Video",
+    "keepsakeVoice": "Voice",
+    "closingTitle": "This letter is yours to keep.",
+    "closingBody": "Scan the card again whenever you'd like to open it.",
+    "toLetter": "Your letter",
+    "postmark": "QR STARR · LUXURY VINTAGE · KEEPSAKE · ",
+    "printsLabel": "Photos. Press Enter for the next one.",
+    "ourSong": {
+      "title": "Our Song",
+      "track": "A song for you",
+      "playlist": "A playlist for you",
+      "ledeTrack": "Chosen to be heard with this letter.",
+      "ledePlaylist": "Songs chosen to be heard with this letter.",
+      "listen": "Listen on Spotify",
+      "opensSpotify": "opens in Spotify",
+      "playHere": "Play here",
+      "closePlayer": "Close player",
+      "playerTitle": "Spotify player",
+      "note": "Opens in Spotify, which may ask you to sign in. If it won't open, it may no longer be available there."
+    }
   },
   "themes": {
     "romantic": {
@@ -229,11 +355,19 @@
       "opening": "A few words, just for you",
       "ending": "With warmest wishes",
       "sample": "With admiration, and every good wish."
+    },
+    "luxury-vintage": {
+      "name": "Luxury Vintage",
+      "tagline": "An antique letter, sealed in wax",
+      "opening": "A letter kept just for you",
+      "ending": "Yours, always",
+      "sample": "Some words are meant to be kept for a lifetime."
     }
   },
   "success": {
     "banner": "This is exactly what they'll see. Give the gift with the card — they scan it and it opens.",
-    "title": "Your greeting is live"
+    "title": "Your greeting is live",
+    "kicker": "Activated"
   },
   "partner": {
     "notAdmin": "Signed in as {email}, but not an admin.",
@@ -255,10 +389,11 @@
         "commissionPaid": "Commission paid",
         "unpaidBalance": "Unpaid balance",
         "draft": "Draft",
-        "active": "Active",
+        "active": "Activated",
         "batches": "Batches",
         "grossSales": "Gross sales",
-        "commissionReversed": "Commission reversed"
+        "commissionReversed": "Commission reversed",
+        "blocked": "Blocked"
       },
       "membershipTitle": "Members",
       "createBatchTitle": "Create QR batch",
@@ -318,7 +453,23 @@
       "salesTitle": "Sales",
       "cardsTitle": "Cards",
       "maintenanceTitle": "Maintenance",
-      "maintenanceHint": "Activates greetings whose payment succeeded but activation didn't complete. Safe to run any time."
+      "maintenanceHint": "Activates greetings whose payment succeeded but activation didn't complete. Safe to run any time.",
+      "reconcile": {
+        "title": "Payment reconciliation",
+        "description": "Hourly check that every bank payment and refund matches the books. Counts only; details: npm run payments:reconcile.",
+        "status": {
+          "OK": "Running, clean",
+          "ATTENTION": "Running, needs attention",
+          "FAILING": "Last run failed",
+          "STALE": "Not running",
+          "NEVER": "Never run"
+        },
+        "lastSuccess": "Last successful run: {when}",
+        "noSuccess": "No successful run recorded",
+        "open": "{count} open item(s)",
+        "notConfigured": "Schedule not configured on this deployment (CRON_SECRET / RECONCILE_ADMIN_USER_ID).",
+        "notConfiguredRequired": "Payments are live but the schedule is not configured: paid orders whose bank callback was missed will not be activated automatically."
+      }
     },
     "partnersPage": {
       "title": "Partners",
@@ -357,8 +508,8 @@
       "subtitle": "Find a Greeting, review reports, and block or unblock as needed.",
       "findTitle": "Find a Greeting",
       "openReportsTitle": "Open reports ({count})",
-      "staleDraftsTitle": "Abandoned drafts — older than 14 days ({count})",
-      "staleDraftsNote": "Visibility only — Greetings left in Draft are never deleted or reused automatically.",
+      "staleDraftsTitle": "Abandoned drafts — untouched for 24 hours or more ({count})",
+      "staleDraftsNote": "Nothing is recycled automatically. Release a card only when its draft is clearly abandoned (for example, a shop test): its content is erased, the old link stops working and the card can be started again. Cards with an order waiting at the bank, paid or refunded cannot be released.",
       "searchPlaceholder": "Public QR token or Greeting ID",
       "searchButton": "Find",
       "noResult": "No Greeting found for that identifier.",
@@ -384,7 +535,13 @@
       "publicTokenHeader": "Public token",
       "partnerHeader": "Partner",
       "createdHeader": "Created",
-      "lastUpdatedHeader": "Last updated"
+      "lastUpdatedHeader": "Last updated",
+      "releaseHeader": "Release",
+      "releaseDraft": "Release card",
+      "releaseDraftWarning": "The draft's text and media will be erased and the card returns to the shelf.",
+      "releaseReasonRequired": "Write a reason (at least 5 characters).",
+      "confirmRelease": "Erase draft and release card",
+      "releasedDraft": "Released"
     },
     "reconcile": {
       "button": "Reconcile stuck activations",
@@ -463,13 +620,41 @@
     "hidePassword": "Hide password",
     "checkInboxTitle": "Check your inbox",
     "forgotPasswordBody": "Enter your account email and we'll send you a link to choose a new password.",
-    "passwordRule": "Use at least {min} characters.",
+    "passwordRule": "Use at least {min} characters, including a letter and a digit.",
     "passwordSameAsOld": "Choose a password you haven't used before.",
     "resetFailed": "We couldn't update your password. Please request a new link and try again.",
     "partnerLoginBody": "Manage your cards, sales and commission.",
     "adminLoginBody": "Restricted to QR Starr staff.",
     "areaPartner": "Partner",
-    "areaAdmin": "Admin"
+    "areaAdmin": "Admin",
+    "mfa": {
+      "setupTitle": "Turn on two-step sign-in",
+      "setupBody": "The admin area requires an authenticator app. Scan the QR code, then enter the 6-digit code it shows.",
+      "qrAlt": "QR code for your authenticator app",
+      "secretLabel": "Or enter this key by hand",
+      "codeLabel": "6-digit code",
+      "confirm": "Confirm",
+      "verifying": "Checking…",
+      "preparing": "Preparing…",
+      "challengeTitle": "Enter your security code",
+      "challengeBody": "Open your authenticator app and enter the current 6-digit code.",
+      "factorLabel": "Authenticator",
+      "invalidCode": "That code is wrong or has expired. Try a new one.",
+      "rateLimited": "Too many attempts. Please try again in a few minutes.",
+      "failed": "The security check could not be completed. Please try again.",
+      "securityTitle": "Account security",
+      "securityBody": "The authenticators that protect your admin sign-in. Add a backup so a lost phone cannot lock you out.",
+      "factorsTitle": "Authenticators",
+      "addedOn": "Added {date}",
+      "addBackup": "Add a backup authenticator",
+      "backupTitle": "Scan with your backup device",
+      "backupRecommended": "You have one authenticator. Add a backup on a second device.",
+      "remove": "Remove",
+      "cancel": "Cancel",
+      "lastFactor": "The only authenticator cannot be removed.",
+      "lockedTitle": "Two-step sign-in needs authorization",
+      "lockedBody": "This admin account cannot set up or use two-step sign-in yet. The platform owner must authorize it first."
+    }
   },
   "nav": {
     "adminBrand": "QR Starr — Admin",
@@ -480,7 +665,8 @@
     "signOut": "Sign out",
     "managePartners": "Manage partners",
     "partnerArea": "Partner",
-    "adminArea": "Admin"
+    "adminArea": "Admin",
+    "security": "Security"
   },
   "enums": {
     "partnerStatus": {
@@ -490,7 +676,7 @@
     "qrStatus": {
       "AVAILABLE": "Available",
       "DRAFT": "Draft",
-      "ACTIVE": "Active",
+      "ACTIVE": "Activated",
       "BLOCKED": "Blocked",
       "USED": "Used"
     },
@@ -601,7 +787,16 @@
     "title": "Digital greetings for physical gifts",
     "body": "QR Starr adds a personal message, photos, video and a voice note to flowers, cakes and gifts — revealed with a single scan.",
     "partnerCta": "Partner sign in",
-    "adminCta": "Admin"
+    "adminCta": "Admin",
+    "kicker": "QR Starr · the words that come with a gift",
+    "how": {
+      "card": "The card",
+      "cardLine": "A QR card comes with the gift",
+      "words": "The words",
+      "wordsLine": "The giver writes and adds memories",
+      "opening": "The opening",
+      "openingLine": "The recipient scans and opens it"
+    }
   },
   "batchPerformance": {
     "summary": "{distributed} distributed · {scanned} scanned · {paid} paid · {conversion} conversion · {commission} commission"
@@ -632,5 +827,118 @@
     "statusChargedBack": "Charged back",
     "evidence": "Evidence",
     "empty": "No paid activations yet."
+  },
+  "partnerAccess": {
+    "errors": {
+      "invalid_link": "This link is not valid. Ask QR STARR for a new one.",
+      "link_used": "This link has already been used. Sign in instead.",
+      "link_expired": "This link has expired. Ask QR STARR for a new one.",
+      "partner_inactive": "This partner account is not active. Contact QR STARR.",
+      "contact_mismatch": "This sign-in doesn't match the partner's registered contact.",
+      "partner_has_login": "This partner already has a login. Revoke it first.",
+      "user_has_partner": "This email or phone is already the login of another partner.",
+      "admin_account": "A platform admin account can't be a partner login.",
+      "recovery_target_mismatch": "This reset link no longer matches the partner's login.",
+      "no_contact": "Add this contact to the partner first.",
+      "contact_required": "Enter a Georgian mobile number or an email (at least one).",
+      "contact_in_use": "Another partner already uses this email or phone.",
+      "invalid_email": "Enter a valid email address.",
+      "invalid_phone": "Enter a Georgian mobile number: +995 5XX XX XX XX.",
+      "invalid_code": "That code is not right or has expired.",
+      "phone_auth_disabled": "Phone sign-in is not available yet.",
+      "email_not_configured": "Email delivery is not configured yet.",
+      "weak_password": "Use at least {min} characters, including a letter and a digit.",
+      "no_login": "There is no partner login for this.",
+      "login_not_email": "The partner's login doesn't use the registered email.",
+      "not_found": "Not found.",
+      "rate_limited": "Too many attempts. Please wait a few minutes and try again.",
+      "unauthorized": "You don't have access to do this.",
+      "failed": "Something went wrong. Please try again.",
+      "mfa_required": "Finish two-step verification first.",
+      "email_required": "Enter the partner's email — it becomes their login."
+    },
+    "login": {
+      "tabEmail": "Email",
+      "tabPhone": "Phone",
+      "phoneLabel": "Mobile number",
+      "phonePlaceholder": "5XX XX XX XX",
+      "sendCode": "Send code",
+      "sendingCode": "Sending…",
+      "codeSentBody": "If {phone} is registered with QR STARR, we've sent it a 6-digit code.",
+      "codeLabel": "Code from SMS",
+      "verify": "Sign in",
+      "verifying": "Signing in…",
+      "changeNumber": "Use a different number",
+      "resend": "Send a new code"
+    },
+    "activate": {
+      "title": "Activate your partner account",
+      "body": "{partner} — choose a password for your QR STARR partner account.",
+      "recoveryTitle": "Set a new password",
+      "recoveryBody": "{partner} — choose a new password for your partner account.",
+      "emailLine": "Account email: {email}",
+      "passwordLabel": "Password",
+      "confirmLabel": "Repeat password",
+      "passwordRule": "At least {min} characters, including a letter and a digit.",
+      "mismatch": "The passwords don't match.",
+      "submit": "Activate and sign in",
+      "submitRecovery": "Save and sign in",
+      "submitting": "Saving…",
+      "usedTitle": "Link already used",
+      "expiredTitle": "Link expired",
+      "invalidTitle": "Link not valid",
+      "inactiveTitle": "Account not active",
+      "goToLogin": "Go to sign in"
+    },
+    "admin": {
+      "title": "Login access",
+      "hint": "One partner, one login. The person proves the contact is theirs: an emailed link, or an SMS code.",
+      "contactEmail": "Email",
+      "contactPhone": "Georgian mobile",
+      "phonePlaceholder": "+995 5XX XX XX XX",
+      "saveContacts": "Save contacts",
+      "saved": "Saved.",
+      "loginLinked": "Login",
+      "noLogin": "No login yet.",
+      "lastSignIn": "Last sign-in: {date}",
+      "never": "never signed in",
+      "blocked": "blocked",
+      "pendingEMAIL": "Activation link emailed to {contact} — valid until {date}.",
+      "pendingPHONE": "Phone sign-in open for {contact} until {date}.",
+      "pendingRECOVERY": "Password reset link emailed to {contact} — valid until {date}.",
+      "sendEmail": "Email activation link",
+      "openPhone": "Allow phone sign-in",
+      "sendReset": "Email password reset link",
+      "revokeInvitation": "Cancel invitation",
+      "revokeLogin": "Revoke login",
+      "revokeConfirm": "Revoke this partner's login? They lose access immediately.",
+      "confirm": "Yes, revoke",
+      "sent": "Sent. Valid until {date}.",
+      "phoneOpened": "Phone sign-in is open until {date}. Ask the partner to sign in at /partner/login with this number.",
+      "revoked": "Done.",
+      "emailUnavailable": "Email delivery isn't configured, so email links can't be sent yet.",
+      "phoneUnavailable": "Phone sign-in is turned off (no SMS provider yet)."
+    },
+    "create": {
+      "contactEmailLabel": "Email (optional)",
+      "contactPhoneLabel": "Mobile (+995)",
+      "contactHint": "At least one contact: a Georgian mobile number or an email. It becomes the partner's login.",
+      "contactEmailRequiredLabel": "Email (login)",
+      "contactHintEmail": "The partner's email becomes their login. We'll send them a one-time activation link."
+    },
+    "qrResults": {
+      "title": "Results by QR card",
+      "hint": "Cards that were scanned or sold. Revenue and commission count only confirmed, successful payments — handing a card to a customer is not a sale.",
+      "colCard": "Card",
+      "colBatch": "Batch",
+      "colStatus": "Status",
+      "colScans": "Scans",
+      "colPaid": "Paid activations",
+      "colRevenue": "Revenue",
+      "colCommission": "Commission",
+      "empty": "No scans or sales yet.",
+      "handedOver": "handed over",
+      "inStock": "in stock"
+    }
   }
 }

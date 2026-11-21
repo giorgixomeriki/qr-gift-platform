@@ -13,6 +13,9 @@ import { defineConfig, devices } from "@playwright/test";
  * (`supabase start`) and migrated/seeded — the same precondition every
  * `verify:*` script already has.
  */
+const port = process.env.E2E_PORT ?? "3000"; // set when another checkout already uses 3000
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   globalSetup: "./e2e/global-setup.ts",
@@ -34,7 +37,7 @@ export default defineConfig({
   expect: { timeout: 10_000 },
   reporter: [["list"]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "retain-on-failure",
   },
   projects: [
@@ -48,8 +51,8 @@ export default defineConfig({
     { name: "mobile-emulated", use: { ...devices["Pixel 7"] } },
   ],
   webServer: {
-    command: "npm run dev",
-    url: "http://localhost:3000",
+    command: `npm run dev -- -p ${port}`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,
     env: {

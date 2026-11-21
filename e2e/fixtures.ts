@@ -42,6 +42,7 @@ export async function createAvailableQr() {
       await sql`delete from greeting_content where greeting_id in (select id from greetings where qr_code_id = ${qrId})`;
       await sql`delete from payments where order_id in (select id from orders where qr_code_id = ${qrId})`;
       await sql`delete from partner_ledger_entries where order_id in (select id from orders where qr_code_id = ${qrId})`;
+      await sql`delete from checkout_consents where order_id in (select id from orders where qr_code_id = ${qrId})`;
       await sql`delete from orders where qr_code_id = ${qrId}`;
       await sql`delete from greetings where qr_code_id = ${qrId}`;
       await sql`delete from qr_codes where id = ${qrId}`;

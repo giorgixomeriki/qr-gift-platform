@@ -419,6 +419,7 @@ async function cleanup() {
   await admin`delete from partner_ledger_entries where partner_id in ${admin(p)}`;
   await admin`delete from partner_payouts where partner_id in ${admin(p)}`;
   await admin`delete from payments where order_id in (select id from orders where partner_id in ${admin(p)})`;
+  await admin`delete from checkout_consents where order_id in (select id from orders where partner_id in ${admin(p)})`;
   await admin`delete from orders where partner_id in ${admin(p)}`;
   await admin`delete from analytics_events where partner_id in ${admin(p)}`;
   if (created.greetings.length) {

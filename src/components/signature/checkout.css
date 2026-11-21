@@ -1,0 +1,249 @@
+/* ===========================================================================
+ * Signature checkout: the order slip (A's paper, C's ruled rows). Ported from
+ * the approved lab (design-lab/signature, "6 · checkout") onto the real
+ * CheckoutOrderSummary; every state of the real flow has its own composition.
+ * Presentation only — see components/greeting/checkout-flow.ts for behaviour.
+ * ======================================================================== */
+.sig-order {
+  position: relative;
+  margin-top: 1.25rem;
+  padding: 1rem 1.125rem 1.125rem;
+  border-radius: 4px 4px 0 0;
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    var(--sig-card);
+  background-blend-mode: soft-light, normal;
+  box-shadow: var(--sig-shadow-object);
+}
+/* The slip's torn foot. */
+.sig-order::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -7px;
+  height: 8px;
+  background: radial-gradient(circle at 6px 0, transparent 5px, var(--sig-card) 5.5px) -1px 0 / 12px 8px repeat-x;
+}
+.sig-order__head {
+  display: grid;
+  grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding-bottom: 0.875rem;
+}
+.sig-order__thumb {
+  width: 100%;
+  border-radius: 3px;
+  box-shadow: 0 1px 2px rgb(60 30 20 / 0.18);
+}
+/* Two lines, cleanly. Clamped by height rather than -webkit-line-clamp: WebKit positions the clamp's
+   ellipsis inconsistently, and paints fragments of the lines it hides (a colour emoji is taller than the
+   line box). So: exactly two line boxes plus 0.15em of headroom for line 1's emoji (cancelled by the
+   margin), and a 0.08em clip band at the foot that hides whatever line 3 would show. The line ends at a
+   word; the full message is one tap away (Edit / Preview). */
+.sig-order__msg {
+  margin-top: calc(0.3rem - 0.15em);
+  padding-top: 0.15em;
+  max-height: calc(2 * 1.45em + 0.15em);
+  overflow: hidden;
+  font: 400 0.9375rem/1.45 var(--sig-serif);
+  overflow-wrap: break-word;
+  /* Plain greedy wrapping: "pretty" (global p rule) re-flows the whole paragraph from text it never shows. */
+  text-wrap: wrap;
+  clip-path: inset(0 0 0.08em 0);
+}
+.sig-order__edit {
+  align-self: start;
+  min-height: 2.75rem;
+  padding: 0 0.25rem;
+  color: var(--sig-ink-2);
+  font: 500 0.8125rem/1 var(--sig-ui);
+  text-decoration: underline;
+  text-decoration-color: var(--sig-line);
+  text-underline-offset: 4px;
+}
+/* Ruled rows: label left, value right; values wrap but never overflow. */
+.sig-rows {
+  border-top: 1px solid var(--sig-ink);
+}
+.sig-rows > div {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: baseline;
+  padding: 0.625rem 0;
+  border-bottom: 1px solid var(--sig-line);
+  font: 400 0.875rem/1.4 var(--sig-ui);
+}
+.sig-rows dt {
+  color: var(--sig-ink-2);
+}
+.sig-rows dd {
+  min-width: 0;
+  text-align: right;
+  color: var(--sig-ink);
+  overflow-wrap: anywhere;
+}
+.sig-rows > .sig-rows__total {
+  align-items: end;
+  border-bottom-color: var(--sig-ink);
+}
+.sig-rows__total dt {
+  font-weight: 600;
+  color: var(--sig-ink);
+}
+.sig-rows__total dd {
+  font: 300 2.5rem/1 var(--sig-serif);
+  font-variant-numeric: tabular-nums;
+}
+.sig-order > .sig-caption {
+  margin-top: 0.75rem;
+}
+.sig-get {
+  margin-top: 1.75rem;
+}
+.sig-get ol {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.625rem;
+  list-style: none;
+}
+.sig-get li {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr);
+  font: 400 0.875rem/1.45 var(--sig-ui);
+  color: var(--sig-ink-2);
+}
+.sig-caption--lock {
+  margin-top: 1rem;
+}
+.sig-co-links {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin-top: 1rem;
+}
+.sig-co-links > details {
+  text-align: right;
+}
+.sig-co-link {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  color: var(--sig-ink-2);
+  font: 500 0.8125rem/1.3 var(--sig-ui);
+  text-decoration: underline;
+  text-decoration-color: var(--sig-line);
+  text-underline-offset: 4px;
+  cursor: pointer;
+  list-style: none;
+}
+.sig-co-link::-webkit-details-marker {
+  display: none;
+}
+.sig-co-link--danger {
+  color: #a3221b;
+}
+.sig-co-link:disabled {
+  opacity: 0.4;
+}
+/* The dock's message: what just happened, in place, above the action. */
+.sig-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.875rem;
+  border-radius: 12px;
+  font: 500 0.875rem/1.45 var(--sig-ui);
+  animation: sig-set-down 420ms var(--sig-settle) both;
+}
+.sig-status svg {
+  flex: none;
+  margin-top: 2px;
+}
+.sig-status[data-tone="danger"] {
+  background: #fae4e2;
+  color: #8f1d17; /* 7.3:1 */
+}
+.sig-status[data-tone="warning"] {
+  background: #fbefd9;
+  color: #6f4a0c; /* 6.9:1 */
+}
+.sig-status[data-tone="success"] {
+  background: #e3f1ea;
+  color: #1f5c40; /* 6.8:1 */
+}
+.sig-secure {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  font: 400 0.75rem/1.3 var(--sig-ui);
+  color: var(--sig-ink-3);
+  text-align: center;
+}
+.sig-test {
+  text-align: center;
+  font: 500 0.75rem/1.35 var(--sig-ui);
+  color: #8a560f; /* 5.4:1 */
+}
+/* A state that replaces the slip: verifying, still verifying, activating, closed, unavailable. */
+.sig-co-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.875rem;
+  margin: clamp(1.5rem, 8dvh, 4rem) auto 0;
+  max-width: 22rem;
+  text-align: center;
+}
+.sig-co-state__mark {
+  display: grid;
+  width: 4.5rem;
+  height: 4.5rem;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    var(--sig-tooth) 0 0 / 256px 256px,
+    var(--sig-card);
+  background-blend-mode: soft-light, normal;
+  color: var(--sig-wine);
+  box-shadow: var(--sig-shadow-object);
+}
+.sig-co-state__mark svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+.sig-co-state__wax {
+  width: 4.5rem;
+  height: 4.5rem;
+}
+.sig-co-state h2 {
+  font: 400 1.25rem/1.35 var(--sig-serif);
+  color: var(--sig-ink);
+  text-wrap: balance;
+}
+.sig-co-state p {
+  font: 400 0.9375rem/1.55 var(--sig-ui);
+  color: var(--sig-ink-2);
+  text-wrap: pretty;
+}
+/* Loading: the slip's own silhouette, not a spinner. */
+.sig-order--skeleton .sig-skel {
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sig-line), color-mix(in oklab, var(--sig-line) 40%, var(--sig-card)), var(--sig-line)) 0 0 / 200% 100%;
+  animation: sig-shimmer 1400ms linear infinite;
+}
+@keyframes sig-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sig-order--skeleton .sig-skel {
+    animation: none;
+  }
+}

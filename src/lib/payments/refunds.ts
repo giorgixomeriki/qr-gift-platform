@@ -1,12 +1,13 @@
 import "server-only";
 import { and, eq, ne, sql } from "drizzle-orm";
-import { withAdminPaymentContext, withPaymentActivation, type Tx } from "@/db/client";
+import { checkIsAdmin, withAdminPaymentContext, withPaymentActivation, type Tx } from "@/db/client";
 import { orders, payments, paymentRefunds, partnerLedgerEntries } from "@/db/schema";
 import { recordAuditLog } from "@/lib/audit";
 import { logServerError } from "@/lib/log";
 import { getPaymentProvider } from "./provider-factory";
 import { idempotencyKeyFor } from "./idempotency";
 import { ProviderNotImplementedError } from "./types";
+import { assertOrderInPaymentScope } from "./scope";
 
 /**
  * Two-phase provider refunds (migrations/0019, plan §3.6).
@@ -33,6 +34,8 @@ export type RefundReason = "ADMIN" | "INELIGIBLE" | "DUPLICATE_CAPTURE";
 export type RefundOutcome = "COMPLETED" | "REQUESTED" | "REJECTED" | "NOT_SENT";
 
 const NOT_SENT = "NOT_SENT";
+/** An unacknowledged ADMIN refund whose requester is no longer an admin is not re-sent. */
+const REQUESTER_REVOKED = "REQUESTER_REVOKED";
 
 export class RefundWorkflowError extends Error {}
 
@@ -103,6 +106,10 @@ export async function requestChargeRefund(input: {
 }): Promise<RefundOutcome> {
   const { orderId, payment, reason, requestedBy } = input;
   if (!payment.providerPaymentId) throw new RefundWorkflowError(`Payment ${payment.id} has no provider reference`);
+  // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): checked before the refund row
+  // is opened and before the provider is contacted — an out-of-scope charge
+  // (e.g. a simulator-made one) can never produce a real refund request.
+  await assertOrderInPaymentScope(orderId);
   const refund = await openRefund(orderId, payment, reason, requestedBy);
   if (refund.status === "COMPLETED") return "COMPLETED";
   // Already acknowledged by the provider: nothing to send again — completion
@@ -212,13 +219,15 @@ async function applyRefundCompletion(tx: Tx, refund: Refund): Promise<void> {
       currency: locked.currency,
     })
     .onConflictDoNothing();
+  // The booking is the payment service's, not the requester's (FA-02): the
+  // admin who asked is kept for the audit trail only.
   await recordAuditLog(tx, {
-    actorType: "ADMIN",
-    actorId: refund.requestedBy ?? undefined,
+    actorType: "SYSTEM",
     action: refund.reason === "CHARGEBACK" ? "ORDER_CHARGED_BACK" : "ORDER_REFUNDED",
     targetType: "order",
     targetId: locked.id,
     metadata: {
+      requestedBy: refund.requestedBy ?? null,
       refundId: refund.id,
       partnerId: locked.partnerId,
       grossAmountMinor: locked.grossAmountMinor,
@@ -241,14 +250,20 @@ export async function completeRefund(refundId: string, orderId: string): Promise
   if (refund.status === "COMPLETED") return;
   if (refund.status === "REJECTED") throw new RefundWorkflowError(`Refund ${refundId} was rejected`);
 
-  if (refund.reason === "ADMIN" || refund.reason === "CHARGEBACK") {
-    // The commission reversal needs an admin context (ledger RLS): it is booked
-    // on behalf of the admin who asked for this refund.
-    if (!refund.requestedBy) throw new RefundWorkflowError(`Refund ${refund.id} has no requesting admin`);
-    await withAdminPaymentContext(refund.requestedBy, refund.orderId, (tx) => applyRefundCompletion(tx, refund));
-  } else {
-    await withPaymentActivation(refund.orderId, (tx) => applyRefundCompletion(tx, refund));
-  }
+  // FA-02: completion runs in the order's payment-service context whoever
+  // asked. The money is already back with the customer, so the books must
+  // follow even if the requesting admin has since been removed. The
+  // COMMISSION_REVERSAL is allowed by partner_ledger_entries_insert_refund_completion
+  // (migrations/0024), which requires this refund to be COMPLETED in the same
+  // transaction; the order and payment rows by the *_by_payment_service policies.
+  await withPaymentActivation(refund.orderId, (tx) => applyRefundCompletion(tx, refund));
+}
+
+/** The requester of an ADMIN refund is still a platform admin (app_is_admin under their id). */
+async function requesterStillAdmin(refund: Refund): Promise<boolean> {
+  if (refund.reason !== "ADMIN") return true;
+  if (!refund.requestedBy) return false;
+  return checkIsAdmin(refund.requestedBy);
 }
 
 /**
@@ -267,6 +282,7 @@ export async function reconcileOrderRefunds(orderId: string): Promise<{ complete
   );
   const counts = { completed: 0, rejected: 0, pending: 0 };
   if (open.length === 0) return counts;
+  await assertOrderInPaymentScope(orderId);
   const provider = getPaymentProvider();
 
   for (const { refund, payment } of open) {
@@ -283,7 +299,15 @@ export async function reconcileOrderRefunds(orderId: string): Promise<{ complete
       await rejectRefund(refund, "PROVIDER_REJECTED");
       counts.rejected++;
     } else if (r && r.status === "NONE" && !refund.providerActionId) {
-      // The provider has no record of it and never acknowledged it: re-send (same key).
+      // The provider has no record of it and never acknowledged it: re-send
+      // (same key). Re-sending moves money, so an ADMIN refund is re-sent only
+      // while its requester is still an admin (FA-02); otherwise it is closed
+      // as NOT_SENT for a current admin to decide again.
+      if (!(await requesterStillAdmin(refund))) {
+        await rejectRefund(refund, REQUESTER_REVOKED); // audited as PAYMENT_REFUND_REJECTED
+        counts.rejected++;
+        continue;
+      }
       const outcome = await requestChargeRefund({ orderId, payment, reason: refund.reason as RefundReason, requestedBy: refund.requestedBy ?? undefined });
       if (outcome === "COMPLETED") counts.completed++;
       else if (outcome === "REQUESTED") counts.pending++;

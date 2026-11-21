@@ -1,0 +1,36 @@
+# Hourly payment reconciliation for https://qrapp.ge
+# (docs/ops/PAYMENT_RECONCILIATION_RUNBOOK.md on the deployed branch).
+#
+# Inert until the owner sets the repository variable
+# RECONCILE_SCHEDULE_ENABLED=true; until then every run is skipped.
+# The secret lives in the "production-reconcile" environment, restricted to main.
+name: Payment reconciliation
+
+on:
+  schedule:
+    - cron: "15 * * * *" # hourly at :15 (GitHub may delay scheduled runs)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: payments-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    if: ${{ vars.RECONCILE_SCHEDULE_ENABLED == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: production-reconcile
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          sparse-checkout: .github/scripts
+          persist-credentials: false
+      - name: Reconcile payments
+        env:
+          APP_URL: https://qrapp.ge
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: bash .github/scripts/payments-reconcile.sh

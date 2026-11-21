@@ -35,11 +35,14 @@ test.describe("Sender greeting creation -> TEST checkout -> recipient reveal", (
     await page.getByTestId("wizard-continue").click();
 
     await expect(page.getByTestId("message-textarea")).toBeVisible();
+    // Message and media are one Create screen; every media slot is optional.
+    await expect(page.getByTestId("media-step")).toBeVisible();
     await page.getByTestId("message-textarea").fill("This is an automated end-to-end test greeting.");
     await page.getByTestId("wizard-continue").click();
 
-    await expect(page.getByTestId("media-step")).toBeVisible();
-    await page.getByTestId("wizard-continue").click(); // every media slot is optional
+    // The Preview screen; "See it as the recipient" opens the real renderer.
+    await expect(page.getByTestId("preview-step")).toBeVisible();
+    await page.getByTestId("preview-watch").click();
 
     // Preview renders the SAME reveal sequence a recipient would see —
     // "preview-sender-controls" (the activate button) only appears at the
@@ -54,6 +57,17 @@ test.describe("Sender greeting creation -> TEST checkout -> recipient reveal", (
 
     await expect(page.getByTestId("checkout-step")).toBeVisible();
     await expect(page.getByTestId("checkout-amount")).toBeVisible();
+    await expect(page.getByTestId("checkout-link-contact")).toHaveAttribute("href", "/contact");
+    await expect(page.getByTestId("checkout-country")).toHaveCount(process.env.MERCHANT_LEGAL_NAME_KA ? 1 : 0);
+    // Registered ID / legal address follow the same publication gates as the legal pages.
+    const published = (gate: string, value?: string) => (process.env.MERCHANT_LEGAL_NAME_KA && value && process.env[gate] === "owner-approved" ? 1 : 0);
+    await expect(page.getByTestId("checkout-id-code")).toHaveCount(published("MERCHANT_PUBLISH_ID_CODE", process.env.MERCHANT_ID_CODE));
+    await expect(page.getByTestId("checkout-legal-address")).toHaveCount(published("MERCHANT_PUBLISH_LEGAL_ADDRESS", process.env.MERCHANT_LEGAL_ADDRESS_KA));
+    await expect(page.getByTestId("checkout-currency")).toBeVisible();
+    // No payment before explicit agreement to the terms.
+    await expect(page.getByTestId("checkout-consent")).not.toBeChecked();
+    await expect(page.getByTestId("checkout-pay")).toBeDisabled();
+    await page.getByTestId("checkout-consent").check();
     await page.getByTestId("checkout-pay").click();
 
     // simulateTestPaymentAction succeeds -> full reload of /g/{token}, which

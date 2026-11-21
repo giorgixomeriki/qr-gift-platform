@@ -20,7 +20,7 @@ pilot dry run.
 2. Name it clearly (e.g. `qr-starr-staging`) so it's never confused with
    production in the Supabase dashboard.
 3. Record its project URL and keys (`NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`) directly into
+   `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`) directly into
    the hosting platform's secret store in step 3 below — never into a local
    file, a chat message, or a commit.
 

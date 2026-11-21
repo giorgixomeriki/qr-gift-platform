@@ -4,6 +4,7 @@ import { join } from "node:path";
 import postgres from "postgres";
 import { createClient } from "@supabase/supabase-js";
 import { envFindings, migrationFindings, type Finding, type JournalEntry } from "../src/lib/ops/preflight-checks";
+import { resolvePublishableKey, resolveSecretKey } from "../src/lib/supabase/keys";
 
 /**
  * READ-ONLY readiness check for one environment (local, staging or
@@ -61,8 +62,23 @@ async function main() {
     await sql.end();
   }
 
+  // Key migration status (docs/security/SUPABASE_API_KEY_MIGRATION.md): the
+  // legacy JWT keys must be gone before they can be disabled in Supabase.
+  const keySources = [
+    ["publishable", resolvePublishableKey(process.env)?.source],
+    ["secret", resolveSecretKey(process.env)?.source],
+  ] as const;
+  add(
+    "api-keys",
+    keySources.map(([kind, source]): Finding =>
+      source === "new"
+        ? { level: "INFO", message: `${kind} key: new format` }
+        : { level: "WARN", message: `${kind} key: ${source ? "LEGACY JWT fallback" : "not set"} — set the new ${kind} key` },
+    ),
+  );
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceKey = resolveSecretKey(process.env)?.key;
   const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
   if (supabaseUrl && serviceKey) {
     const { data, error } = await createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } }).storage.getBucket(bucket);
@@ -74,7 +90,7 @@ async function main() {
           : { level: "INFO", message: `bucket "${bucket}" is private` },
     ]);
   } else {
-    add("storage", [{ level: "WARN", message: "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY not set — bucket privacy not checked" }]);
+    add("storage", [{ level: "WARN", message: "NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SECRET_KEY not set — bucket privacy not checked" }]);
   }
 
   for (const { area, f } of findings) console.log(`${f.level.padEnd(4)}  [${area}] ${f.message}`);
