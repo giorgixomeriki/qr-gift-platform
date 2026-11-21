@@ -31,12 +31,12 @@ const nextConfig: NextConfig = {
     if (process.env.NODE_ENV !== "production") return [];
     return [
       { source: "/:path*", headers: securityHeaders },
-      // Camera for the admin card scanner (/admin/inventory/scan, the only
-      // caller). Allowed for the whole MFA-gated admin area because the
-      // policy belongs to the document: after a client-side navigation from
-      // another admin page the scanner still runs in that page's document.
-      // Public pages keep camera=(). Later entries override earlier ones.
-      { source: "/admin/:path*", headers: [{ key: "Permissions-Policy", value: "camera=(self), geolocation=(), microphone=(self)" }] },
+      // Camera ONLY for the admin card scanner document. The policy belongs
+      // to the document, so every link into the scanner is a full page load
+      // (plain <a>, not next/link) and the scanner gets this header. Every
+      // other page — public and admin — keeps camera=(). Later entries
+      // override earlier ones for the same key.
+      { source: "/admin/inventory/scan", headers: [{ key: "Permissions-Policy", value: "camera=(self), geolocation=(), microphone=(self)" }] },
     ];
   },
 };
