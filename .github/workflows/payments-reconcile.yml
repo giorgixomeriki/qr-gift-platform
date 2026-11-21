@@ -22,7 +22,9 @@ concurrency:
 
 jobs:
   reconcile:
-    if: ${{ vars.RECONCILE_SCHEDULE_ENABLED == 'true' }}
+    # Manual recovery (workflow_dispatch) always runs; the schedule only when enabled.
+    # Primary scheduler since 2026-11-21: Supabase Cron (docs/bog-release/RECONCILE_SCHEDULER.md).
+    if: ${{ github.event_name == 'workflow_dispatch' || vars.RECONCILE_SCHEDULE_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     environment: production-reconcile
