@@ -24,12 +24,20 @@ export type PartnerHandoverView = {
  */
 export function IncomingHandovers({ open, recent, canReceive }: { open: PartnerHandoverView[]; recent: PartnerHandoverView[]; canReceive: boolean }) {
   const t = useTranslations("handover");
+  // Kept here, not in the card: after a confirmation the refresh moves the
+  // handover out of `open`, which unmounts its card.
+  const [accepted, setAccepted] = useState<number | null>(null);
   return (
     <Panel title={t("partner.title")} description={t("partner.hint")} testId="incoming-handovers">
       <div className="flex flex-col gap-4">
-        {open.length === 0 && <p className="text-caption text-ink-3">{t("partner.noIncoming")}</p>}
+        {accepted !== null && (
+          <Notice tone="success">
+            <span data-testid="handover-accepted">{t("partner.accepted")}</span> · {t("partner.quantity", { count: accepted })}
+          </Notice>
+        )}
+        {open.length === 0 && accepted === null && <p className="text-caption text-ink-3">{t("partner.noIncoming")}</p>}
         {open.map((h) => (
-          <IncomingCard key={h.id} handover={h} canReceive={canReceive} />
+          <IncomingCard key={h.id} handover={h} canReceive={canReceive} onAccepted={() => setAccepted(h.quantity)} />
         ))}
         {recent.length > 0 && (
           <div className="flex flex-col gap-1.5">
@@ -50,7 +58,7 @@ export function IncomingHandovers({ open, recent, canReceive }: { open: PartnerH
   );
 }
 
-function IncomingCard({ handover: h, canReceive }: { handover: PartnerHandoverView; canReceive: boolean }) {
+function IncomingCard({ handover: h, canReceive, onAccepted }: { handover: PartnerHandoverView; canReceive: boolean; onAccepted: () => void }) {
   const t = useTranslations("handover");
   const router = useRouter();
   const [mode, setMode] = useState<"idle" | "confirm" | "dispute">("idle");
@@ -68,6 +76,7 @@ function IncomingCard({ handover: h, canReceive }: { handover: PartnerHandoverVi
     setBusy(false);
     if (!r.ok) return setError(t(`errors.${r.error}`, { count: ("ineligibleCount" in r && r.ineligibleCount) || 0 }));
     setSuccess(true);
+    onAccepted();
     router.refresh();
   }
 
@@ -97,7 +106,6 @@ function IncomingCard({ handover: h, canReceive }: { handover: PartnerHandoverVi
         <Badge tone={HANDOVER_STATUS_TONE[h.status]}>{t(`status.${h.status}`)}</Badge>
       </div>
 
-      {success && <Notice tone="success">{t("partner.accepted")}</Notice>}
       {h.status === "DISPUTED" && <Notice tone="warning">{t("partner.disputed")}</Notice>}
 
       {h.status === "PENDING" && canReceive && !success && mode === "idle" && (
