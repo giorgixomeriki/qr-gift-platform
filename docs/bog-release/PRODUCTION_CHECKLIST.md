@@ -87,6 +87,23 @@ Expected:
 Live f575182 keeps working, because both migrations are additive.
 Partner Auth's 0025 (1795334400000) is applied later by its own release. Never apply a migration with a smaller `when` after it.
 
+**Phase D DONE 2026-11-21 (owner-approved).** Result: **PASS**. No deploy, no Render change, `CHECKOUT_ENABLED=false` and `PAYMENTS_PROVIDER=TEST` unchanged, no customer record modified.
+
+| Check | Result |
+|---|---|
+| Pre-checks | live f575182; ledger 23 (0022 last). All 23 applied hashes equal the release files at 48dbc89. 0023/0024 sha256 `b74dfd92…541c` / `eb186832…b519` equal in 48dbc89 and the worktree. SQL review: no DROP/DELETE/TRUNCATE/UPDATE/ALTER COLUMN; REVOKE only on the new table. f575182 compatibility: claim sets `app.claimable_qr_id`, distribution changes `distribution_status` only, moderation runs as admin, activation runs in payment context. Production fingerprint unchanged since the Phase B backup (120/120), so the backup is still current |
+| 0023_checkout_consents | applied 08:44:38–08:44:39 UTC, ledger row 24, `created_at` 1795219200000, hash = file. Verified before 0024: table + RLS + 2 app_runtime policies; app_runtime SELECT/INSERT only; FKs ON DELETE RESTRICT; existing data unchanged |
+| 0024_payment_release_safety | applied 08:45:04–08:45:06 UTC, ledger row 25, `created_at` 1795222800000, hash = file. Each run is one transaction; lock_timeout 5 s, statement_timeout 120 s |
+| Ledger | 25 rows; all 25 hashes = release journal |
+| Data integrity | 87/87 existing row-count, full-content-hash and money lines identical to before: 192 QR codes, 27 greetings, 2 PAID orders (2000 / 600 / 1400), 2 payments, ledger 2 × COMMISSION_EARNED = 600, 4 users, 3 partners, 1 admin, 4 active prices |
+| Existing security | identical to the Phase B restore (11/11): 67 policies, 231 grants, RLS flags, 15 triggers, 211 functions, 75 constraints, 58 indexes; anon/authenticated 0 grants on public; no table without RLS; app_runtime not superuser, no BYPASSRLS |
+| New security (behaviour, on a local copy of production + 0023/0024 as app_runtime) | DRAFT→AVAILABLE without an admin release: refused by the trigger. AVAILABLE→ACTIVE without context: 0 rows. The sender's claim with `app.claimable_qr_id`: allowed. Consent insert without context, or for a non-pending order: refused by RLS. Consent delete: permission denied. anon/authenticated: permission denied for schema public. COMMISSION_REVERSAL on a PAID order: refused. Copy dropped |
+| Data API | `/rest/v1/*` → 503 PGRST002, the documented disabled state since 2026-11-05 (not caused by Phase D) |
+| Health (read-only) | `/api/health`, `/`, legal pages, `/contact`, `/admin/login`, `/partner/login` → 200; unknown `/g/` token 404; BOG webhook 404 and cron 404 (as expected while TEST / unset); Render logs since 08:40Z: 11 info, 0 errors |
+| ⚠ Warning | Cold start after the migration took **86.8 s**: ~70 s Render Free provisioning + app ready in 10.7 s. Earlier the same day: 36.6 s. Gate C2 (≤ 90 s) is near its limit. The reconcile caller's wake budget covers it (6 × 90 s), and a cold BOG callback is recovered by reconciliation (`RENDER_FREE_PAYMENTS.md` F1) |
+
+Next: Phase E (Render environment + deploy, checkout still closed), **only with the owner's approval**.
+
 ## E. 🔒 Render environment (Save only, not "Save and deploy")
 
 | Variable | Value | Note |
