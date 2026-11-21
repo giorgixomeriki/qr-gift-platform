@@ -93,6 +93,19 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
+  // Owner pilot (M1): real-money checkout for these QR codes only (comma-
+  // separated qr_codes.id UUIDs, at most 3) while CHECKOUT_ENABLED stays
+  // false for everyone else. Ignored for the TEST provider and while the
+  // policies are not in effect (lib/payments/checkout-gate.ts). Unset after
+  // the pilot.
+  CHECKOUT_PILOT_QR_IDS: z
+    .string()
+    .optional()
+    .transform((value) => (value ?? "").split(",").map((id) => id.trim().toLowerCase()).filter(Boolean))
+    .refine((ids) => ids.length <= 3 && ids.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)), {
+      message: "CHECKOUT_PILOT_QR_IDS: up to 3 comma-separated QR code UUIDs",
+    }),
+
   // BOG refunds are implemented and off by default: while false,
   // refundPayment sends nothing and refunds stay queued for a person
   // (REFUND_REQUIRED / anomalies).

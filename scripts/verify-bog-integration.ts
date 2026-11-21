@@ -111,7 +111,7 @@ async function main() {
   const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
   const { getOrCreateCheckoutOrder, checkPaymentReturn, acceptCheckoutTerms, consentTextSha256 } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
   const { CheckoutUnavailableError } = require("../src/lib/payments/checkout-gate") as typeof import("../src/lib/payments/checkout-gate");
-  const { refundPaidOrder, findPaymentAnomalies } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
+  const { refundPaidOrder, findPaymentAnomalies, createPaymentAttempt } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
   const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
   const { runPaymentReconciliation, ReconcileScopeError } = require("../src/lib/payments/reconcile") as typeof import("../src/lib/payments/reconcile");
@@ -400,8 +400,16 @@ async function main() {
   console.log("\n--- 16. Second capture on a PAID order ---");
   {
     const o = await newOrder();
-    await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry
-    await acceptCheckoutTerms(o.greetingId, o.editToken, "en"); // consent again: a second BOG attempt
+    const reentry = await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry while BOG's page is open
+    const again = await attempt(() => acceptCheckoutTerms(o.greetingId, o.editToken, "en")); // consent again
+    check("16-. M1 guard: re-entry waits for the bank, a second consent opens no second BOG payment", reentry.awaitingProvider === true && !again.ok && again.error === "A payment for this card is still being processed");
+    // A second charge can still happen outside that guard (an attempt opened
+    // before the guard existed, or a race between two tabs): open it directly.
+    const [orderFull] = await admin`select o.*, q.public_token from orders o join qr_codes q on q.id = o.qr_code_id where o.id = ${o.orderId}`;
+    await createPaymentAttempt(
+      { ...orderFull, id: orderFull!.id, grossAmountMinor: orderFull!.gross_amount_minor, currency: orderFull!.currency, productId: orderFull!.product_id, qrCodeId: orderFull!.qr_code_id } as never,
+      orderFull!.public_token as string,
+    );
     const [second] = await admin`select provider_payment_id from payments where order_id = ${o.orderId} and status = 'PENDING' and provider_payment_id <> ${o.bogId}`;
     const bog2 = second!.provider_payment_id as string;
     complete(o.bogId);

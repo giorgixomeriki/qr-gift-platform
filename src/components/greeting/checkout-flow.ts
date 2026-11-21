@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction, acceptCheckoutTermsAction } from "@/lib/payments/actions";
 import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
-import { CHECKOUT_CLOSED } from "@/lib/payments/checkout-codes";
+import { CHECKOUT_CLOSED, PAYMENT_IN_PROGRESS } from "@/lib/payments/checkout-codes";
 
 /**
  * Checkout's state machine, shared by the legacy and the Signature checkout
@@ -22,6 +22,12 @@ function logActionError(scope: string, error: string) {
 /** How many times to poll checkPaymentReturnAction after a real-provider redirect before falling back to showing the normal Checkout screen with a manual retry. */
 const RETURN_POLL_ATTEMPTS = 5;
 const RETURN_POLL_INTERVAL_MS = 2000;
+/**
+ * While the outcome is uncertain, re-ask the server on a slow, bounded
+ * schedule (≈ 7.5 min in total), then stop and leave "Check again" to the
+ * person. Never a Pay button while uncertain.
+ */
+const UNCERTAIN_RECHECK_DELAYS_MS = [15_000, 30_000, 60_000, 120_000, 240_000];
 
 export function useCheckoutFlow(greetingId: string) {
   const searchParams = useSearchParams();
@@ -63,6 +69,12 @@ export function useCheckoutFlow(greetingId: string) {
       return;
     }
     setSummary(result.data.summary);
+    if (result.data.awaitingProvider) {
+      // A bank payment for this card is still open (e.g. the sender came back
+      // without the bank's return link). The bank's verdict comes first.
+      setUncertain(true);
+      return;
+    }
     if (result.data.recovered) {
       // A prior payment already succeeded but activation hadn't completed —
       // it's been reconciled just now. Go straight to the success view.
@@ -110,12 +122,44 @@ export function useCheckoutFlow(greetingId: string) {
     setUncertain(true);
   }
 
+  useEffect(() => {
+    if (!uncertain) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const step = (i: number) => {
+      if (i >= UNCERTAIN_RECHECK_DELAYS_MS.length) return;
+      timer = setTimeout(async () => {
+        const result = await checkPaymentReturnAction(greetingId).catch(() => null);
+        if (cancelled) return;
+        if (result?.ok && result.data.status === "PAID") {
+          window.location.href = window.location.pathname;
+          return;
+        }
+        if (result?.ok && (result.data.status === "FAILED" || result.data.status === "CANCELED")) {
+          setUncertain(false);
+          setFailed(true);
+          await loadSummary();
+          return;
+        }
+        step(i + 1);
+      }, UNCERTAIN_RECHECK_DELAYS_MS[i]);
+    };
+    step(0);
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [uncertain, greetingId, loadSummary]);
+
   /** Records the buyer's consent server-side (linked to the order); for a real provider also opens the bank payment. */
-  async function acceptTerms(): Promise<{ redirectUrl?: string } | null> {
+  async function acceptTerms(): Promise<{ redirectUrl?: string } | "IN_PROGRESS" | null> {
     const result = await acceptCheckoutTermsAction(greetingId, locale).catch(() => null);
     if (result?.ok) return result.data;
     if (result?.error === CHECKOUT_CLOSED) setClosed(true);
-    else if (result) logActionError("acceptCheckoutTerms", result.error);
+    else if (result?.error === PAYMENT_IN_PROGRESS) {
+      setUncertain(true);
+      return "IN_PROGRESS";
+    } else if (result) logActionError("acceptCheckoutTerms", result.error);
     return null;
   }
 
@@ -123,7 +167,12 @@ export function useCheckoutFlow(greetingId: string) {
     setPaying(true);
     setError(false);
     setFailed(false);
-    if (outcome === "success" && !(await acceptTerms())) {
+    const accepted = outcome === "success" ? await acceptTerms() : true;
+    if (accepted === "IN_PROGRESS") {
+      setPaying(false);
+      return;
+    }
+    if (!accepted) {
       setPaying(false);
       setError(true);
       return;
@@ -152,6 +201,11 @@ export function useCheckoutFlow(greetingId: string) {
     setPaying(true);
     setError(false);
     const accepted = await acceptTerms();
+    if (accepted === "IN_PROGRESS") {
+      // Already switched to "still verifying": no error, no Pay.
+      setPaying(false);
+      return;
+    }
     if (!accepted?.redirectUrl) {
       setPaying(false);
       setError(true);

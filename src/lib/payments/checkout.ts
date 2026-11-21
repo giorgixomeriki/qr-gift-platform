@@ -14,6 +14,8 @@ import { loadMerchantInfo } from "@/lib/merchant/info";
 import kaMessages from "@/messages/ka.json";
 import enMessages from "@/messages/en.json";
 
+type Order = typeof orders.$inferSelect;
+
 export class CheckoutEntryError extends Error {}
 
 export type CheckoutOrderSummary = {
@@ -31,6 +33,50 @@ function toSummary(order: { id: string; grossAmountMinor: number; currency: stri
   return { orderId: order.id, grossAmountMinor: order.grossAmountMinor, currency: order.currency, status: order.status };
 }
 
+/** A payment for this card is still open at the bank; a second attempt could charge twice. */
+export class PaymentInProgressError extends Error {
+  constructor() {
+    super("A payment for this card is still being processed");
+    this.name = "PaymentInProgressError";
+  }
+}
+
+/**
+ * Real provider only. If the order has an open bank attempt, asks the bank
+ * (verifyAndReconcileOrder: the same idempotent path as the return check and
+ * reconciliation) and reports:
+ *   NONE   no open attempt: a new one is safe;
+ *   PAID   the bank charged it: the order is now PAID (activation is the caller's);
+ *   OPEN   still open at the bank, or the bank could not be asked: never offer Pay;
+ *   CLOSED the attempt ended without payment (orderStatus: the order's status now).
+ */
+async function settleOpenBankAttempt(
+  orderId: string,
+): Promise<{ kind: "NONE" } | { kind: "PAID" } | { kind: "OPEN" } | { kind: "CLOSED"; orderStatus: Order["status"] }> {
+  if (env.PAYMENTS_PROVIDER === "TEST") return { kind: "NONE" };
+  const openAttempt = async () =>
+    (
+      await withPaymentActivation(orderId, (tx) =>
+        tx
+          .select({ providerPaymentId: payments.providerPaymentId })
+          .from(payments)
+          .where(and(eq(payments.orderId, orderId), eq(payments.status, "PENDING")))
+          .limit(1),
+      )
+    )[0];
+  const attempt = await openAttempt();
+  if (!attempt?.providerPaymentId) return { kind: "NONE" };
+  try {
+    await verifyAndReconcileOrder(orderId);
+  } catch {
+    return { kind: "OPEN" }; // bank unreachable: unknown, so no second attempt
+  }
+  const [order] = await withPaymentActivation(orderId, (tx) => tx.select({ status: orders.status }).from(orders).where(eq(orders.id, orderId)).limit(1));
+  if (order?.status === "PAID") return { kind: "PAID" };
+  if (await openAttempt()) return { kind: "OPEN" };
+  return { kind: "CLOSED", orderStatus: order?.status ?? "FAILED" };
+}
+
 /**
  * The single entry point Checkout uses (Phase 3 §1/§7/§15) — never calls
  * lib/payments/service.ts's startCheckout blindly on every click. Reuses an
@@ -44,7 +90,7 @@ function toSummary(order: { id: string; grossAmountMinor: number; currency: stri
 export async function getOrCreateCheckoutOrder(
   greetingId: string,
   editToken: string,
-): Promise<{ summary: CheckoutOrderSummary; recovered: boolean }> {
+): Promise<{ summary: CheckoutOrderSummary; recovered: boolean; awaitingProvider?: boolean }> {
   const greeting = await verifyGreetingEditAccess(greetingId, editToken);
 
   const existing = await withEditableGreeting(greetingId, (tx) =>
@@ -56,8 +102,29 @@ export async function getOrCreateCheckoutOrder(
       .orderBy(desc(orders.createdAt))
       .limit(1),
   );
-  const latest = existing[0]?.order;
+  let latest = existing[0]?.order;
   const qrPublicToken = existing[0]?.qrPublicToken;
+
+  // A sender who comes back WITHOUT the bank's return URL (closed the tab,
+  // opened the card again later) while a real bank payment attempt is still
+  // open: ask the bank before ever showing a Pay button again. The callback
+  // may have been lost on a cold start, and a second Pay would be a second
+  // charge (refunds are manual). Deliberately before the checkout gate, so a
+  // paid card is recovered even if checkout has closed since.
+  if (latest?.status === "PENDING_PAYMENT") {
+    const verdict = await settleOpenBankAttempt(latest.id);
+    if (verdict.kind === "PAID") {
+      const { activated } = await activatePaidOrder(latest.id);
+      if (activated) {
+        await recordAnalyticsEvent({ eventType: "QR_ACTIVATED", qrCodeId: greeting.qrCodeId, greetingId }, { partnerId: latest.partnerId });
+      }
+      return { summary: toSummary({ ...latest, status: "PAID" }), recovered: true };
+    }
+    if (verdict.kind === "OPEN") {
+      return { summary: toSummary(latest), recovered: false, awaitingProvider: true };
+    }
+    if (verdict.kind === "CLOSED") latest = { ...latest, status: verdict.orderStatus };
+  }
 
   if (latest?.status === "PAID") {
     const { activated } = await activatePaidOrder(latest.id);
@@ -67,9 +134,9 @@ export async function getOrCreateCheckoutOrder(
     return { summary: toSummary(latest), recovered: true };
   }
 
-  // Real-money checkout may be switched off (CHECKOUT_ENABLED) — nothing
-  // below runs then: no order, no provider call.
-  assertCheckoutOpen();
+  // Real-money checkout may be switched off (CHECKOUT_ENABLED; owner pilot
+  // cards excepted) — nothing below runs then: no order, no provider call.
+  assertCheckoutOpen(greeting.qrCodeId);
 
   // Everything below either opens a payment attempt or creates an order, so
   // the greeting must be purchasable right now (message present, not
@@ -127,8 +194,8 @@ export async function acceptCheckoutTerms(
   editToken: string,
   locale: "ka" | "en",
 ): Promise<{ orderId: string; redirectUrl?: string }> {
-  await verifyGreetingEditAccess(greetingId, editToken);
-  assertCheckoutOpen();
+  const greeting = await verifyGreetingEditAccess(greetingId, editToken);
+  assertCheckoutOpen(greeting.qrCodeId);
   await assertGreetingPurchasable(greetingId);
 
   const [open] = await withEditableGreeting(greetingId, (tx) =>
@@ -142,6 +209,12 @@ export async function acceptCheckoutTerms(
   if (!open) throw new CheckoutEntryError("No open order for this greeting");
   // Staging fence: refused before the consent row and the bank payment.
   await assertOrderInPaymentScope(open.order.id);
+  // Never a second bank payment while an earlier one for this order may still
+  // be charged (second tab, back button, lost callback): the bank decides first.
+  const verdict = await settleOpenBankAttempt(open.order.id);
+  if (verdict.kind === "PAID") throw new CheckoutEntryError("This card is already paid");
+  if (verdict.kind === "OPEN") throw new PaymentInProgressError();
+  if (verdict.kind === "CLOSED" && verdict.orderStatus !== "PENDING_PAYMENT") throw new CheckoutEntryError("The previous payment attempt ended; start again");
 
   await withEditableGreeting(greetingId, (tx) =>
     tx.insert(checkoutConsents).values({

@@ -75,7 +75,7 @@ export async function getReconcileHealth(tx: Tx, now: Date = new Date()): Promis
   });
   return {
     ...classifyReconcileHealth(runs, now),
-    required: env.PAYMENTS_PROVIDER === "BOG" && env.CHECKOUT_ENABLED,
+    required: env.PAYMENTS_PROVIDER === "BOG" && (env.CHECKOUT_ENABLED || env.CHECKOUT_PILOT_QR_IDS.length > 0),
     scheduleConfigured: !!env.CRON_SECRET && !!env.RECONCILE_ADMIN_USER_ID,
   };
 }

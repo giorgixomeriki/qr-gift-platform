@@ -76,8 +76,8 @@ export async function startCheckout(input: {
    */
   createAttempt?: boolean;
 }): Promise<{ order: Order; redirectUrl?: string }> {
-  assertCheckoutOpen();
   const greeting = await verifyGreetingEditAccess(input.greetingId, input.editToken);
+  assertCheckoutOpen(greeting.qrCodeId);
 
   const { order, qrPublicToken } = await withEditableGreeting(input.greetingId, async (tx) => {
     const [qr] = await tx
@@ -130,7 +130,7 @@ export async function startCheckout(input: {
  * holding a Postgres transaction open.
  */
 export async function createPaymentAttempt(order: Order, qrPublicToken: string, locale?: "ka" | "en"): Promise<string | undefined> {
-  assertCheckoutOpen();
+  assertCheckoutOpen(order.qrCodeId);
   // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): no provider call for an order
   // this deployment does not own.
   await assertOrderInPaymentScope(order.id);

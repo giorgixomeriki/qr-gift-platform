@@ -1,11 +1,11 @@
 "use server";
 
 import { getEditToken } from "@/lib/greetings/edit-token-cookie";
-import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, acceptCheckoutTerms, type CheckoutOrderSummary } from "./checkout";
+import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, acceptCheckoutTerms, PaymentInProgressError, type CheckoutOrderSummary } from "./checkout";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logServerError } from "@/lib/log";
 import { CheckoutUnavailableError } from "./checkout-gate";
-import { CHECKOUT_CLOSED } from "./checkout-codes";
+import { CHECKOUT_CLOSED, PAYMENT_IN_PROGRESS } from "./checkout-codes";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -15,7 +15,7 @@ function errorResult(scope: string, err: unknown, context: Record<string, string
 }
 
 /** PUBLIC EXPENSIVE: creates/re-enters a checkout order. Keyed by greetingId — a genuine checkout/retry flow calls this a handful of times, never dozens per minute. */
-export async function startCheckoutAction(greetingId: string): Promise<ActionResult<{ summary: CheckoutOrderSummary; recovered: boolean }>> {
+export async function startCheckoutAction(greetingId: string): Promise<ActionResult<{ summary: CheckoutOrderSummary; recovered: boolean; awaitingProvider?: boolean }>> {
   try {
     await enforceRateLimit({ key: `checkout-start:${greetingId}`, limit: 20, windowSeconds: 60 });
     const token = await getEditToken(greetingId);
@@ -41,6 +41,7 @@ export async function acceptCheckoutTermsAction(greetingId: string, locale: stri
     const { redirectUrl } = await acceptCheckoutTerms(greetingId, token, locale === "en" ? "en" : "ka");
     return { ok: true, data: { redirectUrl } };
   } catch (err) {
+    if (err instanceof PaymentInProgressError) return { ok: false, error: PAYMENT_IN_PROGRESS };
     if (err instanceof CheckoutUnavailableError) return { ok: false, error: CHECKOUT_CLOSED };
     return errorResult("acceptCheckoutTermsAction", err, { greetingId });
   }

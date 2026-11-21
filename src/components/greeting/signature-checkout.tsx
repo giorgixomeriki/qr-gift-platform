@@ -71,6 +71,11 @@ export function SignatureCheckout({
 
       {uncertain ? (
         <CheckoutState mark={<TimeIcon aria-hidden />} title={t("stillVerifying")} body={t("stillVerifyingBody")} testId="checkout-still-verifying" live>
+          {merchantSeller?.supportEmail ? (
+            <p className="sig-caption" data-testid="checkout-support">
+              {t("stillVerifyingSupport", { email: merchantSeller.supportEmail })}
+            </p>
+          ) : null}
           <button type="button" className="sig-ghost" onClick={() => void verifyReturn()} data-testid="checkout-check-again">
             {t("checkAgain")}
           </button>

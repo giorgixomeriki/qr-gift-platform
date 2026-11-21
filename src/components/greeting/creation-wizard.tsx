@@ -612,6 +612,11 @@ export function CheckoutStep({
           <div>
             <p className="text-h3">{t("stillVerifying")}</p>
             <p className="mt-1 text-body-sm text-ink-2">{t("stillVerifyingBody")}</p>
+            {merchantSeller?.supportEmail ? (
+              <p className="mt-2 text-body-sm text-ink-2" data-testid="checkout-support">
+                {t("stillVerifyingSupport", { email: merchantSeller.supportEmail })}
+              </p>
+            ) : null}
           </div>
           <Button variant="secondary" size="lg" onClick={() => void verifyReturn()} data-testid="checkout-check-again">
             {t("checkAgain")}

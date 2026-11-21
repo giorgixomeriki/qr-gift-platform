@@ -238,13 +238,13 @@ export function resolveMerchantToken(info: MerchantInfo, token: MerchantToken, l
  * ID come from `info.values`, so the publication gates (PUBLICATION_GATES)
  * already apply: a withheld detail is null here and is simply not rendered.
  */
-export type CheckoutSeller = { name: string; idCode: string | null; legalAddress: string | null };
+export type CheckoutSeller = { name: string; idCode: string | null; legalAddress: string | null; supportEmail: string | null };
 
 export function checkoutSeller(info: MerchantInfo, locale: Locale): CheckoutSeller | null {
   if (info.mode !== "configured") return null;
   const name = resolveMerchantToken(info, "legalName", locale).value;
   if (name === null) return null;
-  return { name, idCode: info.values.idCode, legalAddress: resolveMerchantToken(info, "legalAddress", locale).value };
+  return { name, idCode: info.values.idCode, legalAddress: resolveMerchantToken(info, "legalAddress", locale).value, supportEmail: info.values.supportEmail };
 }
 
 /** Today's calendar date in Georgia (Asia/Tbilisi), as YYYY-MM-DD. */

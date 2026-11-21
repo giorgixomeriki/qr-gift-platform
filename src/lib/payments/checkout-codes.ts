@@ -4,3 +4,6 @@
  * Plain module (no server-only) so client components can compare against it.
  */
 export const CHECKOUT_CLOSED = "CHECKOUT_CLOSED";
+
+/** A bank payment for this card is still open: show "still verifying", never Pay. */
+export const PAYMENT_IN_PROGRESS = "PAYMENT_IN_PROGRESS";
