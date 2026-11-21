@@ -1,0 +1,46 @@
+# Release runbook — Admin-only QR handover (migration 0026)
+
+Branch `feat/qr-scan-handover` (fast-forward of the live deploy branch at `ae7a0ab`).
+Each numbered step needs the owner's explicit "go". Never deploy between :10 and :25 (Supabase
+Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env change in this release.
+
+## Evidence prepared (2026-11-22, local, production read-only)
+- Backup `~/.qrapp-review/backups/qrapp-prod-full-20261121-2126-pre0026-qr-handover.dump`
+  (sha256 `a54ddbdd8f45d4e4…`), fingerprint 126/126 MATCH, money: 2 PAID / 2000 GEL / commission 600.
+- Rehearsal on the restored copy: 0026 applied (26 → 27). qr_codes (202), batches, greetings, orders,
+  payments, ledger, analytics, audit logs, members: content hashes IDENTICAL before/after.
+  Rollback script → fingerprint identical on all 126 lines; re-apply OK.
+  Real-service flows on the copy 10/10 (central → Solo FLW, Solo FLW → Demo, real DRAFT refused, admin = partner
+  views, no money effect). Rollback refuses once a handover was accepted (by design). Copy dropped.
+- Production cron before release: jobs 1 wake `15 * * * *`, 2 reconcile `17 * * * *`, 3 trim `40 3 * * *`, all active.
+  0026 and the rollback never reference cron / pg_net / vault / `private`.
+
+## Steps
+1. **Fresh backup** (if > 2 h since the one above or any prod write happened):
+   `source ~/.qrapp-review/ops-env.sh; BACKUP_DATABASE_URL="$MIGRATIONS_DATABASE_URL" scripts/ops/prod-backup.sh pre0026-final` → must print `RESULT: MATCH`.
+2. **Migrate** (window :30–:05): `MIGRATIONS_DATABASE_URL=… node ./node_modules/.bin/tsx src/db/migrate.ts`.
+   Verify: ledger 27 (max 1795420800000); qr_codes 202 (169/31/2/0); money lines unchanged; cron jobs unchanged.
+   Old code (ae7a0ab) keeps working with 0026 (it never reads the new tables/column).
+3. **Deploy**: `git push origin feat/qr-scan-handover:feat/render-low-cost-hosting` (fast-forward only) → Render deploy; wait live.
+4. **Live checks**: `/api/health` 200; `/admin/inventory/scan` header `camera=(self)`, all other pages `camera=()`;
+   checkout still closed; admin dashboard totals 202 / partners unchanged.
+5. **Controlled smoke (owner)**, recipient = Demo Flower Shop (demo login, no real store):
+   1. Admin → QR ინვენტარი → *ცენტრალური საწყობის შექმნა* (central stock, suspended, 0 %).
+   2. Central stock page → create batch "smoke", quantity 2 → print one sheet.
+   3. Open a smoke card's URL on a phone → must show "unavailable" (dormant stock).
+   4. Phone (admin) → scanner → scan both cards → partner Demo Flower Shop → create handover.
+   5. Demo login → *ახალი QR ბარათების მიღება* → tick → confirm. Demo issued 92 → 94; total 204; orders/ledger unchanged.
+   6. Optional partner → partner: scan 1 of the 2 smoke cards → Demo → … needs a second test partner with a login
+      (e.g. activate the pending "TST Flw" invitation). G'N / Nino's are not needed.
+   7. Optional discrepancy path: create a handover of 1 card → Demo reports a discrepancy → admin *Reject*.
+6. **Real-device camera test** (DEVICE-CAMERA-TEST.md) on one Android + one iPhone.
+7. Record evidence; keep CHECKOUT_ENABLED=false.
+
+## Rollback
+- Code: Render rollback to `dep-dc0selec6qcc73btprt0` (ae7a0ab). 0026 may stay (old code ignores it; 0013's rule
+  still applies to every non-handover update). Cron untouched either way.
+- Database (only if required, and only while no handover is ACCEPTED):
+  `psql "$MIGRATIONS_DATABASE_URL" -v ON_ERROR_STOP=1 -f docs/qr-handover/rollback-0026.sql` (one transaction;
+  restores 0013's function, drops 0026 objects, removes ledger row 27; keeps the central-stock partner row and
+  its cards). After an accepted handover, ownership moved for real — keep 0026 and roll back code only.
+- Full restore from the dump is the last resort (would also lose any later prod writes).
