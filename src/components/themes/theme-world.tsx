@@ -41,8 +41,13 @@ import "./theme-world.css";
  * The recipient reveal uses the same world with a real message: `sealed`
  * holds it closed (its ground only) until it is opened; `onRest` reports
  * when its scene has come to rest; `onFit` reports whether the message fits
- * on the card — when it does not, the card shows its beginning under a soft
- * fade (data-overflow) and the reveal presents the whole letter. `finale`
+ * on the card. What a card does with a message that does not fit is the
+ * caller's choice (`overflow`): selectors and the composer show its beginning
+ * under a soft fade (`clamp`, data-overflow); the reveal never shows a clipped
+ * copy of the recipient's words — while it presents the whole letter the
+ * card and headline step aside (`letter`, data-letter), and when the world
+ * closes the greeting the card is sealed with the world's mark instead of the
+ * words (`signoff`, data-signoff; the letter follows in the closing). `finale`
  * presents the world closing the greeting (the reveal's ending beat): it
  * starts at the rest its scene left it in and, when `active`, plays the
  * finale (scenes/finales.ts) to the finale's resting state (CSS).
@@ -59,6 +64,7 @@ export function ThemeWorld({
   sealed = false,
   finale,
   fit = false,
+  overflow = "clamp",
   onRest,
   onFit,
   className = "",
@@ -76,8 +82,10 @@ export function ThemeWorld({
   sealed?: boolean;
   /** Present the world closing with this finale (it must be authored for the world's composition). */
   finale?: FinaleId;
-  /** Fit a real (possibly long) message to the card — implied by `onFit`. */
+  /** Fit a real (possibly long) message to the card — implied by `onFit` and by a non-default `overflow`. */
   fit?: boolean;
+  /** What the card does with a message that does not fit it (see above). */
+  overflow?: "clamp" | "letter" | "signoff";
   onRest?: () => void;
   onFit?: (fits: boolean) => void;
   className?: string;
@@ -89,7 +97,7 @@ export function ThemeWorld({
   useThemeScene(ref, finale ? FINALE_SCENES[finale] : SCENES[c], active, motion, onRest, finale ? "finale-pending" : "pending");
   const FinaleLayer = finale && FINALE_LAYERS[finale];
   useDepth(ref, interactive && near);
-  useMessageFit(ref, message, near, COMPOSITIONS[c].messageLines, fit || !!onFit, onFit);
+  useMessageFit(ref, message, near, COMPOSITIONS[c].messageLines, fit || !!onFit || overflow !== "clamp", overflow, onFit);
   useHeadlineFit(ref, opening, near, !!finale);
   return (
     <div
@@ -137,6 +145,11 @@ export function ThemeWorld({
           </span>
         )}
         <p className="tw__message">{message}</p>
+        {overflow === "signoff" && (
+          <svg viewBox="0 0 24 24" className="tw__signoff">
+            <path d={SPARK_PATH} />
+          </svg>
+        )}
         {FinaleLayer && <FinaleLayer />}
         <svg viewBox="0 0 24 24" className="tw__mark">
           <path d={SPARK_PATH} />
@@ -180,10 +193,20 @@ export function ThemeWorld({
  * Does the message fit on the card? Each composition's card is designed for
  * a number of lines (`messageLines`); the message is measured against that
  * in its own type (layout sizes, unaffected by the scene's transforms) and
- * re-measured once the world's typefaces have loaded. When it does not fit,
- * the card keeps its beginning (--msg-max, data-overflow).
+ * re-measured once the world's typefaces have loaded. When it does not fit:
+ * `clamp` keeps its beginning (--msg-max, data-overflow); `letter` and
+ * `signoff` mark the world (data-letter / data-signoff) and never clip.
+ * Runs before paint, so the first frame is already the right one.
  */
-function useMessageFit(ref: React.RefObject<HTMLDivElement | null>, message: string, near: boolean, lines: number, enabled: boolean, onFit?: (fits: boolean) => void) {
+function useMessageFit(
+  ref: React.RefObject<HTMLDivElement | null>,
+  message: string,
+  near: boolean,
+  lines: number,
+  enabled: boolean,
+  overflow: "clamp" | "letter" | "signoff",
+  onFit?: (fits: boolean) => void,
+) {
   const onFitRef = useRef(onFit);
   useLayoutEffect(() => {
     onFitRef.current = onFit;
@@ -196,15 +219,19 @@ function useMessageFit(ref: React.RefObject<HTMLDivElement | null>, message: str
       const msg = el.querySelector<HTMLElement>(".tw__message");
       if (!alive || !msg) return;
       delete el.dataset.overflow;
+      delete el.dataset.letter;
+      delete el.dataset.signoff;
       msg.style.removeProperty("--msg-max");
       const style = getComputedStyle(msg);
       const fs = parseFloat(style.fontSize);
       const lh = style.lineHeight.endsWith("px") ? parseFloat(style.lineHeight) : (parseFloat(style.lineHeight) || 1.3) * fs;
       const room = lines * lh;
       const fits = msg.scrollHeight <= room + lh * 0.25;
-      if (!fits) {
+      if (!fits && overflow === "clamp") {
         el.dataset.overflow = "";
         msg.style.setProperty("--msg-max", `${room}px`);
+      } else if (!fits) {
+        el.dataset[overflow] = "";
       }
       onFitRef.current?.(fits);
     };
@@ -214,7 +241,7 @@ function useMessageFit(ref: React.RefObject<HTMLDivElement | null>, message: str
     return () => {
       alive = false;
     };
-  }, [ref, message, near, lines, enabled]);
+  }, [ref, message, near, lines, enabled, overflow]);
 }
 
 /**
