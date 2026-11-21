@@ -4,6 +4,7 @@ import {
   uuid,
   text,
   integer,
+  boolean,
   jsonb,
   timestamp,
   unique,
@@ -31,6 +32,10 @@ export const partners = pgTable("partners", {
   // unique across partners. Empty on partners created before 0023.
   contactEmail: text("contact_email"),
   contactPhone: text("contact_phone"),
+  // migrations/0026: the ONE partner row holding QR STARR's own unsorted card
+  // stock. Cards move from it to a store only through an accepted handover
+  // (lib/qr/handovers.ts). Settable by admins only (DB trigger).
+  isCentralStock: boolean("is_central_stock").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => [
