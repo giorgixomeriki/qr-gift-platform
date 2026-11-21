@@ -94,8 +94,8 @@ async function truth(partnerId: string) {
            count(*) filter (where status = 'ACTIVE')::int active,
            count(*) filter (where status = 'BLOCKED')::int blocked,
            count(*) filter (where distribution_status = 'DISTRIBUTED')::int distributed,
-           (select count(distinct e.qr_code_id)::int from analytics_events e join qr_codes q on q.id = e.qr_code_id
-             where q.partner_id = ${partnerId} and e.event_type = 'QR_SCANNED') scanned_cards,
+           (select count(distinct e.qr_code_id)::int from analytics_events e
+             where e.partner_id = ${partnerId} and e.event_type = 'QR_SCANNED') scanned_cards,
            (select count(*)::int from qr_batches where partner_id = ${partnerId}) batch_count
       from qr_codes where partner_id = ${partnerId}`;
   return {
@@ -164,10 +164,14 @@ async function main() {
   const sb = await screens(B);
   check("2a. partner B: dashboard = admin page = database", same(sb.partnerView, tb) && same(sb.adminView, tb), { partner: sb.partnerView, db: tb });
   check("2b. A's figures include none of B's cards or scans", t.issued === 13 && tb.issued === 5 && tb.scannedCards === 1);
-  // A mis-attributed event (B's card logged under A) still counts for the card's owner.
+  // Since admin handovers (migrations/0026) a card can change shop: its earlier
+  // scans stay with the shop that held it when scanned (the event's stamp).
+  // Simulate a scan of B's card recorded while A held it.
   await admin`insert into analytics_events (event_type, qr_code_id, partner_id) values ('QR_SCANNED', ${bDraft[0]!}, ${A.id})`;
   const s2 = await screens(A);
-  check("2c. scans follow the card's owner, not the event's partner_id", s2.partnerView.scannedCards === 3 && (await screens(B)).partnerView.scannedCards === 1);
+  const s2b = await screens(B);
+  check("2c. a scan counts for the shop that held the card when scanned (A +1, B unchanged; admin = partner)",
+    s2.partnerView.scannedCards === 4 && s2.adminView.scannedCards === 4 && s2b.partnerView.scannedCards === 1 && s2b.adminView.scannedCards === 1);
 
   console.log("\n--- 3. Changes show on both screens ---");
   const [claim] = await admin<{ id: string }[]>`select id from qr_codes where partner_id = ${A.id} and status = 'AVAILABLE' and distribution_status = 'NOT_DISTRIBUTED' limit 1`;

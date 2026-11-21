@@ -32,6 +32,7 @@ const H = require("../src/lib/qr/handovers") as typeof import("../src/lib/qr/han
 const { parseScannedQr, tokenHint } = require("../src/lib/qr/scan-parse") as typeof import("../src/lib/qr/scan-parse");
 const { createQrBatch } = require("../src/lib/qr/batches") as typeof import("../src/lib/qr/batches");
 const { getPartnerInventorySummary } = require("../src/lib/dashboard/inventory") as typeof import("../src/lib/dashboard/inventory");
+const { getBatchPerformance, getQrResults } = require("../src/lib/dashboard/attribution") as typeof import("../src/lib/dashboard/attribution");
 const { getPartnerMetrics } = require("../src/lib/dashboard/partner-metrics") as typeof import("../src/lib/dashboard/partner-metrics");
 const { generatePublicToken } = require("../src/lib/security/public-token") as typeof import("../src/lib/security/public-token");
 const { generateEditToken, hashEditToken } = require("../src/lib/security/edit-token") as typeof import("../src/lib/security/edit-token");
@@ -390,10 +391,14 @@ async function main() {
   // -------------------------------------------------------------------------
   console.log("\n--- 11. Admin-only redistribution: partner A -> partner B ---");
   {
-    const moneyBefore = await money();
-    const ledgerA = await su`select id, amount_minor from partner_ledger_entries where partner_id = ${A.id} order by id`;
     const soldTok = sel1[7]!; // sold in §10, attributed to A
     const pick = sel1.slice(8, 18); // 10 of A's received cards
+    // Customers at shop A scanned 3 of these cards (stamped with A, as /g/{token} does).
+    for (const t of pick.slice(0, 3)) await su`insert into analytics_events (event_type, qr_code_id, partner_id) values ('QR_SCANNED', ${idOf.get(t)!}, ${A.id})`;
+    const scanA0 = (await asAdmin((tx) => getPartnerInventorySummary(tx, A.id))).scannedCards;
+    const scanB0 = (await asAdmin((tx) => getPartnerInventorySummary(tx, B.id))).scannedCards;
+    const moneyBefore = await money();
+    const ledgerA = await su`select id, amount_minor from partner_ledger_entries where partner_id = ${A.id} order by id`;
     const invA0 = await asAdmin((tx) => getPartnerInventorySummary(tx, A.id));
     const invB0 = await asAdmin((tx) => getPartnerInventorySummary(tx, B.id));
     const total0 = (await su`select count(*)::int n from qr_codes`)[0]!.n;
@@ -433,6 +438,22 @@ async function main() {
     check("the earlier sale stays attributed to A (order + ledger unchanged)",
       (await su`select o.partner_id from orders o join qr_codes q on q.id = o.qr_code_id where q.public_token = ${soldTok}`)[0]?.partner_id === A.id &&
       JSON.stringify(await su`select id, amount_minor from partner_ledger_entries where partner_id = ${A.id} order by id`) === JSON.stringify(ledgerA));
+    const scanA1 = (await asAdmin((tx) => getPartnerInventorySummary(tx, A.id))).scannedCards;
+    const scanB1 = (await asAdmin((tx) => getPartnerInventorySummary(tx, B.id))).scannedCards;
+    const scanA1p = (await withPartnerContext(A.owner, A.id, (tx) => getPartnerMetrics(tx, A.id))).qrScanned;
+    const scanB1p = (await withPartnerContext(B.owner, B.id, (tx) => getPartnerMetrics(tx, B.id))).qrScanned;
+    check("historical scans stay with A (the shop whose customers scanned)", scanA1 === scanA0 && scanA1p === scanA1, { scanA0, scanA1, scanA1p });
+    check("B doesn't inherit A's scans; admin view of B = B's dashboard", scanB1 === scanB0 && scanB1p === scanB1, { scanB0, scanB1, scanB1p });
+    const perfB = await asAdmin((tx) => getBatchPerformance(tx, B.id));
+    const resultBatch = (await su`select result_batch_id from qr_handovers where id = ${hid}`)[0]!.result_batch_id;
+    check("B's received batch line shows 0 scanned (no inherited scans)", perfB.find((p) => p.batchId === resultBatch)?.scanned === 0);
+    const resultsB = await withPartnerContext(B.owner, B.id, (tx) => getQrResults(tx, B.id));
+    check("B's per-card results don't show A's customer scans", resultsB.every((r) => !pick.slice(0, 3).some((t) => idOf.get(t) === r.qrCodeId)));
+    await su`insert into analytics_events (event_type, qr_code_id, partner_id) values ('QR_SCANNED', ${idOf.get(pick[0]!)!}, ${B.id})`;
+    const scanB2 = (await asAdmin((tx) => getPartnerInventorySummary(tx, B.id))).scannedCards;
+    const scanB2p = (await withPartnerContext(B.owner, B.id, (tx) => getPartnerMetrics(tx, B.id))).qrScanned;
+    check("a new scan at B counts for B on both screens", scanB2 === scanB1 + 1 && scanB2p === scanB2);
+    await su`delete from analytics_events where qr_code_id = ${idOf.get(pick[0]!)!} and partner_id = ${B.id}`;
     const moneyAfter = await money();
     check("redistribution created no order, payment, commission, analytics event or activation", JSON.stringify(moneyAfter) === JSON.stringify(moneyBefore), { moneyBefore, moneyAfter });
     check("audit: created (kind PARTNER_TO_PARTNER) + accepted",

@@ -36,7 +36,9 @@ export async function getBatchPerformance(tx: Tx, partnerId: string): Promise<Ba
       label: qrBatches.label,
       quantity: qrBatches.quantity,
       distributed: sql<number>`(select count(*) from qr_codes q where q.batch_id = ${batchIdRef} and q.distribution_status = 'DISTRIBUTED')::int`,
-      scanned: sql<number>`(select count(distinct e.qr_code_id) from analytics_events e join qr_codes q on q.id = e.qr_code_id where q.batch_id = ${batchIdRef} and e.event_type = 'QR_SCANNED')::int`,
+      // Scans made while THIS partner held the card (event stamp): a card that
+      // arrived by admin handover doesn't bring the previous shop's scans.
+      scanned: sql<number>`(select count(distinct e.qr_code_id) from analytics_events e join qr_codes q on q.id = e.qr_code_id where q.batch_id = ${batchIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = "qr_batches"."partner_id")::int`,
       paidActivations: sql<number>`(select count(*) from orders o join qr_codes q on q.id = o.qr_code_id where q.batch_id = ${batchIdRef} and o.status = 'PAID')::int`,
       netCommissionMinor: sql<number>`(select coalesce(sum(l.amount_minor), 0) from partner_ledger_entries l join orders o on o.id = l.order_id join qr_codes q on q.id = o.qr_code_id where q.batch_id = ${batchIdRef} and l.type in ('COMMISSION_EARNED', 'COMMISSION_REVERSAL'))::int`,
     })
@@ -169,8 +171,9 @@ export async function getQrResults(tx: Tx, partnerId: string, viewer: "PARTNER" 
       status: qrCodes.status,
       distributionStatus: qrCodes.distributionStatus,
       batchLabel: qrBatches.label,
-      scans: sql<number>`(select count(*) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED')::int`,
-      lastScannedAt: sql<Date | null>`(select max(e.created_at) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED')`,
+      // Only scans made while this partner held the card (event stamp).
+      scans: sql<number>`(select count(*) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = ${partnerId})::int`,
+      lastScannedAt: sql<Date | null>`(select max(e.created_at) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = ${partnerId})`,
       paidActivations: sql<number>`(select count(*) from orders o where o.qr_code_id = ${qrIdRef} and o.status = 'PAID')::int`,
       grossMinor: sql<number>`(select coalesce(sum(o.gross_amount_minor), 0) from orders o where o.qr_code_id = ${qrIdRef} and o.status = 'PAID')::int`,
       netCommissionMinor: sql<number>`(select coalesce(sum(l.amount_minor), 0) from partner_ledger_entries l join orders o on o.id = l.order_id where o.qr_code_id = ${qrIdRef} and l.type in ('COMMISSION_EARNED', 'COMMISSION_REVERSAL'))::int`,
@@ -180,12 +183,12 @@ export async function getQrResults(tx: Tx, partnerId: string, viewer: "PARTNER" 
     .where(
       and(
         eq(qrCodes.partnerId, partnerId),
-        sql`(exists (select 1 from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED')
+        sql`(exists (select 1 from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = ${partnerId})
              or exists (select 1 from orders o where o.qr_code_id = ${qrIdRef} and o.status in ('PAID', 'REFUNDED', 'PARTIALLY_REFUNDED')))`,
       ),
     )
     .orderBy(desc(sql`greatest(
-      (select max(e.created_at) from analytics_events e where e.qr_code_id = ${qrIdRef}),
+      (select max(e.created_at) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.partner_id = ${partnerId}),
       (select max(o.paid_at) from orders o where o.qr_code_id = ${qrIdRef}))`))
     .limit(limit);
 

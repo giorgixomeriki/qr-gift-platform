@@ -15,7 +15,7 @@ import { analyticsEvents, qrBatches, qrCodes } from "@/db/schema";
  *   active       ACTIVE: paid activation (only a verified payment sets this)
  *   blocked      BLOCKED: moderated
  *   distributed  physically handed over (independent of status; not a sale)
- *   scannedCards distinct cards with at least one QR_SCANNED event — a card
+ *   scannedCards distinct cards scanned while held by this partner (event stamp) — a card
  *                scanned 10 times is one scanned card (same rule as the
  *                per-batch line and the admin funnel)
  *   batchCount   batches created for the partner
@@ -50,14 +50,17 @@ export async function getPartnerInventorySummary(tx: Tx, partnerId: string): Pro
     .from(qrCodes)
     .where(eq(qrCodes.partnerId, partnerId));
 
-  // Attributed through the card's owner (qr_codes.partner_id), like the
-  // per-batch performance query, so a scan always counts for the partner
-  // that holds the card.
+  // Attributed to the partner that HELD the card when it was scanned
+  // (analytics_events.partner_id, stamped at scan time). Before admin
+  // handovers (migrations/0026) that always equalled the card's owner; after
+  // a card moves, its earlier scans stay with the shop whose customer made
+  // them — historically truthful, and exactly what the partner's own RLS
+  // (analytics_events_select) lets the partner dashboard see, so the admin
+  // page and the partner dashboard still agree.
   const [scanned] = await tx
     .select({ count: sql<number>`count(distinct ${analyticsEvents.qrCodeId})::int` })
     .from(analyticsEvents)
-    .innerJoin(qrCodes, eq(qrCodes.id, analyticsEvents.qrCodeId))
-    .where(and(eq(qrCodes.partnerId, partnerId), eq(analyticsEvents.eventType, "QR_SCANNED")));
+    .where(and(eq(analyticsEvents.partnerId, partnerId), eq(analyticsEvents.eventType, "QR_SCANNED")));
 
   const [batches] = await tx
     .select({ count: sql<number>`count(*)::int` })
