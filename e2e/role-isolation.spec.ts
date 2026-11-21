@@ -13,7 +13,7 @@ import { signInAdminWithMfa } from "./admin-session";
  */
 const sql = postgres(process.env.MIGRATIONS_DATABASE_URL ?? "postgresql://postgres:postgres@127.0.0.1:54322/postgres", { max: 1 });
 
-const ADMIN_PAGES = ["/admin/dashboard", "/admin/partners", "/admin/moderation"];
+const ADMIN_PAGES = ["/admin/dashboard", "/admin/partners", "/admin/moderation", "/admin/inventory", "/admin/inventory/scan"];
 
 let other: { partnerId: string; name: string; slug: string; batchId: string; qrId: string; token: string };
 
