@@ -34,7 +34,12 @@ export interface AuthDirectory {
   deleteUser(userId: string): Promise<void>;
 }
 
-export class AuthDirectoryError extends Error {}
+export class AuthDirectoryError extends Error {
+  /** Supabase Auth error code, e.g. "weak_password" (never contains the password). */
+  constructor(message: string, readonly code?: string) {
+    super(message);
+  }
+}
 
 const BAN_DURATION = "876000h"; // ~100 years: "until an admin restores it".
 
@@ -87,7 +92,7 @@ export function createSupabaseAuthDirectory(): AuthDirectory {
     },
     async createEmailUser(email, password) {
       const { data, error } = await client.auth.admin.createUser({ email, password, email_confirm: true });
-      if (error || !data.user) throw new AuthDirectoryError(`Could not create the account${error?.code ? ` (${error.code})` : ""}`);
+      if (error || !data.user) throw new AuthDirectoryError(`Could not create the account${error?.code ? ` (${error.code})` : ""}`, error?.code);
       return summarize(data.user);
     },
     async createPhoneUser(phoneE164) {
@@ -100,7 +105,7 @@ export function createSupabaseAuthDirectory(): AuthDirectory {
         password,
         ...(opts?.confirmEmail ? { email_confirm: true } : {}),
       });
-      if (error) throw new AuthDirectoryError(`Could not set the password${error.code ? ` (${error.code})` : ""}`);
+      if (error) throw new AuthDirectoryError(`Could not set the password${error.code ? ` (${error.code})` : ""}`, error.code);
     },
     async setBanned(userId, banned) {
       const { error } = await client.auth.admin.updateUserById(userId, { ban_duration: banned ? BAN_DURATION : "none" });

@@ -84,12 +84,20 @@ test("admin invites by email; partner activates; reuse refused; revoke ends acce
     await partnerPage.goto(link);
     await expect(partnerPage.getByTestId("activate-state-valid")).toContainText(`Login Access ${run}`);
     await partnerPage.screenshot({ path: testInfo.outputPath("activate.png"), fullPage: true });
-    // Too short is stopped by the field itself (minLength); a mismatch by the form.
-    await expect(partnerPage.getByTestId("activate-password")).toHaveAttribute("minlength", "10");
-    await partnerPage.getByTestId("activate-password").fill("long-enough-one");
-    await partnerPage.getByTestId("activate-confirm").fill("long-enough-two");
+    // Too short is stopped by the field itself (minLength); the rest of Auth's
+    // policy (a letter and a digit) and a mismatch by the form, before any request.
+    await expect(partnerPage.getByTestId("activate-password")).toHaveAttribute("minlength", "12");
+    await expect(partnerPage.getByTestId("activate-password")).toHaveAttribute("type", "password");
+    await expect(partnerPage.getByTestId("activate-confirm")).toHaveAttribute("type", "password");
+    await partnerPage.getByTestId("activate-password").fill("only-letters-here");
+    await partnerPage.getByTestId("activate-confirm").fill("only-letters-here");
+    await partnerPage.getByTestId("activate-submit").click();
+    await expect(partnerPage.getByTestId("activate-error")).toContainText(/digit|ციფრი/);
+    await partnerPage.getByTestId("activate-password").fill("long-enough-1");
+    await partnerPage.getByTestId("activate-confirm").fill("long-enough-2");
     await partnerPage.getByTestId("activate-submit").click();
     await expect(partnerPage.getByTestId("activate-error")).toBeVisible();
+    await expect(partnerPage.getByTestId("activate-error")).not.toContainText(/digit|ციფრი/);
     const pw = `E2e-${run}-strong-pass`;
     await partnerPage.getByTestId("activate-password").fill(pw);
     await partnerPage.getByTestId("activate-confirm").fill(pw);

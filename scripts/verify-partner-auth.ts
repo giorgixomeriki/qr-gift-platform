@@ -240,7 +240,7 @@ async function main() {
   check("4h. garbage token previews as invalid", (await access.previewLink("x".repeat(43))).state === "invalid" && (await access.previewLink("../etc")).state === "invalid");
   const signIns: string[] = [];
   check("4i. short password refused", (await errorCode(() => access.activateWithEmailLink(token, "short", freshIp(), activateDeps(signIns)))) === "weak_password");
-  const PW = `Pa-${RUN}-correct-horse`;
+  const PW = `Pa-${RUN}-correct-horse-7`;
   check("4j. old (revoked) link can't activate", (await errorCode(() => access.activateWithEmailLink(firstToken, PW, freshIp(), activateDeps(signIns)))) === "invalid_link");
   const activated = await access.activateWithEmailLink(token, PW, freshIp(), activateDeps(signIns));
   const userA = await directory.findByEmail(emailA);
@@ -310,7 +310,7 @@ async function main() {
   await withAdminContext(adminUserId, (tx) => access.setPartnerContacts(tx, adminUserId, C.id, { phone: C.contactPhone }));
   await withAdminContext(adminUserId, (tx) => access.issueRecovery(tx, adminUserId, A.id, issueDeps(outbox)));
   const recLink = outbox.at(-1)!;
-  const NEWPW = `New-${RUN}-battery-staple`;
+  const NEWPW = `New-${RUN}-battery-staple-8`;
   const rec = await access.previewLink(tokenOf(recLink.link));
   check("7b. reset link goes to the login's email", recLink.to === emailA && recLink.purpose === "RECOVERY" && rec.state === "valid" && rec.purpose === "RECOVERY");
   await access.activateWithEmailLink(tokenOf(recLink.link), NEWPW, freshIp(), activateDeps(signIns));
@@ -323,7 +323,7 @@ async function main() {
   check("7g. revoked account is blocked from signing in", blocked.includes(userA!.id) && !(await signInWorks(emailA, NEWPW)));
   check("7h. an admin account keeps working when its partner login is revoked", (await access.blockRevokedLogins([adminAuth.id], directory)).length === 0);
   await withAdminContext(adminUserId, (tx) => access.issueActivation(tx, adminUserId, A.id, "EMAIL", issueDeps(outbox)));
-  const PW3 = `Back-${RUN}-again-pw`;
+  const PW3 = `Back-${RUN}-again-pw-9`;
   await access.activateWithEmailLink(tokenOf(outbox.at(-1)!.link), PW3, freshIp(), activateDeps(signIns));
   const userA2 = await directory.findByEmail(emailA);
   if (userA2) createdUsers.push(userA2.id);
@@ -437,6 +437,55 @@ async function main() {
   check("9f. A's login sees nothing of partner B, even naming B", (await getPartnerRole(loginA, B.id)) === null && cross.length === 0 && crossPartner.every((p) => p.id !== B.id));
   const orderAttribution = await admin`select partner_id from orders where id = ${order.id}`;
   check("9g. attribution is partner + card only (no user/employee column on the order)", orderAttribution[0]!.partner_id === A.id && (await admin`select column_name from information_schema.columns where table_name = 'orders' and column_name ~ '(user|member|employee|staff)'`).length === 0);
+
+  console.log("\n--- 10. Auth password policy and failure handling (P0 2026-11-21) ---");
+  // Production Auth requires >= 12 characters; the form once allowed 10, so
+  // Auth refused with weak_password and the partner saw a generic error.
+  const { PASSWORD_MIN_LENGTH_PUBLIC } = await import("../src/lib/partners/login-rules");
+  const probeEmail = `pa-probe-${RUN}@verify.test`;
+  const probe = await errorCode(() => directory.createEmailUser(probeEmail, "x".repeat(PASSWORD_MIN_LENGTH_PUBLIC - 1)));
+  check("10a. the stack's Auth enforces a minimum like production (11 chars refused by Auth)", probe.includes("weak_password"), probe);
+  const probeOk = await directory.createEmailUser(probeEmail, `Ok1-${RUN}`.padEnd(PASSWORD_MIN_LENGTH_PUBLIC, "z"));
+  createdUsers.push(probeOk.id);
+  check("10b. the app's minimum is accepted by Auth (app rule >= Auth rule)", Boolean(probeOk.id));
+  const lettersOnly = await errorCode(() => directory.createEmailUser(`pa-probe2-${RUN}@verify.test`, "only-letters-here"));
+  check("10a2. the stack's Auth also requires a digit, like production (letters-only refused)", lettersOnly.includes("weak_password"), lettersOnly);
+  check("10c2. the app refuses letters-only and digits-only passwords too", (await errorCode(async () => access.checkPassword("only-letters-here"))) === "weak_password" && (await errorCode(async () => access.checkPassword("123456789012"))) === "weak_password" && (await errorCode(async () => access.checkPassword(`ok1-${RUN}-ok`))) === "OK");
+  check("10c. the app refuses a password Auth would refuse, before calling Auth", (await errorCode(async () => access.checkPassword("y".repeat(PASSWORD_MIN_LENGTH_PUBLIC - 1)))) === "weak_password");
+
+  const emailW = `pa-w-${RUN}@verify.test`;
+  const W = await makePartner("w", { email: emailW });
+  await withAdminContext(adminUserId, (tx) => access.issueActivation(tx, adminUserId, W.id, "EMAIL", issueDeps(outbox)));
+  const tokW = tokenOf(outbox.at(-1)!.link);
+  const invStatus = async () => (await admin`select status from partner_invitations where partner_id = ${W.id} order by created_at desc limit 1`)[0]!.status as string;
+  const authRefuses = { ...directory, createEmailUser: async () => { throw Object.assign(new Error("Could not create the account (weak_password)"), { code: "weak_password" }); } };
+  check("10d. Auth's weak_password reaches the partner as weak_password, not a generic error", (await errorCode(() => access.activateWithEmailLink(tokW, PW, freshIp(), { directory: authRefuses, signIn: async () => {} }))) === "weak_password");
+  check("10e. ...and leaves no account, no link, the invitation still PENDING", (await directory.findByEmail(emailW)) === null && (await invStatus()) === "PENDING" && (await admin`select count(*)::int n from partner_members where partner_id = ${W.id}`)[0]!.n === 0);
+  const authDown = { ...directory, createEmailUser: async () => { throw new Error("Could not create the account (unexpected_failure)"); } };
+  const downCode = await errorCode(() => access.activateWithEmailLink(tokW, PW, freshIp(), { directory: authDown, signIn: async () => {} }));
+  check("10f. any other Auth failure stays generic, leaves nothing behind", downCode !== "weak_password" && (await directory.findByEmail(emailW)) === null && (await invStatus()) === "PENDING", downCode);
+  let madeId: string | null = null;
+  const dbFails = {
+    ...directory,
+    createEmailUser: async (email: string, password: string) => { const u = await directory.createEmailUser(email, password); madeId = u.id; return u; },
+  };
+  // Make the claim transaction itself fail after Auth created the user: a
+  // temporary NOT VALID check blocks the membership insert for W only.
+  const blocker = admin.unsafe(`verify_block_${RUN.replace(/[^a-z0-9]/gi, "").toLowerCase()}`);
+  const wid = admin.unsafe(`'${W.id}'::uuid`);
+  await admin`alter table partner_members add constraint ${blocker} check (partner_id <> ${wid}) not valid`;
+  let dbCode: string;
+  try {
+    dbCode = await errorCode(() => access.activateWithEmailLink(tokW, PW, freshIp(), { directory: dbFails, signIn: async () => {} }));
+  } finally {
+    await admin`alter table partner_members drop constraint ${blocker}`;
+  }
+  check("10g. a failed DB claim after Auth created the user deletes that user; invitation stays PENDING", madeId !== null && (await directory.getById(madeId!)) === null && (await directory.findByEmail(emailW)) === null && (await invStatus()) === "PENDING", dbCode);
+  const retried = await access.activateWithEmailLink(tokW, PW, freshIp(), activateDeps(signIns));
+  const userW = await directory.findByEmail(emailW);
+  if (userW) createdUsers.push(userW.id);
+  check("10h. retry with the same link after the failures activates; exactly one login, linked as OWNER", retried.partnerId === W.id && userW !== null && (await getPartnerRole(userW.id, W.id)) === "OWNER" && (await admin`select count(*)::int n from partner_members where partner_id = ${W.id}`)[0]!.n === 1);
+  check("10i. the partner signs in with the chosen password; the link is now used", (await signInWorks(emailW, PW)) && (await errorCode(() => access.activateWithEmailLink(tokW, PW, freshIp(), activateDeps(signIns)))) === "link_used");
 
   console.log(`\n${passed} passed, ${failed} failed`);
 }

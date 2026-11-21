@@ -124,7 +124,7 @@ test("expired link refused; password sign-in; admin reset ends old session; self
     await panel.getByTestId("partner-send-email-activation").click();
     await expect(page.getByTestId("partner-login-message")).toBeVisible();
     const activation = await waitForNewLink(email, 1);
-    const pw1 = `Journey-${run}-first-pass`;
+    const pw1 = `Journey-${run}-first-pass-1`;
     await setPassword(partnerPage, activation, pw1);
     await partnerPage.goto(expiredLink);
     await expect(partnerPage.getByTestId("activate-state-valid")).toHaveCount(0);
@@ -145,7 +145,7 @@ test("expired link refused; password sign-in; admin reset ends old session; self
     await page.getByTestId("partner-send-reset").click();
     await expect(page.getByTestId("partner-login-message")).toBeVisible();
     const reset = await waitForNewLink(email, 2);
-    const pw2 = `Journey-${run}-second-pass`;
+    const pw2 = `Journey-${run}-second-pass-2`;
     const c3 = await browser.newContext({ ...testInfo.project.use });
     const third = await c3.newPage();
     await setPassword(third, reset, pw2);
@@ -174,7 +174,7 @@ test("expired link refused; password sign-in; admin reset ends old session; self
       await expect(fourth.getByTestId("reset-email-sent")).toBeVisible();
       await fourth.goto(await recoveryLink(email, since));
       await expect(fourth).toHaveURL(/\/reset-password/);
-      const pw3 = `Journey-${run}-third-pass`;
+      const pw3 = `Journey-${run}-third-pass-3`;
       await fourth.getByTestId("new-password").fill(pw3);
       await fourth.getByTestId("confirm-password").fill(pw3);
       await fourth.getByTestId("reset-password-submit").click();

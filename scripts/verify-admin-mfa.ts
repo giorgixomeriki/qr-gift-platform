@@ -87,7 +87,7 @@ async function caught(fn: () => Promise<unknown>): Promise<Error & { digest?: st
 const redirectTarget = (e: Error & { digest?: string }) => e.digest?.split(";")[2] ?? `not a redirect: ${e.message}`;
 
 const RUN = randomUUID().slice(0, 8);
-const PASSWORD = `verify-${RUN}-password`;
+const PASSWORD = `verify-${RUN}-password-1`;
 const email = (who: string) => `${who}-${RUN}@verify.test`;
 const createdUsers: string[] = [];
 const created = { partnerId: randomUUID(), batchId: randomUUID(), qrId: randomUUID() };

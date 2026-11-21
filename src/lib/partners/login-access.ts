@@ -7,7 +7,7 @@ import { recordAuditLog } from "@/lib/audit";
 import type { AuthDirectory, AuthUserSummary } from "@/lib/auth/auth-directory";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { maskEmail, maskPhone, normalizeEmail, normalizeGeorgianMobile } from "./contact";
-import { PASSWORD_MAX_LENGTH_PUBLIC, PASSWORD_MIN_LENGTH_PUBLIC } from "./login-rules";
+import { meetsPasswordPolicy, PASSWORD_MAX_LENGTH_PUBLIC, PASSWORD_MIN_LENGTH_PUBLIC } from "./login-rules";
 
 /**
  * Partner login access: one partner = one login, linked only after the
@@ -425,8 +425,23 @@ async function acceptInvitation(tx: Tx, invitationId: string, userId: string, co
   }
 }
 
+/**
+ * Runs an Auth call that sets a password. Auth's own policy (length,
+ * character classes, leaked-password check) is the final word: its refusal is
+ * the person's to fix, so it surfaces as weak_password, not a generic failure.
+ */
+async function authPasswordStep<T>(step: () => Promise<T>): Promise<T> {
+  try {
+    return await step();
+  } catch (err) {
+    // AuthDirectoryError carries Auth's code; database errors never use this one.
+    if ((err as { code?: unknown } | null)?.code === "weak_password") throw new LoginAccessError("weak_password");
+    throw err;
+  }
+}
+
 export function checkPassword(password: string) {
-  if (typeof password !== "string" || password.length < PASSWORD_MIN_LENGTH || password.length > PASSWORD_MAX_LENGTH) {
+  if (!meetsPasswordPolicy(password)) {
     throw new LoginAccessError("weak_password");
   }
 }
@@ -469,7 +484,7 @@ export async function activateWithEmailLink(token: string, password: string, ip:
       const target = await deps.directory.getById(inv.target_user_id!);
       if (!target || target.email !== inv.contact) throw new LoginAccessError("contact_mismatch");
       // Last, so a failure rolls the claim back and the link stays usable.
-      await deps.directory.setPassword(target.id, password);
+      await authPasswordStep(() => deps.directory.setPassword(target.id, password));
       return id;
     });
   } else {
@@ -483,7 +498,7 @@ export async function activateWithEmailLink(token: string, password: string, ip:
       // by the holder of this link, with no session but the one started below.
       await deps.directory.deleteUser(existing.id);
     }
-    const created = await deps.directory.createEmailUser(inv.contact, password);
+    const created = await authPasswordStep(() => deps.directory.createEmailUser(inv.contact, password));
     try {
       partnerId = await db.transaction((tx) => acceptInvitation(tx, inv.invitation_id, created.id, inv.contact));
     } catch (err) {

@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { activatePartnerLinkAction } from "@/lib/partners/login-actions";
-import { PASSWORD_MAX_LENGTH_PUBLIC, PASSWORD_MIN_LENGTH_PUBLIC } from "@/lib/partners/login-rules";
+import { meetsPasswordPolicy, PASSWORD_MIN_LENGTH_PUBLIC } from "@/lib/partners/login-rules";
 import { PasswordField } from "./password-field";
 
 /** Choose a password for an emailed activation / reset link, then sign in. */
@@ -18,7 +18,7 @@ export function ActivatePartnerForm({ token, recovery }: { token: string; recove
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (password.length < PASSWORD_MIN_LENGTH_PUBLIC || password.length > PASSWORD_MAX_LENGTH_PUBLIC) {
+    if (!meetsPasswordPolicy(password)) {
       setError(t("errors.weak_password", { min: PASSWORD_MIN_LENGTH_PUBLIC }));
       return;
     }
