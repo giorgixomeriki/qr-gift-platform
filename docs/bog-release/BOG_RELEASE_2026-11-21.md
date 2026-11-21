@@ -94,9 +94,11 @@ Verified: a fresh database migrates 0000 → 0024 cleanly (25 rows), with all su
   - partner-pricing 70.
 - `admin-mfa`: 31/35 here. The 4 failures are environmental (`auth.users` does not exist in an isolated DB). The Partner Auth session ran it against a DB with the auth schema; its static checks 13b/13c are fixed in 4350882.
 - Caller script against a mock server: 7/7 scenarios as designed (ok, transient 503/502, busy 409, 401, open anomalies, timeout then ok, persistent 500). The secret never appears in output.
-- Browser e2e: see the release report.
+- Browser e2e and the auth-enabled re-run (admin-mfa 126/126, 0025 stacked on top): see `PRODUCTION_CHECKLIST.md` §A.
 
 ## 5. Release steps (each needs the owner's approval)
+
+The operational version with commands, pass criteria and rollback is `PRODUCTION_CHECKLIST.md`.
 
 1. **Render Starter** ($7/month). Free spins down after 15 min (~31 s cold start). It also shares 750 h/month with `insurancecomparison-backend`, so it can be suspended before month end. Callbacks and the return check need an awake service.
 2. **Production backup**: verified `pg_dump` via the migrations role (pg_dump 17 inside the supabase container), with sha256 and restore counts.

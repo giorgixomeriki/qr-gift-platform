@@ -45,14 +45,17 @@ services:
       - key: EDIT_TOKEN_SECRET
         generateValue: true
 
-      # Checkout disabled: TEST is refused in production, so checkout is closed
-      # ("Payments open soon") and no BOG variable exists to call a bank.
+      # Payment switches are owner-set in the dashboard (docs/bog-release):
+      # PAYMENTS_PROVIDER (TEST → BOG) and CHECKOUT_ENABLED (false → true).
+      # `sync: false` so a Blueprint sync never resets them to the closed
+      # defaults. Both fail closed when unset (env.ts defaults TEST / false;
+      # TEST is refused in production). ALLOW_TEST_PAYMENTS stays pinned off.
       - key: PAYMENTS_PROVIDER
-        value: TEST
+        sync: false
       - key: ALLOW_TEST_PAYMENTS
         value: "false"
       - key: CHECKOUT_ENABLED
-        value: "false"
+        sync: false
 
       # Verified on Render 2026-10-16 (docs/RENDER_DEPLOYMENT.md §4): Render
       # APPENDS to a client-supplied X-Forwarded-For ("client, Cloudflare edge,

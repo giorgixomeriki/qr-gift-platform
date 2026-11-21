@@ -206,7 +206,13 @@ async function main() {
   const dashboardOnly = (key: string) => new RegExp(`- key: ${key}\\n\\s+sync: false`).test(blueprint);
   check("Free or Starter plan in Frankfurt with /api/health as health check", /plan: (free|starter)/.test(blueprint) && /region: frankfurt/.test(blueprint) && /healthCheckPath: \/api\/health/.test(blueprint));
   check("Node 22 (package.json engines)", envValue("NODE_VERSION") === "22");
-  check("PAYMENTS_PROVIDER=TEST, ALLOW_TEST_PAYMENTS=false, CHECKOUT_ENABLED=false", envValue("PAYMENTS_PROVIDER") === "TEST" && envValue("ALLOW_TEST_PAYMENTS") === "false" && envValue("CHECKOUT_ENABLED") === "false");
+  // The owner flips PAYMENTS_PROVIDER/CHECKOUT_ENABLED in the dashboard; a
+  // pinned `value:` would be reset by the next Blueprint sync. Unset, both
+  // fail closed (TEST / false), and TEST is refused in production.
+  check(
+    "ALLOW_TEST_PAYMENTS=false pinned; PAYMENTS_PROVIDER and CHECKOUT_ENABLED dashboard-only (sync: false)",
+    envValue("ALLOW_TEST_PAYMENTS") === "false" && dashboardOnly("PAYMENTS_PROVIDER") && dashboardOnly("CHECKOUT_ENABLED") && envValue("PAYMENTS_PROVIDER") === undefined && envValue("CHECKOUT_ENABLED") === undefined,
+  );
   check("no BOG_* variable and no CRON_SECRET", !/BOG_|CRON_SECRET/.test(blueprint));
   check(
     "client IP: CF-Connecting-IP with a 3-hop fallback (verified on Render)",

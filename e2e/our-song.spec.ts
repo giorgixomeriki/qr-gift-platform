@@ -174,6 +174,9 @@ test.describe("Our Song — Spotify link keepsake", () => {
 
     await page.getByTestId("preview-activate-cta").click();
     await expect(page.getByTestId("checkout-step")).toContainText("song");
+    // Consent is mandatory before payment (0023_checkout_consents).
+    await expect(page.getByTestId("checkout-pay")).toBeDisabled();
+    await page.getByTestId("checkout-consent").check();
     await page.getByTestId("checkout-pay").click();
     await expect(page.getByTestId("sender-success-banner")).toBeVisible({ timeout: 20_000 });
   });
