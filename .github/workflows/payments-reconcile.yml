@@ -5,6 +5,7 @@
 # RECONCILE_SCHEDULE_ENABLED=true; until then every run is skipped.
 # The secret lives in the "production-reconcile" environment, restricted to main.
 # Must live on main (the default branch): GitHub schedules only from there.
+# Schedule registration: 2026-11-21 (commit made through the GitHub API).
 name: Payment reconciliation
 
 on:
