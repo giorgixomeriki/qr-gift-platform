@@ -1,5 +1,10 @@
 -- =============================================================================
--- Scan-to-Assign: physical QR card handovers from central stock to a partner.
+-- Admin-controlled QR handovers (Scan-to-Assign): physical cards move
+--   * from QR STARR's central stock to a partner, or
+--   * from one partner to another (admin redistribution).
+-- Only an admin creates a handover; partners can only confirm receipt of a
+-- handover addressed to them or report a discrepancy. There is no
+-- partner-initiated transfer.
 --
 -- Until now every QR was minted for one partner and its owner could never
 -- change (0013: "if reassignment is ever needed it must be a new, deliberate
@@ -12,8 +17,8 @@
 --     (partial unique index), so a card can be in at most one open handover.
 --   * Ownership moves ONLY inside app_accept_qr_handover(), run by the
 --     receiving partner, atomically for every card of the handover, and only
---     for cards that are still pristine: central stock, AVAILABLE, never had a
---     greeting, never had an order. Cards keep their public_token (printed
+--     for cards that are still pristine: owned by the handover's source,
+--     AVAILABLE, never had a greeting, never had an order or payment. Cards keep their public_token (printed
 --     URLs never change). They move to a new batch of the receiving partner,
 --     so qr_codes.partner_id = qr_batches.partner_id still always holds.
 --   * The attribution trigger from 0013 stays in force for every other
@@ -30,6 +35,32 @@ alter table partners add column is_central_stock boolean not null default false;
 --> statement-breakpoint
 create unique index partners_one_central_stock on partners ((true)) where is_central_stock;
 --> statement-breakpoint
+-- Central stock is never a commercial partner: always SUSPENDED (its cards
+-- resolve as unavailable on /g/{token}, so nothing can be started or sold
+-- before a store accepts them) and never earns commission.
+alter table partners add constraint partners_central_stock_dormant
+  check (not is_central_stock or (status = 'SUSPENDED' and commission_rate_bps = 0));
+--> statement-breakpoint
+-- ...and never has a login: no member, no invitation.
+create or replace function enforce_no_central_stock_login() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from partners p where p.id = new.partner_id and p.is_central_stock) then
+    raise exception 'central stock partner % cannot have logins or members', new.partner_id
+      using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+--> statement-breakpoint
+create trigger trg_partner_members_no_central_stock
+  before insert or update of partner_id on partner_members
+  for each row execute function enforce_no_central_stock_login();
+--> statement-breakpoint
+create trigger trg_partner_invitations_no_central_stock
+  before insert or update of partner_id on partner_invitations
+  for each row execute function enforce_no_central_stock_login();
+--> statement-breakpoint
 -- partners_update also lets a partner OWNER/ADMIN edit their own row; only an
 -- admin may set or clear the central-stock flag. (Invoker rights on purpose:
 -- current_user is the caller.)
@@ -40,6 +71,13 @@ begin
      and current_user = 'app_runtime' and not app_is_admin() then
     raise exception 'partners.% is_central_stock can be changed only by an admin', old.id
       using errcode = 'insufficient_privilege';
+  end if;
+  if new.is_central_stock and not old.is_central_stock and (
+       exists (select 1 from partner_members m where m.partner_id = new.id)
+       or exists (select 1 from partner_invitations i where i.partner_id = new.id and i.status = 'PENDING')
+     ) then
+    raise exception 'partners.% has logins and cannot become central stock', old.id
+      using errcode = 'check_violation';
   end if;
   return new;
 end;
@@ -92,6 +130,9 @@ create index qr_handovers_status_idx on qr_handovers (status, created_at desc);
 create table qr_handover_items (
   handover_id uuid not null references qr_handovers(id) on delete restrict,
   qr_code_id uuid not null references qr_codes(id) on delete restrict,
+  -- Where the card came from (its batch at creation time) — permanent history,
+  -- the card itself then moves to the receiving partner's new batch.
+  from_batch_id uuid not null references qr_batches(id) on delete restrict,
   reserved boolean not null default true,
   primary key (handover_id, qr_code_id)
 );
@@ -205,6 +246,23 @@ create trigger trg_qr_handovers_update
   for each row execute function enforce_qr_handover_update();
 --> statement-breakpoint
 
+-- A handover never goes INTO central stock (it has no login to confirm
+-- receipt, and stock only ever leaves it).
+create or replace function enforce_qr_handover_insert() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from partners p where p.id = new.to_partner_id and p.is_central_stock) then
+    raise exception 'qr_handovers: central stock cannot receive a handover' using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+--> statement-breakpoint
+create trigger trg_qr_handovers_insert
+  before insert on qr_handovers
+  for each row execute function enforce_qr_handover_insert();
+--> statement-breakpoint
+
 -- Cancel / reject release the reservations in the same transaction.
 create or replace function release_qr_handover_reservations() returns trigger
 language plpgsql security definer set search_path = public as $$
@@ -230,9 +288,16 @@ begin
     if not exists (select 1 from qr_handovers h where h.id = new.handover_id and h.status = 'PENDING') then
       raise exception 'qr_handover_items: handover % is not pending', new.handover_id using errcode = 'check_violation';
     end if;
+    if not exists (
+      select 1 from qr_codes q join qr_handovers h on h.id = new.handover_id
+       where q.id = new.qr_code_id and q.partner_id = h.from_partner_id and q.batch_id = new.from_batch_id
+    ) then
+      raise exception 'qr_handover_items: card % is not held by the handover source', new.qr_code_id using errcode = 'check_violation';
+    end if;
     return new;
   end if;
-  if new.handover_id is distinct from old.handover_id or new.qr_code_id is distinct from old.qr_code_id then
+  if new.handover_id is distinct from old.handover_id or new.qr_code_id is distinct from old.qr_code_id
+     or new.from_batch_id is distinct from old.from_batch_id then
     raise exception 'qr_handover_items identity is immutable' using errcode = 'check_violation';
   end if;
   if new.reserved and not old.reserved then
@@ -319,7 +384,7 @@ begin
          or new.partner_id <> v_handover.to_partner_id
          or old.status <> 'AVAILABLE'
          or new.status <> 'AVAILABLE'
-         or not exists (select 1 from partners p where p.id = old.partner_id and p.is_central_stock)
+         or exists (select 1 from partners p where p.id = new.partner_id and p.is_central_stock)
          or (select partner_id from qr_batches where id = new.batch_id) is distinct from new.partner_id
          or exists (select 1 from greetings g where g.qr_code_id = old.id)
          or exists (select 1 from orders o where o.qr_code_id = old.id) then
@@ -416,7 +481,7 @@ begin
      set partner_id = h.to_partner_id,
          batch_id = v_batch,
          distribution_status = 'DISTRIBUTED',
-         distributed_at = coalesce(q.distributed_at, now())
+         distributed_at = now()
     from qr_handover_items i
    where i.handover_id = h.id and i.qr_code_id = q.id and i.reserved;
   get diagnostics v_moved = row_count;
@@ -500,6 +565,10 @@ revoke execute on function enforce_qr_handover_update() from public;
 revoke execute on function release_qr_handover_reservations() from public;
 --> statement-breakpoint
 revoke execute on function enforce_qr_handover_item() from public;
+--> statement-breakpoint
+revoke execute on function enforce_no_central_stock_login() from public;
+--> statement-breakpoint
+revoke execute on function enforce_qr_handover_insert() from public;
 --> statement-breakpoint
 revoke execute on function check_qr_handover_quantity() from public;
 --> statement-breakpoint

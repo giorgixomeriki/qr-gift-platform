@@ -1,5 +1,6 @@
 import "server-only";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { Tx } from "@/db/client";
 import { greetings, orders, partners, qrBatches, qrCodes, qrHandoverItems, qrHandovers } from "@/db/schema";
 import { recordAuditLog } from "@/lib/audit";
@@ -33,17 +34,20 @@ export const CENTRAL_STOCK_SLUG = "qr-starr-central-stock";
 
 export type IneligibleReason =
   | "not_found"
-  | "no_central_stock"
-  | "assigned_to_partner"
   | "draft"
   | "active"
   | "blocked"
   | "has_history"
-  | "reserved";
+  | "reserved"
+  | "other_source"
+  | "same_as_destination";
+
+/** Who holds the card now. Admin-only data (partners never see this view). */
+export type CardHolder = { holderId: string; holderName: string; holderIsCentral: boolean };
 
 export type CardEligibility =
-  | { token: string; hint: string; eligible: true }
-  | { token: string; hint: string; eligible: false; reason: IneligibleReason; partnerName?: string };
+  | ({ token: string; hint: string; eligible: true } & CardHolder)
+  | ({ token: string; hint: string; eligible: false; reason: IneligibleReason; partnerName?: string } & Partial<CardHolder>);
 
 export async function getCentralStockPartner(tx: Tx) {
   const [row] = await tx
@@ -55,10 +59,10 @@ export async function getCentralStockPartner(tx: Tx) {
 }
 
 /**
- * Creates the central-stock partner the first time it is needed. SUSPENDED by
- * design: a card still in central stock resolves as unavailable on /g/{token}
- * (lib/qr/resolve-state.ts), so a card lost before handover can't be started
- * or sold. The owner can reactivate it from the partner page if ever wanted.
+ * Creates the central-stock partner the first time it is needed. Always
+ * SUSPENDED with 0% commission and never a login (enforced by the database,
+ * migrations/0026): a card still in central stock resolves as unavailable on
+ * /g/{token}, so it can't be started or sold before a store accepts it.
  */
 export async function ensureCentralStockPartner(tx: Tx, adminUserId: string) {
   const existing = await getCentralStockPartner(tx);
@@ -86,22 +90,34 @@ export async function ensureCentralStockPartner(tx: Tx, adminUserId: string) {
 }
 
 /**
- * Eligibility of each token for a NEW handover. With `lock`, the card rows are
- * locked FOR UPDATE first (in id order, so two concurrent submissions can't
- * deadlock), which is what makes the check authoritative at submission.
+ * Eligibility of each token for a NEW admin handover. A card is eligible when
+ * it is AVAILABLE, never had a greeting, order or payment, and is not in an
+ * open handover. With `sourcePartnerId`, it must also be held by that source
+ * (one handover = one source); with `destinationPartnerId`, it must not
+ * already be the destination's. With `lock`, the card rows are locked FOR
+ * UPDATE first (id order — no deadlock between concurrent submissions), which
+ * makes the check authoritative at submission.
  */
-export async function evaluateCards(tx: Tx, tokens: string[], opts: { lock?: boolean } = {}): Promise<CardEligibility[]> {
+export async function evaluateCards(
+  tx: Tx,
+  tokens: string[],
+  opts: { lock?: boolean; sourcePartnerId?: string; destinationPartnerId?: string } = {},
+): Promise<CardEligibility[]> {
   if (tokens.length === 0) return [];
-  const central = await getCentralStockPartner(tx);
 
   if (opts.lock) {
-    await tx.execute(
-      sql`select id from qr_codes where public_token in ${tokens} order by id for update`,
-    );
+    await tx.execute(sql`select id from qr_codes where public_token in ${tokens} order by id for update`);
   }
 
   const cards = await tx
-    .select({ id: qrCodes.id, token: qrCodes.publicToken, partnerId: qrCodes.partnerId, status: qrCodes.status, partnerName: partners.name })
+    .select({
+      id: qrCodes.id,
+      token: qrCodes.publicToken,
+      status: qrCodes.status,
+      holderId: qrCodes.partnerId,
+      holderName: partners.name,
+      holderIsCentral: partners.isCentralStock,
+    })
     .from(qrCodes)
     .innerJoin(partners, eq(partners.id, qrCodes.partnerId))
     .where(inArray(qrCodes.publicToken, tokens));
@@ -131,20 +147,23 @@ export async function evaluateCards(tx: Tx, tokens: string[], opts: { lock?: boo
     const hint = tokenHint(token);
     const card = byToken.get(token);
     if (!card) return { token, hint, eligible: false, reason: "not_found" };
-    if (card.status === "BLOCKED") return { token, hint, eligible: false, reason: "blocked" };
-    if (card.status === "ACTIVE") return { token, hint, eligible: false, reason: "active" };
-    if (card.status === "DRAFT") return { token, hint, eligible: false, reason: "draft" };
-    if (!central) return { token, hint, eligible: false, reason: "no_central_stock" };
-    if (card.partnerId !== central.id) return { token, hint, eligible: false, reason: "assigned_to_partner", partnerName: card.partnerName };
-    if (withGreeting.has(card.id) || withOrder.has(card.id)) return { token, hint, eligible: false, reason: "has_history" };
+    const holder: CardHolder = { holderId: card.holderId, holderName: card.holderName, holderIsCentral: card.holderIsCentral };
+    const no = (reason: IneligibleReason, partnerName?: string): CardEligibility => ({ token, hint, eligible: false, reason, partnerName, ...holder });
+    if (card.status === "BLOCKED") return no("blocked");
+    if (card.status === "ACTIVE") return no("active");
+    if (card.status === "DRAFT") return no("draft");
+    if (withGreeting.has(card.id) || withOrder.has(card.id)) return no("has_history");
     const reservedFor = reservations.get(card.id);
-    if (reservedFor !== undefined) return { token, hint, eligible: false, reason: "reserved", partnerName: reservedFor };
-    return { token, hint, eligible: true };
+    if (reservedFor !== undefined) return no("reserved", reservedFor);
+    if (opts.sourcePartnerId && card.holderId !== opts.sourcePartnerId) return no("other_source", card.holderName);
+    if (opts.destinationPartnerId && card.holderId === opts.destinationPartnerId) return no("same_as_destination", card.holderName);
+    return { token, hint, eligible: true, ...holder };
   });
 }
 
 export type CreateHandoverInput = {
   idempotencyKey: string;
+  fromPartnerId: string;
   toPartnerId: string;
   tokens: string[];
   note?: string;
@@ -160,9 +179,12 @@ function pgCode(err: unknown): string | undefined {
 }
 
 /**
- * Creates a PENDING handover that reserves exactly these cards. All-or-
- * nothing: one ineligible card refuses the whole request and nothing is
- * written. A repeat with the same idempotency key returns the first result.
+ * Admin only (RLS + caller): creates a PENDING handover that reserves exactly
+ * these cards, all held by `fromPartnerId` (central stock or a partner), for
+ * `toPartnerId`. All-or-nothing: one ineligible card refuses the whole request
+ * and nothing is written. A repeat with the same idempotency key returns the
+ * first result. Ownership does not change until the receiving partner
+ * confirms receipt (app_accept_qr_handover).
  */
 export async function createHandover(tx: Tx, adminUserId: string, input: CreateHandoverInput): Promise<CreateHandoverResult> {
   const tokens = [...new Set(input.tokens)];
@@ -173,31 +195,33 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
   // serialized here, so the second one always sees the first one's result.
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`qr_handover:${input.idempotencyKey}`}, 0))`);
   const [previous] = await tx
-    .select({ id: qrHandovers.id, quantity: qrHandovers.quantity, toPartnerId: qrHandovers.toPartnerId })
+    .select({ id: qrHandovers.id, quantity: qrHandovers.quantity, toPartnerId: qrHandovers.toPartnerId, fromPartnerId: qrHandovers.fromPartnerId })
     .from(qrHandovers)
     .where(eq(qrHandovers.idempotencyKey, input.idempotencyKey))
     .limit(1);
   if (previous) {
-    if (previous.toPartnerId !== input.toPartnerId) throw new HandoverError("idempotency_conflict");
+    if (previous.toPartnerId !== input.toPartnerId || previous.fromPartnerId !== input.fromPartnerId) throw new HandoverError("idempotency_conflict");
     return { ok: true, handoverId: previous.id, quantity: previous.quantity, duplicate: true };
   }
 
-  const central = await getCentralStockPartner(tx);
-  if (!central) throw new HandoverError("no_central_stock");
-
-  const [destination] = await tx
+  if (input.fromPartnerId === input.toPartnerId) throw new HandoverError("same_partner");
+  const pair = await tx
     .select({ id: partners.id, status: partners.status, isCentralStock: partners.isCentralStock })
     .from(partners)
-    .where(eq(partners.id, input.toPartnerId))
-    .limit(1);
-  if (!destination) throw new HandoverError("partner_not_found");
+    .where(inArray(partners.id, [input.fromPartnerId, input.toPartnerId]));
+  const source = pair.find((p) => p.id === input.fromPartnerId);
+  const destination = pair.find((p) => p.id === input.toPartnerId);
+  if (!source || !destination) throw new HandoverError("partner_not_found");
   if (destination.isCentralStock) throw new HandoverError("partner_is_central_stock");
   if (destination.status !== "ACTIVE") throw new HandoverError("partner_inactive");
 
-  const cards = await evaluateCards(tx, tokens, { lock: true });
+  const cards = await evaluateCards(tx, tokens, { lock: true, sourcePartnerId: source.id, destinationPartnerId: destination.id });
   if (cards.some((c) => !c.eligible)) return { ok: false, code: "ineligible", cards };
 
-  const idRows = await tx.select({ id: qrCodes.id }).from(qrCodes).where(inArray(qrCodes.publicToken, tokens));
+  const idRows = await tx
+    .select({ id: qrCodes.id, batchId: qrCodes.batchId })
+    .from(qrCodes)
+    .where(inArray(qrCodes.publicToken, tokens));
 
   let handoverId: string;
   try {
@@ -207,7 +231,7 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
       const [created] = await sp
         .insert(qrHandovers)
         .values({
-          fromPartnerId: central.id,
+          fromPartnerId: source.id,
           toPartnerId: destination.id,
           quantity: idRows.length,
           idempotencyKey: input.idempotencyKey,
@@ -216,7 +240,7 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
         })
         .returning({ id: qrHandovers.id });
       if (!created) throw new HandoverError("create_failed");
-      await sp.insert(qrHandoverItems).values(idRows.map((r) => ({ handoverId: created.id, qrCodeId: r.id })));
+      await sp.insert(qrHandoverItems).values(idRows.map((r) => ({ handoverId: created.id, qrCodeId: r.id, fromBatchId: r.batchId })));
       return created.id;
     });
   } catch (err) {
@@ -227,7 +251,7 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
         .where(eq(qrHandovers.idempotencyKey, input.idempotencyKey))
         .limit(1);
       if (raced) return { ok: true, handoverId: raced.id, quantity: raced.quantity, duplicate: true };
-      return { ok: false, code: "ineligible", cards: await evaluateCards(tx, tokens) };
+      return { ok: false, code: "ineligible", cards: await evaluateCards(tx, tokens, { sourcePartnerId: source.id, destinationPartnerId: destination.id }) };
     }
     throw err;
   }
@@ -238,10 +262,54 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
     action: "QR_HANDOVER_CREATED",
     targetType: "qr_handover",
     targetId: handoverId,
-    metadata: { fromPartnerId: central.id, toPartnerId: destination.id, quantity: idRows.length, qrCodeIds: idRows.map((r) => r.id) },
+    metadata: {
+      kind: source.isCentralStock ? "CENTRAL_TO_PARTNER" : "PARTNER_TO_PARTNER",
+      fromPartnerId: source.id,
+      toPartnerId: destination.id,
+      quantity: idRows.length,
+      qrCodeIds: idRows.map((r) => r.id),
+    },
   });
 
   return { ok: true, handoverId, quantity: idRows.length, duplicate: false };
+}
+
+/**
+ * "Select a batch" instead of scanning: every currently eligible card of one
+ * batch (admin only). The handover is still re-checked card by card on submit.
+ */
+export async function listEligibleBatchTokens(tx: Tx, batchId: string): Promise<string[]> {
+  const rows = await tx.execute<{ public_token: string }>(sql`
+    select q.public_token from qr_codes q
+     where q.batch_id = ${batchId} and q.status = 'AVAILABLE'
+       and not exists (select 1 from greetings g where g.qr_code_id = q.id)
+       and not exists (select 1 from orders o where o.qr_code_id = q.id)
+       and not exists (select 1 from qr_handover_items i where i.qr_code_id = q.id and i.reserved)
+     order by q.public_token`);
+  return (rows as unknown as { public_token: string }[]).map((r) => r.public_token);
+}
+
+/** Batches the admin can pick from, with how many cards are eligible right now. */
+export async function listSelectableBatches(tx: Tx) {
+  const rows = await tx.execute<{ id: string; label: string; partner_id: string; partner_name: string; is_central: boolean; eligible: number }>(sql`
+    select b.id, b.label, b.partner_id, p.name partner_name, p.is_central_stock is_central,
+           count(q.id) filter (where q.status = 'AVAILABLE'
+             and not exists (select 1 from greetings g where g.qr_code_id = q.id)
+             and not exists (select 1 from orders o where o.qr_code_id = q.id)
+             and not exists (select 1 from qr_handover_items i where i.qr_code_id = q.id and i.reserved))::int eligible
+      from qr_batches b join partners p on p.id = b.partner_id
+      left join qr_codes q on q.batch_id = b.id
+     group by b.id, p.id
+    having count(q.id) > 0
+     order by p.is_central_stock desc, p.name, b.created_at`);
+  return (rows as unknown as { id: string; label: string; partner_id: string; partner_name: string; is_central: boolean; eligible: number }[]).map((r) => ({
+    id: r.id,
+    label: r.label,
+    partnerId: r.partner_id,
+    partnerName: r.partner_name,
+    isCentral: r.is_central,
+    eligible: r.eligible,
+  }));
 }
 
 type AdminTransition = "cancel" | "reopen" | "reject";
@@ -351,24 +419,34 @@ const listColumns = {
   note: qrHandovers.note,
 };
 
-/** Admin history, newest first. `q` matches the partner name; `status` filters. */
-export async function listHandovers(tx: Tx, filters: { q?: string; status?: HandoverStatus } = {}, limit = 100): Promise<HandoverListRow[]> {
+const fromPartner = alias(partners, "from_partner");
+
+export type AdminHandoverRow = HandoverListRow & { fromPartnerName: string; fromIsCentral: boolean };
+const adminColumns = { ...listColumns, fromPartnerName: fromPartner.name, fromIsCentral: fromPartner.isCentralStock };
+
+/** Admin history, newest first. `q` matches the source or destination partner; `status` filters. */
+export async function listHandovers(tx: Tx, filters: { q?: string; status?: HandoverStatus } = {}, limit = 100): Promise<AdminHandoverRow[]> {
   const conditions = [];
   if (filters.status) conditions.push(eq(qrHandovers.status, filters.status));
   if (filters.q?.trim()) {
     const pattern = `%${filters.q.trim().replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
-    conditions.push(or(ilike(partners.name, pattern), ilike(partners.slug, pattern))!);
+    conditions.push(or(ilike(partners.name, pattern), ilike(partners.slug, pattern), ilike(fromPartner.name, pattern), ilike(fromPartner.slug, pattern))!);
   }
   return tx
-    .select(listColumns)
+    .select(adminColumns)
     .from(qrHandovers)
     .innerJoin(partners, eq(partners.id, qrHandovers.toPartnerId))
+    .innerJoin(fromPartner, eq(fromPartner.id, qrHandovers.fromPartnerId))
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(qrHandovers.createdAt))
     .limit(limit);
 }
 
-/** The receiving partner's own handovers (explicitly scoped; RLS enforces it too). */
+/**
+ * The receiving partner's own handovers (explicitly scoped; RLS enforces it
+ * too). Deliberately WITHOUT the source: a partner never learns which other
+ * partner the cards came from — the sender is always "QR STARR".
+ */
 export async function listPartnerHandovers(tx: Tx, partnerId: string, limit = 20): Promise<HandoverListRow[]> {
   return tx
     .select(listColumns)
@@ -379,30 +457,32 @@ export async function listPartnerHandovers(tx: Tx, partnerId: string, limit = 20
     .limit(limit);
 }
 
-export type HandoverDetail = HandoverListRow & {
+export type HandoverDetail = AdminHandoverRow & {
   disputedAt: Date | null;
   resolutionNote: string | null;
   resultBatchId: string | null;
-  items: { hint: string; status: string; ownerName: string; reserved: boolean }[];
+  items: { hint: string; status: string; ownerName: string; fromBatchLabel: string; reserved: boolean }[];
 };
 
 /** Admin detail: the exact cards (token hint only), their current status and holder. No greeting content. */
 export async function getHandoverDetail(tx: Tx, handoverId: string): Promise<HandoverDetail | null> {
   const [row] = await tx
-    .select({ ...listColumns, disputedAt: qrHandovers.disputedAt, resolutionNote: qrHandovers.resolutionNote, resultBatchId: qrHandovers.resultBatchId })
+    .select({ ...adminColumns, disputedAt: qrHandovers.disputedAt, resolutionNote: qrHandovers.resolutionNote, resultBatchId: qrHandovers.resultBatchId })
     .from(qrHandovers)
     .innerJoin(partners, eq(partners.id, qrHandovers.toPartnerId))
+    .innerJoin(fromPartner, eq(fromPartner.id, qrHandovers.fromPartnerId))
     .where(eq(qrHandovers.id, handoverId))
     .limit(1);
   if (!row) return null;
   const items = await tx
-    .select({ token: qrCodes.publicToken, status: qrCodes.status, ownerName: partners.name, reserved: qrHandoverItems.reserved })
+    .select({ token: qrCodes.publicToken, status: qrCodes.status, ownerName: partners.name, fromBatchLabel: qrBatches.label, reserved: qrHandoverItems.reserved })
     .from(qrHandoverItems)
     .innerJoin(qrCodes, eq(qrCodes.id, qrHandoverItems.qrCodeId))
     .innerJoin(partners, eq(partners.id, qrCodes.partnerId))
+    .innerJoin(qrBatches, eq(qrBatches.id, qrHandoverItems.fromBatchId))
     .where(eq(qrHandoverItems.handoverId, handoverId))
     .orderBy(qrCodes.publicToken);
-  return { ...row, items: items.map((i) => ({ hint: tokenHint(i.token), status: i.status, ownerName: i.ownerName, reserved: i.reserved })) };
+  return { ...row, items: items.map((i) => ({ hint: tokenHint(i.token), status: i.status, ownerName: i.ownerName, fromBatchLabel: i.fromBatchLabel, reserved: i.reserved })) };
 }
 
 /**

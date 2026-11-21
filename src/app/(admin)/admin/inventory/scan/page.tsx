@@ -2,21 +2,21 @@ import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
-import { getCentralStockPartner, listAssignablePartners } from "@/lib/qr/handovers";
+import { listAssignablePartners, listSelectableBatches } from "@/lib/qr/handovers";
 import { publicEnv } from "@/lib/env.public";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { ScanAssign } from "@/components/admin/scan-assign";
 import { PageHeader } from "@/components/dashboard/ui";
 
-/** Option B: scan physical cards and create a handover (camera allowed on this path only, next.config.ts). */
+/** Option B: admin-only scan (or batch pick) → handover from central stock or from one partner to another. */
 export default async function AdminScanAssignPage() {
   const { user, isAdmin } = await requireAdminPage();
   const tAdmin = await getTranslations("admin");
   if (!isAdmin) return <NotAdmin message={tAdmin("notAdmin", { email: user.email ?? "" })} />;
 
-  const { partners, central } = await requireAdmin(async (tx) => ({
+  const { partners, batches } = await requireAdmin(async (tx) => ({
     partners: await listAssignablePartners(tx),
-    central: await getCentralStockPartner(tx),
+    batches: await listSelectableBatches(tx),
   }));
   const t = await getTranslations("handover");
 
@@ -29,7 +29,7 @@ export default async function AdminScanAssignPage() {
         </Link>
         <PageHeader title={t("title")} />
       </div>
-      <ScanAssign partners={partners.map((p) => ({ id: p.id, name: p.name }))} appUrl={publicEnv.NEXT_PUBLIC_APP_URL} centralConfigured={central !== null} />
+      <ScanAssign partners={partners.map((p) => ({ id: p.id, name: p.name }))} batches={batches} appUrl={publicEnv.NEXT_PUBLIC_APP_URL} />
     </div>
   );
 }

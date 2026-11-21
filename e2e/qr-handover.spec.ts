@@ -309,3 +309,80 @@ test("camera permission denied → clear message, manual entry still works", asy
 test.afterAll(async () => {
   await sql.end();
 });
+
+test("admin-only redistribution: partner → partner via batch pick, receiver confirms", async ({ browser, browserName }, testInfo) => {
+  test.skip(testInfo.project.name === "android-pixel7", "covered on desktop Chromium and iPhone WebKit");
+  test.setTimeout(240_000);
+  const run = `p2p-${browserName.slice(0, 3)}-${randomUUID().slice(0, 6)}`;
+  const f = await seed(run);
+  // Source partner "G'N"-like: owns a batch of 3 sellable cards + 1 draft.
+  const [src] = await sql<{ id: string }[]>`insert into partners (slug, name) values (${`ho-src-${run}`}, ${`Source shop ${run}`}) returning id`;
+  const [srcBatch] = await sql<{ id: string }[]>`insert into qr_batches (partner_id, label, quantity) values (${src!.id}, ${`src ${run}`}, 4) returning id`;
+  const srcCards = Array.from({ length: 4 }, token);
+  for (const t of srcCards) await sql`insert into qr_codes (public_token, batch_id, partner_id) values (${t}, ${srcBatch!.id}, ${src!.id})`;
+  await sql.begin(async (t) => {
+    await t`set local session_replication_role = replica`;
+    await t`update qr_codes set status = 'DRAFT' where public_token = ${srcCards[3]!}`;
+  });
+  const money0 = await money();
+  const ctx = await browser.newContext({ ...testInfo.project.use });
+  let admin: Awaited<ReturnType<typeof adminSignIn>> | null = null;
+  try {
+    await ctx.addCookies([{ name: "NEXT_LOCALE", value: "ka", url: APP }]);
+    const page = await ctx.newPage();
+    admin = await adminSignIn(page);
+    await page.goto("/admin/inventory/scan");
+    await page.getByTestId("batch-select").selectOption(srcBatch!.id);
+    await page.getByTestId("batch-add").click();
+    await expect(counter(page)).toHaveText("3 / 20");
+    await expect(page.getByTestId("scan-source")).toContainText(`Source shop ${run}`);
+    // A central-stock card can't join a handover whose source is the shop.
+    await page.getByTestId("manual-input").fill(cardUrl(f.cards[0]!));
+    await page.getByTestId("manual-add").click();
+    await expect(page.getByTestId("scan-feedback")).toHaveAttribute("data-kind", "rejected");
+    await expect(counter(page)).toHaveText("3 / 20");
+
+    await page.getByTestId("scan-finish").click();
+    await expect(page.getByTestId("handover-review-source")).toHaveText(`Source shop ${run}`);
+    await expect(page.getByTestId("handover-partner-select").locator(`option[value="${src!.id}"]`)).toHaveCount(0);
+    await page.getByTestId("handover-partner-select").selectOption(f.partnerId);
+    await page.getByTestId("handover-create").click();
+    await expect(page.getByTestId("handover-done-body")).toContainText("3");
+
+    const [h] = await sql<{ id: string; from_partner_id: string }[]>`select id, from_partner_id from qr_handovers where to_partner_id = ${f.partnerId}`;
+    expect(h!.from_partner_id).toBe(src!.id);
+
+    const pctx = await browser.newContext({ ...testInfo.project.use });
+    await pctx.addCookies([{ name: "NEXT_LOCALE", value: "ka", url: APP }]);
+    const pp = await pctx.newPage();
+    await logIn(pp, "/partner/login", f.email, f.password);
+    await pp.waitForURL(/\/partner\/dashboard/);
+    // The receiver never learns which shop the cards came from.
+    await expect(pp.getByTestId("incoming-handovers")).toContainText("QR STARR");
+    await expect(pp.locator("body")).not.toContainText(`Source shop ${run}`);
+    await pp.getByTestId("handover-confirm-open").click();
+    await pp.getByTestId("handover-confirm-check").check();
+    await pp.getByTestId("handover-confirm").click();
+    await expect(pp.getByTestId("incoming-handovers")).toContainText("მიღება დადასტურდა", { timeout: 30_000 });
+    await pctx.close();
+
+    const [counts] = await sql`select (select count(*)::int from qr_codes where partner_id = ${src!.id}) src, (select count(*)::int from qr_codes where partner_id = ${f.partnerId}) dst`;
+    expect(counts).toEqual({ src: 1, dst: 3 });
+    await page.goto(`/admin/partners/${src!.id}`);
+    await expect(page.getByTestId("admin-metric-issued").locator("p").nth(1)).toHaveText("1");
+    expect(await money()).toEqual(money0);
+  } finally {
+    await ctx.close();
+    const hs = await sql<{ id: string }[]>`select id from qr_handovers where to_partner_id = ${f.partnerId}`;
+    await sql.begin(async (t) => {
+      await t`set local session_replication_role = replica`;
+      await t`delete from qr_handover_items where handover_id = any(${hs.map((x) => x.id)})`;
+      await t`delete from qr_handovers where id = any(${hs.map((x) => x.id)})`;
+      await t`delete from qr_codes where public_token = any(${srcCards})`;
+      await t`delete from qr_batches where id = ${srcBatch!.id}`;
+      await t`delete from partners where id = ${src!.id}`;
+    });
+    await cleanup(f);
+    await admin?.cleanup();
+  }
+});

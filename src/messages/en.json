@@ -964,13 +964,13 @@
     },
     "reasons": {
       "not_found": "This QR code was not found",
-      "no_central_stock": "Central stock has not been set up yet",
-      "assigned_to_partner": "Already assigned to partner: {partner}",
       "draft": "A greeting draft has already been started on this card",
       "active": "This card is already activated",
       "blocked": "This card is blocked",
       "has_history": "This card already had a greeting or an order — it can't be assigned",
-      "reserved": "Already reserved for another handover ({partner})"
+      "reserved": "Already reserved for another handover ({partner})",
+      "other_source": "This card belongs to {partner} — this handover has a different source",
+      "same_as_destination": "This card already belongs to this partner"
     },
     "continue": "Continue scanning",
     "viewSelected": "Selected cards ({count})",
@@ -1008,10 +1008,11 @@
       "note": "Note (optional)",
       "create": "Create handover request",
       "back": "Back to scanning",
-      "explain": "The cards move to the partner only when they confirm receipt in their dashboard. Until then the cards are reserved. This is not a sale and creates no commission.",
+      "explain": "The cards move to the receiving partner only when they confirm receipt in their dashboard. Until then they are reserved and stay with their current holder. This is not a sale and creates no commission.",
       "noPartners": "No active partners found",
       "ineligibleTitle": "Some cards can no longer be assigned",
-      "ineligibleBody": "They were removed from the list. Check and try again."
+      "ineligibleBody": "They were removed from the list. Check and try again.",
+      "from": "From"
     },
     "done": {
       "title": "Handover request created",
@@ -1048,7 +1049,9 @@
       "handover_cards_ineligible": "{count} card(s) are no longer available — receipt could not be completed. Please contact QR STARR.",
       "dispute_note_invalid": "Describe the discrepancy",
       "dispute_count_invalid": "Invalid quantity",
-      "unknown": "Something went wrong — try again"
+      "unknown": "Something went wrong — try again",
+      "same_partner": "Source and destination are the same partner",
+      "batch_empty": "No assignable cards left in this batch"
     },
     "inventory": {
       "title": "QR inventory",
@@ -1077,7 +1080,8 @@
         "none": "There is no central stock yet. Create it once — then print cards for it with the usual \"Create batch\" and print.",
         "create": "Create central stock",
         "manage": "Central stock batches & printing",
-        "dormant": "A card in central stock can't be started by a customer until a partner confirms receipt."
+        "dormant": "A card in central stock can't be started by a customer until a partner confirms receipt.",
+        "partnerPageNote": "This is central stock: no login, commission, pricing or payouts, and always suspended. Only create and print batches here; cards go to partners from “QR inventory”."
       },
       "history": {
         "title": "Handover history",
@@ -1094,7 +1098,8 @@
         "byYou": "You",
         "byAdmin": "Admin",
         "byPartner": "Partner",
-        "details": "Details"
+        "details": "Details",
+        "from": "From"
       }
     },
     "detail": {
@@ -1123,7 +1128,8 @@
       "reject": "Reject — cards return to stock",
       "resolutionPlaceholder": "Note (optional)",
       "centralStock": "QR STARR — central stock",
-      "resultBatch": "Partner's new batch"
+      "resultBatch": "Partner's new batch",
+      "fromBatch": "Original batch"
     },
     "partner": {
       "title": "Incoming QR cards",
@@ -1142,6 +1148,14 @@
       "accepted": "Receipt confirmed — the cards were added to your inventory",
       "historyTitle": "Recent handovers",
       "noIncoming": "No incoming handovers"
+    },
+    "sourceLine": "Source: {source} — all cards in one handover must come from one source",
+    "batch": {
+      "title": "Or pick a whole batch",
+      "choose": "Choose a batch",
+      "eligible": "{count} available",
+      "hint": "Adds every assignable card of the batch (max 500). Use only when the whole batch physically moves.",
+      "added": "Added {count} cards"
     }
   }
 }

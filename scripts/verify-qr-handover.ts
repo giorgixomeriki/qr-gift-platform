@@ -35,6 +35,7 @@ const { getPartnerInventorySummary } = require("../src/lib/dashboard/inventory")
 const { getPartnerMetrics } = require("../src/lib/dashboard/partner-metrics") as typeof import("../src/lib/dashboard/partner-metrics");
 const { generatePublicToken } = require("../src/lib/security/public-token") as typeof import("../src/lib/security/public-token");
 const { generateEditToken, hashEditToken } = require("../src/lib/security/edit-token") as typeof import("../src/lib/security/edit-token");
+const { resolveQrState } = require("../src/lib/qr/resolve-state") as typeof import("../src/lib/qr/resolve-state");
 const { startCheckout, confirmPaymentSuccess, activatePaidOrder } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -113,7 +114,6 @@ async function main() {
 
   const asAdmin = <T>(fn: (tx: import("../src/db/client").Tx) => Promise<T>) => withAdminContext(adminUserId, fn);
 
-  check("no central stock yet -> cards report no_central_stock", true);
   const central = await asAdmin((tx) => H.ensureCentralStockPartner(tx, adminUserId));
   const centralAgain = await asAdmin((tx) => H.ensureCentralStockPartner(tx, adminUserId));
   check("central stock created once (idempotent), SUSPENDED, 0% commission",
@@ -164,7 +164,11 @@ async function main() {
     check("ACTIVE rejected", r(2) === "active");
     check("BLOCKED rejected", r(3) === "blocked");
     check("card with greeting history rejected", r(4) === "has_history");
-    check("card owned by another partner rejected (names the holder)", r(5) === "assigned_to_partner" && (res[5] as { partnerName?: string }).partnerName === `Handover a ${RUN}`);
+    check("a partner's AVAILABLE card is eligible for admin redistribution (holder reported)", r(5) === "eligible" && (res[5] as { holderName?: string }).holderName === `Handover a ${RUN}`);
+    const scoped = await asAdmin((tx) => H.evaluateCards(tx, [aCard!.public_token], { sourcePartnerId: central.id }));
+    check("…but refused in a central-stock handover (other source, holder named)", !scoped[0]!.eligible && (scoped[0] as { reason: string }).reason === "other_source" && (scoped[0] as { partnerName?: string }).partnerName === `Handover a ${RUN}`);
+    const self = await asAdmin((tx) => H.evaluateCards(tx, [aCard!.public_token], { destinationPartnerId: A.id }));
+    check("…and refused when the destination already holds it", !self[0]!.eligible && (self[0] as { reason: string }).reason === "same_as_destination");
     check("unknown token rejected", r(6) === "not_found");
     const partnerTry = await errorOf(() => withPartnerContext(A.owner, A.id, (tx) => tx.select().from(qrHandovers)));
     check("partner can query only through RLS (no error, own rows only)", partnerTry === null);
@@ -174,7 +178,7 @@ async function main() {
   console.log("\n--- 3. Create handover: exact cards, idempotent, all-or-nothing ---");
   const key1 = randomUUID();
   const sel1 = tok.slice(0, 20);
-  const h1 = await asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: key1, toPartnerId: A.id, tokens: [...sel1, sel1[0]!] }));
+  const h1 = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: key1, toPartnerId: A.id, tokens: [...sel1, sel1[0]!] }));
   check("20 scanned cards (+1 duplicate scan) -> handover of exactly 20", h1.ok && h1.quantity === 20 && !h1.duplicate, h1);
   const h1Id = h1.ok ? h1.handoverId : "";
   const items1 = await su<{ public_token: string; reserved: boolean }[]>`select q.public_token, i.reserved from qr_handover_items i join qr_codes q on q.id = i.qr_code_id where i.handover_id = ${h1Id}`;
@@ -183,34 +187,34 @@ async function main() {
   check("handover records source, destination, actor, PENDING", row1?.status === "PENDING" && row1?.from_partner_id === central.id && row1?.to_partner_id === A.id && row1?.created_by === adminUserId);
   check("cards still owned by central stock while pending (creation ≠ delivery)",
     (await su`select count(*)::int n from qr_codes where public_token in ${su(sel1)} and partner_id = ${central.id}`)[0]?.n === 20);
-  const replay = await asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: key1, toPartnerId: A.id, tokens: sel1 }));
+  const replay = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: key1, toPartnerId: A.id, tokens: sel1 }));
   check("repeat submission (same key) returns the same handover, no duplicate", replay.ok && replay.duplicate && replay.handoverId === h1Id &&
     (await su`select count(*)::int n from qr_handovers where idempotency_key = ${key1}`)[0]?.n === 1);
-  check("same key for another partner refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: key1, toPartnerId: B.id, tokens: sel1 })))) !== null);
+  check("same key for another partner refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: key1, toPartnerId: B.id, tokens: sel1 })))) !== null);
 
   const reservedRes = await asAdmin((tx) => H.evaluateCards(tx, [sel1[3]!]));
   check("reserved card shows 'reserved' for the destination", !reservedRes[0]!.eligible && (reservedRes[0] as { reason: string }).reason === "reserved");
-  const overlap = await asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [tok[20]!, sel1[5]!] }));
+  const overlap = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [tok[20]!, sel1[5]!] }));
   check("a reserved card can't go into a second handover (whole request refused)", !overlap.ok &&
     (await su`select count(*)::int n from qr_handover_items where qr_code_id = ${idOf.get(tok[20]!)!}`)[0]?.n === 0);
-  const mixed = await asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [tok[21]!, draftTok] }));
+  const mixed = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [tok[21]!, draftTok] }));
   check("one ineligible card (DRAFT) -> nothing created", !mixed.ok && (await su`select count(*)::int n from qr_handovers where to_partner_id = ${B.id}`)[0]?.n === 0);
-  check("handover to central stock itself refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: central.id, tokens: [tok[22]!] })))) ?.includes("partner_is_central_stock") === true);
-  check("handover to a suspended partner refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: S.id, tokens: [tok[22]!] })))) ?.includes("partner_inactive") === true);
+  check("handover to central stock itself refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: A.id, idempotencyKey: randomUUID(), toPartnerId: central.id, tokens: [tok[22]!] })))) ?.includes("partner_is_central_stock") === true);
+  check("handover to a suspended partner refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: S.id, tokens: [tok[22]!] })))) ?.includes("partner_inactive") === true);
 
   // -------------------------------------------------------------------------
   console.log("\n--- 4. Concurrency: two admins, overlapping cards ---");
   {
     const shared = [tok[22]!, tok[23]!];
     const results = await Promise.allSettled([
-      asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [...shared, tok[24]!] })),
-      asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: [...shared, tok[25]!] })),
+      asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [...shared, tok[24]!] })),
+      asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: [...shared, tok[25]!] })),
     ]);
     const okCount = results.filter((r) => r.status === "fulfilled" && r.value.ok).length;
     const reservations = (await su`select count(*)::int n from qr_handover_items where qr_code_id in ${su(shared.map((t) => idOf.get(t)!))} and reserved`)[0]?.n;
     check("exactly one of two concurrent handovers wins; each card reserved once", okCount === 1 && reservations === 2, results.map((r) => (r.status === "fulfilled" ? r.value.ok : String(r.reason))));
     const keyC = randomUUID();
-    const same = await Promise.allSettled([0, 1, 2].map(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: keyC, toPartnerId: B.id, tokens: [tok[26]!] }))));
+    const same = await Promise.allSettled([0, 1, 2].map(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: keyC, toPartnerId: B.id, tokens: [tok[26]!] }))));
     check("3 concurrent submits with one key -> one handover", (await su`select count(*)::int n from qr_handovers where idempotency_key = ${keyC}`)[0]?.n === 1 &&
       same.every((r) => r.status === "fulfilled" && r.value.ok), same.map((r) => (r.status === "fulfilled" ? r.value : String(r.reason))));
   }
@@ -220,9 +224,9 @@ async function main() {
   {
     const stranger = randomUUID();
     check("signed-in non-admin can't create a handover (RLS)",
-      (await errorOf(() => withUserContext(stranger, (tx) => H.createHandover(tx, stranger, { idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: [tok[27]!] })))) !== null);
+      (await errorOf(() => withUserContext(stranger, (tx) => H.createHandover(tx, stranger, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: [tok[27]!] })))) !== null);
     check("partner owner can't create a handover (RLS)",
-      (await errorOf(() => withPartnerContext(A.owner, A.id, (tx) => H.createHandover(tx, A.owner, { idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: [tok[27]!] })))) !== null);
+      (await errorOf(() => withPartnerContext(A.owner, A.id, (tx) => H.createHandover(tx, A.owner, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: [tok[27]!] })))) !== null);
     const bSees = await withPartnerContext(B.owner, B.id, (tx) => tx.select({ id: qrHandovers.id }).from(qrHandovers).where(eq(qrHandovers.id, h1Id)));
     const bItems = await withPartnerContext(B.owner, B.id, (tx) => tx.select().from(qrHandoverItems).where(eq(qrHandoverItems.handoverId, h1Id)));
     check("partner B can't see partner A's handover or its items", bSees.length === 0 && bItems.length === 0);
@@ -283,14 +287,15 @@ async function main() {
     phys1.inCentralStock + phys1.heldByPartners === phys1.generated, { phys0, phys1 });
   check("accepted handover is terminal (admin can't cancel it)",
     (await errorOf(() => asAdmin((tx) => H.adminTransitionHandover(tx, adminUserId, h1Id, "cancel")))) !== null);
-  check("moved card can't be scanned into a new handover (now A's)",
-    !(await asAdmin((tx) => H.evaluateCards(tx, [sel1[0]!])))[0]!.eligible);
+  check("moved card is now A's: refused for a central-stock handover, eligible only as an A-sourced redistribution",
+    (await asAdmin((tx) => H.evaluateCards(tx, [sel1[0]!], { sourcePartnerId: central.id })))[0]!.eligible === false &&
+    (await asAdmin((tx) => H.evaluateCards(tx, [sel1[0]!], { sourcePartnerId: A.id })))[0]!.eligible === true);
 
   // -------------------------------------------------------------------------
   console.log("\n--- 7. Failure is all-or-nothing ---");
   {
     const sel = [tok[28]!, tok[29]!, tok[30]!];
-    const h = await asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: sel }));
+    const h = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: sel }));
     const hid = h.ok ? h.handoverId : "";
     await setStatus(sel[1]!, "DRAFT"); // a customer started this card meanwhile
     const batchesB0 = (await su`select count(*)::int n from qr_batches where partner_id = ${B.id}`)[0]?.n;
@@ -312,7 +317,7 @@ async function main() {
   console.log("\n--- 8. Discrepancy: held for admin resolution ---");
   {
     const sel = [tok[31]!, tok[32]!, tok[33]!];
-    const h = await asAdmin((tx) => H.createHandover(tx, adminUserId, { idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: sel }));
+    const h = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: sel }));
     const hid = h.ok ? h.handoverId : "";
     check("empty discrepancy note refused", (await errorOf(() => withPartnerContext(B.owner, B.id, (tx) => H.partnerDisputeHandover(tx, hid, 2, "  "))))?.includes("dispute_note_invalid") === true);
     await withPartnerContext(B.owner, B.id, (tx) => H.partnerDisputeHandover(tx, hid, 2, "Only 2 cards in the envelope"));
@@ -343,10 +348,16 @@ async function main() {
     check("quantity must equal items (checked at commit)",
       (await errorOf(() => asAdmin(async (tx) => {
         const [h] = await tx.insert(qrHandovers).values({ fromPartnerId: central.id, toPartnerId: B.id, quantity: 2, idempotencyKey: randomUUID(), createdBy: adminUserId }).returning();
-        await tx.insert(qrHandoverItems).values({ handoverId: h!.id, qrCodeId: idOf.get(tok[34]!)! });
+        await tx.insert(qrHandoverItems).values({ handoverId: h!.id, qrCodeId: idOf.get(tok[34]!)!, fromBatchId: centralBatch.id });
       }))) !== null);
     check("items can't be added to a non-pending handover",
-      (await errorOf(() => asAdmin((tx) => tx.insert(qrHandoverItems).values({ handoverId: h1Id, qrCodeId: idOf.get(tok[35]!)! })))) !== null);
+      (await errorOf(() => asAdmin((tx) => tx.insert(qrHandoverItems).values({ handoverId: h1Id, qrCodeId: idOf.get(tok[35]!)!, fromBatchId: centralBatch.id })))) !== null);
+    check("an item must be held by the handover's source (checked by the DB)",
+      (await errorOf(() => asAdmin(async (tx) => {
+        const [h] = await tx.insert(qrHandovers).values({ fromPartnerId: central.id, toPartnerId: B.id, quantity: 1, idempotencyKey: randomUUID(), createdBy: adminUserId }).returning();
+        const [aOwn] = await tx.select({ id: qrCodes.id }).from(qrCodes).where(eq(qrCodes.batchId, aBatch.id)).limit(1);
+        await tx.insert(qrHandoverItems).values({ handoverId: h!.id, qrCodeId: aOwn!.id, fromBatchId: aBatch.id });
+      }))) !== null);
     check("handover identity is immutable",
       (await errorOf(() => su`update qr_handovers set to_partner_id = ${B.id} where id = ${h1Id}`)) !== null);
   }
@@ -374,6 +385,80 @@ async function main() {
       chain?.partner_id === A.id && chain?.ledger_partner === A.id && chain?.amount_minor === 300, chain);
     check("a sold card's owner can never change again",
       (await errorOf(() => asAdmin((tx) => tx.update(qrCodes).set({ partnerId: B.id }).where(eq(qrCodes.id, qrId))))) !== null);
+  }
+
+  // -------------------------------------------------------------------------
+  console.log("\n--- 11. Admin-only redistribution: partner A -> partner B ---");
+  {
+    const moneyBefore = await money();
+    const ledgerA = await su`select id, amount_minor from partner_ledger_entries where partner_id = ${A.id} order by id`;
+    const soldTok = sel1[7]!; // sold in §10, attributed to A
+    const pick = sel1.slice(8, 18); // 10 of A's received cards
+    const invA0 = await asAdmin((tx) => getPartnerInventorySummary(tx, A.id));
+    const invB0 = await asAdmin((tx) => getPartnerInventorySummary(tx, B.id));
+    const total0 = (await su`select count(*)::int n from qr_codes`)[0]!.n;
+
+    check("partner can't create a redistribution (RLS: admin only)",
+      (await errorOf(() => withPartnerContext(A.owner, A.id, (tx) => H.createHandover(tx, A.owner, { fromPartnerId: A.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: pick })))) !== null);
+    const withSold = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: A.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [...pick, soldTok] }));
+    check("a sold (ACTIVE, ordered) card refuses the whole redistribution", !withSold.ok && (withSold.cards.find((c) => c.token === soldTok) as { reason?: string })?.reason === "active");
+    const wrongSource = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: central.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: pick }));
+    check("declared source must hold every card", !wrongSource.ok && wrongSource.cards.every((c) => !c.eligible && (c as { reason: string }).reason === "other_source"));
+    check("source = destination refused", (await errorOf(() => asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: A.id, idempotencyKey: randomUUID(), toPartnerId: A.id, tokens: pick }))))?.includes("same_partner") === true);
+
+    const h = await asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: A.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: pick }));
+    const hid = h.ok ? h.handoverId : "";
+    check("admin creates A -> B handover of 10", h.ok && h.quantity === 10);
+    check("cards stay with A while pending", (await su`select count(*)::int n from qr_codes where public_token in ${su(pick)} and partner_id = ${A.id}`)[0]?.n === 10);
+    check("sender A does not see the handover (only the receiver does)",
+      (await withPartnerContext(A.owner, A.id, (tx) => tx.select({ id: qrHandovers.id }).from(qrHandovers).where(eq(qrHandovers.id, hid)))).length === 0);
+    check("sender A can't accept it", (await errorOf(() => withPartnerContext(A.owner, A.id, (tx) => H.partnerAcceptHandover(tx, hid))))?.includes("handover_not_found") === true);
+    const bList = await withPartnerContext(B.owner, B.id, (tx) => H.listPartnerHandovers(tx, B.id));
+    check("receiver's view has no source partner field", bList.some((x) => x.id === hid) && bList.every((x) => !("fromPartnerName" in x)));
+    const conc = await Promise.allSettled([
+      asAdmin((tx) => H.createHandover(tx, adminUserId, { fromPartnerId: A.id, idempotencyKey: randomUUID(), toPartnerId: B.id, tokens: [pick[0]!] })),
+    ]);
+    check("a card in a pending redistribution can't be reserved again", conc.every((r) => r.status === "fulfilled" && !r.value.ok));
+
+    await withPartnerContext(B.owner, B.id, (tx) => H.partnerAcceptHandover(tx, hid));
+    const invA1 = await asAdmin((tx) => getPartnerInventorySummary(tx, A.id));
+    const invB1 = await asAdmin((tx) => getPartnerInventorySummary(tx, B.id));
+    const total1 = (await su`select count(*)::int n from qr_codes`)[0]!.n;
+    check("A -10, B +10, global unchanged", invA1.issued === invA0.issued - 10 && invB1.issued === invB0.issued + 10 && total1 === total0, { invA0: invA0.issued, invA1: invA1.issued, invB0: invB0.issued, invB1: invB1.issued });
+    check("status totals consistent (available moved, nothing else)", invA1.available === invA0.available - 10 && invB1.available === invB0.available + 10 && invA1.active === invA0.active && invB1.draft === invB0.draft);
+    const metB = await withPartnerContext(B.owner, B.id, (tx) => getPartnerMetrics(tx, B.id));
+    check("partner B dashboard = admin view of B", metB.qrIssued === invB1.issued && metB.qrAvailable === invB1.available && metB.qrDistributed === invB1.distributed);
+    const hist = await su`select count(*)::int n from qr_handover_items i join qr_batches b on b.id = i.from_batch_id where i.handover_id = ${hid} and b.partner_id = ${A.id}`;
+    check("history keeps each card's original batch (A's)", hist[0]?.n === 10);
+    check("the earlier sale stays attributed to A (order + ledger unchanged)",
+      (await su`select o.partner_id from orders o join qr_codes q on q.id = o.qr_code_id where q.public_token = ${soldTok}`)[0]?.partner_id === A.id &&
+      JSON.stringify(await su`select id, amount_minor from partner_ledger_entries where partner_id = ${A.id} order by id`) === JSON.stringify(ledgerA));
+    const moneyAfter = await money();
+    check("redistribution created no order, payment, commission, analytics event or activation", JSON.stringify(moneyAfter) === JSON.stringify(moneyBefore), { moneyBefore, moneyAfter });
+    check("audit: created (kind PARTNER_TO_PARTNER) + accepted",
+      (await su`select action, metadata->>'kind' kind from audit_logs where target_id = ${hid} order by created_at`).map((r) => `${r.action}${r.kind ? `:${r.kind}` : ""}`).join(",") === "QR_HANDOVER_CREATED:PARTNER_TO_PARTNER,QR_HANDOVER_ACCEPTED");
+  }
+
+  // -------------------------------------------------------------------------
+  console.log("\n--- 12. Central stock is never a commercial partner ---");
+  {
+    check("can't be reactivated", (await errorOf(() => asAdmin((tx) => tx.update(partners).set({ status: "ACTIVE" }).where(eq(partners.id, central.id))))) !== null);
+    check("can't earn commission", (await errorOf(() => su`update partners set commission_rate_bps = 1000 where id = ${central.id}`)) !== null);
+    check("can't get a login (member)", (await errorOf(() => su`insert into partner_members (partner_id, user_id, role) values (${central.id}, ${randomUUID()}, 'OWNER')`)) !== null);
+    check("can't get an invitation",
+      (await errorOf(() => su`insert into partner_invitations (partner_id, channel, contact, expires_at, created_by) values (${central.id}, 'EMAIL', ${`c-${RUN}@verify.test`}, now() + interval '1 day', ${adminUserId})`)) !== null);
+    check("can't receive a handover (even inserted directly)",
+      (await errorOf(() => su.begin(async (t) => {
+        await t`insert into qr_handovers (from_partner_id, to_partner_id, quantity, idempotency_key, created_by) values (${A.id}, ${central.id}, 1, ${randomUUID()}, ${adminUserId})`;
+      }))) !== null);
+    check("a partner with a login can't be flagged as central stock",
+      (await errorOf(() => su.begin(async (t) => {
+        await t`update partners set is_central_stock = false where id = ${central.id}`;
+        await t`update partners set status = 'SUSPENDED', is_central_stock = true where id = ${B.id}`;
+      }))) !== null);
+    const [centralCard] = await su<{ public_token: string }[]>`select public_token from qr_codes where partner_id = ${central.id} and status = 'AVAILABLE' limit 1`;
+    const state = await resolveQrState(centralCard!.public_token);
+    check("a central-stock card can't be started by a customer (/g resolves blocked)", state.kind === "blocked", state);
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

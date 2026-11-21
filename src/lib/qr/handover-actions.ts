@@ -10,6 +10,7 @@ import {
   adminTransitionSchema,
   createHandoverSchema,
   disputeHandoverSchema,
+  batchIdSchema,
   handoverIdSchema,
   resolveScanSchema,
 } from "@/lib/validation/handovers";
@@ -19,6 +20,8 @@ import {
   ensureCentralStockPartner,
   evaluateCards,
   HandoverError,
+  HANDOVER_MAX_CARDS,
+  listEligibleBatchTokens,
   partnerAcceptHandover,
   partnerDisputeHandover,
   type CardEligibility,
@@ -42,6 +45,8 @@ export type HandoverActionError =
   | "partner_not_found"
   | "partner_inactive"
   | "partner_is_central_stock"
+  | "same_partner"
+  | "batch_empty"
   | "idempotency_conflict"
   | "too_many_cards"
   | "no_cards"
@@ -57,7 +62,7 @@ export type HandoverActionError =
 export type Failure = { ok: false; error: HandoverActionError; ineligibleCount?: number };
 
 const KNOWN: readonly string[] = [
-  "no_central_stock", "partner_not_found", "partner_inactive", "partner_is_central_stock", "idempotency_conflict",
+  "no_central_stock", "partner_not_found", "partner_inactive", "partner_is_central_stock", "same_partner", "idempotency_conflict",
   "too_many_cards", "no_cards", "handover_not_found", "handover_forbidden", "handover_not_pending",
   "handover_wrong_state", "dispute_note_invalid", "dispute_count_invalid",
 ];
@@ -89,6 +94,26 @@ export async function adminResolveScannedCardAction(raw: unknown): Promise<{ ok:
     return { ok: true, card: card! };
   } catch (err) {
     return failure("adminResolveScannedCardAction", err);
+  }
+}
+
+/**
+ * "Select a batch" instead of scanning: the currently eligible cards of one
+ * batch, with holder info (admin only, at most HANDOVER_MAX_CARDS).
+ */
+export async function adminBatchCardsAction(batchId: unknown): Promise<{ ok: true; cards: CardEligibility[]; truncated: boolean } | Failure> {
+  try {
+    const id = batchIdSchema.parse(batchId);
+    const result = await requireAdmin(async (tx, adminUserId) => {
+      await enforceRateLimit({ key: `qr-batch-select:${adminUserId}`, limit: 60, windowSeconds: 60 });
+      const tokens = await listEligibleBatchTokens(tx, id);
+      const picked = tokens.slice(0, HANDOVER_MAX_CARDS);
+      return { cards: await evaluateCards(tx, picked), truncated: tokens.length > picked.length };
+    });
+    if (result.cards.length === 0) return { ok: false, error: "batch_empty" };
+    return { ok: true, cards: result.cards.filter((c) => c.eligible), truncated: result.truncated };
+  } catch (err) {
+    return failure("adminBatchCardsAction", err);
   }
 }
 

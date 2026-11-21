@@ -112,6 +112,9 @@ export const qrHandoverItems = pgTable(
     qrCodeId: uuid("qr_code_id")
       .notNull()
       .references(() => qrCodes.id, { onDelete: "restrict" }),
+    fromBatchId: uuid("from_batch_id")
+      .notNull()
+      .references(() => qrBatches.id, { onDelete: "restrict" }),
     reserved: boolean("reserved").notNull().default(true),
   },
   (table) => [primaryKey({ columns: [table.handoverId, table.qrCodeId] }), index("qr_handover_items_qr_idx").on(table.qrCodeId)],

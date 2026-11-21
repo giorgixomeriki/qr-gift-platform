@@ -7,7 +7,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { Panel, control, fieldLabel } from "@/components/dashboard/ui";
 import { parseScannedQr, tokenHint } from "@/lib/qr/scan-parse";
-import { adminCreateHandoverAction, adminResolveScannedCardAction, type HandoverActionError } from "@/lib/qr/handover-actions";
+import { adminBatchCardsAction, adminCreateHandoverAction, adminResolveScannedCardAction, type HandoverActionError } from "@/lib/qr/handover-actions";
 import type { CardEligibility, IneligibleReason } from "@/lib/qr/handovers";
 
 /**
@@ -23,7 +23,8 @@ import type { CardEligibility, IneligibleReason } from "@/lib/qr/handovers";
  */
 
 type Partner = { id: string; name: string };
-type Selected = { token: string; hint: string };
+type Selected = { token: string; hint: string; holderId: string; holderName: string; holderIsCentral: boolean };
+type BatchOption = { id: string; label: string; partnerName: string; isCentral: boolean; eligible: number };
 type Rejected = { token: string; hint: string; reason: IneligibleReason; partnerName?: string };
 type Feedback =
   | { kind: "added"; hint: string }
@@ -32,10 +33,11 @@ type Feedback =
   | { kind: "network"; hint: string }
   | { kind: "scanError"; reason: "foreign" | "malformed" | "empty" }
   | { kind: "rejected"; hint: string; reason: IneligibleReason; partnerName?: string }
-  | { kind: "actionError"; error: HandoverActionError };
+  | { kind: "actionError"; error: HandoverActionError }
+  | { kind: "batchAdded"; count: number };
 type CameraState = "idle" | "starting" | "live" | "denied" | "unavailable" | "insecure" | "error";
 
-const STORAGE_KEY = "qrstarr.scan-assign.v1";
+const STORAGE_KEY = "qrstarr.scan-assign.v2";
 const SAME_CODE_COOLDOWN_MS = 2500;
 const SCAN_INTERVAL_MS = 120;
 
@@ -48,7 +50,9 @@ function readStored(): Stored | null {
     const v = JSON.parse(raw) as Partial<Stored>;
     if (!Array.isArray(v.selected)) return null;
     return {
-      selected: v.selected.filter((s) => typeof s?.token === "string").map((s) => ({ token: s.token, hint: tokenHint(s.token) })),
+      selected: v.selected
+        .filter((s) => typeof s?.token === "string" && typeof s?.holderId === "string")
+        .map((s) => ({ token: s.token, hint: tokenHint(s.token), holderId: s.holderId, holderName: String(s.holderName ?? ""), holderIsCentral: Boolean(s.holderIsCentral) })),
       target: typeof v.target === "number" && v.target > 0 ? v.target : 20,
       partnerId: typeof v.partnerId === "string" ? v.partnerId : "",
       note: typeof v.note === "string" ? v.note : "",
@@ -78,7 +82,7 @@ function vibrate(pattern: number | number[]) {
 
 type Detector = { detect: (source: CanvasImageSource) => Promise<{ rawValue: string }[]> };
 
-export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: Partner[]; appUrl: string; centralConfigured: boolean }) {
+export function ScanAssign({ partners, batches, appUrl }: { partners: Partner[]; batches: BatchOption[]; appUrl: string }) {
   const t = useTranslations("handover");
 
   const [hydrated, setHydrated] = useState(false);
@@ -124,7 +128,7 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
       setPartnerId(stored.partnerId);
       setNote(stored.note);
       setIdempotencyKey(stored.idempotencyKey);
-      for (const s of stored.selected) resolvedRef.current.set(s.token, { token: s.token, hint: s.hint, eligible: true });
+      for (const s of stored.selected) resolvedRef.current.set(s.token, { ...s, eligible: true });
     } else {
       setIdempotencyKey(crypto.randomUUID());
     }
@@ -147,15 +151,25 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
   }, []);
 
   const applyResult = useCallback(
-    (card: CardEligibility) => {
+    (result: CardEligibility, quiet = false) => {
+      let card = result;
+      // One handover has one source: the holder of the first selected card
+      // (central stock or a partner). A card held by someone else is refused
+      // here; the server checks the same rule again on submit.
+      const source = selectedRef.current[0];
+      if (card.eligible && source && card.holderId !== source.holderId) {
+        card = { token: card.token, hint: card.hint, eligible: false, reason: "other_source", partnerName: card.holderName };
+      }
       if (card.eligible) {
         if (!selectedRef.current.some((s) => s.token === card.token)) {
-          setSelected((prev) => (prev.some((s) => s.token === card.token) ? prev : [...prev, { token: card.token, hint: card.hint }]));
+          const item: Selected = { token: card.token, hint: card.hint, holderId: card.holderId, holderName: card.holderName, holderIsCentral: card.holderIsCentral };
+          selectedRef.current = [...selectedRef.current, item];
+          setSelected((prev) => (prev.some((s) => s.token === card.token) ? prev : [...prev, item]));
         }
-        signal({ kind: "added", hint: card.hint }, "ok");
+        if (!quiet) signal({ kind: "added", hint: card.hint }, "ok");
       } else {
         setRejected((prev) => [{ token: card.token, hint: card.hint, reason: card.reason, partnerName: card.partnerName }, ...prev.filter((r) => r.token !== card.token)].slice(0, 5));
-        signal({ kind: "rejected", hint: card.hint, reason: card.reason, partnerName: card.partnerName }, "warn");
+        if (!quiet) signal({ kind: "rejected", hint: card.hint, reason: card.reason, partnerName: card.partnerName }, "warn");
       }
     },
     [signal],
@@ -351,13 +365,43 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
   };
 
   const partnerName = useMemo(() => partners.find((p) => p.id === partnerId)?.name ?? "", [partners, partnerId]);
+  const source = selected[0] ?? null;
+  const sourceLabel = source ? (source.holderIsCentral ? t("detail.centralStock") : source.holderName) : "";
+  const destinations = useMemo(() => partners.filter((p) => p.id !== source?.holderId), [partners, source?.holderId]);
+
+  const [batchId, setBatchId] = useState("");
+  const [batchBusy, setBatchBusy] = useState(false);
+  const addBatch = async () => {
+    if (!batchId) return;
+    setBatchBusy(true);
+    try {
+      const result = await adminBatchCardsAction(batchId);
+      if (!result.ok) {
+        signal({ kind: "actionError", error: result.error }, "warn");
+        return;
+      }
+      let added = 0;
+      for (const card of result.cards) {
+        resolvedRef.current.set(card.token, card);
+        const before = selectedRef.current.length;
+        applyResult(card, true);
+        if (selectedRef.current.length > before) added++;
+      }
+      signal({ kind: "batchAdded", count: added }, added > 0 ? "ok" : "warn");
+    } catch {
+      signal({ kind: "network", hint: "" }, "warn");
+    } finally {
+      setBatchBusy(false);
+    }
+  };
 
   const createHandover = async () => {
     if (!partnerId || selected.length === 0) return;
     setSubmitting(true);
     setReviewProblem(null);
     try {
-      const result = await adminCreateHandoverAction({ idempotencyKey, toPartnerId: partnerId, tokens: selected.map((s) => s.token), note: note.trim() || undefined });
+      if (!source) return;
+      const result = await adminCreateHandoverAction({ idempotencyKey, fromPartnerId: source.holderId, toPartnerId: partnerId, tokens: selected.map((s) => s.token), note: note.trim() || undefined });
       if (result.ok) {
         setDone({ handoverId: result.handoverId, quantity: result.quantity, partnerName, duplicate: result.duplicate });
         setPhase("done");
@@ -411,6 +455,8 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
         return <Notice tone="warning">{t(`scanReasons.${feedback.reason}`)}</Notice>;
       case "rejected":
         return <Notice tone="danger">{reasonText(feedback.reason, feedback.partnerName)} <span className="font-mono text-caption">{feedback.hint}</span></Notice>;
+      case "batchAdded":
+        return <Notice tone={feedback.count > 0 ? "success" : "warning"}>{t("batch.added", { count: feedback.count })}</Notice>;
       case "actionError":
         return <Notice tone="danger">{t(`errors.${feedback.error}`, { count: 0 })}</Notice>;
     }
@@ -441,16 +487,20 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
       <div className="flex flex-col gap-4" data-testid="handover-review">
         <Panel title={t("review.title")}>
           <div className="flex flex-col gap-4">
+            <div className="flex items-baseline justify-between gap-3 rounded-md px-4 py-3 ring-1 ring-line">
+              <span className="text-body-sm text-ink-2">{t("review.from")}</span>
+              <span className="text-label text-ink" data-testid="handover-review-source">{sourceLabel}</span>
+            </div>
             <label className={fieldLabel}>
               {t("review.partner")}
               <select className={control} value={partnerId} onChange={(e) => setPartnerId(e.target.value)} data-testid="handover-partner-select">
                 <option value="">{t("review.choosePartner")}</option>
-                {partners.map((p) => (
+                {destinations.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
                 ))}
               </select>
             </label>
-            {partners.length === 0 && <p className="text-caption text-danger">{t("review.noPartners")}</p>}
+            {destinations.length === 0 && <p className="text-caption text-danger">{t("review.noPartners")}</p>}
 
             <div className="flex items-baseline justify-between rounded-md bg-sunken px-4 py-3">
               <span className="text-body-sm text-ink-2">{t("review.selectedCards")}</span>
@@ -498,7 +548,11 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
   const live = camera === "live";
   return (
     <div className="flex flex-col gap-4 pb-24" data-testid="scan-assign">
-      {!centralConfigured && <Notice tone="warning">{t("reasons.no_central_stock")}</Notice>}
+      {source && (
+        <p className="text-caption text-ink-2" data-testid="scan-source">
+          {t("sourceLine", { source: sourceLabel })}
+        </p>
+      )}
 
       <div
         className={`relative overflow-hidden rounded-[var(--radius-lg)] bg-ink ring-1 ring-line transition-shadow ${flash === "ok" ? "ring-4 ring-success" : flash === "warn" ? "ring-4 ring-warning" : ""}`}
@@ -580,6 +634,24 @@ export function ScanAssign({ partners, appUrl, centralConfigured }: { partners: 
       <div aria-live="polite" aria-atomic="true" data-testid="scan-feedback" data-kind={feedback?.kind ?? ""}>
         {feedbackNode}
       </div>
+
+      {batches.length > 0 && (
+        <div className="flex flex-col gap-1.5" data-testid="batch-entry">
+          <label htmlFor="batch-pick" className="text-caption font-medium text-ink-2">{t("batch.title")}</label>
+          <div className="flex gap-2">
+            <select id="batch-pick" className={control} value={batchId} onChange={(e) => setBatchId(e.target.value)} data-testid="batch-select">
+              <option value="">{t("batch.choose")}</option>
+              {batches.map((b) => (
+                <option key={b.id} value={b.id} disabled={b.eligible === 0}>
+                  {(b.isCentral ? t("detail.centralStock") : b.partnerName) + " · " + b.label + " · " + t("batch.eligible", { count: b.eligible })}
+                </option>
+              ))}
+            </select>
+            <Button variant="secondary" loading={batchBusy} disabled={!batchId} onClick={addBatch} data-testid="batch-add">{t("manual.add")}</Button>
+          </div>
+          <p className="text-caption text-ink-3">{t("batch.hint")}</p>
+        </div>
+      )}
 
       {pending.length > 0 && (
         <Notice tone="warning" action={<Button size="sm" variant="secondary" onClick={retryPending} data-testid="scan-retry">{t("retryNow")}</Button>}>

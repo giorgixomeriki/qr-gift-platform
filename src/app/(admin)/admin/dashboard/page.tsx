@@ -98,9 +98,10 @@ export default async function AdminDashboardPage() {
           <h2 className="text-label text-ink-2">{th("inventory.physicalTitle")}</h2>
           <div className="flex flex-wrap gap-2">
             <ButtonLink href="/admin/inventory" variant="secondary" size="sm">{tNav("inventory")}</ButtonLink>
-            <ButtonLink href="/admin/inventory/scan" size="sm" icon={<ScanLine className="size-4" aria-hidden />} data-testid="dashboard-scan-assign">
-              {th("inventory.scanCta")}
-            </ButtonLink>
+            {/* Plain <a>: the scanner needs its own camera=(self) document (next.config.ts). */}
+            <a href="/admin/inventory/scan" className={buttonClasses({ size: "sm" })} data-testid="dashboard-scan-assign">
+              <span className="inline-flex items-center gap-2"><ScanLine className="size-4" aria-hidden />{th("inventory.scanCta")}</span>
+            </a>
           </div>
         </div>
         <StatGroup>

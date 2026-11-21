@@ -10,6 +10,7 @@ const token = z.string().refine(isPublicToken, "invalid token");
 
 export const createHandoverSchema = z.object({
   idempotencyKey: z.uuid(),
+  fromPartnerId: z.uuid(),
   toPartnerId: z.uuid(),
   tokens: z.array(token).min(1).max(500),
   note: z.string().trim().max(500).optional(),
@@ -19,6 +20,8 @@ export type CreateHandoverActionInput = z.infer<typeof createHandoverSchema>;
 export const resolveScanSchema = z.string().max(512);
 
 export const handoverIdSchema = z.uuid();
+
+export const batchIdSchema = z.uuid();
 
 export const adminTransitionSchema = z.object({
   handoverId: z.uuid(),

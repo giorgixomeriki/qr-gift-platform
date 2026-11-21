@@ -22,6 +22,7 @@ import { PartnerPricingManager } from "@/components/admin/partner-pricing-manage
 import { PayoutManager } from "@/components/admin/payout-manager";
 import { SalesTrace } from "@/components/admin/sales-trace";
 import { EmptyState, PageHeader, Panel, Stat, StatGroup } from "@/components/dashboard/ui";
+import { Notice } from "@/components/ui/notice";
 import { MembershipManager } from "@/components/partners/membership-manager";
 import { BatchBlock } from "@/components/qr/batch-block";
 import { CreateBatchForm } from "@/components/qr/create-batch-form";
@@ -84,6 +85,7 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
   };
   const tNav = await getTranslations("nav");
   const tAccess = await getTranslations("partnerAccess.admin");
+  const tInventory = await getTranslations("handover.inventory");
 
   const markDistributed = adminMarkDistributedAction.bind(null, partnerId);
   const createBatch = adminCreateBatchAction.bind(null, partnerId);
@@ -101,10 +103,16 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
         <PageHeader
           title={partner.name}
           description={<span className="font-mono text-caption">{partner.slug}</span>}
-          actions={<PartnerStatusToggle partnerId={partner.id} status={partner.status} />}
+          actions={partner.isCentralStock ? undefined : <PartnerStatusToggle partnerId={partner.id} status={partner.status} />}
         />
       </div>
 
+      {partner.isCentralStock ? (
+        <Notice tone="info" title={tInventory("central.title")}>
+          {tInventory("central.partnerPageNote")}
+        </Notice>
+      ) : (
+        <>
       <Panel title={tAccess("title")} description={tAccess("hint")}>
         <PartnerLoginPanel
           partnerId={partner.id}
@@ -135,6 +143,8 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
       <Panel title={td("salesTitle")} description={td("salesHint")} flush>
         <SalesTrace rows={sales} refundAction={adminRefundPaidOrderAction} chargebackAction={adminRecordChargebackAction} evidenceAction={adminDisputeEvidenceAction} />
       </Panel>
+        </>
+      )}
 
       <StatGroup title={tStats("qrCardsTitle")}>
         <Stat label={tStats("stats.issued")} value={data.inventory.issued} testId="admin-metric-issued" />

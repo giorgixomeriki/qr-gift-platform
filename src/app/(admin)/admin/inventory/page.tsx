@@ -10,7 +10,7 @@ import { NotAdmin } from "@/components/admin/not-admin";
 import { CentralStockButton } from "@/components/admin/central-stock-button";
 import { HANDOVER_STATUS_TONE } from "@/components/admin/handover-status";
 import { Badge, EmptyState, PageHeader, Panel, Stat, StatGroup, control, table } from "@/components/dashboard/ui";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 
 const STATUSES: HandoverStatus[] = ["PENDING", "DISPUTED", "ACCEPTED", "REJECTED", "CANCELLED"];
 
@@ -51,9 +51,10 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
         title={t("inventory.title")}
         description={t("inventory.description")}
         actions={
-          <ButtonLink href="/admin/inventory/scan" size="lg" icon={<ScanLine className="size-5" aria-hidden />} data-testid="scan-assign-cta">
-            {t("inventory.scanCta")}
-          </ButtonLink>
+          // Plain <a>: a full load gives the scanner its own camera=(self) document (next.config.ts).
+          <a href="/admin/inventory/scan" className={buttonClasses({ size: "lg" })} data-testid="scan-assign-cta">
+            <span className="inline-flex items-center gap-2"><ScanLine className="size-5" aria-hidden />{t("inventory.scanCta")}</span>
+          </a>
         }
       />
 
@@ -111,6 +112,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
             <table className={table.table}>
               <thead className={table.thead}>
                 <tr>
+                  <th className={table.th}>{t("inventory.history.from")}</th>
                   <th className={table.th}>{t("inventory.history.partner")}</th>
                   <th className={`${table.th} text-right`}>{t("inventory.history.quantity")}</th>
                   <th className={table.th}>{t("inventory.history.created")}</th>
@@ -123,6 +125,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
               <tbody>
                 {data.handovers.map((h) => (
                   <tr key={h.id} className={table.tr} data-testid="handover-row" data-status={h.status}>
+                    <td className={`${table.td} text-ink-2`}>{h.fromIsCentral ? t("detail.centralStock") : h.fromPartnerName}</td>
                     <td className={`${table.td} text-ink`}>{h.toPartnerName}</td>
                     <td className={`${table.td} text-right tabular-nums`}>{h.quantity}</td>
                     <td className={`${table.td} whitespace-nowrap text-ink-2`}>{formatBusinessDateTime(h.createdAt, locale)}</td>

@@ -43,7 +43,7 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
 
       <Panel>
         <dl className="grid grid-cols-1 gap-x-6 gap-y-3 text-body-sm sm:grid-cols-2">
-          <div><dt className="text-caption text-ink-3">{t("detail.from")}</dt><dd>{t("detail.centralStock")}</dd></div>
+          <div><dt className="text-caption text-ink-3">{t("detail.from")}</dt><dd data-testid="handover-source">{h.fromIsCentral ? t("detail.centralStock") : h.fromPartnerName}</dd></div>
           <div><dt className="text-caption text-ink-3">{t("detail.to")}</dt><dd><Link className="underline-offset-4 hover:underline" href={`/admin/partners/${h.toPartnerId}`}>{h.toPartnerName}</Link></dd></div>
           <div><dt className="text-caption text-ink-3">{t("detail.quantity")}</dt><dd className="tabular-nums" data-testid="handover-quantity">{h.quantity}</dd></div>
           <div><dt className="text-caption text-ink-3">{t("detail.created")}</dt><dd>{when(h.createdAt)}</dd></div>
@@ -73,6 +73,7 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
               <tr>
                 <th className={table.th}>{t("detail.card")}</th>
                 <th className={table.th}>{t("detail.cardStatus")}</th>
+                <th className={table.th}>{t("detail.fromBatch")}</th>
                 <th className={table.th}>{t("detail.holder")}</th>
                 <th className={table.th}>{t("detail.reservation")}</th>
               </tr>
@@ -82,6 +83,7 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
                 <tr key={item.hint + i} className={table.tr} data-testid="handover-item">
                   <td className={`${table.td} font-mono text-caption`}>{i + 1}. {item.hint}</td>
                   <td className={table.td}>{tQr(item.status as "AVAILABLE" | "DRAFT" | "ACTIVE" | "BLOCKED")}</td>
+                  <td className={`${table.td} text-ink-2`}>{item.fromBatchLabel}</td>
                   <td className={`${table.td} text-ink-2`}>{item.ownerName}</td>
                   <td className={`${table.td} text-ink-2`}>{item.reserved ? t("detail.reserved") : t("detail.released")}</td>
                 </tr>
