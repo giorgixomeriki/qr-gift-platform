@@ -1,6 +1,6 @@
 # M1: first real BOG payment in production (owner-only, Render Free)
 
-Branch `release/m1-hardening`, built on live **ae7a0ab** (`dep-dc0selec6qcc73btprt0`). Local only until the owner approves the release.
+Branch `release/m1-hardening`, rebased on live **8827b9a** (`dep-dc10s4942hec73ff4b60`). Local only until the owner approves the release.
 
 ## 1. What changed (and why)
 
@@ -35,7 +35,7 @@ Unchanged: the callback, signature check, receipt verification, amount/currency 
 
 ## 3. Release plan (each step needs owner approval)
 
-1. **Deploy code only:** fast-forward `ae7a0ab → <this branch>` on `feat/render-low-cost-hosting`, outside `:10–:25`. No env change, so the public behaviour is identical (checkout closed). Coordinate with the other sessions; no one else may push in between.
+1. **Deploy code only:** fast-forward `8827b9a → <this branch>` on `feat/render-low-cost-hosting`, outside `:10–:25`. No env change, so the public behaviour is identical (checkout closed). Coordinate with the other sessions; no one else may push in between.
 2. **Smoke:** `/api/health` 200; unsigned webhook 400; cron without secret 401; a DRAFT card still shows "payments open soon".
 3. **Owner sets two env vars** (Render, single-key PUT, then restart):
    - `LEGAL_EFFECTIVE_DATE=<owner-approved date>`. It also publishes the date on the legal pages, and must be ≤ today (Tbilisi);
@@ -48,7 +48,7 @@ Unchanged: the callback, signature check, receipt verification, amount/currency 
 
 **Rollback:**
 - unset `CHECKOUT_PILOT_QR_IDS` (closes the pilot at once after restart);
-- or roll back to `dep-dc0selec6qcc73btprt0` (ae7a0ab). No migration is involved.
+- or roll back to `dep-dc10s4942hec73ff4b60` (8827b9a). No migration is involved.
 
 ## 4. M1 procedure (owner)
 
