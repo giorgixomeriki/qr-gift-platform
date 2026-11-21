@@ -392,7 +392,8 @@
         "active": "Active",
         "batches": "Batches",
         "grossSales": "Gross sales",
-        "commissionReversed": "Commission reversed"
+        "commissionReversed": "Commission reversed",
+        "blocked": "Blocked"
       },
       "membershipTitle": "Members",
       "createBatchTitle": "Create QR batch",

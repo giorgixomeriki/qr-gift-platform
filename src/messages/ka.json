@@ -392,7 +392,8 @@
         "active": "აქტიური",
         "batches": "პარტიები",
         "grossSales": "გაყიდვების ჯამი",
-        "commissionReversed": "გაუქმებული საკომისიო"
+        "commissionReversed": "გაუქმებული საკომისიო",
+        "blocked": "დაბლოკილი"
       },
       "membershipTitle": "წევრები",
       "createBatchTitle": "QR პარტიის შექმნა",

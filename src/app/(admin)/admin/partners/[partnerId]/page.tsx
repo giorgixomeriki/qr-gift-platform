@@ -9,6 +9,7 @@ import { toInventoryRow } from "@/lib/qr/credential-access";
 import { getPartnerUnpaidBalance, listPartnerPayoutsWithItems } from "@/lib/payments/payouts";
 import { getPartnerPricing, listPricingAuditLog } from "@/lib/payments/pricing-admin";
 import { getBatchPerformance, listPartnerSalesTrace } from "@/lib/dashboard/attribution";
+import { getPartnerInventorySummary } from "@/lib/dashboard/inventory";
 import { getLoginStatus } from "@/lib/partners/login-access";
 import { authDirectory } from "@/lib/auth/auth-directory";
 import { emailDeliveryConfigured } from "@/lib/notify/email";
@@ -20,7 +21,7 @@ import { PartnerStatusToggle } from "@/components/admin/partner-status-toggle";
 import { PartnerPricingManager } from "@/components/admin/partner-pricing-manager";
 import { PayoutManager } from "@/components/admin/payout-manager";
 import { SalesTrace } from "@/components/admin/sales-trace";
-import { EmptyState, PageHeader, Panel } from "@/components/dashboard/ui";
+import { EmptyState, PageHeader, Panel, Stat, StatGroup } from "@/components/dashboard/ui";
 import { MembershipManager } from "@/components/partners/membership-manager";
 import { BatchBlock } from "@/components/qr/batch-block";
 import { CreateBatchForm } from "@/components/qr/create-batch-form";
@@ -59,12 +60,15 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
     const pricing = await getPartnerPricing(tx, partnerId);
     const pricingHistory = await listPricingAuditLog(tx, partnerId);
     const login = await getLoginStatus(tx, partnerId, authDirectory());
-    return { login, partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory };
+    // Same function and definitions as the partner's own dashboard.
+    const inventory = await getPartnerInventorySummary(tx, partnerId);
+    return { login, partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory, inventory };
   });
 
   if (!data) notFound();
   const { login, partner, members, batchesWithCodes, unpaidBalanceMinor, payouts, performance, sales, pricing, pricingHistory } = data;
   const td = await getTranslations("admin.partnerDetail");
+  const tStats = await getTranslations("partner.dashboard");
   const tPerf = await getTranslations("batchPerformance");
   const locale = await getLocale();
   const performanceLabel = (batchId: string) => {
@@ -131,6 +135,17 @@ export default async function AdminPartnerDetailPage({ params }: { params: Promi
       <Panel title={td("salesTitle")} description={td("salesHint")} flush>
         <SalesTrace rows={sales} refundAction={adminRefundPaidOrderAction} chargebackAction={adminRecordChargebackAction} evidenceAction={adminDisputeEvidenceAction} />
       </Panel>
+
+      <StatGroup title={tStats("qrCardsTitle")}>
+        <Stat label={tStats("stats.issued")} value={data.inventory.issued} testId="admin-metric-issued" />
+        <Stat label={tStats("stats.available")} value={data.inventory.available} testId="admin-metric-available" />
+        <Stat label={tStats("stats.draft")} value={data.inventory.draft} testId="admin-metric-draft" />
+        <Stat label={tStats("stats.active")} value={data.inventory.active} testId="admin-metric-active" />
+        <Stat label={tStats("stats.blocked")} value={data.inventory.blocked} testId="admin-metric-blocked" />
+        <Stat label={tStats("stats.distributed")} value={data.inventory.distributed} testId="admin-metric-distributed" />
+        <Stat label={tStats("stats.scanned")} value={data.inventory.scannedCards} testId="admin-metric-scanned" />
+        <Stat label={tStats("stats.batches")} value={data.inventory.batchCount} testId="admin-metric-batch-count" />
+      </StatGroup>
 
       <section className="flex flex-col gap-4">
         <h2 className="text-h2">{td("batchesTitle")}</h2>
