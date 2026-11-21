@@ -104,7 +104,9 @@ export default async function PrintBatchPage({ params }: { params: Promise<{ bat
                 <p className="font-serif text-[11pt] leading-[1.2] text-ink">{messages.headline}</p>
                 <p className="text-[7pt] leading-snug text-ink-2">{messages.instruction}</p>
               </div>
-              <p className="truncate text-[6.5pt] tracking-wide text-ink-3">{partner.name}</p>
+              {/* Central-stock cards are unsorted and may go to any store: no
+                  partner or stock name on the customer-facing card. */}
+              <p className="truncate text-[6.5pt] tracking-wide text-ink-3">{partner.isCentralStock ? "" : partner.name}</p>
             </div>
           </div>
         ))}

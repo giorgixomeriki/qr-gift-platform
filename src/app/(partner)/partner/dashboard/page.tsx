@@ -17,6 +17,9 @@ import { formatMinorAmount } from "@/lib/format/money";
 import { listPartnerMembers, getPartnerById } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
 import { toInventoryRow } from "@/lib/qr/credential-access";
+import { listPartnerHandovers } from "@/lib/qr/handovers";
+import { formatBusinessDateTime } from "@/lib/format/datetime";
+import { IncomingHandovers } from "@/components/partners/incoming-handovers";
 import { Badge, EmptyState, PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
 import { PartnerSwitcher } from "@/components/partners/partner-switcher";
 import { MembershipManager } from "@/components/partners/membership-manager";
@@ -26,6 +29,7 @@ import { partnerAddMemberByEmailAction, partnerUpdateMemberRoleAction, partnerRe
 import { partnerCreateBatchAction, partnerMarkDistributedAction } from "@/lib/qr/actions";
 
 const MANAGE_ROLES = ["OWNER", "ADMIN"] as const;
+const RECEIVE_ROLES = ["OWNER", "ADMIN", "STAFF"] as const;
 
 /**
  * Real per-partner operational dashboard (Phase 1 — "no fake data"). Every
@@ -79,10 +83,13 @@ export default async function PartnerDashboardPage() {
         qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "PARTNER")),
       })),
     );
-    return { partner, metrics, members, batchesWithCodes, performance, payouts, role: ctx.role };
+    // Physical card handovers addressed to this partner (Scan-to-Assign).
+    const handovers = await listPartnerHandovers(tx, ctx.partnerId);
+    return { partner, metrics, members, batchesWithCodes, performance, payouts, handovers, role: ctx.role };
   }, activePartnerId);
 
   const canManage = (MANAGE_ROLES as readonly string[]).includes(data.role);
+  const canReceive = (RECEIVE_ROLES as readonly string[]).includes(data.role);
   // One partner = one login: staff logins are managed only when the team
   // feature is explicitly on (lib/partners/actions.ts enforces the same).
   const canManageTeam = canManage && env.PARTNER_TEAM_MEMBERS_ENABLED;
@@ -114,6 +121,13 @@ export default async function PartnerDashboardPage() {
         description={td("roleLine", { email: user.email ?? "", role: tRole(data.role as "OWNER" | "ADMIN" | "STAFF" | "VIEWER") })}
         actions={<PartnerSwitcher memberships={memberships} activePartnerId={activePartnerId} />}
       />
+
+      {data.handovers.length > 0 && (() => {
+        const view = (h: (typeof data.handovers)[number]) => ({ id: h.id, quantity: h.quantity, status: h.status, createdAtLabel: formatBusinessDateTime(h.createdAt, locale) });
+        const open = data.handovers.filter((h) => h.status === "PENDING" || h.status === "DISPUTED").map(view);
+        const recent = data.handovers.filter((h) => h.status !== "PENDING" && h.status !== "DISPUTED").slice(0, 5).map(view);
+        return <IncomingHandovers open={open} recent={recent} canReceive={canReceive} />;
+      })()}
 
       {/* Hierarchy matches the actual business flow (Phase 4 §14): Distributed
           QR → Customer activation → Partner commission — not a flat grid of

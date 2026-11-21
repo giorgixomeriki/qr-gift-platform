@@ -1,14 +1,15 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ScanLine } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { getAdminMetrics } from "@/lib/dashboard/admin-metrics";
+import { getPhysicalInventorySummary } from "@/lib/qr/handovers";
 import { getReconcileHealth } from "@/lib/payments/reconcile-heartbeat";
 import { formatMinorAmount } from "@/lib/format/money";
 import { ReconcileActivationsButton } from "@/components/admin/reconcile-activations-button";
 import { NotAdmin } from "@/components/admin/not-admin";
 import { Badge, PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
-import { buttonClasses } from "@/components/ui/button";
+import { ButtonLink, buttonClasses } from "@/components/ui/button";
 
 /**
  * Real platform-wide aggregates (Phase 1 — "no fake data"), computed live
@@ -24,7 +25,12 @@ export default async function AdminDashboardPage() {
   const t = await getTranslations("admin");
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
-  const { metrics, reconcile } = await requireAdmin(async (tx) => ({ metrics: await getAdminMetrics(tx), reconcile: await getReconcileHealth(tx) }));
+  const { metrics, reconcile, physical } = await requireAdmin(async (tx) => ({
+    metrics: await getAdminMetrics(tx),
+    reconcile: await getReconcileHealth(tx),
+    physical: await getPhysicalInventorySummary(tx),
+  }));
+  const th = await getTranslations("handover");
   const td = await getTranslations("admin.dashboard");
   const tStage = await getTranslations("admin.dashboard.funnel.stages");
   const tNav = await getTranslations("nav");
@@ -86,6 +92,24 @@ export default async function AdminDashboardPage() {
         <Stat label={td("stats.qrActive")} value={metrics.qrActive} testId="metric-qr-active" />
         <Stat label={td("stats.qrBlocked")} value={metrics.qrBlocked} testId="metric-qr-blocked" />
       </StatGroup>
+
+      <div className="flex flex-col gap-3" data-testid="admin-physical-inventory">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-label text-ink-2">{th("inventory.physicalTitle")}</h2>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/admin/inventory" variant="secondary" size="sm">{tNav("inventory")}</ButtonLink>
+            <ButtonLink href="/admin/inventory/scan" size="sm" icon={<ScanLine className="size-4" aria-hidden />} data-testid="dashboard-scan-assign">
+              {th("inventory.scanCta")}
+            </ButtonLink>
+          </div>
+        </div>
+        <StatGroup>
+          <Stat label={th("inventory.stats.inCentral")} value={physical.inCentralStock} testId="metric-central-stock" />
+          <Stat label={th("inventory.stats.reserved")} value={physical.reserved} testId="metric-reserved" />
+          <Stat label={th("inventory.stats.heldByPartners")} value={physical.heldByPartners} testId="metric-held-by-partners" />
+          <Stat label={th("inventory.stats.openHandovers")} value={physical.pendingHandovers + physical.disputedHandovers} testId="metric-open-handovers" />
+        </StatGroup>
+      </div>
 
       <Panel title={td("funnel.title")} description={td("funnel.description")} testId="admin-funnel" flush>
         <div className={table.wrap}>

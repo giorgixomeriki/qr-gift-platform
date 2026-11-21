@@ -187,7 +187,11 @@ async function catalogChecks() {
     select c.relname, p.priv from pg_class c join pg_namespace n on n.oid = c.relnamespace
     cross join (values ('select'), ('insert'), ('update'), ('delete')) as p(priv)
     where n.nspname = 'public' and c.relkind = 'r' and not has_table_privilege('app_runtime', c.oid, p.priv)
-      and c.relname not in ('partner_payout_items', 'payment_refunds', 'checkout_consents')`; // checkout_consents: append-only evidence (0023)
+      and c.relname not in ('partner_payout_items', 'payment_refunds', 'checkout_consents',
+                            'qr_handovers', 'qr_handover_items', 'qr_handover_acceptance_marks')`;
+  // checkout_consents: append-only evidence (0023). qr_handovers / _items: no
+  // DELETE, history is permanent (0026). qr_handover_acceptance_marks: no app
+  // privilege at all — only app_accept_qr_handover() (definer) writes it (0026).
   check("A10. app_runtime keeps SELECT/INSERT/UPDATE/DELETE on application tables", runtimeGaps.length === 0, runtimeGaps.slice(0, 5));
   const helperGaps: string[] = [];
   for (const fn of RUNTIME_HELPERS) {

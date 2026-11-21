@@ -30,6 +30,7 @@ export default async function AdminPartnersPage() {
   const tPricing = await getTranslations("admin.pricing");
   const locale = await getLocale();
   const tStatus = await getTranslations("enums.partnerStatus");
+  const tInventory = await getTranslations("handover.inventory");
 
   return (
     <div className="flex flex-col gap-8" data-testid="admin-partners-page">
@@ -76,7 +77,10 @@ export default async function AdminPartnersPage() {
                     </td>
                     <td className={`${table.td} text-right tabular-nums`}>{formatBpsAsPercent(p.commissionRateBps)}%</td>
                     <td className={table.td}>
-                      <Badge tone={p.status === "ACTIVE" ? "success" : "danger"}>{tStatus(p.status)}</Badge>
+                      <span className="inline-flex flex-wrap gap-1.5">
+                        <Badge tone={p.status === "ACTIVE" ? "success" : "danger"}>{tStatus(p.status)}</Badge>
+                        {p.isCentralStock && <Badge tone="info">{tInventory("central.title")}</Badge>}
+                      </span>
                     </td>
                   </tr>
                 ))}
