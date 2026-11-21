@@ -46,6 +46,22 @@ Pass criteria:
 
 If the ledger count is not 23, **stop**: production changed since this plan.
 
+**Phase B DONE 2026-11-21 08:38 UTC (owner-approved, read-only on production).** Result: **PASS**.
+
+| Check | Result |
+|---|---|
+| Live deploy / commit | `dep-dc01qme0tbcc73ahmoj0` = f575182 (Render API) |
+| Server / ledger | Postgres 17.11; `__drizzle_migrations` = **23**, max 1795161600000; `checkout_consents` absent |
+| Backup | `~/.qrapp-review/backups/qrapp-prod-full-20261121-0838-pre0023-bog.dump` (671,537 bytes, custom format, pg_dump 17.6, empty stderr) |
+| SHA-256 | `2ab69da099fccee4b617687943f2531a05f5e73124699224ece5543af984dc18`; `shasum -c` OK; openssl matches |
+| Storage of the backup | outside the repository; directory 0700, every file 0600 |
+| Restore + compare | throwaway DB, restored with privileges. Fingerprint **120/120 lines identical**: every column, constraint, index, policy, RLS flag, trigger, function, enum and grant; the exact row count and full-content md5 of every public/drizzle table; auth.users, MFA factors, storage objects. No line changed on production during the dump. **MATCH** |
+| Financial records (production = restore) | 2 PAID orders: gross 2000, commission 600, platform 1400; 2 TEST SUCCEEDED payments, amount 2000; ledger COMMISSION_EARNED 2 × = 600; 0 refunds; 0 payouts; 4 active prices (hash equal) |
+| Restore stderr | 31 errors, all Supabase-managed platform objects: default privileges of `supabase_admin` / `supabase_auth_admin`, `vault`, `realtime`, `pg_catalog`. Production `vault.secrets` = 0 rows, so nothing is lost. No application object affected |
+| Recovery rehearsal (DISASTER_RECOVERY.md §2) | Restored into a separate scratch DB, then applied 0023 + 0024 forward on that copy. Result: 25 rows, max 1795222800000, 4 policies + trigger present, `app_runtime` INSERT/SELECT on `checkout_consents`, no anon/authenticated grants. **No existing row or money total changed** (only the migration ledger). Scratch copy dropped |
+
+Phase D (0023 + 0024 on production) is ready, pending the owner's approval. Re-run this backup immediately before Phase D if more than a few hours have passed or anything was written to production.
+
 ## C. Hosting: stay on Render Free (owner decision 2026-11-21)
 
 No plan change. Do **not** upgrade the instance and do not change the hosting configuration. The analysis and drill are in `RENDER_FREE_PAYMENTS.md`. On Free, a BOG callback can be lost to a cold start, and BOG documents no retries. Safety then rests on the return-page check and on scheduled reconciliation, so **step G is a hard gate before step H**.
