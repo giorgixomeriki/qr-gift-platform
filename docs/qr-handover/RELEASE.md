@@ -1,6 +1,6 @@
 # Release runbook — Admin-only QR handover (migration 0026)
 
-Branch `feat/qr-scan-handover` (fast-forward of the live deploy branch at `ae7a0ab`).
+Branch `feat/qr-scan-handover` (fast-forward of the live deploy branch at `8827b9a`, live as `dep-dc10s4942hec73ff4b60` since 2026-11-21 21:35Z).
 Each numbered step needs the owner's explicit "go". Never deploy between :10 and :25 (Supabase
 Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env change in this release.
 
@@ -20,7 +20,7 @@ Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env 
    `source ~/.qrapp-review/ops-env.sh; BACKUP_DATABASE_URL="$MIGRATIONS_DATABASE_URL" scripts/ops/prod-backup.sh pre0026-final` → must print `RESULT: MATCH`.
 2. **Migrate** (window :30–:05): `MIGRATIONS_DATABASE_URL=… node ./node_modules/.bin/tsx src/db/migrate.ts`.
    Verify: ledger 27 (max 1795420800000); qr_codes 202 (169/31/2/0); money lines unchanged; cron jobs unchanged.
-   Old code (ae7a0ab) keeps working with 0026 (it never reads the new tables/column).
+   Old code (8827b9a) keeps working with 0026 (it never reads the new tables/column).
 3. **Deploy**: `git push origin feat/qr-scan-handover:feat/render-low-cost-hosting` (fast-forward only) → Render deploy; wait live.
 4. **Live checks**: `/api/health` 200; `/admin/inventory/scan` header `camera=(self)`, all other pages `camera=()`;
    checkout still closed; admin dashboard totals 202 / partners unchanged.
@@ -37,7 +37,7 @@ Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env 
 7. Record evidence; keep CHECKOUT_ENABLED=false.
 
 ## Rollback
-- Code: Render rollback to `dep-dc0selec6qcc73btprt0` (ae7a0ab). 0026 may stay (old code ignores it; 0013's rule
+- Code: Render rollback to `dep-dc10s4942hec73ff4b60` (8827b9a) — re-check it is still the live deploy right before step 3. 0026 may stay (old code ignores it; 0013's rule
   still applies to every non-handover update). Cron untouched either way.
 - Database (only if required, and only while no handover is ACCEPTED):
   `psql "$MIGRATIONS_DATABASE_URL" -v ON_ERROR_STOP=1 -f docs/qr-handover/rollback-0026.sql` (one transaction;
