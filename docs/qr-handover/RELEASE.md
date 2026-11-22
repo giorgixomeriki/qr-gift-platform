@@ -15,6 +15,16 @@ Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env 
 - Production cron before release: jobs 1 wake `15 * * * *`, 2 reconcile `17 * * * *`, 3 trim `40 3 * * *`, all active.
   0026 and the rollback never reference cron / pg_net / vault / `private`.
 
+## Pre-release gate (2026-11-22 07:09–07:12Z, production read-only)
+- Live: `dep-dc10s4942hec73ff4b60` = 8827b9a; health 200; CHECKOUT_ENABLED=false, PAYMENTS_PROVIDER=BOG, CHECKOUT_PILOT_QR_IDS unset.
+  BOG M1 (`release/m1-hardening`, no migration) is approved and deploys first (~07:26Z); this branch then rebases onto it
+  and the code rollback target becomes the M1 deploy id (re-read Render before step 3).
+- Backup `qrapp-prod-full-20261122-0709-pre0026-final.dump` (sha256 `2c4910edc2b318e2…`): fingerprint 126/126 MATCH;
+  money 2 PAID / gross 2000 / commission 600 / platform 1400; payments 2 SUCCEEDED 2000; payouts 0; ledger 26.
+  Since the 21:26 backup only login data changed (TST Flw now has a login); QR cards hash `526ecb05…` unchanged.
+- QR baseline: 202 cards (169 AVAILABLE / 31 DRAFT / 2 ACTIVE / 0 BLOCKED), 0 distributed, 5 batches.
+- Cron: jobs 1–3 active, 25 successful runs in 12 h (last 06:17Z).
+
 ## Steps
 1. **Fresh backup** (if > 2 h since the one above or any prod write happened):
    `source ~/.qrapp-review/ops-env.sh; BACKUP_DATABASE_URL="$MIGRATIONS_DATABASE_URL" scripts/ops/prod-backup.sh pre0026-final` → must print `RESULT: MATCH`.
@@ -30,8 +40,8 @@ Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env 
    3. Open a smoke card's URL on a phone → must show "unavailable" (dormant stock).
    4. Phone (admin) → scanner → scan both cards → partner Demo Flower Shop → create handover.
    5. Demo login → *ახალი QR ბარათების მიღება* → tick → confirm. Demo issued 92 → 94; total 204; orders/ledger unchanged.
-   6. Optional partner → partner: scan 1 of the 2 smoke cards → Demo → … needs a second test partner with a login
-      (e.g. activate the pending "TST Flw" invitation). G'N / Nino's are not needed.
+   6. Optional partner → partner: Demo → TST Flw (test partner, has a login since 2026-11-22), 1 of the smoke cards.
+      G'N / Nino's are not needed.
    7. Optional discrepancy path: create a handover of 1 card → Demo reports a discrepancy → admin *Reject*.
 6. **Real-device camera test** (DEVICE-CAMERA-TEST.md) on one Android + one iPhone.
 7. Record evidence; keep CHECKOUT_ENABLED=false.
