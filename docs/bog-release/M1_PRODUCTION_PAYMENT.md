@@ -82,7 +82,7 @@ The session re-reads this immediately before M1.
    - If Render was asleep, the return page can take 30–90 s or show a 503: reload. **Do not pay again.**
 4. If it says "still verifying", wait. The page re-checks by itself for about 7.5 min. Reconciliation settles it at the latest at the next `:17` after 30 min.
 5. Open the card URL again: the greeting should show (recipient view). Check it on mobile.
-6. Tell the session the time of payment. The session then verifies (§5).
+6. Tell the session the time of payment. The session then verifies with `psql "$MIGRATIONS_DATABASE_URL" -v qr=00794e0b-9d14-4529-8c05-8a43f9bfb781 -f scripts/ops/m1-verify.sql` (read-only; every invariant must be `t`), plus Render logs and the BOG receipt.
 
 **Success criteria (M1 PASS):**
 - BOG shows one completed payment of exactly 10.00 GEL;
