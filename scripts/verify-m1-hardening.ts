@@ -83,7 +83,7 @@ async function main() {
   const { startGreeting } = require("../src/lib/greetings/start") as typeof import("../src/lib/greetings/start");
   const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
   const { getOrCreateCheckoutOrder, acceptCheckoutTerms, checkPaymentReturn, PaymentInProgressError } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
-  const { isCheckoutOpen, CheckoutUnavailableError } = require("../src/lib/payments/checkout-gate") as typeof import("../src/lib/payments/checkout-gate");
+  const { isCheckoutOpen } = require("../src/lib/payments/checkout-gate") as typeof import("../src/lib/payments/checkout-gate");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
   const { runPaymentReconciliation } = require("../src/lib/payments/reconcile") as typeof import("../src/lib/payments/reconcile");
   const { getReconcileHealth } = require("../src/lib/payments/reconcile-heartbeat") as typeof import("../src/lib/payments/reconcile-heartbeat");
