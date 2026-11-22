@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, sql } from "drizzle-orm";
 import { withEditableGreeting, withPaymentActivation } from "@/db/client";
 import { checkoutConsents, orders, payments, qrCodes } from "@/db/schema";
 import { verifyGreetingEditAccess } from "@/lib/greetings/access";
@@ -209,6 +209,30 @@ export async function acceptCheckoutTerms(
   if (!open) throw new CheckoutEntryError("No open order for this greeting");
   // Staging fence: refused before the consent row and the bank payment.
   await assertOrderInPaymentScope(open.order.id);
+  // One Pay at a time per order: two simultaneous presses (double tap, two
+  // tabs) would otherwise both pass the open-attempt check below and open two
+  // bank payments, both payable. The loser is told a payment is in progress.
+  return withOrderPaymentLock(open.order.id, () => acceptCheckoutTermsLocked(greetingId, locale, open));
+}
+
+/**
+ * Runs fn while holding a transaction-scoped advisory lock for this order's
+ * bank attempt (try-lock: never waits). The lock transaction writes nothing;
+ * it is held only for the bank's create call (a few seconds at most).
+ */
+async function withOrderPaymentLock<T>(orderId: string, fn: () => Promise<T>): Promise<T> {
+  return withPaymentActivation(orderId, async (tx) => {
+    const [row] = await tx.execute<{ locked: boolean }>(sql`select pg_try_advisory_xact_lock(hashtextextended(${"payment-attempt:" + orderId}, 0)) as locked`);
+    if (!row?.locked) throw new PaymentInProgressError();
+    return fn();
+  });
+}
+
+async function acceptCheckoutTermsLocked(
+  greetingId: string,
+  locale: "ka" | "en",
+  open: { order: Order; qrPublicToken: string },
+): Promise<{ orderId: string; redirectUrl?: string }> {
   // Never a second bank payment while an earlier one for this order may still
   // be charged (second tab, back button, lost callback): the bank decides first.
   const verdict = await settleOpenBankAttempt(open.order.id);

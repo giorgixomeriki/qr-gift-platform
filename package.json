@@ -63,6 +63,7 @@
     "e2e": "node --env-file-if-exists=.env.local ./node_modules/.bin/playwright test",
     "verify:payment-release": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-payment-release.ts",
     "verify:m1-hardening": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-m1-hardening.ts",
+    "verify:m1-pilot-price": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-m1-pilot-price.ts",
     "drill:free-tier": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/drill-free-tier-payments.ts",
     "verify:data-api-lockdown": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-data-api-lockdown.ts"
   },

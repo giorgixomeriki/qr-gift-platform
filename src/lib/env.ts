@@ -11,6 +11,7 @@ import {
   supabaseUrlProblems,
 } from "./env-guards";
 import { publishableKeyProblems, resolvePublishableKey, resolveSecretKey, secretKeyProblems, type KeySource } from "./supabase/keys";
+import { MAX_PRICE_MINOR, MIN_PRICE_MINOR } from "./payments/split";
 
 /**
  * Single validated source of truth for SERVER-SIDE environment variables,
@@ -104,6 +105,23 @@ const envSchema = z.object({
     .transform((value) => (value ?? "").split(",").map((id) => id.trim().toLowerCase()).filter(Boolean))
     .refine((ids) => ids.length <= 3 && ids.every((id) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(id)), {
       message: "CHECKOUT_PILOT_QR_IDS: up to 3 comma-separated QR code UUIDs",
+    }),
+
+  // Owner pilot price (M1 at 1.00 GEL): the activation price, in tetri, for
+  // the ONE card in CHECKOUT_PILOT_QR_IDS, while CHECKOUT_ENABLED=false. It
+  // never touches the prices table (the public price stays as configured)
+  // and applies to no other card (lib/payments/pilot-price.ts). Unset after
+  // the pilot.
+  CHECKOUT_PILOT_PRICE_MINOR: z
+    .string()
+    .optional()
+    .transform((value) => (value === undefined || value.trim() === "" ? null : value.trim()))
+    .refine((value) => value === null || /^[1-9][0-9]{0,6}$/.test(value), {
+      message: "CHECKOUT_PILOT_PRICE_MINOR: a whole number of tetri (e.g. 100 = 1.00 GEL)",
+    })
+    .transform((value) => (value === null ? null : Number(value)))
+    .refine((value) => value === null || (value >= MIN_PRICE_MINOR && value <= MAX_PRICE_MINOR), {
+      message: `CHECKOUT_PILOT_PRICE_MINOR: between ${MIN_PRICE_MINOR} and ${MAX_PRICE_MINOR} tetri`,
     }),
 
   // BOG refunds are implemented and off by default: while false,
@@ -226,6 +244,15 @@ function loadEnv(): Env {
       smsProvider: data.PARTNER_SMS_PROVIDER,
     }),
   );
+  if (data.CHECKOUT_PILOT_PRICE_MINOR !== null) {
+    // The pilot price is for one named card during the closed pilot only.
+    if (data.CHECKOUT_PILOT_QR_IDS.length !== 1) {
+      problems.push("CHECKOUT_PILOT_PRICE_MINOR requires exactly one QR id in CHECKOUT_PILOT_QR_IDS");
+    }
+    if (data.CHECKOUT_ENABLED) {
+      problems.push("CHECKOUT_PILOT_PRICE_MINOR must be unset when CHECKOUT_ENABLED=true (public checkout)");
+    }
+  }
   if (problems.length > 0) {
     throw new Error(`Unsafe environment configuration:\n- ${problems.join("\n- ")}`);
   }

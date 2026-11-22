@@ -61,7 +61,7 @@ export default async function QrEntryPage({
 
     case "available": {
       await recordAnalyticsEvent({ eventType: "QR_SCANNED", qrCodeId: resolution.qrId }, { partnerId: resolution.partnerId });
-      const price = await getDefaultProductPrice(resolution.partnerId);
+      const price = await getDefaultProductPrice(resolution.partnerId, resolution.qrId);
       const priceLabel = price ? formatMinorAmount(price.amountMinor, price.currency, locale) : null;
       return <SenderEntry publicToken={token} priceLabel={priceLabel} />;
     }
@@ -75,7 +75,7 @@ export default async function QrEntryPage({
 
       try {
         const draft = await loadDraftForEdit(resolution.greetingId, editToken);
-        const price = await getDefaultProductPrice(resolution.partnerId);
+        const price = await getDefaultProductPrice(resolution.partnerId, resolution.qrId);
         const priceLabel = price ? formatMinorAmount(price.amountMinor, price.currency, locale) : null;
 
         const photoBySlot = [0, 1, 2].map((slot) => {

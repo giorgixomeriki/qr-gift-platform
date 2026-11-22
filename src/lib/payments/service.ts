@@ -10,6 +10,7 @@ import { getPaymentProvider } from "./provider-factory";
 import { sanitizeProviderMetadata, type PaymentProviderKey } from "./types";
 import { getPurchaseBlocker, type PurchaseBlocker } from "./eligibility";
 import { assertCheckoutOpen } from "./checkout-gate";
+import { pilotPriceOverrideMinor, assertOrderAmountCurrent } from "./pilot-price";
 import { requestChargeRefund } from "./refunds";
 import { assertOrderInPaymentScope } from "./scope";
 import { logServerError } from "@/lib/log";
@@ -79,7 +80,7 @@ export async function startCheckout(input: {
   const greeting = await verifyGreetingEditAccess(input.greetingId, input.editToken);
   assertCheckoutOpen(greeting.qrCodeId);
 
-  const { order, qrPublicToken } = await withEditableGreeting(input.greetingId, async (tx) => {
+  const { order, qrPublicToken, pilot } = await withEditableGreeting(input.greetingId, async (tx) => {
     const [qr] = await tx
       .select({ id: qrCodes.id, partnerId: qrCodes.partnerId, publicToken: qrCodes.publicToken })
       .from(qrCodes)
@@ -88,9 +89,14 @@ export async function startCheckout(input: {
     if (!qr) throw new CheckoutError("QR code not found for greeting");
 
     const price = await resolveActivePrice(tx, input.productId, qr.partnerId);
+    // Owner pilot price (M1): only for the one pilot card while public
+    // checkout is closed; qr.id is the database's, never the request's. The
+    // order then has no price_id (it was not charged a prices row).
+    const pilotAmountMinor = pilotPriceOverrideMinor(qr.id);
+    const grossAmountMinor = pilotAmountMinor ?? price.amountMinor;
     const commissionRateBps = await getPartnerCommissionRateBps(tx, qr.partnerId);
     const { partnerCommissionMinor, platformShareMinor } = splitCommission(
-      price.amountMinor,
+      grossAmountMinor,
       commissionRateBps,
     );
 
@@ -101,9 +107,9 @@ export async function startCheckout(input: {
         qrCodeId: qr.id,
         partnerId: qr.partnerId,
         productId: input.productId,
-        priceId: price.id,
+        priceId: pilotAmountMinor === null ? price.id : null,
         currency: price.currency,
-        grossAmountMinor: price.amountMinor,
+        grossAmountMinor,
         partnerCommissionMinor,
         platformShareMinor,
         commissionRateBps,
@@ -112,8 +118,24 @@ export async function startCheckout(input: {
       .returning();
 
     if (!created) throw new CheckoutError("Failed to create order");
-    return { order: created, qrPublicToken: qr.publicToken };
+    return { order: created, qrPublicToken: qr.publicToken, pilot: pilotAmountMinor === null ? null : { standardPriceId: price.id, standardAmountMinor: price.amountMinor } };
   });
+
+  if (pilot) {
+    // Audit trail: this order was priced by the owner pilot override, not by
+    // a prices row. Ids and amounts only.
+    await withPaymentActivation(order.id, (tx) =>
+      recordAuditLog(tx, { actorType: "SYSTEM", action: "PRICING_PILOT_PRICE_APPLIED", targetType: "order", targetId: order.id, metadata: {
+      qrCodeId: order.qrCodeId,
+      grossAmountMinor: order.grossAmountMinor,
+      partnerCommissionMinor: order.partnerCommissionMinor,
+      platformShareMinor: order.platformShareMinor,
+      commissionRateBps: order.commissionRateBps,
+      standardPriceId: pilot.standardPriceId,
+      standardAmountMinor: pilot.standardAmountMinor,
+      } }),
+    ).catch((err) => logServerError("pilotPriceAudit", err, { orderId: order.id }));
+  }
 
   if (input.createAttempt === false) return { order };
   const redirectUrl = await createPaymentAttempt(order, qrPublicToken);
@@ -131,6 +153,9 @@ export async function startCheckout(input: {
  */
 export async function createPaymentAttempt(order: Order, qrPublicToken: string, locale?: "ka" | "en"): Promise<string | undefined> {
   assertCheckoutOpen(order.qrCodeId);
+  // The amount sent to the bank is the order's snapshot, and it must still be
+  // the card's price now (owner pilot price on/off; lib/payments/pilot-price.ts).
+  assertOrderAmountCurrent(order);
   // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): no provider call for an order
   // this deployment does not own.
   await assertOrderInPaymentScope(order.id);
