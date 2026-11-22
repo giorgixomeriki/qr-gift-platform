@@ -1,6 +1,6 @@
 # Release runbook — Admin-only QR handover (migration 0026)
 
-Branch `feat/qr-scan-handover` (fast-forward of the live deploy branch at `8827b9a`, live as `dep-dc10s4942hec73ff4b60` since 2026-11-21 21:35Z).
+Branch `feat/qr-scan-handover` (fast-forward of the live deploy branch at `5546932` = BOG M1, live as `dep-dc19ib3bc2fs73e3i860` since 2026-11-22 07:29Z).
 Each numbered step needs the owner's explicit "go". Never deploy between :10 and :25 (Supabase
 Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env change in this release.
 
@@ -25,12 +25,16 @@ Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env 
 - QR baseline: 202 cards (169 AVAILABLE / 31 DRAFT / 2 ACTIVE / 0 BLOCKED), 0 distributed, 5 batches.
 - Cron: jobs 1–3 active, 25 successful runs in 12 h (last 06:17Z).
 
+- 07:34Z re-check after M1: since the 07:09 backup only one audit row (Cron reconcile 07:17, expected); money identical;
+  cards 202 hash `526ecb05…`; ledger 26; no qr_handovers table; cron 3/3 active, last 07:17 OK; no other active DB sessions.
+  Rebased branch: m1-hardening 33, qr-handover 114 and 13 more suites green; e2e 6/6 + regression 18/18.
+
 ## Steps
 1. **Fresh backup** (if > 2 h since the one above or any prod write happened):
    `source ~/.qrapp-review/ops-env.sh; BACKUP_DATABASE_URL="$MIGRATIONS_DATABASE_URL" scripts/ops/prod-backup.sh pre0026-final` → must print `RESULT: MATCH`.
 2. **Migrate** (window :30–:05): `MIGRATIONS_DATABASE_URL=… node ./node_modules/.bin/tsx src/db/migrate.ts`.
    Verify: ledger 27 (max 1795420800000); qr_codes 202 (169/31/2/0); money lines unchanged; cron jobs unchanged.
-   Old code (8827b9a) keeps working with 0026 (it never reads the new tables/column).
+   Old code (5546932) keeps working with 0026 (it never reads the new tables/column).
 3. **Deploy**: `git push origin feat/qr-scan-handover:feat/render-low-cost-hosting` (fast-forward only) → Render deploy; wait live.
 4. **Live checks**: `/api/health` 200; `/admin/inventory/scan` header `camera=(self)`, all other pages `camera=()`;
    checkout still closed; admin dashboard totals 202 / partners unchanged.
@@ -47,7 +51,7 @@ Cron wake :15 / reconcile :17). `CHECKOUT_ENABLED` stays `false`; no Render env 
 7. Record evidence; keep CHECKOUT_ENABLED=false.
 
 ## Rollback
-- Code: Render rollback to `dep-dc10s4942hec73ff4b60` (8827b9a) — re-check it is still the live deploy right before step 3. 0026 may stay (old code ignores it; 0013's rule
+- Code: Render rollback to `dep-dc19ib3bc2fs73e3i860` (5546932, BOG M1, live since 2026-11-22 07:29Z) — re-check it is still the live deploy right before step 3. 0026 may stay (old code ignores it; 0013's rule
   still applies to every non-handover update). Cron untouched either way.
 - Database (only if required, and only while no handover is ACCEPTED):
   `psql "$MIGRATIONS_DATABASE_URL" -v ON_ERROR_STOP=1 -f docs/qr-handover/rollback-0026.sql` (one transaction;
