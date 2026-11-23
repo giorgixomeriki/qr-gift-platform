@@ -93,7 +93,7 @@
   padding: 0;
   border-radius: 12px;
 }
-:is(.reveal__primary, .reveal__ghost, .reveal__letter):focus-visible {
+:is(.reveal__primary, .reveal__ghost, .reveal__letter-scroll, .reveal__letter-more):focus-visible {
   outline: 2px solid var(--r-ink);
   outline-offset: 3px;
 }
@@ -199,10 +199,12 @@ html:has(.reveal) {
 }
 
 /* ---- The letter: a message longer than the card ---------------------------
-   Rises over the world once its scene is at rest, in the world's own paper,
-   ink and type; the world steps back behind it. */
+   One whole letter from the first frame of the message beat: it rises in the
+   world's own paper, ink and type while the world's scene plays around it
+   (the world's card and headline step aside — theme-world.css data-letter —
+   so no clipped copy of the words sits behind it). */
 .reveal__frame[data-reading] .reveal__world {
-  opacity: 0.4;
+  opacity: 0.72;
 }
 .reveal__letter {
   /* Centred by auto margins, not translate(-50%): a half-pixel offset would
@@ -210,27 +212,81 @@ html:has(.reveal) {
   position: absolute;
   inset: 0;
   margin: auto;
+  display: flex;
+  flex-direction: column;
   width: min(calc(100cqw - 1rem), 28rem);
   height: fit-content;
   max-height: calc(100cqh - 1rem);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 2.25rem 1.75rem 2.25rem;
   border-radius: 3px;
   color: var(--w-ink);
-  /* Scroll cue without JS: a soft shade at the foot while more of the letter
-     lies below; a strip of card stock attached to the end of the content
-     covers it once the end is reached (background-attachment local/scroll). */
   background:
-    linear-gradient(to top, var(--w-card) 55%, transparent) bottom / 100% 2.25rem no-repeat local,
-    radial-gradient(farthest-side at 50% 100%, rgb(var(--w-shadow) / 0.3), transparent) bottom / 100% 1.1rem no-repeat scroll,
     var(--cx-paper-tooth) 0 0 / 256px 256px,
     var(--w-card);
-  background-blend-mode: normal, normal, soft-light, normal;
+  background-blend-mode: soft-light, normal;
   box-shadow:
     0 1px 2px rgb(var(--w-shadow) / 0.2),
     0 34px 70px -28px rgb(var(--w-shadow) / 0.75);
-  animation: reveal-letter 950ms var(--qs-ease-settle) both;
+  animation: reveal-letter 700ms var(--qs-ease-settle) both;
+}
+/* The sheet scrolls inside the letter, so its paper, frame and shadow stay put. */
+.reveal__letter-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2.25rem 1.75rem 2.25rem;
+  border-radius: inherit;
+  /* A soft shade at the foot while more of the letter lies below; a strip of
+     card stock attached to the end of the content covers it once the end is
+     reached (background-attachment local/scroll). */
+  background:
+    linear-gradient(to top, var(--w-card) 55%, transparent) bottom / 100% 2.25rem no-repeat local,
+    radial-gradient(farthest-side at 50% 100%, rgb(var(--w-shadow) / 0.3), transparent) bottom / 100% 1.1rem no-repeat scroll;
+}
+/* Room at the foot for the "continue reading" control, so it never covers the
+   last line; while more lies below, the lines pass under a band of the same
+   paper that holds the control. */
+.reveal__letter[data-more] .reveal__letter-scroll {
+  padding-bottom: 4.25rem;
+}
+.reveal__letter[data-more]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 4.5rem;
+  border-radius: 0 0 3px 3px;
+  background: linear-gradient(to bottom, transparent, var(--w-card) 62%);
+  pointer-events: none;
+}
+.reveal__letter-more {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  bottom: 0.75rem;
+  translate: -50% 0;
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0 1rem 0 1.125rem;
+  border: 1px solid color-mix(in oklab, var(--w-ink) 22%, transparent);
+  border-radius: 999px;
+  color: var(--w-ink);
+  background: color-mix(in oklab, var(--w-card) 92%, var(--w-ink) 8%);
+  box-shadow: 0 6px 16px -8px rgb(var(--w-shadow) / 0.55);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  animation: reveal-fade 400ms ease-out both;
+}
+.reveal__letter-more svg {
+  animation: reveal-nudge 1.6s ease-in-out 1.2s 3;
+}
+@keyframes reveal-nudge {
+  50% {
+    translate: 0 2px;
+  }
 }
 .reveal__letter p {
   margin: 0;
@@ -239,6 +295,8 @@ html:has(.reveal) {
   line-height: 1.6;
   white-space: pre-wrap;
   text-wrap: pretty;
+  /* A long unbroken string (a link, a row of one letter) wraps inside the sheet instead of running off it. */
+  overflow-wrap: anywhere;
 }
 :lang(ka) .reveal__letter p {
   font-size: 1.0625rem;
@@ -489,12 +547,16 @@ html:has(.reveal) {
   .reveal__cover,
   .reveal__seal,
   .reveal__letter,
+  .reveal__letter-more,
   .reveal-enter {
     animation: reveal-fade 240ms ease-out both;
   }
   .reveal__world,
   .reveal__progress > span {
     transition: none;
+  }
+  .reveal__letter-more svg {
+    animation: none;
   }
 }
 
