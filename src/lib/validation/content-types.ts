@@ -28,6 +28,16 @@ const SIZE_LIMIT_BYTES: Record<Exclude<SupportedContentType, "text">, number> = 
   audio: 20 * 1024 * 1024,
 };
 
+/** How many items of each media type one greeting holds (slots 0..n-1). */
+export const MEDIA_SLOT_LIMITS: Record<Exclude<SupportedContentType, "text">, number> = {
+  photo: 3,
+  video: 1,
+  audio: 1,
+};
+
+/** Longest voice message the in-browser recorder captures. */
+export const VOICE_MAX_DURATION_SECONDS = 60;
+
 export function allowedMimeTypesFor(type: Exclude<SupportedContentType, "text">): readonly string[] {
   return MIME_ALLOWLIST[type];
 }

@@ -11,7 +11,7 @@
  */
 export default async function globalSetup() {
   const baseURL = "http://localhost:3000";
-  const routes = ["/", "/partner/login", "/admin/login", "/partner/forgot-password", "/admin/forgot-password", "/reset-password", "/g/warmup-nonexistent-token"];
+  const routes = ["/", "/about", "/how-it-works", "/pricing", "/contact", "/terms", "/privacy", "/delivery-and-refunds", "/partner/login", "/admin/login", "/partner/forgot-password", "/admin/forgot-password", "/reset-password", "/g/warmup-nonexistent-token"];
 
   for (const route of routes) {
     try {
