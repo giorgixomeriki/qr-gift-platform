@@ -1001,30 +1001,32 @@
       "add": "Add"
     },
     "review": {
-      "title": "Handover summary",
+      "title": "Transfer summary",
       "partner": "Partner",
       "choosePartner": "Choose a partner",
       "selectedCards": "Selected cards",
       "note": "Note (optional)",
-      "create": "Create handover request",
+      "create": "Assign / Transfer",
       "back": "Back to scanning",
-      "explain": "The cards move to the receiving partner only when they confirm receipt in their dashboard. Until then they are reserved and stay with their current holder. This is not a sale and creates no commission.",
+      "explain": "The cards move to the selected partner as soon as you confirm and appear in their inventory immediately — no partner confirmation is needed. This is not a sale and creates no commission.",
       "noPartners": "No active partners found",
       "ineligibleTitle": "Some cards can no longer be assigned",
       "ineligibleBody": "They were removed from the list. Check and try again.",
       "from": "From"
     },
     "done": {
-      "title": "Handover request created",
-      "body": "{partner} — {count} cards. Status: awaiting partner confirmation.",
-      "duplicate": "This request had already been created — no duplicate was made.",
-      "view": "View handover",
-      "scanMore": "New scan"
+      "title": "QR cards successfully assigned to the partner.",
+      "body": "{partner} — {count} cards are now in their inventory.",
+      "duplicate": "This transfer had already been completed — nothing was transferred twice.",
+      "view": "View transfer",
+      "scanMore": "New scan",
+      "destinationTotal": "Available at {partner}",
+      "sourceTotal": "Left in {source}"
     },
     "status": {
-      "PENDING": "Awaiting confirmation",
+      "PENDING": "Awaiting confirmation (old flow)",
       "DISPUTED": "Discrepancy reported",
-      "ACCEPTED": "Received",
+      "ACCEPTED": "Transferred",
       "REJECTED": "Rejected",
       "CANCELLED": "Cancelled"
     },
@@ -1046,12 +1048,14 @@
       "handover_forbidden": "You don't have permission for this action",
       "handover_not_pending": "This handover is no longer awaiting confirmation",
       "handover_wrong_state": "The handover's current status doesn't allow this action",
-      "handover_cards_ineligible": "{count} card(s) are no longer available — receipt could not be completed. Please contact QR STARR.",
+      "handover_cards_ineligible": "{count} card(s) are no longer available — nothing was transferred. Check the list and try again.",
       "dispute_note_invalid": "Describe the discrepancy",
       "dispute_count_invalid": "Invalid quantity",
       "unknown": "Something went wrong — try again",
       "same_partner": "Source and destination are the same partner",
-      "batch_empty": "No assignable cards left in this batch"
+      "batch_empty": "No assignable cards left in this batch",
+      "handover_not_completed": "Only a completed transfer can be reported",
+      "report_limit": "Too many reports for this transfer — please contact QR STARR"
     },
     "inventory": {
       "title": "QR inventory",
@@ -1073,14 +1077,15 @@
         "blocked": "Blocked",
         "paidSales": "Actual sales (verified payment)",
         "openHandovers": "Open handovers",
-        "disputed": "With discrepancy"
+        "disputed": "With discrepancy",
+        "reports": "Count mismatch reports"
       },
       "central": {
         "title": "Central stock",
         "none": "There is no central stock yet. Create it once — then print cards for it with the usual \"Create batch\" and print.",
         "create": "Create central stock",
         "manage": "Central stock batches & printing",
-        "dormant": "A card in central stock can't be started by a customer until a partner confirms receipt.",
+        "dormant": "A card in central stock can't be started by a customer until it is transferred to a partner.",
         "partnerPageNote": "This is central stock: no login, commission, pricing or payouts, and always suspended. Only create and print batches here; cards go to partners from “QR inventory”."
       },
       "history": {
@@ -1093,7 +1098,7 @@
         "created": "Created",
         "status": "Status",
         "createdBy": "Created by",
-        "resolvedBy": "Accepted / rejected by",
+        "resolvedBy": "Completed by",
         "empty": "No handovers yet",
         "byYou": "You",
         "byAdmin": "Admin",
@@ -1124,30 +1129,28 @@
       "actions": "Actions",
       "cancel": "Cancel handover",
       "cancelHint": "The cards return to central stock and become available again.",
-      "reopen": "Send back to the partner for confirmation",
       "reject": "Reject — cards return to stock",
       "resolutionPlaceholder": "Note (optional)",
       "centralStock": "QR STARR — central stock",
       "resultBatch": "Partner's new batch",
-      "fromBatch": "Original batch"
+      "fromBatch": "Original batch",
+      "legacyHint": "Opened under the earlier two-step flow. It is never completed automatically: cancel or reject it, then transfer the cards again.",
+      "reportsTitle": "Partner reported a count mismatch",
+      "reportsHint": "Support only — the transfer stays in place. Check with the partner and correct it with a new transfer if needed."
     },
     "partner": {
-      "title": "Incoming QR cards",
-      "from": "From: QR STARR",
+      "title": "QR cards from QR STARR",
       "quantity": "Quantity: {count}",
-      "sentOn": "Sent: {date}",
-      "hint": "Count the physical cards and confirm only if the quantity matches.",
-      "confirm": "Confirm receipt",
-      "confirmCheck": "I confirm I physically received {count} cards",
-      "report": "Report discrepancy",
+      "hint": "QR STARR adds cards to your inventory directly — there is nothing to confirm.",
+      "report": "Count doesn't match?",
       "disputeCount": "How many cards did you actually receive?",
       "disputeNote": "Describe the discrepancy",
       "send": "Send",
       "cancel": "Cancel",
-      "disputed": "Discrepancy sent — awaiting QR STARR's decision",
-      "accepted": "Receipt confirmed — the cards were added to your inventory",
-      "historyTitle": "Recent handovers",
-      "noIncoming": "No incoming handovers"
+      "historyTitle": "Transfer history",
+      "added": "QR STARR administration added {count} QR cards to your inventory.",
+      "reportHint": "Tell us how many cards you physically received. The cards stay in your inventory; QR STARR will check and follow up.",
+      "reportSent": "Report sent to QR STARR"
     },
     "sourceLine": "Source: {source} — all cards in one handover must come from one source",
     "batch": {

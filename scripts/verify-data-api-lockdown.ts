@@ -188,10 +188,13 @@ async function catalogChecks() {
     cross join (values ('select'), ('insert'), ('update'), ('delete')) as p(priv)
     where n.nspname = 'public' and c.relkind = 'r' and not has_table_privilege('app_runtime', c.oid, p.priv)
       and c.relname not in ('partner_payout_items', 'payment_refunds', 'checkout_consents',
-                            'qr_handovers', 'qr_handover_items', 'qr_handover_acceptance_marks')`;
+                            'qr_handovers', 'qr_handover_items', 'qr_handover_acceptance_marks',
+                            'qr_handover_reports')`;
   // checkout_consents: append-only evidence (0023). qr_handovers / _items: no
-  // DELETE, history is permanent (0026). qr_handover_acceptance_marks: no app
-  // privilege at all — only app_accept_qr_handover() (definer) writes it (0026).
+  // DELETE, history is permanent (0026); since 0027 no INSERT either — only
+  // app_admin_transfer_qr_cards() (definer) creates them. qr_handover_acceptance_marks:
+  // no app privilege at all — only the definer transfer functions write it (0026).
+  // qr_handover_reports: SELECT only — written by app_report_qr_handover_discrepancy() (0027).
   check("A10. app_runtime keeps SELECT/INSERT/UPDATE/DELETE on application tables", runtimeGaps.length === 0, runtimeGaps.slice(0, 5));
   const helperGaps: string[] = [];
   for (const fn of RUNTIME_HELPERS) {

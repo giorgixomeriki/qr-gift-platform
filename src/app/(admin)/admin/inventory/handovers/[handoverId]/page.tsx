@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
 import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
-import { getHandoverDetail } from "@/lib/qr/handovers";
+import { getHandoverDetail, listHandoverReports } from "@/lib/qr/handovers";
 import { handoverIdSchema } from "@/lib/validation/handovers";
 import { formatBusinessDateTime } from "@/lib/format/datetime";
 import { NotAdmin } from "@/components/admin/not-admin";
@@ -20,8 +20,14 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
   if (!isAdmin) return <NotAdmin message={tAdmin("notAdmin", { email: user.email ?? "" })} />;
   if (!handoverIdSchema.safeParse(handoverId).success) notFound();
 
-  const h = await requireAdmin((tx) => getHandoverDetail(tx, handoverId));
-  if (!h) notFound();
+  const data = await requireAdmin(async (tx) => {
+    const detail = await getHandoverDetail(tx, handoverId);
+    return detail ? { detail, reports: await listHandoverReports(tx, [detail.id]) } : null;
+  });
+  if (!data) notFound();
+  const { detail: h, reports } = data;
+  const legacyStatus = h.status === "PENDING" || h.status === "DISPUTED" ? h.status : null;
+  const legacyOpen = legacyStatus !== null;
 
   const t = await getTranslations("handover");
   const tQr = await getTranslations("enums.qrStatus");
@@ -60,9 +66,24 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
         </Notice>
       )}
 
-      {(h.status === "PENDING" || h.status === "DISPUTED") && (
-        <Panel title={t("detail.actions")}>
-          <HandoverAdminActions handoverId={h.id} status={h.status} />
+      {reports.length > 0 && (
+        <Notice tone="warning" title={t("detail.reportsTitle")}>
+          <p className="text-caption">{t("detail.reportsHint")}</p>
+          <ul className="mt-2 flex flex-col gap-2" data-testid="handover-reports">
+            {reports.map((r) => (
+              <li key={r.id} data-testid="handover-report">
+                <span className="text-caption text-ink-3">{when(r.createdAt)}</span>
+                {r.receivedCount !== null && <span className="text-caption"> · {t("detail.disputeCount", { count: r.receivedCount })}</span>}
+                <p>{r.note}</p>
+              </li>
+            ))}
+          </ul>
+        </Notice>
+      )}
+
+      {legacyStatus && (
+        <Panel title={t("detail.actions")} description={t("detail.legacyHint")}>
+          <HandoverAdminActions handoverId={h.id} status={legacyStatus} />
         </Panel>
       )}
 
@@ -75,7 +96,7 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
                 <th className={table.th}>{t("detail.cardStatus")}</th>
                 <th className={table.th}>{t("detail.fromBatch")}</th>
                 <th className={table.th}>{t("detail.holder")}</th>
-                <th className={table.th}>{t("detail.reservation")}</th>
+                {legacyOpen && <th className={table.th}>{t("detail.reservation")}</th>}
               </tr>
             </thead>
             <tbody>
@@ -85,7 +106,7 @@ export default async function AdminHandoverDetailPage({ params }: { params: Prom
                   <td className={table.td}>{tQr(item.status as "AVAILABLE" | "DRAFT" | "ACTIVE" | "BLOCKED")}</td>
                   <td className={`${table.td} text-ink-2`}>{item.fromBatchLabel}</td>
                   <td className={`${table.td} text-ink-2`}>{item.ownerName}</td>
-                  <td className={`${table.td} text-ink-2`}>{item.reserved ? t("detail.reserved") : t("detail.released")}</td>
+                  {legacyOpen && <td className={`${table.td} text-ink-2`}>{item.reserved ? t("detail.reserved") : t("detail.released")}</td>}
                 </tr>
               ))}
             </tbody>

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { isPublicToken } from "@/lib/qr/scan-parse";
 
 /**
- * Server-side validation for Scan-to-Assign (migrations/0026). The client
+ * Server-side validation for Scan-to-Assign (migrations/0026 + 0027). The client
  * sends public tokens (what the camera read), never card ids; the server
  * resolves and re-checks every one of them at submission.
  */
@@ -25,11 +25,12 @@ export const batchIdSchema = z.uuid();
 
 export const adminTransitionSchema = z.object({
   handoverId: z.uuid(),
-  transition: z.enum(["cancel", "reopen", "reject"]),
+  transition: z.enum(["cancel", "reject"]),
   note: z.string().trim().max(500).optional(),
 });
 
-export const disputeHandoverSchema = z.object({
+/** A partner's non-blocking report on a completed transfer (migrations/0027). */
+export const reportDiscrepancySchema = z.object({
   handoverId: z.uuid(),
   receivedCount: z.number().int().min(0).max(10000).nullable(),
   note: z.string().trim().min(1).max(1000),

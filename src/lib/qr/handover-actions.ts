@@ -9,9 +9,8 @@ import { logServerError } from "@/lib/log";
 import {
   adminTransitionSchema,
   createHandoverSchema,
-  disputeHandoverSchema,
+  reportDiscrepancySchema,
   batchIdSchema,
-  handoverIdSchema,
   resolveScanSchema,
 } from "@/lib/validation/handovers";
 import {
@@ -22,9 +21,9 @@ import {
   HandoverError,
   HANDOVER_MAX_CARDS,
   listEligibleBatchTokens,
-  partnerAcceptHandover,
-  partnerDisputeHandover,
+  partnerReportDiscrepancy,
   type CardEligibility,
+  type TransferTotals,
 } from "./handovers";
 import { parseScannedQr } from "./scan-parse";
 
@@ -55,6 +54,8 @@ export type HandoverActionError =
   | "handover_not_pending"
   | "handover_wrong_state"
   | "handover_cards_ineligible"
+  | "handover_not_completed"
+  | "report_limit"
   | "dispute_note_invalid"
   | "dispute_count_invalid"
   | "unknown";
@@ -64,7 +65,7 @@ export type Failure = { ok: false; error: HandoverActionError; ineligibleCount?:
 const KNOWN: readonly string[] = [
   "no_central_stock", "partner_not_found", "partner_inactive", "partner_is_central_stock", "same_partner", "idempotency_conflict",
   "too_many_cards", "no_cards", "handover_not_found", "handover_forbidden", "handover_not_pending",
-  "handover_wrong_state", "dispute_note_invalid", "dispute_count_invalid",
+  "handover_wrong_state", "handover_not_completed", "report_limit", "dispute_note_invalid", "dispute_count_invalid",
 ];
 
 function failure(scope: string, err: unknown): Failure {
@@ -130,7 +131,7 @@ export async function adminEnsureCentralStockAction(): Promise<{ ok: true; partn
 
 export async function adminCreateHandoverAction(
   input: unknown,
-): Promise<{ ok: true; handoverId: string; quantity: number; duplicate: boolean } | { ok: false; error: "ineligible"; cards: CardEligibility[] } | Failure> {
+): Promise<{ ok: true; handoverId: string; quantity: number; duplicate: boolean; totals: TransferTotals } | { ok: false; error: "ineligible"; cards: CardEligibility[] } | Failure> {
   try {
     const parsed = createHandoverSchema.parse(input);
     const result = await requireAdmin(async (tx, adminUserId) => {
@@ -138,8 +139,11 @@ export async function adminCreateHandoverAction(
       return createHandover(tx, adminUserId, parsed);
     });
     if (!result.ok) return { ok: false, error: "ineligible", cards: result.cards.filter((c) => !c.eligible) };
+    // Ownership has already moved: refresh both sides' inventory views.
     revalidatePath("/admin/inventory");
     revalidatePath("/admin/dashboard");
+    revalidatePath("/admin/partners", "layout");
+    revalidatePath("/partner/dashboard");
     return result;
   } catch (err) {
     return failure("adminCreateHandoverAction", err);
@@ -161,32 +165,22 @@ export async function adminTransitionHandoverAction(input: unknown): Promise<{ o
 
 const RECEIVE_ROLES = ["OWNER", "ADMIN", "STAFF"] as const;
 
-export async function partnerAcceptHandoverAction(handoverId: unknown): Promise<{ ok: true } | Failure> {
+/**
+ * Partner: report a physical-count mismatch on a completed transfer. Support
+ * only — it never moves or reverses cards. Partners have no action that
+ * accepts, approves, sends or reassigns inventory.
+ */
+export async function partnerReportDiscrepancyAction(input: unknown): Promise<{ ok: true } | Failure> {
   try {
-    const id = handoverIdSchema.parse(handoverId);
+    const parsed = reportDiscrepancySchema.parse(input);
     await requirePartnerContext(async (tx, ctx) => {
       if (!(RECEIVE_ROLES as readonly string[]).includes(ctx.role)) throw new HandoverError("handover_forbidden");
-      await enforceRateLimit({ key: `qr-handover-accept:${ctx.userId}`, limit: 30, windowSeconds: 60 });
-      return partnerAcceptHandover(tx, id);
+      await enforceRateLimit({ key: `qr-handover-report:${ctx.userId}`, limit: 10, windowSeconds: 60 });
+      return partnerReportDiscrepancy(tx, parsed.handoverId, parsed.receivedCount, parsed.note);
     });
     revalidatePath("/partner/dashboard");
     return { ok: true };
   } catch (err) {
-    return failure("partnerAcceptHandoverAction", err);
-  }
-}
-
-export async function partnerDisputeHandoverAction(input: unknown): Promise<{ ok: true } | Failure> {
-  try {
-    const parsed = disputeHandoverSchema.parse(input);
-    await requirePartnerContext(async (tx, ctx) => {
-      if (!(RECEIVE_ROLES as readonly string[]).includes(ctx.role)) throw new HandoverError("handover_forbidden");
-      await enforceRateLimit({ key: `qr-handover-dispute:${ctx.userId}`, limit: 30, windowSeconds: 60 });
-      return partnerDisputeHandover(tx, parsed.handoverId, parsed.receivedCount, parsed.note);
-    });
-    revalidatePath("/partner/dashboard");
-    return { ok: true };
-  } catch (err) {
-    return failure("partnerDisputeHandoverAction", err);
+    return failure("partnerReportDiscrepancyAction", err);
   }
 }

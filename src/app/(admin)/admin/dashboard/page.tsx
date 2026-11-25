@@ -106,9 +106,12 @@ export default async function AdminDashboardPage() {
         </div>
         <StatGroup>
           <Stat label={th("inventory.stats.inCentral")} value={physical.inCentralStock} testId="metric-central-stock" />
-          <Stat label={th("inventory.stats.reserved")} value={physical.reserved} testId="metric-reserved" />
+          {physical.reserved > 0 && <Stat label={th("inventory.stats.reserved")} value={physical.reserved} testId="metric-reserved" />}
           <Stat label={th("inventory.stats.heldByPartners")} value={physical.heldByPartners} testId="metric-held-by-partners" />
-          <Stat label={th("inventory.stats.openHandovers")} value={physical.pendingHandovers + physical.disputedHandovers} testId="metric-open-handovers" />
+          {physical.pendingHandovers + physical.disputedHandovers > 0 && (
+            <Stat label={th("inventory.stats.openHandovers")} value={physical.pendingHandovers + physical.disputedHandovers} testId="metric-open-handovers" />
+          )}
+          <Stat label={th("inventory.stats.received")} value={physical.receivedByPartners} testId="metric-received" />
         </StatGroup>
       </div>
 

@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 import { control } from "@/components/dashboard/ui";
 import { adminTransitionHandoverAction } from "@/lib/qr/handover-actions";
 
-/** Admin resolution of an open handover: cancel (PENDING), reopen / reject (DISPUTED). */
+/**
+ * Closing a handover left open by the earlier two-step flow (before 0027):
+ * cancel (PENDING) or reject (DISPUTED). New transfers complete immediately
+ * and never show these actions. A legacy handover is never auto-accepted.
+ */
 export function HandoverAdminActions({ handoverId, status }: { handoverId: string; status: "PENDING" | "DISPUTED" }) {
   const t = useTranslations("handover");
   const router = useRouter();
@@ -15,7 +19,7 @@ export function HandoverAdminActions({ handoverId, status }: { handoverId: strin
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function run(transition: "cancel" | "reopen" | "reject") {
+  async function run(transition: "cancel" | "reject") {
     setBusy(transition);
     setError(null);
     const result = await adminTransitionHandoverAction({ handoverId, transition, note: note.trim() || undefined }).catch(() => ({ ok: false as const, error: "unknown" as const }));
@@ -34,14 +38,9 @@ export function HandoverAdminActions({ handoverId, status }: { handoverId: strin
           </Button>
         )}
         {status === "DISPUTED" && (
-          <>
-            <Button variant="secondary" loading={busy === "reopen"} disabled={busy !== null} onClick={() => run("reopen")} data-testid="handover-reopen">
-              {t("detail.reopen")}
-            </Button>
-            <Button variant="secondary" loading={busy === "reject"} disabled={busy !== null} onClick={() => run("reject")} data-testid="handover-reject">
-              {t("detail.reject")}
-            </Button>
-          </>
+          <Button variant="secondary" loading={busy === "reject"} disabled={busy !== null} onClick={() => run("reject")} data-testid="handover-reject">
+            {t("detail.reject")}
+          </Button>
         )}
       </div>
       {status === "PENDING" && <p className="text-caption text-ink-3">{t("detail.cancelHint")}</p>}

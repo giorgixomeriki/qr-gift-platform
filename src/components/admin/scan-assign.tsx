@@ -8,7 +8,7 @@ import { Notice } from "@/components/ui/notice";
 import { Panel, control, fieldLabel } from "@/components/dashboard/ui";
 import { parseScannedQr, tokenHint } from "@/lib/qr/scan-parse";
 import { adminBatchCardsAction, adminCreateHandoverAction, adminResolveScannedCardAction, type HandoverActionError } from "@/lib/qr/handover-actions";
-import type { CardEligibility, IneligibleReason } from "@/lib/qr/handovers";
+import type { CardEligibility, IneligibleReason, TransferTotals } from "@/lib/qr/handovers";
 
 /**
  * Mobile-first continuous scanner for physical QR STARR cards (Scan-to-
@@ -100,7 +100,7 @@ export function ScanAssign({ partners, batches, appUrl }: { partners: Partner[];
   const [manual, setManual] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [reviewProblem, setReviewProblem] = useState<Rejected[] | HandoverActionError | null>(null);
-  const [done, setDone] = useState<{ handoverId: string; quantity: number; partnerName: string; duplicate: boolean } | null>(null);
+  const [done, setDone] = useState<{ handoverId: string; quantity: number; partnerName: string; duplicate: boolean; totals: TransferTotals; sourceName: string } | null>(null);
 
   const [camera, setCamera] = useState<CameraState>("idle");
   const [deviceIds, setDeviceIds] = useState<string[]>([]);
@@ -403,7 +403,7 @@ export function ScanAssign({ partners, batches, appUrl }: { partners: Partner[];
       if (!source) return;
       const result = await adminCreateHandoverAction({ idempotencyKey, fromPartnerId: source.holderId, toPartnerId: partnerId, tokens: selected.map((s) => s.token), note: note.trim() || undefined });
       if (result.ok) {
-        setDone({ handoverId: result.handoverId, quantity: result.quantity, partnerName, duplicate: result.duplicate });
+        setDone({ handoverId: result.handoverId, quantity: result.quantity, partnerName, duplicate: result.duplicate, totals: result.totals, sourceName: sourceLabel });
         setPhase("done");
         writeStored(null);
         return;
@@ -470,6 +470,16 @@ export function ScanAssign({ partners, batches, appUrl }: { partners: Partner[];
           <div className="grid size-12 place-items-center rounded-full bg-success-soft text-success"><Check className="size-6" aria-hidden /></div>
           <h2 className="text-h3">{t("done.title")}</h2>
           <p className="text-body-sm text-ink-2" data-testid="handover-done-body">{t("done.body", { partner: done.partnerName, count: done.quantity })}</p>
+          <dl className="grid w-full max-w-sm grid-cols-2 gap-2 text-left" data-testid="handover-done-totals">
+            <div className="rounded-md bg-sunken px-3 py-2">
+              <dt className="text-caption text-ink-3">{t("done.destinationTotal", { partner: done.partnerName })}</dt>
+              <dd className="font-serif text-[1.5rem] leading-tight tabular-nums" data-testid="handover-done-destination">{done.totals.destinationAvailable}</dd>
+            </div>
+            <div className="rounded-md bg-sunken px-3 py-2">
+              <dt className="text-caption text-ink-3">{t("done.sourceTotal", { source: done.sourceName })}</dt>
+              <dd className="font-serif text-[1.5rem] leading-tight tabular-nums" data-testid="handover-done-source">{done.totals.sourceAvailable}</dd>
+            </div>
+          </dl>
           {done.duplicate && <p className="text-caption text-ink-3">{t("done.duplicate")}</p>}
           <div className="mt-2 flex flex-wrap justify-center gap-2">
             <ButtonLink href={`/admin/inventory/handovers/${done.handoverId}`} data-testid="handover-view-link">

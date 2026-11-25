@@ -66,9 +66,10 @@ export const qrCodes = pgTable(
 ).enableRLS();
 
 /**
- * Scan-to-Assign handovers (migrations/0026). An admin scans physical cards
- * from central stock for one partner; the partner confirms receipt, and only
- * then do the cards change owner (app_accept_qr_handover, atomically). All
+ * QR transfers (migrations/0026 + 0027). An admin scans or selects physical
+ * cards and transfers them to a partner; ownership moves at once, atomically,
+ * inside app_admin_transfer_qr_cards() — no partner step (0027). Rows from
+ * the earlier two-step flow keep their statuses for history. All
  * transitions are guarded by DB triggers; see lib/qr/handovers.ts.
  */
 export const qrHandovers = pgTable(
@@ -118,4 +119,28 @@ export const qrHandoverItems = pgTable(
     reserved: boolean("reserved").notNull().default(true),
   },
   (table) => [primaryKey({ columns: [table.handoverId, table.qrCodeId] }), index("qr_handover_items_qr_idx").on(table.qrCodeId)],
+).enableRLS();
+
+/**
+ * A partner's report that the physical count of a completed transfer does not
+ * match (migrations/0027). Support only: it never changes ownership. Written
+ * only by app_report_qr_handover_discrepancy(); read by admins and the
+ * receiving partner.
+ */
+export const qrHandoverReports = pgTable(
+  "qr_handover_reports",
+  {
+    id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+    handoverId: uuid("handover_id")
+      .notNull()
+      .references(() => qrHandovers.id, { onDelete: "restrict" }),
+    partnerId: uuid("partner_id")
+      .notNull()
+      .references(() => partners.id, { onDelete: "restrict" }),
+    reportedBy: uuid("reported_by").notNull(),
+    receivedCount: integer("received_count"),
+    note: text("note").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+  },
+  (table) => [index("qr_handover_reports_handover_idx").on(table.handoverId, table.createdAt)],
 ).enableRLS();

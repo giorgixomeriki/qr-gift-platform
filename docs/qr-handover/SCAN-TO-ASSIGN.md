@@ -1,5 +1,7 @@
 # Admin-only QR Handover (Scan-to-Assign)
 
+> **Superseded in part by 0027** (see [IMMEDIATE-TRANSFER.md](IMMEDIATE-TRANSFER.md)): admin transfers now complete immediately; partners no longer confirm receipt. Scanning, batch pick, eligibility and central-stock rules below still apply.
+
 Two admin-controlled operations, one mechanism (`qr_handovers` + `app_accept_qr_handover`):
 - **Central stock → partner**
 - **Partner → partner** (admin redistribution, e.g. G'N 50 → 40, Nino's +10, global unchanged)

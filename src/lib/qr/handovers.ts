@@ -2,21 +2,22 @@ import "server-only";
 import { and, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import type { Tx } from "@/db/client";
-import { greetings, orders, partners, qrBatches, qrCodes, qrHandoverItems, qrHandovers } from "@/db/schema";
+import { greetings, orders, partners, qrBatches, qrCodes, qrHandoverItems, qrHandoverReports, qrHandovers } from "@/db/schema";
 import { recordAuditLog } from "@/lib/audit";
 import { tokenHint } from "./scan-parse";
 
 /**
- * Scan-to-Assign (migrations/0026). Physical cards printed for QR STARR's
- * central stock are scanned by an admin into a handover for one partner;
- * the partner confirms receipt and only then do the cards change owner.
+ * Scan-to-Assign (migrations/0026 + 0027). An admin scans (or selects)
+ * physical cards and transfers them to one partner. The admin is the sole
+ * authority over inventory: the transfer completes at once, atomically, in
+ * app_admin_transfer_qr_cards() — there is no partner acceptance step.
  *
- *   scan ≠ handover ≠ receipt ≠ sale
+ *   scan ≠ transfer ≠ sale
  *
  * Nothing here touches qr_codes.status, greetings, orders, payments, the
  * partner ledger or analytics. Every rule is re-checked by the database
- * (RLS, triggers, app_accept_qr_handover), so this module is the friendly
- * first layer, not the enforcement boundary.
+ * (RLS, triggers, app_admin_transfer_qr_cards), so this module is the
+ * friendly first layer, not the enforcement boundary.
  */
 
 export class HandoverError extends Error {
@@ -170,21 +171,33 @@ export type CreateHandoverInput = {
 };
 
 export type CreateHandoverResult =
-  | { ok: true; handoverId: string; quantity: number; duplicate: boolean }
+  | { ok: true; handoverId: string; quantity: number; duplicate: boolean; totals: TransferTotals }
   | { ok: false; code: "ineligible"; cards: CardEligibility[] };
 
-function pgCode(err: unknown): string | undefined {
-  const e = err as { code?: string; cause?: { code?: string } };
-  return e?.code ?? e?.cause?.code;
+/** Cards each side holds right after the transfer (any status / AVAILABLE only). */
+export type TransferTotals = { destinationHeld: number; destinationAvailable: number; sourceHeld: number; sourceAvailable: number };
+
+async function transferTotals(tx: Tx, sourceId: string, destinationId: string): Promise<TransferTotals> {
+  const rows = await tx
+    .select({
+      partnerId: qrCodes.partnerId,
+      held: sql<number>`count(*)::int`,
+      available: sql<number>`(count(*) filter (where ${qrCodes.status} = 'AVAILABLE'))::int`,
+    })
+    .from(qrCodes)
+    .where(inArray(qrCodes.partnerId, [sourceId, destinationId]))
+    .groupBy(qrCodes.partnerId);
+  const of = (id: string) => rows.find((r) => r.partnerId === id) ?? { held: 0, available: 0 };
+  return { destinationHeld: of(destinationId).held, destinationAvailable: of(destinationId).available, sourceHeld: of(sourceId).held, sourceAvailable: of(sourceId).available };
 }
 
 /**
- * Admin only (RLS + caller): creates a PENDING handover that reserves exactly
- * these cards, all held by `fromPartnerId` (central stock or a partner), for
- * `toPartnerId`. All-or-nothing: one ineligible card refuses the whole request
- * and nothing is written. A repeat with the same idempotency key returns the
- * first result. Ownership does not change until the receiving partner
- * confirms receipt (app_accept_qr_handover).
+ * Admin only: transfers exactly these cards, all held by `fromPartnerId`
+ * (central stock or a partner), to `toPartnerId` — immediately. The database
+ * function records the handover and moves ownership in one transaction
+ * (status ACCEPTED, resolved by the admin). All-or-nothing: one ineligible
+ * card refuses the whole request and nothing is written. A repeat with the
+ * same idempotency key returns the first result (duplicate: true).
  */
 export async function createHandover(tx: Tx, adminUserId: string, input: CreateHandoverInput): Promise<CreateHandoverResult> {
   const tokens = [...new Set(input.tokens)];
@@ -192,7 +205,8 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
   if (tokens.length > HANDOVER_MAX_CARDS) throw new HandoverError("too_many_cards");
 
   // Same-key submissions (double tap, retry after a dropped response) are
-  // serialized here, so the second one always sees the first one's result.
+  // serialized here (the DB function takes the same lock), so the second one
+  // always sees the first one's result.
   await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`qr_handover:${input.idempotencyKey}`}, 0))`);
   const [previous] = await tx
     .select({ id: qrHandovers.id, quantity: qrHandovers.quantity, toPartnerId: qrHandovers.toPartnerId, fromPartnerId: qrHandovers.fromPartnerId })
@@ -200,8 +214,11 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
     .where(eq(qrHandovers.idempotencyKey, input.idempotencyKey))
     .limit(1);
   if (previous) {
-    if (previous.toPartnerId !== input.toPartnerId || previous.fromPartnerId !== input.fromPartnerId) throw new HandoverError("idempotency_conflict");
-    return { ok: true, handoverId: previous.id, quantity: previous.quantity, duplicate: true };
+    if (previous.toPartnerId !== input.toPartnerId || previous.fromPartnerId !== input.fromPartnerId || previous.quantity !== tokens.length) {
+      throw new HandoverError("idempotency_conflict");
+    }
+    const totals = await transferTotals(tx, previous.fromPartnerId, previous.toPartnerId);
+    return { ok: true, handoverId: previous.id, quantity: previous.quantity, duplicate: true, totals };
   }
 
   if (input.fromPartnerId === input.toPartnerId) throw new HandoverError("same_partner");
@@ -215,63 +232,29 @@ export async function createHandover(tx: Tx, adminUserId: string, input: CreateH
   if (destination.isCentralStock) throw new HandoverError("partner_is_central_stock");
   if (destination.status !== "ACTIVE") throw new HandoverError("partner_inactive");
 
+  // Friendly per-card answer first (locks the rows in id order); the DB
+  // function re-checks every card under the same locks.
   const cards = await evaluateCards(tx, tokens, { lock: true, sourcePartnerId: source.id, destinationPartnerId: destination.id });
   if (cards.some((c) => !c.eligible)) return { ok: false, code: "ineligible", cards };
 
-  const idRows = await tx
-    .select({ id: qrCodes.id, batchId: qrCodes.batchId })
-    .from(qrCodes)
-    .where(inArray(qrCodes.publicToken, tokens));
+  const idRows = await tx.select({ id: qrCodes.id }).from(qrCodes).where(inArray(qrCodes.publicToken, tokens));
+  const ids = idRows.map((r) => r.id);
 
   let handoverId: string;
   try {
-    // A savepoint, so a lost race on the idempotency key or a reservation
-    // leaves the outer transaction usable for the friendly answer below.
-    handoverId = await tx.transaction(async (sp) => {
-      const [created] = await sp
-        .insert(qrHandovers)
-        .values({
-          fromPartnerId: source.id,
-          toPartnerId: destination.id,
-          quantity: idRows.length,
-          idempotencyKey: input.idempotencyKey,
-          note: input.note?.trim() || null,
-          createdBy: adminUserId,
-        })
-        .returning({ id: qrHandovers.id });
-      if (!created) throw new HandoverError("create_failed");
-      await sp.insert(qrHandoverItems).values(idRows.map((r) => ({ handoverId: created.id, qrCodeId: r.id, fromBatchId: r.batchId })));
-      return created.id;
-    });
+    const rows = await tx.execute<{ id: string }>(
+      sql`select app_admin_transfer_qr_cards(${input.idempotencyKey}::uuid, ${source.id}::uuid, ${destination.id}::uuid, ${`{${ids.join(",")}}`}::uuid[], ${input.note?.trim() || null}) as id`,
+    );
+    const id = (rows as unknown as { id: string }[])[0]?.id;
+    if (!id) throw new HandoverError("create_failed");
+    handoverId = id;
   } catch (err) {
-    if (pgCode(err) === "23505") {
-      const [raced] = await tx
-        .select({ id: qrHandovers.id, quantity: qrHandovers.quantity })
-        .from(qrHandovers)
-        .where(eq(qrHandovers.idempotencyKey, input.idempotencyKey))
-        .limit(1);
-      if (raced) return { ok: true, handoverId: raced.id, quantity: raced.quantity, duplicate: true };
-      return { ok: false, code: "ineligible", cards: await evaluateCards(tx, tokens, { sourcePartnerId: source.id, destinationPartnerId: destination.id }) };
-    }
+    const code = dbErrorCode(err);
+    if (code) throw new HandoverError(code);
     throw err;
   }
 
-  await recordAuditLog(tx, {
-    actorType: "ADMIN",
-    actorId: adminUserId,
-    action: "QR_HANDOVER_CREATED",
-    targetType: "qr_handover",
-    targetId: handoverId,
-    metadata: {
-      kind: source.isCentralStock ? "CENTRAL_TO_PARTNER" : "PARTNER_TO_PARTNER",
-      fromPartnerId: source.id,
-      toPartnerId: destination.id,
-      quantity: idRows.length,
-      qrCodeIds: idRows.map((r) => r.id),
-    },
-  });
-
-  return { ok: true, handoverId, quantity: idRows.length, duplicate: false };
+  return { ok: true, handoverId, quantity: ids.length, duplicate: false, totals: await transferTotals(tx, source.id, destination.id) };
 }
 
 /**
@@ -312,14 +295,19 @@ export async function listSelectableBatches(tx: Tx) {
   }));
 }
 
-type AdminTransition = "cancel" | "reopen" | "reject";
-const ADMIN_TRANSITIONS: Record<AdminTransition, { from: "PENDING" | "DISPUTED"; to: "CANCELLED" | "PENDING" | "REJECTED"; action: string }> = {
+/**
+ * Closing a handover left open by the earlier two-step flow (0026). Since
+ * 0027 nothing new can be PENDING or DISPUTED, and "send back for
+ * confirmation" no longer exists; cancel / reject remain so a legacy
+ * handover can be closed explicitly (never auto-accepted).
+ */
+type AdminTransition = "cancel" | "reject";
+const ADMIN_TRANSITIONS: Record<AdminTransition, { from: "PENDING" | "DISPUTED"; to: "CANCELLED" | "REJECTED"; action: string }> = {
   cancel: { from: "PENDING", to: "CANCELLED", action: "QR_HANDOVER_CANCELLED" },
-  reopen: { from: "DISPUTED", to: "PENDING", action: "QR_HANDOVER_REOPENED" },
   reject: { from: "DISPUTED", to: "REJECTED", action: "QR_HANDOVER_REJECTED" },
 };
 
-/** Admin resolution. Cancel / reject release the reservations (DB trigger). Idempotent. */
+/** Admin resolution of a legacy handover. Cancel / reject release the reservations (DB trigger). Idempotent. */
 export async function adminTransitionHandover(tx: Tx, adminUserId: string, handoverId: string, transition: AdminTransition, note?: string) {
   const rule = ADMIN_TRANSITIONS[transition];
   const [current] = await tx.select().from(qrHandovers).where(eq(qrHandovers.id, handoverId)).for("update").limit(1);
@@ -327,15 +315,9 @@ export async function adminTransitionHandover(tx: Tx, adminUserId: string, hando
   if (current.status === rule.to) return current;
   if (current.status !== rule.from) throw new HandoverError("handover_wrong_state");
 
-  const terminal = rule.to !== "PENDING";
   const [updated] = await tx
     .update(qrHandovers)
-    .set({
-      status: rule.to,
-      ...(terminal
-        ? { resolvedAt: new Date(), resolvedBy: adminUserId, resolvedActorType: "ADMIN" as const, resolutionNote: note?.trim() || null }
-        : {}),
-    })
+    .set({ status: rule.to, resolvedAt: new Date(), resolvedBy: adminUserId, resolvedActorType: "ADMIN" as const, resolutionNote: note?.trim() || null })
     .where(eq(qrHandovers.id, handoverId))
     .returning();
 
@@ -350,23 +332,30 @@ export async function adminTransitionHandover(tx: Tx, adminUserId: string, hando
   return updated!;
 }
 
-/** The P0001 code raised by app_accept_qr_handover / app_dispute_qr_handover (the whole PG message), or null. */
+/** The P0001 code raised by the handover functions (the whole PG message), or null. */
 function dbErrorCode(err: unknown): string | null {
   const e = err as { message?: string; cause?: { message?: string } };
   for (const message of [e?.cause?.message, e?.message]) {
-    const m = /^(handover_[a-z_]+(?::\d+)?|partner_inactive|dispute_[a-z_]+)$/.exec(message?.trim() ?? "");
+    const m =
+      /^(handover_[a-z_]+(?::\d+)?|partner_inactive|partner_not_found|partner_is_central_stock|same_partner|idempotency_conflict|no_cards|too_many_cards|report_limit|dispute_[a-z_]+)$/.exec(
+        message?.trim() ?? "",
+      );
     if (m) return m[1]!;
   }
   return null;
 }
 
-/** Partner: confirm receipt (atomic ownership change in the database). */
-export async function partnerAcceptHandover(tx: Tx, handoverId: string): Promise<{ batchId: string }> {
+/**
+ * Partner: report that the physical count of a completed transfer does not
+ * match. Support only — the cards stay where the admin put them; QR STARR
+ * follows up. At most 5 reports per transfer.
+ */
+export async function partnerReportDiscrepancy(tx: Tx, handoverId: string, receivedCount: number | null, note: string): Promise<{ reportId: string }> {
   try {
-    const rows = await tx.execute<{ batch_id: string }>(sql`select app_accept_qr_handover(${handoverId}::uuid) as batch_id`);
-    const batchId = (rows as unknown as { batch_id: string }[])[0]?.batch_id;
-    if (!batchId) throw new HandoverError("accept_failed");
-    return { batchId };
+    const rows = await tx.execute<{ id: string }>(sql`select app_report_qr_handover_discrepancy(${handoverId}::uuid, ${receivedCount}::int, ${note}) as id`);
+    const id = (rows as unknown as { id: string }[])[0]?.id;
+    if (!id) throw new HandoverError("report_failed");
+    return { reportId: id };
   } catch (err) {
     const code = dbErrorCode(err);
     if (code) throw new HandoverError(code);
@@ -374,15 +363,22 @@ export async function partnerAcceptHandover(tx: Tx, handoverId: string): Promise
   }
 }
 
-/** Partner: report a discrepancy (keeps the reservation for the admin). */
-export async function partnerDisputeHandover(tx: Tx, handoverId: string, receivedCount: number | null, note: string) {
-  try {
-    await tx.execute(sql`select app_dispute_qr_handover(${handoverId}::uuid, ${receivedCount}::int, ${note})`);
-  } catch (err) {
-    const code = dbErrorCode(err);
-    if (code) throw new HandoverError(code);
-    throw err;
-  }
+export type HandoverReportRow = { id: string; handoverId: string; receivedCount: number | null; note: string; createdAt: Date };
+
+/** Discrepancy reports, newest first (RLS: admins see all, a partner its own). */
+export async function listHandoverReports(tx: Tx, handoverIds: string[]): Promise<HandoverReportRow[]> {
+  if (handoverIds.length === 0) return [];
+  return tx
+    .select({
+      id: qrHandoverReports.id,
+      handoverId: qrHandoverReports.handoverId,
+      receivedCount: qrHandoverReports.receivedCount,
+      note: qrHandoverReports.note,
+      createdAt: qrHandoverReports.createdAt,
+    })
+    .from(qrHandoverReports)
+    .where(inArray(qrHandoverReports.handoverId, handoverIds))
+    .orderBy(desc(qrHandoverReports.createdAt));
 }
 
 export type HandoverStatus = "PENDING" | "DISPUTED" | "ACCEPTED" | "REJECTED" | "CANCELLED";
@@ -502,8 +498,11 @@ export type PhysicalInventorySummary = {
   draft: number;
   active: number;
   blocked: number;
+  /** Legacy (pre-0027) handovers still open; always 0 once 0027 is applied. */
   pendingHandovers: number;
   disputedHandovers: number;
+  /** Partner count-mismatch reports on completed transfers (support only). */
+  discrepancyReports: number;
 };
 
 export async function getPhysicalInventorySummary(tx: Tx): Promise<PhysicalInventorySummary> {
@@ -539,6 +538,8 @@ export async function getPhysicalInventorySummary(tx: Tx): Promise<PhysicalInven
     })
     .from(qrHandovers);
 
+  const [reports] = await tx.select({ count: sql<number>`count(*)::int` }).from(qrHandoverReports);
+
   const generated = cards?.generated ?? 0;
   const inCentralStock = cards?.inCentral ?? 0;
   const reservedCount = reserved?.count ?? 0;
@@ -556,6 +557,7 @@ export async function getPhysicalInventorySummary(tx: Tx): Promise<PhysicalInven
     blocked: cards?.blocked ?? 0,
     pendingHandovers: open?.pending ?? 0,
     disputedHandovers: open?.disputed ?? 0,
+    discrepancyReports: reports?.count ?? 0,
   };
 }
 

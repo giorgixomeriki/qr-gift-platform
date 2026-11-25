@@ -76,7 +76,7 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
         <Stat label={t("inventory.stats.generated")} value={s.generated} testId="inv-generated" />
         <Stat label={t("inventory.stats.inCentral")} value={s.inCentralStock} testId="inv-central" />
         <Stat label={t("inventory.stats.centralFree")} value={s.centralFree} testId="inv-central-free" />
-        <Stat label={t("inventory.stats.reserved")} value={s.reserved} testId="inv-reserved" />
+        {s.reserved > 0 && <Stat label={t("inventory.stats.reserved")} value={s.reserved} testId="inv-reserved" />}
         <Stat label={t("inventory.stats.received")} value={s.receivedByPartners} testId="inv-received" />
         <Stat label={t("inventory.stats.heldByPartners")} value={s.heldByPartners} testId="inv-held" />
       </StatGroup>
@@ -90,8 +90,10 @@ export default async function AdminInventoryPage({ searchParams }: { searchParam
 
       <StatGroup title={t("inventory.salesTitle")} columns={3}>
         <Stat label={t("inventory.stats.paidSales")} value={data.paidSales} tone="accent" testId="inv-paid-sales" />
-        <Stat label={t("inventory.stats.openHandovers")} value={s.pendingHandovers} testId="inv-open-handovers" />
-        <Stat label={t("inventory.stats.disputed")} value={s.disputedHandovers} testId="inv-disputed" />
+        {/* Legacy two-step handovers (before 0027) only; new transfers are never open. */}
+        {s.pendingHandovers > 0 && <Stat label={t("inventory.stats.openHandovers")} value={s.pendingHandovers} testId="inv-open-handovers" />}
+        {s.disputedHandovers > 0 && <Stat label={t("inventory.stats.disputed")} value={s.disputedHandovers} testId="inv-disputed" />}
+        <Stat label={t("inventory.stats.reports")} value={s.discrepancyReports} testId="inv-reports" />
       </StatGroup>
 
       <Panel title={t("inventory.history.title")} flush testId="handover-history">

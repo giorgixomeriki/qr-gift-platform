@@ -10,7 +10,8 @@ import { completeMfaEnrollment, createThrowawayAdmin, logIn } from "./admin-sess
 import { resolveSecretKey } from "../src/lib/supabase/keys";
 
 /**
- * Scan-to-Assign end to end (migrations/0026) on a production build.
+ * Scan-to-Assign end to end (migrations/0026 + 0027: immediate admin
+ * transfers, no partner acceptance) on a production build.
  *
  * Chromium projects feed the scanner a FAKE CAMERA: a generated Y4M video of
  * real QR codes (Chrome's --use-file-for-fake-video-capture), so the actual
@@ -94,6 +95,7 @@ async function cleanup(f: Fixture) {
   await sql.begin(async (t) => {
     await t`set local session_replication_role = replica`;
     if (ids.length) {
+      await t`delete from qr_handover_reports where handover_id = any(${ids})`;
       await t`delete from qr_handover_items where handover_id = any(${ids})`;
       await t`delete from qr_handovers where id = any(${ids})`;
     }
@@ -132,7 +134,7 @@ const counter = (page: Page) => page.getByTestId("scan-counter");
 
 test.describe.configure({ mode: "serial" });
 
-test("scan → handover → partner confirms receipt (no sale, no commission)", async ({ browser, browserName }, testInfo) => {
+test("scan → admin transfer → partner inventory updates at once (no acceptance, no sale, no commission)", async ({ browser, browserName }, testInfo) => {
   test.setTimeout(300_000);
   const run = `${testInfo.project.name.slice(0, 6)}-${randomUUID().slice(0, 6)}`.toLowerCase();
   const f = await seed(run);
@@ -221,45 +223,60 @@ test("scan → handover → partner confirms receipt (no sale, no commission)", 
     await page.getByTestId("scan-finish").click();
     await expect(page.getByTestId("handover-review-count")).toHaveText("3");
     await page.getByTestId("handover-partner-select").selectOption(f.partnerId);
+    await expect(page.getByTestId("handover-review")).toContainText("პარტნიორის დადასტურება საჭირო არ არის");
     await page.getByTestId("handover-create").click();
+    // One confirmation by the admin completes the transfer.
+    await expect(page.getByTestId("handover-done")).toContainText("QR ბარათები წარმატებით გადაეცა პარტნიორს.");
     await expect(page.getByTestId("handover-done-body")).toContainText(`Solo FLW ${run} — 3 ბარათი`);
+    await expect(page.getByTestId("handover-done-destination")).toHaveText("3");
 
-    const [h] = await sql<{ id: string; status: string; quantity: number }[]>`select id, status, quantity from qr_handovers where to_partner_id = ${f.partnerId}`;
+    const [h] = await sql<{ id: string; status: string; quantity: number; resolved_actor_type: string }[]>`select id, status, quantity, resolved_actor_type from qr_handovers where to_partner_id = ${f.partnerId}`;
     const items = await sql<{ public_token: string }[]>`select q.public_token from qr_handover_items i join qr_codes q on q.id = i.qr_code_id where i.handover_id = ${h!.id}`;
-    expect(h!.status).toBe("PENDING");
+    expect(h).toMatchObject({ status: "ACCEPTED", resolved_actor_type: "ADMIN", quantity: 3 });
     expect(items.map((i) => i.public_token).sort()).toEqual(f.cards.slice(0, 3).sort());
-    expect((await sql`select count(*)::int n from qr_codes where public_token in ${sql(f.cards.slice(0, 3))} and partner_id = ${f.centralId}`)[0]!.n).toBe(3);
+    expect((await sql`select count(*)::int n from qr_codes where public_token in ${sql(f.cards.slice(0, 3))} and partner_id = ${f.partnerId} and status = 'AVAILABLE'`)[0]!.n).toBe(3);
 
     await page.getByTestId("handover-view-link").click();
-    await expect(page.getByTestId("handover-status")).toContainText("ელოდება დადასტურებას");
+    await expect(page.getByTestId("handover-status")).toContainText("გადაცემულია");
     await expect(page.getByTestId("handover-item")).toHaveCount(3);
+    // No legacy cancel/reject actions on a completed transfer.
+    await expect(page.getByTestId("handover-cancel")).toHaveCount(0);
     // The admin screen never shows a full card token.
     for (const t of f.cards.slice(0, 3)) expect(await page.content()).not.toContain(t);
 
-    // Partner confirms receipt.
+    // Partner: the cards are already in the inventory — nothing to accept.
     const partnerCtx = await browser.newContext({ ...testInfo.project.use });
     await partnerCtx.addCookies([{ name: "NEXT_LOCALE", value: "ka", url: APP }]);
     const partnerPage = await partnerCtx.newPage();
     await logIn(partnerPage, "/partner/login", f.email, f.password);
     await partnerPage.waitForURL(/\/partner\/dashboard/);
     const incoming = partnerPage.getByTestId("incoming-handovers");
-    await expect(incoming).toContainText("ახალი QR ბარათების მიღება");
-    await expect(partnerPage.getByTestId("incoming-quantity")).toContainText("3");
-    await noHorizontalScroll(partnerPage);
-    await partnerPage.getByTestId("handover-confirm-open").click();
-    await expect(partnerPage.getByTestId("handover-confirm")).toBeDisabled();
-    await partnerPage.getByTestId("handover-confirm-check").check();
-    await partnerPage.getByTestId("handover-confirm").click();
-    await expect(incoming).toContainText("მიღება დადასტურდა", { timeout: 30_000 });
-    await partnerPage.reload();
+    await expect(partnerPage.getByTestId("handover-notification")).toContainText("QR STARR-ის ადმინისტრაციამ თქვენს მარაგს დაამატა 3 QR ბარათი.");
     await expect(partnerPage.getByTestId("metric-issued").locator("p").nth(1)).toHaveText("3");
     await expect(partnerPage.getByTestId("metric-available").locator("p").nth(1)).toHaveText("3");
-    await expect(partnerPage.getByTestId("handover-recent")).toContainText("მიღებულია");
-    await partnerCtx.close();
+    await expect(partnerPage.getByTestId("handover-recent")).toContainText("გადაცემულია");
+    for (const id of ["handover-confirm-open", "handover-confirm", "handover-confirm-check", "handover-dispute-open"]) {
+      await expect(partnerPage.getByTestId(id)).toHaveCount(0);
+    }
+    await expect(incoming.getByRole("button", { name: /დადასტურ|Confirm|Accept/ })).toHaveCount(0);
+    await noHorizontalScroll(partnerPage);
 
-    const [after] = await sql`select status, resolved_actor_type from qr_handovers where id = ${h!.id}`;
-    expect(after).toMatchObject({ status: "ACCEPTED", resolved_actor_type: "PARTNER" });
-    expect((await sql`select count(*)::int n from qr_codes where public_token in ${sql(f.cards.slice(0, 3))} and partner_id = ${f.partnerId} and status = 'AVAILABLE'`)[0]!.n).toBe(3);
+    // Non-blocking count report: sent to QR STARR, the cards stay.
+    await partnerPage.getByTestId("handover-report-open").click();
+    await partnerPage.getByTestId("handover-report-count").fill("2");
+    await partnerPage.getByTestId("handover-report-note").fill("კონვერტში 2 ბარათი იყო");
+    await partnerPage.getByTestId("handover-report-send").click();
+    await expect(partnerPage.getByTestId("handover-report-sent")).toBeVisible({ timeout: 30_000 });
+    await partnerPage.reload();
+    await expect(partnerPage.getByTestId("metric-issued").locator("p").nth(1)).toHaveText("3");
+    await expect(partnerPage.getByTestId("handover-report-sent")).toBeVisible();
+    await partnerCtx.close();
+    expect((await sql`select status from qr_handovers where id = ${h!.id}`)[0]!.status).toBe("ACCEPTED");
+    expect((await sql`select count(*)::int n from qr_codes where public_token in ${sql(f.cards.slice(0, 3))} and partner_id = ${f.partnerId}`)[0]!.n).toBe(3);
+
+    // Admin sees the report on the transfer page.
+    await page.goto(`/admin/inventory/handovers/${h!.id}`);
+    await expect(page.getByTestId("handover-report")).toContainText("კონვერტში 2 ბარათი იყო");
 
     // Admin sees the same: partner page tiles + inventory history.
     await page.goto(`/admin/partners/${f.partnerId}`);
@@ -310,7 +327,7 @@ test.afterAll(async () => {
   await sql.end();
 });
 
-test("admin-only redistribution: partner → partner via batch pick, receiver confirms", async ({ browser, browserName }, testInfo) => {
+test("admin-only redistribution: partner → partner via batch pick, immediate", async ({ browser, browserName }, testInfo) => {
   test.skip(testInfo.project.name === "android-pixel7", "covered on desktop Chromium and iPhone WebKit");
   test.setTimeout(240_000);
   const run = `p2p-${browserName.slice(0, 3)}-${randomUUID().slice(0, 6)}`;
@@ -348,9 +365,11 @@ test("admin-only redistribution: partner → partner via batch pick, receiver co
     await page.getByTestId("handover-partner-select").selectOption(f.partnerId);
     await page.getByTestId("handover-create").click();
     await expect(page.getByTestId("handover-done-body")).toContainText("3");
+    await expect(page.getByTestId("handover-done-source")).toHaveText("0");
 
-    const [h] = await sql<{ id: string; from_partner_id: string }[]>`select id, from_partner_id from qr_handovers where to_partner_id = ${f.partnerId}`;
+    const [h] = await sql<{ id: string; from_partner_id: string; status: string }[]>`select id, from_partner_id, status from qr_handovers where to_partner_id = ${f.partnerId}`;
     expect(h!.from_partner_id).toBe(src!.id);
+    expect(h!.status).toBe("ACCEPTED");
 
     const pctx = await browser.newContext({ ...testInfo.project.use });
     await pctx.addCookies([{ name: "NEXT_LOCALE", value: "ka", url: APP }]);
@@ -360,10 +379,8 @@ test("admin-only redistribution: partner → partner via batch pick, receiver co
     // The receiver never learns which shop the cards came from.
     await expect(pp.getByTestId("incoming-handovers")).toContainText("QR STARR");
     await expect(pp.locator("body")).not.toContainText(`Source shop ${run}`);
-    await pp.getByTestId("handover-confirm-open").click();
-    await pp.getByTestId("handover-confirm-check").check();
-    await pp.getByTestId("handover-confirm").click();
-    await expect(pp.getByTestId("incoming-handovers")).toContainText("მიღება დადასტურდა", { timeout: 30_000 });
+    await expect(pp.getByTestId("handover-notification")).toContainText("3 QR ბარათი");
+    await expect(pp.getByTestId("metric-available").locator("p").nth(1)).toHaveText("3");
     await pctx.close();
 
     const [counts] = await sql`select (select count(*)::int from qr_codes where partner_id = ${src!.id}) src, (select count(*)::int from qr_codes where partner_id = ${f.partnerId}) dst`;

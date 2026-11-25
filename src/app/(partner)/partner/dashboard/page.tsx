@@ -17,7 +17,7 @@ import { formatMinorAmount } from "@/lib/format/money";
 import { listPartnerMembers, getPartnerById } from "@/lib/partners/service";
 import { listQrBatches, listQrCodesForBatch } from "@/lib/qr/batches";
 import { toInventoryRow } from "@/lib/qr/credential-access";
-import { listPartnerHandovers } from "@/lib/qr/handovers";
+import { listHandoverReports, listPartnerHandovers } from "@/lib/qr/handovers";
 import { formatBusinessDateTime } from "@/lib/format/datetime";
 import { IncomingHandovers } from "@/components/partners/incoming-handovers";
 import { Badge, EmptyState, PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
@@ -83,9 +83,12 @@ export default async function PartnerDashboardPage() {
         qrCodes: (await listQrCodesForBatch(tx, batch.id)).map((qr) => toInventoryRow(qr, "PARTNER")),
       })),
     );
-    // Physical card handovers addressed to this partner (Scan-to-Assign).
+    // Cards QR STARR transferred to this partner (Scan-to-Assign). Read-only:
+    // transfers are completed by the admin; the partner may only report a
+    // count mismatch (non-blocking).
     const handovers = await listPartnerHandovers(tx, ctx.partnerId);
-    return { partner, metrics, members, batchesWithCodes, performance, payouts, handovers, role: ctx.role };
+    const reports = await listHandoverReports(tx, handovers.map((h) => h.id));
+    return { partner, metrics, members, batchesWithCodes, performance, payouts, handovers, reports, role: ctx.role };
   }, activePartnerId);
 
   const canManage = (MANAGE_ROLES as readonly string[]).includes(data.role);
@@ -123,10 +126,12 @@ export default async function PartnerDashboardPage() {
       />
 
       {data.handovers.length > 0 && (() => {
-        const view = (h: (typeof data.handovers)[number]) => ({ id: h.id, quantity: h.quantity, status: h.status, createdAtLabel: formatBusinessDateTime(h.createdAt, locale) });
-        const open = data.handovers.filter((h) => h.status === "PENDING" || h.status === "DISPUTED").map(view);
-        const recent = data.handovers.filter((h) => h.status !== "PENDING" && h.status !== "DISPUTED").slice(0, 5).map(view);
-        return <IncomingHandovers open={open} recent={recent} canReceive={canReceive} />;
+        const reported = new Set(data.reports.map((r) => r.handoverId));
+        const transfers = data.handovers.slice(0, 10).map((h) => {
+          const at = h.resolvedAt ?? h.createdAt;
+          return { id: h.id, quantity: h.quantity, status: h.status, atLabel: formatBusinessDateTime(at, locale), reported: reported.has(h.id) };
+        });
+        return <IncomingHandovers transfers={transfers} canReport={canReceive} />;
       })()}
 
       {/* Hierarchy matches the actual business flow (Phase 4 §14): Distributed
