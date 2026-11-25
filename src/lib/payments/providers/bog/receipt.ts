@@ -42,9 +42,20 @@ export function mapReceipt(receipt: BogReceipt): PaymentVerificationResult {
 
   // A charge's amount is what BOG actually processed. A "completed" receipt
   // without transfer_amount is malformed, so it fails rather than guessing.
-  const charged = status === "SUCCEEDED" ? units.transfer_amount : (units.transfer_amount ?? units.request_amount);
+  // Once a refund exists the charge is history: BOG then reports
+  // transfer_amount as what is left (a full refund shows "0.0"), so the
+  // charge is its request_amount. No path books money from this amount for a
+  // refund-state receipt (refunds settle on refund_amount), and refusing the
+  // receipt here would stall the refund's own completion (callback → 500,
+  // reconciliation → same error).
+  const inRefund = refundStatus !== "NONE";
+  const charged = inRefund
+    ? (units.request_amount ?? units.transfer_amount)
+    : status === "SUCCEEDED"
+      ? units.transfer_amount
+      : (units.transfer_amount ?? units.request_amount);
   if (charged === null || charged === undefined) {
-    if (status === "SUCCEEDED") throw new Error("BOG receipt for a completed payment has no transfer_amount");
+    if (status === "SUCCEEDED" && !inRefund) throw new Error("BOG receipt for a completed payment has no transfer_amount");
   }
   const amountMinor = charged === null || charged === undefined ? 0 : majorToMinor(charged);
 

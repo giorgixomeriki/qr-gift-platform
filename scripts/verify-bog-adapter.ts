@@ -166,6 +166,16 @@ async function main() {
     check("2h. A rejected refund action is reported by id", rejected.refund?.rejectedActionIds.join() === "act-1");
     check("2i. A completed receipt without transfer_amount is refused, not guessed", !!(await rejects(() => mapReceipt(receipt({}, { transfer_amount: null })))));
     check("2j. A completed receipt with a sub-tetri amount is refused", !!(await rejects(() => mapReceipt(receipt({}, { transfer_amount: 10.001 })))));
+    // As BOG documents a full refund: transfer_amount "0.0", refund_amount = charge.
+    const full = mapReceipt(receipt({ order_status: { key: "refunded" } }, { transfer_amount: "0.0", refund_amount: "10.0" }));
+    check("2k. Fully refunded receipt (transfer 0.0): refund COMPLETED 10.00, charge reported as 10.00 (request), never 0",
+      full.refund?.status === "COMPLETED" && full.refund.refundedAmountMinor === 1000 && full.amountMinor === 1000 && full.status === "SUCCEEDED");
+    const noTransfer = await rejects(() => mapReceipt(receipt({ order_status: { key: "refunded" } }, { transfer_amount: null, refund_amount: 10 })));
+    check("2l. A refunded receipt without transfer_amount still maps (refund completion must not stall)", !noTransfer);
+    const partial = mapReceipt(receipt({ order_status: { key: "refunded_partially" } }, { transfer_amount: "6.0", refund_amount: "4.0" }));
+    check("2m. Partially refunded: PARTIAL with 4.00 refunded", partial.refund?.status === "PARTIAL" && partial.refund.refundedAmountMinor === 400);
+    check("2n. A 1.00 GEL charge refunded in full maps to 100 tetri",
+      mapReceipt(receipt({ order_status: { key: "refunded" } }, { request_amount: 1, transfer_amount: "0.0", refund_amount: "1.0" })).refund?.refundedAmountMinor === 100);
   }
 
   console.log("\n--- 3. Callback signature (SHA256withRSA over the raw body) ---");
@@ -301,6 +311,11 @@ async function main() {
     check("8d. No idempotency key or no amount → refused before calling BOG", !!(await rejects(() => p.refundPayment("bog-1", 1000))) && !!(await rejects(() => p.refundPayment("bog-1", undefined, key))) && bog.calls.length === 1);
     const refused = provider(() => ({ status: 400, json: { key: "refund_not_allowed" } }));
     check("8e. A 4xx is a definite refusal → FAILED", (await refused.p.refundPayment("bog-1", 1000, key)).status === "FAILED");
+    let n8 = 0;
+    const flaky = provider(() => (n8++ === 0 ? { status: 503 } : { status: 409, json: { key: "conflict" } }));
+    const flakyErr = await rejects(() => flaky.p.refundPayment("bog-1", 1000, key));
+    check("8g. 5xx then 4xx on the retry → thrown as UNKNOWN (BOG may hold the first attempt), never FAILED",
+      !!flakyErr && (flakyErr as { afterRetry?: boolean }).afterRetry === true && flaky.bog.calls.length === 2);
     const down = provider(() => ({ status: 503 }));
     check("8f. A repeated 5xx is an unknown outcome → thrown (caller keeps it REQUESTED)", !!(await rejects(() => down.p.refundPayment("bog-1", 1000, key))) && down.bog.calls.length === 2 && down.bog.calls[0]!.headers["idempotency-key"] === down.bog.calls[1]!.headers["idempotency-key"]);
   }
@@ -361,7 +376,7 @@ async function main() {
     let r: Awaited<ReturnType<typeof odd.p.refundPayment>> | undefined;
     const l3 = await captureWarn(async () => (r = await odd.p.refundPayment("bog-1", 1000, key)));
     const j3 = parse(l3[0] ?? "");
-    check("10e. An unexpected refund key → FAILED, logged as UNEXPECTED_REFUND_RESPONSE with the key", r?.status === "FAILED" && j3.diagnostic === "UNEXPECTED_REFUND_RESPONSE" && j3.key === "request_queued" && j3.actionIdPresent === true, l3.join("|"));
+    check("10e. An unexpected 2xx refund key → PENDING (unknown, never a final rejection), logged as UNEXPECTED_REFUND_RESPONSE with the key", r?.status === "PENDING" && j3.diagnostic === "UNEXPECTED_REFUND_RESPONSE" && j3.key === "request_queued" && j3.actionIdPresent === true, l3.join("|"));
     check("10f. …without BOG's free-text message, amount, card data or the Idempotency-Key", clean(l3) && !l3.join("").includes(key) && !l3.join("").includes("Refund for"), l3.join("|"));
 
     const no = provider(() => ({ status: 409, json: { key: "refund_not_allowed", message: "x" } }));

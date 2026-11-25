@@ -27,18 +27,27 @@ export const bog = {
   calls: [] as Seen[],
   /** When set, the next refund calls answer with this HTTP status instead. */
   refundFailStatus: null as number | null,
+  /** When set, BOG ACCEPTS the refund (records it) but every answer is lost: the client sees this HTTP status (a timeout after bank-side success). */
+  refundLoseResponseStatus: null as number | null,
+  /** When set, a repeat of an already-accepted Idempotency-Key answers with this status (e.g. 409 while in flight) instead of the original answer. */
+  refundRepeatStatus: null as number | null,
+  /** When true, the next NEW refund is accepted but its one answer is lost (504); the flag then clears itself. */
+  refundLoseFirstAnswer: false,
   /** "503": the receipt answers 503. "drop": the connection is cut with no answer (a timeout, as the client sees it). */
   receiptFailure: null as "503" | "drop" | null,
   /** Override of what the receipt reports as transfer_amount (amount-mismatch case). */
   transferOverride: new Map<string, number>(),
+  /** Receipt lag: an accepted-but-unsettled refund is not yet visible (order shows completed, no actions). */
+  receiptHidesPendingRefund: false,
   seq: 0,
 };
 
 function receiptOf(o: BogOrder) {
+  const hide = bog.receiptHidesPendingRefund && o.status === "refund_requested";
   return {
     order_id: o.id,
     external_order_id: o.externalOrderId,
-    order_status: { key: o.status },
+    order_status: { key: hide ? "completed" : o.status },
     purchase_units: {
       request_amount: o.requestAmount,
       transfer_amount: bog.transferOverride.get(o.id) ?? o.transferAmount,
@@ -46,7 +55,7 @@ function receiptOf(o: BogOrder) {
       currency_code: o.currency,
     },
     payment_detail: { transfer_method: { key: "card" }, transaction_id: `tx-${o.id}`, payer_identifier: "548888xxxxxx1234", card_type: "mc" },
-    actions: o.actions,
+    actions: hide ? [] : o.actions,
   };
 }
 
@@ -105,12 +114,24 @@ export const server = createServer(async (req, res) => {
   if (req.method === "POST" && refundMatch) {
     if (bog.refundFailStatus) return send(res, bog.refundFailStatus, { key: "unavailable" });
     const o = bog.orders.get(decodeURIComponent(refundMatch[1]!));
-    if (!o || o.status !== "completed") return send(res, 400, { key: "refund_not_allowed" });
     const key = headers["idempotency-key"]!;
-    const prior = o.actions.find((a) => a.action_id === `act-${key}`);
+    // BOG: a repeated Idempotency-Key returns the original answer, whatever
+    // the order's state is now (docs: same status code and body).
+    const prior = o?.actions.find((a) => a.action_id === `act-${key}`);
+    if (o && prior) {
+      if (bog.refundLoseResponseStatus) return send(res, bog.refundLoseResponseStatus, { key: "gateway_timeout" });
+      if (bog.refundRepeatStatus) return send(res, bog.refundRepeatStatus, { key: "conflict" });
+      return send(res, 200, { key: "request_received", message: "Refund request received", action_id: `act-${key}` });
+    }
+    if (!o || o.status !== "completed") return send(res, 400, { key: "refund_not_allowed" });
     if (!prior) {
       o.actions.push({ action_id: `act-${key}`, action: "refund", status: "processing", amount: (body as { amount: number }).amount });
       o.status = "refund_requested";
+    }
+    if (bog.refundLoseResponseStatus) return send(res, bog.refundLoseResponseStatus, { key: "gateway_timeout" });
+    if (bog.refundLoseFirstAnswer) {
+      bog.refundLoseFirstAnswer = false;
+      return send(res, 504, { key: "gateway_timeout" });
     }
     return send(res, 200, { key: "request_received", message: "Refund request received", action_id: `act-${key}` });
   }
@@ -131,8 +152,11 @@ export function settleRefund(id: string, outcome: "completed" | "rejected") {
   const a = o.actions.at(-1)!;
   a.status = outcome;
   if (outcome === "completed") {
+    // As BOG documents a full refund: refund_amount = the charge,
+    // transfer_amount drops to 0 (Get Payment Details example, "0.0").
     o.status = "refunded";
     o.refundAmount = o.transferAmount ?? 0;
+    o.transferAmount = 0;
   } else {
     o.status = "completed";
   }
@@ -141,5 +165,6 @@ export function externalRefund(id: string) {
   const o = bog.orders.get(id)!;
   o.status = "refunded";
   o.refundAmount = o.transferAmount ?? 0;
+  o.transferAmount = 0;
   o.actions.push({ action_id: "act-portal", action: "refund", status: "completed", amount: o.refundAmount });
 }

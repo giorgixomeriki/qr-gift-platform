@@ -547,6 +547,125 @@ async function main() {
     check("18i. BOG reporting 0.10 for a 1.00 order → refused (400), nothing paid", mmr.status === 400 && (await orderRow(mm.orderId)).status === "PENDING_PAYMENT");
   }
 
+  console.log("\n--- 19. Refund edge cases (M6 readiness) ---");
+  {
+    const m19 = await newPartner(3000, 100);
+    const qrStatus19 = async (greetingId: string) => (await admin`select q.status from qr_codes q join greetings g on g.qr_code_id = q.id where g.id = ${greetingId}`)[0]!.status as string;
+    const refundCalls = (bogId: string) => bog.calls.filter((c) => c.path === `/payment/refund/${bogId}`);
+    const paidOrder = async () => {
+      const o = await newOrder(m19);
+      complete(o.bogId);
+      await callback(callbackBody(o.bogId));
+      return o;
+    };
+
+    // Concurrent admin clicks: one refund row, one call to BOG.
+    const c = await paidOrder();
+    const results = await Promise.allSettled([0, 1, 2].map(() => refundPaidOrder(adminUserId, c.orderId)));
+    const rowsC = await refundRows(c.orderId);
+    check("19a. Three concurrent refund requests → ONE refund row, ONE call to BOG (one bank refund action), none failed",
+      results.every((r) => r.status === "fulfilled") && rowsC.length === 1 && refundCalls(c.bogId).length === 1,
+      JSON.stringify({ results: results.map((r) => r.status === "fulfilled" ? r.value : String(r.reason)), rows: rowsC.length, calls: refundCalls(c.bogId).length }));
+
+    // BOG accepts the refund but the answer is lost (timeout after bank-side success).
+    const t = await paidOrder();
+    bog.refundLoseResponseStatus = 504;
+    const lost = await attempt(() => refundPaidOrder(adminUserId, t.orderId));
+    bog.refundLoseResponseStatus = null;
+    const rowsT = await refundRows(t.orderId);
+    check("19b. Bank accepted, answer lost → refund REQUESTED (not failed, not done), order still PAID, commission untouched",
+      lost.ok && rowsT.length === 1 && rowsT[0]!.status === "REQUESTED" && (await orderRow(t.orderId)).status === "PAID" && (await ledger(t.orderId)) === "COMMISSION_EARNED:30",
+      JSON.stringify({ lost, rowsT }));
+    const callsT0 = refundCalls(t.bogId).length;
+    const cT = await reconcileOrderRefunds(t.orderId);
+    check("19c. Reconciliation sees BOG's refund_requested and does NOT send a second refund", cT.pending === 1 && refundCalls(t.bogId).length === callsT0, JSON.stringify(cT));
+    settleRefund(t.bogId, "completed");
+    const doneT = await reconcileOrderRefunds(t.orderId);
+    check("19d. …BOG completes it (transfer_amount now 0) → REFUNDED, commission reversed once, no callback needed",
+      doneT.completed === 1 && (await orderRow(t.orderId)).status === "REFUNDED" && (await ledger(t.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+    const cbT = await callback(callbackBody(t.bogId));
+    check("19e. A late refund callback afterwards changes nothing (200, same ledger)", cbT.status === 200 && (await ledger(t.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+    check("19f. After the refund the greeting and QR are kept (not deleted; product rule: stays live)",
+      (await greetingStatus(t.greetingId)) === "ACTIVE" && (await qrStatus19(t.greetingId)) === "ACTIVE");
+    check("19g. A refunded order can't be refunded again (no BOG call)",
+      (await refundPaidOrder(adminUserId, t.orderId)).alreadyRefunded === true && refundCalls(t.bogId).length === callsT0);
+
+    // Accepted, answer lost, and the automatic retry is answered 409 (conflict while in flight).
+    const k = await paidOrder();
+    bog.refundLoseFirstAnswer = true;
+    bog.refundRepeatStatus = 409;
+    const callsK0 = bog.calls.filter((c) => c.path === `/payment/refund/${k.bogId}`).length;
+    const firstTry = await attempt(() => refundPaidOrder(adminUserId, k.orderId));
+    bog.refundLoseFirstAnswer = false;
+    bog.refundRepeatStatus = null;
+    check("19l0. (setup) the client retried the same key after the lost answer", bog.calls.filter((c) => c.path === `/payment/refund/${k.bogId}`).length >= callsK0 + 2);
+    const rowsK = await refundRows(k.orderId);
+    check("19l. Bank accepted, answer lost, retry answered 409 → NOT rejected: kept REQUESTED (the receipt shows refund_requested)",
+      rowsK.length === 1 && rowsK[0]!.status === "REQUESTED" && (await orderRow(k.orderId)).status === "PAID" &&
+      !(await findPaymentAnomalies(adminUserId)).some((a) => a.kind === "REFUND_REJECTED" && a.orderId === k.orderId), JSON.stringify({ firstTry, rowsK }));
+    settleRefund(k.bogId, "completed");
+    await callback(callbackBody(k.bogId));
+    check("19m. …then BOG's callback completes it: REFUNDED, commission reversed once", (await orderRow(k.orderId)).status === "REFUNDED" && (await ledger(k.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+
+    // Worst case: answer lost, retry answered 409, AND the receipt lags (shows no refund yet).
+    const lag = await paidOrder();
+    bog.refundLoseFirstAnswer = true;
+    bog.refundRepeatStatus = 409;
+    bog.receiptHidesPendingRefund = true;
+    const lagTry = await attempt(() => refundPaidOrder(adminUserId, lag.orderId));
+    const lagRows = await refundRows(lag.orderId);
+    check("19o. Lost answer + 409 retry + lagging receipt → still REQUESTED (an uncertain answer is never a final REJECTED)",
+      lagRows.length === 1 && lagRows[0]!.status === "REQUESTED" && (await orderRow(lag.orderId)).status === "PAID", JSON.stringify({ lagTry, lagRows }));
+    bog.refundLoseFirstAnswer = false;
+    bog.refundRepeatStatus = null;
+    bog.receiptHidesPendingRefund = false;
+    const lagCalls0 = bog.calls.filter((c) => c.path === `/payment/refund/${lag.bogId}`).length;
+    const lagRec = await reconcileOrderRefunds(lag.orderId);
+    check("19p. …reconciliation then sees refund_requested and sends nothing new", lagRec.pending === 1 && bog.calls.filter((c) => c.path === `/payment/refund/${lag.bogId}`).length === lagCalls0);
+    settleRefund(lag.bogId, "completed");
+    await reconcileOrderRefunds(lag.orderId);
+    const lagMoney = bog.orders.get(lag.bogId)!.actions.filter((a) => a.action === "refund").length;
+    check("19q. …completes once: REFUNDED, one reversal, and BOG holds exactly ONE refund action for the order",
+      (await orderRow(lag.orderId)).status === "REFUNDED" && (await ledger(lag.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30" && lagMoney === 1);
+
+    // A genuine refusal (bank holds no refund) is still REJECTED.
+    const g = await paidOrder();
+    bog.refundFailStatus = 400;
+    const gr = await attempt(() => refundPaidOrder(adminUserId, g.orderId));
+    bog.refundFailStatus = null;
+    check("19n. A real refusal (no refund at the bank) → REJECTED and listed REFUND_REJECTED",
+      !gr.ok && (await refundRows(g.orderId))[0]!.status === "REJECTED" && (await findPaymentAnomalies(adminUserId)).some((a) => a.kind === "REFUND_REJECTED" && a.orderId === g.orderId));
+
+    // The bank shows a status this integration doesn't know (e.g. a reversal reported differently).
+    const u = await paidOrder();
+    await refundPaidOrder(adminUserId, u.orderId);
+    const callsU0 = refundCalls(u.bogId).length;
+    bog.orders.get(u.bogId)!.status = "reversed_unknown";
+    const cU = await reconcileOrderRefunds(u.orderId);
+    const cbU = await callback(callbackBody(u.bogId));
+    check("19h. Unknown bank status after a refund request: nothing booked, nothing re-sent, refund stays REQUESTED",
+      cU.pending === 1 && cbU.status === 200 && refundCalls(u.bogId).length === callsU0 && (await refundRows(u.orderId))[0]!.status === "REQUESTED" &&
+      (await orderRow(u.orderId)).status === "PAID" && (await ledger(u.orderId)) === "COMMISSION_EARNED:30", JSON.stringify({ cU, cb: cbU.status }));
+    await admin.begin(async (t) => {
+      // Fixture only: pretend the request is 2 h old (the integrity trigger forbids this for real).
+      await t`set local session_replication_role = replica`;
+      await t`update payment_refunds set requested_at = now() - interval '2 hours' where order_id = ${u.orderId}`;
+    });
+    check("19i. …and after 1 h it is listed for a person (REFUND_AWAITING_PROVIDER)",
+      (await findPaymentAnomalies(adminUserId)).some((a) => a.kind === "REFUND_AWAITING_PROVIDER" && a.orderId === u.orderId));
+
+    // Wrong BOG order id: the refund goes only to the charge's own provider id.
+    const w = await paidOrder();
+    const before = bog.calls.length;
+    const refundTotal0 = bog.calls.filter((x) => x.path.startsWith("/payment/refund/")).length;
+    await refundPaidOrder(adminUserId, w.orderId);
+    const sent = bog.calls.slice(before).filter((x) => x.path.startsWith("/payment/refund/"));
+    check("19j. The refund is addressed to exactly this order's BOG id (amount 1)",
+      sent.length === 1 && sent[0]!.path === `/payment/refund/${w.bogId}` && (sent[0]!.body as { amount: number }).amount === 1);
+    check("19k. Refund of an unknown order id is refused before BOG is called",
+      !(await attempt(() => refundPaidOrder(adminUserId, crypto.randomUUID()))).ok && bog.calls.filter((x) => x.path.startsWith("/payment/refund/")).length === refundTotal0 + 1);
+  }
+
   console.log(`\n${passed} passed, ${failed} failed`);
 }
 

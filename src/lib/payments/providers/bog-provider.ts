@@ -212,21 +212,25 @@ export class BOGPaymentProvider implements PaymentProvider {
         refundResponseSchema,
       );
       if (response.key !== "request_received") {
-        // Diagnostic: an answer BOG documents nowhere. Treated as not
-        // accepted (FAILED → REFUND_REJECTED for a person), logged as codes only.
+        // Diagnostic: a 2xx answer BOG documents nowhere. A 2xx is not a
+        // refusal, so it is an UNKNOWN outcome, never a final rejection:
+        // PENDING (the caller keeps it REQUESTED; BOG's receipt decides, and
+        // after 1 h it is listed as REFUND_AWAITING_PROVIDER). Codes only.
         logServerWarning("bogRefund", "UNEXPECTED_REFUND_RESPONSE", {
           bogOrderId: safeDiagnosticCode(providerPaymentId),
           key: safeDiagnosticCode(response.key),
           actionIdPresent: !!response.action_id,
         });
-        return { providerPaymentId, refundedAmountMinor: 0, status: "FAILED" };
+        return { providerPaymentId, refundedAmountMinor: 0, status: "PENDING", providerActionId: response.action_id ?? undefined };
       }
       return { providerPaymentId, refundedAmountMinor: 0, status: "PENDING", providerActionId: response.action_id ?? undefined };
     } catch (err) {
       // A definite refusal (4xx) is FAILED. A network error or 5xx is
       // rethrown: BOG may have received it, so the caller keeps the refund
       // REQUESTED and a retry reuses the same Idempotency-Key.
-      if (err instanceof BogApiError && err.status >= 400 && err.status < 500) {
+      // A 4xx that answered a RETRY (the first attempt's fate unknown) is not
+      // a clean refusal: BOG may hold the first attempt. Unknown → rethrown.
+      if (err instanceof BogApiError && err.status >= 400 && err.status < 500 && !err.afterRetry) {
         logServerWarning("bogRefund", "REFUND_REFUSED", {
           bogOrderId: safeDiagnosticCode(providerPaymentId),
           httpStatus: err.status,

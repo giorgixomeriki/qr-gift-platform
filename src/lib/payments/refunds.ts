@@ -123,6 +123,27 @@ export async function requestChargeRefund(input: {
     return "NOT_SENT";
   }
 
+  // One sender per refund at a time (double click, admin + reconciliation):
+  // the lock lives in a transaction held for the provider call only. Whoever
+  // doesn't get it returns REQUESTED — the request is already on its way, and
+  // a second in-flight call could only earn a conflict answer that must not
+  // be mistaken for a refusal.
+  return withPaymentActivation(orderId, async (lockTx) => {
+    const [{ locked }] = (await lockTx.execute(
+      sql`select pg_try_advisory_xact_lock(hashtextextended(${`refund-send:${refund.id}`}, 0)) as locked`,
+    )) as unknown as [{ locked: boolean }];
+    if (!locked) return "REQUESTED" as const;
+    const [current] = await lockTx.select().from(paymentRefunds).where(eq(paymentRefunds.id, refund.id)).limit(1);
+    if (!current || current.status === "REJECTED") return "REJECTED" as const;
+    if (current.status === "COMPLETED") return "COMPLETED" as const;
+    if (current.providerActionId) return "REQUESTED" as const;
+    return sendRefund(orderId, payment as Payment & { providerPaymentId: string }, current);
+  });
+}
+
+/** The provider call itself (caller holds the per-refund send lock). */
+async function sendRefund(orderId: string, payment: Payment & { providerPaymentId: string }, refund: Refund): Promise<RefundOutcome> {
+  const provider = getPaymentProvider();
   let result;
   try {
     result = await provider.refundPayment(payment.providerPaymentId, payment.amountMinor, idempotencyKeyFor(`refund:${refund.id}`));
@@ -153,6 +174,27 @@ export async function requestChargeRefund(input: {
           .where(and(eq(paymentRefunds.id, refund.id), eq(paymentRefunds.status, "REQUESTED"))),
       );
     }
+    return "REQUESTED";
+  }
+  // A refusal is final only if the bank holds no refund on this charge. A
+  // 4xx can also answer a retry of a request BOG did accept (its first answer
+  // lost in transit, or a conflict while it is in flight); rejecting then
+  // would leave the money returned but the books PAID, and invite a second
+  // refund by hand. The receipt decides.
+  let bankRefund: Awaited<ReturnType<typeof provider.verifyPayment>>["refund"];
+  try {
+    bankRefund = (await provider.verifyPayment(payment.providerPaymentId)).refund;
+  } catch (err) {
+    // Can't tell: keep it REQUESTED; reconciliation asks again.
+    logServerError("requestChargeRefund", err, { orderId, paymentId: payment.id, refusalUnverified: true });
+    return "REQUESTED";
+  }
+  if (bankRefund && (bankRefund.status === "COMPLETED" || bankRefund.status === "PARTIAL") && bankRefund.refundedAmountMinor >= refund.amountMinor) {
+    await completeRefund(refund.id, orderId);
+    return "COMPLETED";
+  }
+  if (bankRefund && bankRefund.status !== "NONE") {
+    logServerError("requestChargeRefund", new Error("Refund call refused but the bank shows a refund in progress: kept REQUESTED"), { orderId, paymentId: payment.id });
     return "REQUESTED";
   }
   await rejectRefund(refund, "PROVIDER_REFUSED", `${result.status} ${result.refundedAmountMinor}`);
