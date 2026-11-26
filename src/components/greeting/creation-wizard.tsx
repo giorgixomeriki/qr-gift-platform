@@ -1,7 +1,7 @@
 "use client";
 
 import type { EventCountdown } from "@/lib/greetings/countdown";
-import type { SpotifyMusic } from "@/lib/music/spotify";
+import type { MusicMeta, MusicRef } from "@/lib/music/link";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
 import { ArrowRight, ChevronLeft, Lock, Pencil, X } from "lucide-react";
@@ -39,8 +39,10 @@ export type WizardInitialState = {
   photos: (ExistingItem | null)[]; // length 3, index = slot
   video: ExistingItem;
   audio: ExistingItem;
-  /** "Our Song": the saved Spotify reference, already re-validated server-side (lib/music/spotify.ts). */
-  music?: SpotifyMusic | null;
+  /** "Our Song": the saved Spotify/YouTube reference, already re-validated server-side (lib/music/link.ts). */
+  music?: MusicRef | null;
+  /** Provider title/artwork for it (null while the provider's metadata flag is off, or on any failure). */
+  musicMeta?: MusicMeta | null;
   /** SPOTIFY_EMBED_ENABLED (server-side); off unless Spotify has approved embedded playback. */
   spotifyEmbed?: boolean;
   priceLabel: string | null;

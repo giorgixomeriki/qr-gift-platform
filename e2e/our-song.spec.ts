@@ -93,10 +93,10 @@ test.describe("Our Song — Spotify link keepsake", () => {
     await page.getByTestId("message-textarea").fill(MESSAGE);
 
     const cases: [string, RegExp][] = [
-      ["https://www.youtube.com/watch?v=dQw4w9WgXcQ", /isn't a Spotify link/],
-      [`https://open.spotify.com.evil.example/track/${TRACK}`, /isn't a Spotify link/],
-      [`javascript:alert(1)//open.spotify.com/track/${TRACK}`, /isn't a Spotify link/],
-      [`https://open.spotify.com/album/${TRACK}`, /Only a song or a playlist/],
+      ["https://www.youtube.com/watch?v=dQw4w9WgXcQ", /isn't a Spotify or YouTube link/],
+      [`https://open.spotify.com.evil.example/track/${TRACK}`, /isn't a Spotify or YouTube link/],
+      [`javascript:alert(1)//open.spotify.com/track/${TRACK}`, /isn't a Spotify or YouTube link/],
+      [`https://open.spotify.com/album/${TRACK}`, /Only one song, a Spotify playlist/],
       ["https://spotify.link/AbCdEf123", /Short links/],
       [`https://open.spotify.com/track/${TRACK}"><img src=x onerror=alert(1)>`, /couldn't read that link/],
     ];

@@ -252,9 +252,9 @@
     "music": {
       "title": "Our song",
       "add": "Add a song",
-      "addHint": "A Spotify song or playlist",
-      "label": "Paste a Spotify link",
-      "hint": "In Spotify: Share → Copy link. One song or one playlist.",
+      "addHint": "A Spotify song or playlist, or a YouTube link",
+      "label": "Paste a Spotify or YouTube link",
+      "hint": "In Spotify or YouTube: Share → Copy link. One song, playlist (Spotify) or video.",
       "save": "Add song",
       "saveReplace": "Use new link",
       "saving": "Saving…",
@@ -266,16 +266,21 @@
       "kindTrack": "Song on Spotify",
       "kindPlaylist": "Playlist on Spotify",
       "error": {
-        "empty": "Paste a Spotify link first.",
-        "tooLong": "That link is too long — copy it again from Spotify.",
-        "notSpotify": "That isn't a Spotify link. Paste a link from open.spotify.com.",
+        "empty": "Paste a Spotify or YouTube link first.",
+        "tooLong": "That link is too long — copy it again from Spotify or YouTube.",
         "shortLink": "Short links (spotify.link) aren't accepted. Open it, then copy the full open.spotify.com link.",
-        "unsupported": "Only a song or a playlist for now — not an album, artist or podcast.",
-        "invalid": "We couldn't read that link. Copy it again from Spotify.",
+        "unsupported": "Only one song, a Spotify playlist or one YouTube video — not an album, artist, channel, podcast or YouTube playlist.",
+        "invalid": "We couldn't read that link. Copy it again from Spotify or YouTube.",
         "save": "Couldn't save. Please try again.",
-        "remove": "Couldn't remove it. Please try again."
+        "remove": "Couldn't remove it. Please try again.",
+        "notSupported": "That isn't a Spotify or YouTube link. Paste a link from open.spotify.com, youtube.com, youtu.be or music.youtube.com."
       },
-      "added": "Added to your greeting"
+      "added": "Added to your greeting",
+      "placeholder": "open.spotify.com/track/… or youtu.be/…",
+      "checkYouTube": "Open in YouTube",
+      "checkYouTubeMusic": "Open in YouTube Music",
+      "kindYouTube": "Video on YouTube",
+      "kindYouTubeMusic": "Song on YouTube Music"
     },
     "timing": {
       "kicker": "Timing",
@@ -378,12 +383,29 @@
       "playlist": "A playlist for you",
       "ledeTrack": "Chosen to be heard with this letter.",
       "ledePlaylist": "Songs chosen to be heard with this letter.",
-      "listen": "Listen on Spotify",
-      "opensSpotify": "opens in Spotify",
+      "listen": {
+        "spotify": "Listen on Spotify",
+        "youtube": "Watch on YouTube",
+        "youtubeMusic": "Listen on YouTube Music"
+      },
       "playHere": "Play here",
       "closePlayer": "Close player",
       "playerTitle": "Spotify player",
-      "note": "Opens in Spotify, which may ask you to sign in. If it won't open, it may no longer be available there."
+      "note": {
+        "spotify": "Opens in Spotify, which may ask you to sign in. If it won't open, it may no longer be available there.",
+        "youtube": "Opens in YouTube. If it won't play, it may no longer be available there.",
+        "youtubeMusic": "Opens in YouTube Music, which may ask you to sign in. If it won't play, it may no longer be available there."
+      },
+      "provider": {
+        "spotify": "Spotify",
+        "youtube": "YouTube",
+        "youtubeMusic": "YouTube Music"
+      },
+      "opensIn": "opens in {provider}",
+      "onProvider": "On {provider}",
+      "fromProvider": "From {provider}",
+      "artworkAlt": "{title} — artwork from {provider}",
+      "unavailable": "{provider} says this may no longer be available. The link is kept, just in case."
     }
   },
   "themes": {

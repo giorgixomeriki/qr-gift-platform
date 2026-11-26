@@ -777,7 +777,7 @@
 }
 
 /* ============================================================ Our Song ("ჩვენი სიმღერა")
-   The sender's Spotify song as a keepsake card: cream stock, a burgundy
+   The sender's Spotify / YouTube song as a keepsake card: cream stock, a burgundy
    record with a gold label, one burgundy action. Fixed house palette (not the
    world's), like the letter: it reads as a card set down in any room. */
 .qs-song {
@@ -815,7 +815,7 @@
   border: 1px solid color-mix(in oklab, var(--qs-gold) 65%, transparent);
   pointer-events: none;
 }
-/* The art is ours, not Spotify's (no cover art may be shown, see our-song.tsx):
+/* Without provider metadata the art is ours, not the provider's (see our-song.tsx):
    a QR STARR record sleeve — burgundy linen, gold-foil frame, the spark — with
    the record half out. A playlist is two sleeves. Sized by --qs-art. */
 .qs-song__art {
@@ -975,6 +975,90 @@
   font-size: 0.875rem;
   line-height: 1.45;
   color: #5d4f47;
+}
+/* Provider metadata (MUSIC_METADATA_* on): the provider's own artwork, title and
+   channel. Artwork rules (Spotify design guide; YouTube branding): shown as
+   served — scaled only, never cropped, filtered, overlaid or animated; 4px
+   corners on phones, 8px on large screens. So, while artwork is shown, the card
+   is not tilted and does not animate in. The box keeps its aspect ratio before
+   the image arrives (no layout shift); a failed image falls back to the sleeve. */
+.qs-song[data-art] .qs-song__card {
+  rotate: none;
+  animation: none;
+}
+.qs-song__cover {
+  display: block;
+  width: 6.5rem;
+  overflow: hidden;
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--qs-ink) 10%, var(--qs-cream));
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 14px 26px -16px rgb(0 0 0 / 0.55);
+}
+.qs-song__cover[data-aspect="square"] {
+  aspect-ratio: 1;
+}
+.qs-song__cover[data-aspect="wide"] {
+  width: 8.5rem;
+  aspect-ratio: 16 / 9;
+}
+.qs-song__cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 240ms ease-out;
+}
+.qs-song[data-art="ready"] .qs-song__cover img {
+  opacity: 1;
+}
+.qs-song[data-variant="beat"] .qs-song__cover {
+  width: min(13rem, 56vw);
+}
+.qs-song[data-variant="beat"] .qs-song__cover[data-aspect="wide"] {
+  width: min(19rem, 72vw);
+}
+@media (min-width: 1024px) {
+  .qs-song__cover {
+    border-radius: 8px;
+  }
+}
+.qs-song__title--song {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+}
+:lang(en) .qs-song__title--song {
+  font-style: normal;
+}
+.qs-song__author {
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  color: #5d4f47;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qs-song__source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.625rem 0 0;
+  color: #5d4f47;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+/* A plain service dot, not a provider logo (official logo assets are a precondition for enabling metadata). */
+.qs-song__source-dot {
+  width: 0.5rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--qs-wine-2);
 }
 .qs-song__actions {
   display: flex;

@@ -17,7 +17,7 @@ import { RevealClosing } from "./reveal-closing";
 import { RevealEnvelope } from "./reveal-envelope";
 import { VoicePlayer } from "./voice-player";
 import { OurSong } from "./our-song";
-import type { SpotifyMusic } from "@/lib/music/spotify";
+import type { MusicMeta, MusicRef } from "@/lib/music/link";
 import type { EventCountdown } from "@/lib/greetings/countdown";
 import { EventCountdownCard } from "@/components/countdown/event-countdown";
 import "./reveal.css";
@@ -30,8 +30,10 @@ export type GreetingRenderContent = {
   video: { url: string } | null;
   /** `refresh` re-signs the voice URL (signed URLs expire; the voice beat may come much later). */
   audio: { url: string; refresh?: () => Promise<string | null> } | null;
-  /** "Our Song": a validated Spotify reference (lib/music/spotify.ts). Optional: older callers and greetings have none. */
-  music?: SpotifyMusic | null;
+  /** "Our Song": a validated Spotify/YouTube reference (lib/music/link.ts). Optional: older callers and greetings have none. */
+  music?: MusicRef | null;
+  /** Provider title/artwork for the song, fetched server-side per view (lib/music/metadata.ts); null = show our own sleeve. */
+  musicMeta?: MusicMeta | null;
   /** Celebration Countdown (lib/greetings/countdown.ts): a countdown to another day, its own beat before the ending. */
   countdown?: EventCountdown | null;
 };
@@ -378,7 +380,7 @@ export function GreetingRenderer({
 
         {beat.kind === "music" && content.music && (
           <div key="music" className="reveal__music reveal-enter">
-            <OurSong music={content.music} embedAllowed={spotifyEmbed} variant="beat" />
+            <OurSong music={content.music} meta={content.musicMeta} embedAllowed={spotifyEmbed} variant="beat" />
           </div>
         )}
 

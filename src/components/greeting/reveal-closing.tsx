@@ -96,7 +96,7 @@ export const RevealClosing = forwardRef<
               </p>
             </div>
           )}
-          {content.music && <OurSong music={content.music} embedAllowed={spotifyEmbed} variant="keepsake" num={num()} />}
+          {content.music && <OurSong music={content.music} meta={content.musicMeta} embedAllowed={spotifyEmbed} variant="keepsake" num={num()} />}
         </div>
       )}
 

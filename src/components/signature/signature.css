@@ -1637,3 +1637,14 @@ button.sigf-add__btn:focus-visible {
     rotate: -200deg;
   }
 }
+
+/* "Our song" saved row: the provider's title, while that provider's metadata flag is on. */
+.sigf-music__song {
+  display: block;
+  overflow: hidden;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.8;
+}

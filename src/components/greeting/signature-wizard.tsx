@@ -67,6 +67,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
   const savedMessageRef = useRef(initial.message);
   const media = useMediaUploads(initial.greetingId, initial);
   const [music, setMusic] = useState(initial.music ?? null);
+  const [musicMeta, setMusicMeta] = useState(initial.musicMeta ?? null);
   const [schedule, setSchedule] = useState(initial.schedule ?? null);
   const [countdown, setCountdown] = useState(initial.countdown ?? null);
   /** Desktop studio: the live world beside the letter (never mounted on phones). */
@@ -160,7 +161,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
     [media, goToStep],
   );
 
-  const content: GreetingRenderContent = { message: message.trim() || null, ...media.content, music, countdown };
+  const content: GreetingRenderContent = { message: message.trim() || null, ...media.content, music, musicMeta, countdown };
 
   if (step === "checkout") {
     return (
@@ -240,7 +241,11 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
                   onContinue={() => void continueFromCreate()}
                   greetingId={initial.greetingId}
                   music={music}
-                  onMusicChange={setMusic}
+                  musicMeta={musicMeta}
+                  onMusicChange={(next, meta) => {
+                    setMusic(next);
+                    setMusicMeta(meta);
+                  }}
                   schedule={schedule}
                   onScheduleChange={setSchedule}
                   countdown={countdown}

@@ -22,6 +22,7 @@ const { startGreeting } = require("../src/lib/greetings/start") as typeof import
 const content = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
 const { loadActiveGreetingForRecipient } = require("../src/lib/greetings/recipient") as typeof import("../src/lib/greetings/recipient");
 const { parseStoredMusic } = require("../src/lib/music/spotify") as typeof import("../src/lib/music/spotify");
+const link = require("../src/lib/music/link") as typeof import("../src/lib/music/link");
 
 const TRACK = "4uLU6hMCjMI75M1A2tKUQC";
 const LIST = "37i9dQZF1DXcBWIGoYBM5M";
@@ -82,6 +83,24 @@ async function main() {
     await Promise.all(Array.from({ length: 6 }, (_, i) => content.setGreetingMusic(g, tok, i % 2 ? `spotify:track:${TRACK}` : `spotify:playlist:${LIST}`)));
     r = await rows();
     check("6 concurrent saves still leave exactly one row", r.length === 1, JSON.stringify(r));
+
+    console.log("\n--- YouTube / YouTube Music (same row, no migration) ---");
+    const VID = "dQw4w9WgXcQ";
+    await content.setGreetingMusic(g, tok, `https://youtu.be/${VID}?si=tracking`);
+    r = await rows();
+    check("youtu.be stored canonical", r.length === 1 && r[0]!.text_value === `youtube:video:${VID}`, JSON.stringify(r));
+    await content.setGreetingMusic(g, tok, `https://music.youtube.com/watch?v=${VID}&si=x&list=RDAMVM${VID}`);
+    r = await rows();
+    check("YouTube Music replaces, one row", r.length === 1 && r[0]!.text_value === `youtube:music:${VID}`, JSON.stringify(r));
+    check("reads back as YouTube Music", JSON.stringify(link.parseStoredMusic(r[0]!.text_value)) === JSON.stringify({ provider: "youtube", kind: "music", id: VID }));
+    check("pre-YouTube reader sees no music (rollback-safe)", parseStoredMusic(r[0]!.text_value) === null);
+    for (const bad of [`https://www.youtube.com/playlist?list=PL123`, `https://www.youtube.com.evil.example/watch?v=${VID}`, `https://youtu.be/${VID}"><script>`]) {
+      check(`rejects ${bad.slice(0, 50)}`, await rejects(() => content.setGreetingMusic(g, tok, bad), content.MusicLinkError));
+    }
+    r = await rows();
+    check("rejected links leave the saved one", r.length === 1 && r[0]!.text_value === `youtube:music:${VID}`);
+    await content.setGreetingMusic(g, tok, `https://www.youtube.com/shorts/${VID}`);
+    check("Shorts stored as video", (await rows())[0]!.text_value === `youtube:video:${VID}`);
 
     console.log("\n--- coexistence with other content ---");
     await content.setGreetingMusic(g, tok, `spotify:track:${TRACK}`);

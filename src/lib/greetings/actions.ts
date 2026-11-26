@@ -22,7 +22,8 @@ import {
   removeGreetingCountdown,
 } from "./content";
 import type { CountdownInput, EventCountdown } from "./countdown";
-import type { SpotifyMusic, SpotifyParseError } from "@/lib/music/spotify";
+import type { MusicMeta, MusicParseError, MusicRef } from "@/lib/music/link";
+import { getMusicMetadata } from "@/lib/music/metadata";
 import { getEditToken } from "./edit-token-cookie";
 import { editTokenCookieName, EDIT_TOKEN_COOKIE_OPTIONS } from "@/lib/security/edit-token";
 import type { SupportedContentType } from "@/lib/validation/content-types";
@@ -147,12 +148,13 @@ export async function refreshDraftVoiceUrlAction(greetingId: string): Promise<Ac
 export async function setMusicAction(
   greetingId: string,
   link: string,
-): Promise<{ ok: true; data: SpotifyMusic } | { ok: false; error: string; code?: SpotifyParseError }> {
+): Promise<{ ok: true; data: MusicRef; meta?: MusicMeta | null } | { ok: false; error: string; code?: MusicParseError }> {
   try {
     await enforceRateLimit({ key: `greeting-music:${greetingId}`, limit: 20, windowSeconds: 60 });
     const token = await getEditToken(greetingId);
     const music = await setGreetingMusic(greetingId, token, typeof link === "string" ? link : "");
-    return { ok: true, data: music };
+    // Saved first; the card's title/artwork (only while that provider's metadata flag is on) is best-effort.
+    return { ok: true, data: music, meta: await getMusicMetadata(music) };
   } catch (err) {
     if (err instanceof MusicLinkError) return { ok: false, error: err.message, code: err.code };
     return errorResult("setMusicAction", err, { greetingId });

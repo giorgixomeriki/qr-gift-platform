@@ -252,9 +252,9 @@
     "music": {
       "title": "ჩვენი სიმღერა",
       "add": "სიმღერის დამატება",
-      "addHint": "Spotify-ის სიმღერა ან ფლეილისტი",
-      "label": "ჩასვი Spotify-ის ბმული",
-      "hint": "Spotify-ში: გაზიარება → ბმულის კოპირება. ერთი სიმღერა ან ერთი ფლეილისტი.",
+      "addHint": "Spotify-ის სიმღერა ან ფლეილისტი, ან YouTube-ის ბმული",
+      "label": "ჩასვი Spotify-ის ან YouTube-ის ბმული",
+      "hint": "Spotify-ში ან YouTube-ზე: გაზიარება → ბმულის კოპირება. ერთი სიმღერა, ფლეილისტი (Spotify) ან ვიდეო.",
       "save": "სიმღერის დამატება",
       "saveReplace": "ახალი ბმულის შენახვა",
       "saving": "ინახება…",
@@ -266,16 +266,21 @@
       "kindTrack": "სიმღერა Spotify-ზე",
       "kindPlaylist": "ფლეილისტი Spotify-ზე",
       "error": {
-        "empty": "ჯერ ჩასვი Spotify-ის ბმული.",
-        "tooLong": "ბმული ზედმეტად გრძელია — დააკოპირე ხელახლა Spotify-დან.",
-        "notSpotify": "ეს Spotify-ის ბმული არ არის. ჩასვი ბმული open.spotify.com-დან.",
+        "empty": "ჯერ ჩასვი Spotify-ის ან YouTube-ის ბმული.",
+        "tooLong": "ბმული ზედმეტად გრძელია — დააკოპირე ხელახლა Spotify-დან ან YouTube-დან.",
         "shortLink": "მოკლე ბმულები (spotify.link) არ მიიღება. გახსენი და დააკოპირე სრული open.spotify.com ბმული.",
-        "unsupported": "ამჟამად მხოლოდ სიმღერა ან ფლეილისტი — არა ალბომი, შემსრულებელი ან პოდკასტი.",
-        "invalid": "ბმული ვერ წავიკითხეთ. დააკოპირე ხელახლა Spotify-დან.",
+        "unsupported": "მხოლოდ ერთი სიმღერა, Spotify-ის ფლეილისტი ან ერთი YouTube ვიდეო — არა ალბომი, შემსრულებელი, არხი, პოდკასტი ან YouTube-ის ფლეილისტი.",
+        "invalid": "ბმული ვერ წავიკითხეთ. დააკოპირე ხელახლა Spotify-დან ან YouTube-დან.",
         "save": "ვერ შევინახეთ. სცადე ხელახლა.",
-        "remove": "ვერ წავშალეთ. სცადე ხელახლა."
+        "remove": "ვერ წავშალეთ. სცადე ხელახლა.",
+        "notSupported": "ეს არც Spotify-ის და არც YouTube-ის ბმულია. ჩასვი ბმული open.spotify.com, youtube.com, youtu.be ან music.youtube.com-დან."
       },
-      "added": "დაემატა შენს მილოცვას"
+      "added": "დაემატა შენს მილოცვას",
+      "placeholder": "open.spotify.com/track/… ან youtu.be/…",
+      "checkYouTube": "YouTube-ზე გახსნა",
+      "checkYouTubeMusic": "YouTube Music-ში გახსნა",
+      "kindYouTube": "ვიდეო YouTube-ზე",
+      "kindYouTubeMusic": "სიმღერა YouTube Music-ზე"
     },
     "timing": {
       "kicker": "დრო",
@@ -378,12 +383,29 @@
       "playlist": "ფლეილისტი შენთვის",
       "ledeTrack": "შერჩეულია ამ წერილთან ერთად მოსასმენად.",
       "ledePlaylist": "სიმღერები, შერჩეული ამ წერილთან ერთად მოსასმენად.",
-      "listen": "მოუსმინე Spotify-ზე",
-      "opensSpotify": "იხსნება Spotify-ში",
+      "listen": {
+        "spotify": "მოუსმინე Spotify-ზე",
+        "youtube": "უყურე YouTube-ზე",
+        "youtubeMusic": "მოუსმინე YouTube Music-ზე"
+      },
       "playHere": "აქვე მოსმენა",
       "closePlayer": "პლეერის დახურვა",
       "playerTitle": "Spotify-ის პლეერი",
-      "note": "იხსნება Spotify-ში, რომელმაც შესაძლოა შესვლა მოგთხოვოს. თუ არ გაიხსნა, შესაძლოა იქ აღარ იყოს ხელმისაწვდომი."
+      "note": {
+        "spotify": "იხსნება Spotify-ში, რომელმაც შესაძლოა შესვლა მოგთხოვოს. თუ არ გაიხსნა, შესაძლოა იქ აღარ იყოს ხელმისაწვდომი.",
+        "youtube": "იხსნება YouTube-ზე. თუ არ ჩაირთო, შესაძლოა იქ აღარ იყოს ხელმისაწვდომი.",
+        "youtubeMusic": "იხსნება YouTube Music-ში, რომელმაც შესაძლოა შესვლა მოგთხოვოს. თუ არ ჩაირთო, შესაძლოა იქ აღარ იყოს ხელმისაწვდომი."
+      },
+      "provider": {
+        "spotify": "Spotify",
+        "youtube": "YouTube",
+        "youtubeMusic": "YouTube Music"
+      },
+      "opensIn": "იხსნება {provider}-ში",
+      "onProvider": "{provider}-ზე",
+      "fromProvider": "წყარო: {provider}",
+      "artworkAlt": "{title} — გარეკანი {provider}-დან",
+      "unavailable": "{provider}-ის მიხედვით, ეს შესაძლოა აღარ იყოს ხელმისაწვდომი. ბმული მაინც შენახულია."
     }
   },
   "themes": {

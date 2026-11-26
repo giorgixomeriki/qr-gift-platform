@@ -4,20 +4,22 @@ import { useEffect, useId, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ErrorIcon, RemoveIcon, SuccessIcon } from "@/components/customer/icons";
 import { removeMusicAction, setMusicAction } from "@/lib/greetings/actions";
-import { MUSIC_INPUT_MAX, parseSpotifyInput, spotifyOpenUrl, type SpotifyMusic, type SpotifyParseError } from "@/lib/music/spotify";
+import { MUSIC_INPUT_MAX, musicOpenUrl, musicService, parseMusicInput, type MusicMeta, type MusicParseError, type MusicRef } from "@/lib/music/link";
 
-type FieldError = SpotifyParseError | "save" | "remove";
+type FieldError = MusicParseError | "save" | "remove";
 
 /**
- * "Our song" on the Create screen: paste a Spotify track or playlist link.
+ * "Our song" on the Create screen: paste a Spotify track/playlist link or a
+ * YouTube / YouTube Music video link.
  * Saved to the draft at once (like an upload, not on Continue), so it
  * survives navigation, reloads and the message's own autosave — which never
  * touches it. One per greeting: adding again replaces it.
  *
  * The link is checked as it is typed (same parser as the server, which
- * checks again and stores only the canonical reference). No Spotify account,
- * no fetch to Spotify: the saved row shows the kind and an "Open in Spotify"
- * link so the sender can check it's the right one.
+ * checks again and stores only the canonical reference). No account needed.
+ * The saved row names the kind and service and links to it ("Open in
+ * Spotify/YouTube") so the sender can check it's the right one; while that
+ * provider's metadata flag is on it also shows the provider's title.
  */
 /**
  * Scrolls so `el` sits inside what the sender can actually see: above the
@@ -41,12 +43,14 @@ function keepInView(el: HTMLElement | null) {
 export function SignatureMusicField({
   greetingId,
   music,
+  meta = null,
   onChange,
   onEditingChange,
 }: {
   greetingId: string;
-  music: SpotifyMusic | null;
-  onChange: (music: SpotifyMusic | null) => void;
+  music: MusicRef | null;
+  meta?: MusicMeta | null;
+  onChange: (music: MusicRef | null, meta: MusicMeta | null) => void;
   /** The form is open: Create moves its Continue dock out of the way so it can't cover the form or catch its taps. */
   onEditingChange?: (editing: boolean) => void;
 }) {
@@ -106,7 +110,7 @@ export function SignatureMusicField({
   }
 
   async function save() {
-    const parsed = parseSpotifyInput(value);
+    const parsed = parseMusicInput(value);
     if (!parsed.ok) return setError(parsed.error);
     setBusy(true);
     setError(null);
@@ -114,7 +118,7 @@ export function SignatureMusicField({
     setBusy(false);
     if (!res) return setError("save");
     if (!res.ok) return setError(res.code ?? "save");
-    onChange(res.data);
+    onChange(res.data, res.meta ?? null);
     setJustSaved(true);
     close();
   }
@@ -126,11 +130,13 @@ export function SignatureMusicField({
     setBusy(false);
     if (!res?.ok) return setError("remove");
     setJustSaved(false);
-    onChange(null);
+    onChange(null, null);
     window.setTimeout(() => addRef.current?.focus({ preventScroll: true }), 0);
   }
 
-  const kindLabel = music ? (music.kind === "playlist" ? t("kindPlaylist") : t("kindTrack")) : "";
+  const service = music ? musicService(music) : null;
+  const kindLabel = !music ? "" : music.kind === "playlist" ? t("kindPlaylist") : music.provider === "youtube" ? t(service === "youtubeMusic" ? "kindYouTubeMusic" : "kindYouTube") : t("kindTrack");
+  const savedTitle = meta?.status === "ok" ? meta.title : null;
 
   return (
     <section className="sigf-music" aria-labelledby={`${inputId}-title`} data-testid="music-field">
@@ -150,20 +156,27 @@ export function SignatureMusicField({
           data-just-saved={justSaved || undefined}
           data-testid="music-saved"
           data-kind={music.kind}
-          data-spotify-id={music.id}
+          data-provider={music.provider}
+          data-music-id={music.id}
+          data-spotify-id={music.provider === "spotify" ? music.id : undefined}
         >
           <span className="sigf-row__thumb sigf-music__thumb" aria-hidden>
             <span />
           </span>
           <span className="sigf-row__body">
             <b className="sigf-row__name">{kindLabel}</b>
+            {savedTitle && (
+              <span className="sigf-music__song" data-testid="music-saved-title">
+                {savedTitle}
+              </span>
+            )}
             <span className="sigf-row__status sigf-music__status" role="status" data-testid="music-confirm">
               <SuccessIcon size={13} weight="fill" aria-hidden />
               {justSaved ? t("added") : t("saved")}
             </span>
             <span className="sigf-music__links">
-              <a href={spotifyOpenUrl(music)} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" data-testid="music-check">
-                {t("check")}
+              <a href={musicOpenUrl(music)} target="_blank" rel="noopener noreferrer" referrerPolicy="no-referrer" data-testid="music-check">
+                {t(service === "spotify" ? "check" : service === "youtubeMusic" ? "checkYouTubeMusic" : "checkYouTube")}
               </a>
               <button type="button" onClick={() => setEditing(true)} disabled={busy} data-testid="music-replace">
                 {t("replace")}
@@ -213,7 +226,7 @@ export function SignatureMusicField({
             spellCheck={false}
             maxLength={MUSIC_INPUT_MAX}
             enterKeyHint="done"
-            placeholder="https://open.spotify.com/track/…"
+            placeholder={t("placeholder")}
             value={value}
             onChange={(e) => {
               setValue(e.target.value);

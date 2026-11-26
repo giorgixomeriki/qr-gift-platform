@@ -27,7 +27,9 @@
  */
 export const MAP_TILE_ORIGIN = "https://tiles.openfreemap.org";
 
-export function buildContentSecurityPolicy(nonce: string, supabaseUrl: string, opts: { spotifyEmbed?: boolean } = {}): string {
+export function buildContentSecurityPolicy(nonce: string, supabaseUrl: string, opts: { spotifyEmbed?: boolean; musicArtOrigins?: readonly string[] } = {}): string {
+  // "Our Song" artwork (lib/music/metadata.ts): provider image hosts, only while that provider's metadata flag is on.
+  const art = opts.musicArtOrigins?.length ? ` ${opts.musicArtOrigins.join(" ")}` : "";
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -35,7 +37,7 @@ export function buildContentSecurityPolicy(nonce: string, supabaseUrl: string, o
     "object-src 'none'",
     `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
     "style-src 'self' 'unsafe-inline'",
-    `img-src 'self' data: blob: ${supabaseUrl}`,
+    `img-src 'self' data: blob: ${supabaseUrl}${art}`,
     `media-src 'self' blob: ${supabaseUrl}`,
     `connect-src 'self' ${supabaseUrl} ${MAP_TILE_ORIGIN}`,
     "worker-src 'self' blob:",

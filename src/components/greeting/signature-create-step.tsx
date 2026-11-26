@@ -13,7 +13,7 @@ import { SLOT_LIMITS, type MediaItem, type MediaKind, type MediaUploads } from "
 import { SignatureVoiceCapture } from "./signature-voice-capture";
 import { SignatureMusicField } from "./signature-music-field";
 import { SignatureTimingField } from "./signature-timing-field";
-import type { SpotifyMusic } from "@/lib/music/spotify";
+import type { MusicMeta, MusicRef } from "@/lib/music/link";
 import type { EventCountdown } from "@/lib/greetings/countdown";
 
 const KINDS = ["photo", "video", "audio"] as const;
@@ -47,6 +47,7 @@ export function SignatureCreateStep({
   onContinue,
   greetingId,
   music,
+  musicMeta = null,
   onMusicChange,
   schedule,
   onScheduleChange,
@@ -65,8 +66,9 @@ export function SignatureCreateStep({
   onContinue: () => void;
   greetingId: string;
   /** "Our song": saved independently of the message and media (signature-music-field.tsx). */
-  music: SpotifyMusic | null;
-  onMusicChange: (music: SpotifyMusic | null) => void;
+  music: MusicRef | null;
+  musicMeta?: MusicMeta | null;
+  onMusicChange: (music: MusicRef | null, meta: MusicMeta | null) => void;
   /** Scheduled Reveal + Celebration Countdown (signature-timing-field.tsx), saved independently like the song. */
   schedule: { unlockAt: string; timeZone: string } | null;
   onScheduleChange: (s: { unlockAt: string; timeZone: string } | null) => void;
@@ -311,7 +313,7 @@ export function SignatureCreateStep({
         )}
       </section>
 
-      <SignatureMusicField greetingId={greetingId} music={music} onChange={onMusicChange} onEditingChange={setMusicEditing} />
+      <SignatureMusicField greetingId={greetingId} music={music} meta={musicMeta} onChange={onMusicChange} onEditingChange={setMusicEditing} />
 
       <SignatureTimingField
         greetingId={greetingId}

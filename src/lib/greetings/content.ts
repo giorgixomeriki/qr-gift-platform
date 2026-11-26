@@ -10,15 +10,15 @@ import { validateMediaUpload, allowedMimeTypesFor, MEDIA_SLOT_LIMITS, type Suppo
 import { buildStorageKey, createSignedUploadUrl, createSignedReadUrl, deleteStorageObject } from "@/lib/storage/media";
 import { verifyUploadedContentMatchesMime, ContentVerificationError } from "@/lib/storage/verify-upload";
 import { recordAnalyticsEvent } from "@/lib/analytics";
-import { parseSpotifyInput, toSpotifyUri, type SpotifyMusic, type SpotifyParseError } from "@/lib/music/spotify";
+import { parseMusicInput, toStoredMusic, type MusicParseError, type MusicRef } from "@/lib/music/link";
 import { checkCountdownInstant, checkUnlockInstant, isValidTimeZone, zonedWallTimeToUtc, type ScheduleError } from "./schedule";
 import { countdownInputSchema, parseStoredCountdown, serializeCountdown, type CountdownInput, type EventCountdown } from "./countdown";
 
 export { InvalidEditTokenError };
 export class ContentActionError extends Error {}
-/** A rejected Spotify link; `code` is mapped to localized copy by the client (never the raw input). */
+/** A rejected music link; `code` is mapped to localized copy by the client (never the raw input). */
 export class MusicLinkError extends ContentActionError {
-  constructor(readonly code: SpotifyParseError) {
+  constructor(readonly code: MusicParseError) {
     super(`Invalid music link: ${code}`);
   }
 }
@@ -138,18 +138,19 @@ export async function updateGreetingMessage(greetingId: string, editToken: strin
 }
 
 /**
- * "Our Song": attach (or replace) the greeting's one Spotify track/playlist.
- * Same shape as the message: one greeting_content row (type "music", slot 0,
- * status READY) whose text_value is the canonical `spotify:<kind>:<id>` —
+ * "Our Song": attach (or replace) the greeting's one Spotify track/playlist or
+ * YouTube video. Same shape as the message: one greeting_content row (type
+ * "music", slot 0, status READY) whose text_value is the canonical
+ * `spotify:<kind>:<id>` / `youtube:<kind>:<id>` (lib/music/link.ts) —
  * never the sender's raw input. Serialized per greeting so two quick saves
  * can never leave two music rows. Other content rows are never touched, so
  * editing the message/media can't drop the song and vice versa.
  */
-export async function setGreetingMusic(greetingId: string, editToken: string, rawLink: string): Promise<SpotifyMusic> {
+export async function setGreetingMusic(greetingId: string, editToken: string, rawLink: string): Promise<MusicRef> {
   await verifyGreetingEditAccess(greetingId, editToken);
-  const parsed = parseSpotifyInput(rawLink);
+  const parsed = parseMusicInput(rawLink);
   if (!parsed.ok) throw new MusicLinkError(parsed.error);
-  const uri = toSpotifyUri(parsed.music);
+  const uri = toStoredMusic(parsed.music);
 
   await withEditableGreeting(greetingId, async (tx) => {
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-music:${greetingId}`}))`);

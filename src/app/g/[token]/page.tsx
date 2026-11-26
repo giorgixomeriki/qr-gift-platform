@@ -15,7 +15,8 @@ import { CreationWizard, RecipientView, ScheduledReveal, SenderEntry, SignatureW
 import { signatureUiEnabled } from "@/components/signature/flag";
 import { getMerchantInfo } from "@/lib/merchant/server";
 import { checkoutSeller } from "@/lib/merchant/info";
-import { parseStoredMusic } from "@/lib/music/spotify";
+import { parseStoredMusic } from "@/lib/music/link";
+import { getMusicMetadata } from "@/lib/music/metadata";
 import { spotifyEmbedEnabled } from "@/lib/music/flag";
 import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder, SuspendedPlaceholder } from "@/components/qr/placeholders";
 
@@ -104,6 +105,7 @@ export default async function QrEntryPage({
         const textRow = draft.content.find((c) => c.type === "text");
         const musicRow = draft.content.find((c) => c.type === "music" && c.status === "READY");
         const countdownRow = draft.content.find((c) => c.type === "countdown" && c.status === "READY");
+        const music = parseStoredMusic(musicRow?.textValue);
 
         // A message is required before preview/checkout. The server refuses
         // to create an order without one anyway (lib/payments/eligibility.ts);
@@ -120,7 +122,9 @@ export default async function QrEntryPage({
           photos: photoBySlot,
           video: videoRow ? { contentId: videoRow.id, url: videoRow.signedUrl! } : null,
           audio: audioRow ? { contentId: audioRow.id, url: audioRow.signedUrl! } : null,
-          music: parseStoredMusic(musicRow?.textValue),
+          music,
+          // The sender's own draft (edit token checked above). Null while the provider's metadata flag is off or on any failure.
+          musicMeta: await getMusicMetadata(music),
           spotifyEmbed: spotifyEmbedEnabled(),
           priceLabel,
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
@@ -160,6 +164,10 @@ export default async function QrEntryPage({
         const audioRow = data.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = data.content.find((c) => c.type === "text");
         const musicRow = data.content.find((c) => c.type === "music" && c.status === "READY");
+        const music = parseStoredMusic(musicRow?.textValue);
+        // Only here — after loadActiveGreetingForRecipient confirmed OPEN and not suspended — is the
+        // provider asked about the song: a scheduled or suspended greeting never triggers a lookup.
+        const musicMeta = await getMusicMetadata(music);
 
         return (
           <RecipientView
@@ -172,7 +180,8 @@ export default async function QrEntryPage({
               photos,
               video: videoRow ? { url: videoRow.signedUrl! } : null,
               audio: audioRow ? { url: audioRow.signedUrl! } : null,
-              music: parseStoredMusic(musicRow?.textValue),
+              music,
+              musicMeta,
               countdown: data.countdown,
             }}
             serverNow={data.serverNow.getTime()}
