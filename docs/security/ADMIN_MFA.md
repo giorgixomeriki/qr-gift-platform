@@ -91,3 +91,7 @@ If the operator credentials are also lost: Supabase dashboard → Authentication
 - `npm run verify:admin-mfa`: real sessions against a local Supabase stack.
 - `e2e/admin-mfa.spec.ts`: the browser journey and the password-only and
   direct-enrollment attacks. Set `E2E_PORT` to use a free port.
+
+## Lost authenticator
+
+See [ADMIN_MFA_TEMPORARY_PAUSE.md](ADMIN_MFA_TEMPORARY_PAUSE.md) for the expiring, config-only pause (financial actions stay disabled) and the restore steps.

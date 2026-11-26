@@ -133,6 +133,13 @@ const envSchema = z.object({
     .default("false")
     .transform((value) => value === "true"),
 
+  // Temporary admin MFA pause (docs/security/ADMIN_MFA_TEMPORARY_PAUSE.md).
+  // Unset = MFA required (the default). Parsed per request by
+  // readAdminMfaPause, which fails closed on anything malformed, so a typo
+  // here never stops the app from starting and never opens access.
+  ADMIN_MFA_PAUSE_USER_ID: z.string().optional(),
+  ADMIN_MFA_PAUSE_UNTIL: z.string().optional(),
+
   // Scheduled payment reconciliation (/api/cron/payments-reconcile). Both
   // must be set for the endpoint to exist: the bearer secret a scheduler
   // (Vercel Cron) sends, and the admin_users.user_id the job acts as (the

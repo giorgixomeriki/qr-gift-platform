@@ -1,7 +1,18 @@
 import "server-only";
 import { redirect } from "next/navigation";
 import { checkIsAdmin, withAdminContext, type Tx } from "@/db/client";
-import { ADMIN_MFA_CHALLENGE_PATH, ADMIN_MFA_ENROLL_PATH, ADMIN_MFA_LOCKED_PATH, decideAdminAccess, type AdminAccess } from "./assurance";
+import { env } from "@/lib/env";
+import {
+  ADMIN_MFA_CHALLENGE_PATH,
+  ADMIN_MFA_ENROLL_PATH,
+  ADMIN_MFA_LOCKED_PATH,
+  decideAdminAccess,
+  isAdminGranted,
+  isMfaPausedFor,
+  readAdminMfaPause,
+  type AdminAccess,
+  type AdminMfaPause,
+} from "./assurance";
 import { getSessionAssurance, type SessionUser, type VerifiedFactor } from "./session";
 
 export class UnauthorizedError extends Error {
@@ -19,6 +30,17 @@ export class MfaRequiredError extends UnauthorizedError {
   }
 }
 
+let lastPauseLog: string | null = null;
+
+/** The current temporary MFA pause, read per request so expiry needs no restart. Logs config state changes once. */
+export function currentAdminMfaPause(now = Date.now()): AdminMfaPause {
+  const pause = readAdminMfaPause(env.ADMIN_MFA_PAUSE_USER_ID, env.ADMIN_MFA_PAUSE_UNTIL, now);
+  const line = pause.active ? `ADMIN_MFA_PAUSED until ${pause.until.toISOString()} for one admin; financial actions blocked` : pause.problem ? `ADMIN_MFA_PAUSE_IGNORED: ${pause.problem}; MFA required` : null;
+  if (line && line !== lastPauseLog) console.warn(line);
+  lastPauseLog = line;
+  return pause;
+}
+
 export type AdminSession = { access: AdminAccess; user: SessionUser | null; factors: VerifiedFactor[]; authorizedFactorIds: Set<string> };
 
 /** The one place admin access is decided, from verified server-side facts only. */
@@ -34,6 +56,7 @@ export async function getAdminAccess(): Promise<AdminSession> {
     authorizedFactors: session.factors.length,
     unauthorizedFactors: session.unauthorizedFactors,
     enrollmentAuthorized: session.enrollmentAuthorized,
+    mfaPaused: isAdmin && isMfaPausedFor(currentAdminMfaPause(), session.user.id),
   });
   return { access, user: session.user, factors: session.factors, authorizedFactorIds: session.authorizedFactorIds };
 }
@@ -44,11 +67,14 @@ export async function getAdminAccess(): Promise<AdminSession> {
  * Every admin route handler/server action must go through this rather than
  * trusting any client-supplied flag.
  */
-export async function requireAdmin<T>(fn: (tx: Tx, adminUserId: string) => Promise<T>): Promise<T> {
+export async function requireAdmin<T>(fn: (tx: Tx, adminUserId: string) => Promise<T>, options: { financial?: boolean } = {}): Promise<T> {
   const { access, user } = await getAdminAccess();
   if (!user) throw new UnauthorizedError("Not signed in");
   if (access === "NOT_ADMIN") throw new UnauthorizedError("Not an admin");
-  if (access !== "GRANTED") throw new MfaRequiredError();
+  if (!isAdminGranted(access)) throw new MfaRequiredError();
+  // Money-moving actions (refunds, chargebacks, payouts, prices, payment
+  // reconciliation) always need a real second factor, pause or not.
+  if (options.financial && access !== "GRANTED") throw new MfaRequiredError();
 
   return withAdminContext(user.id, (tx) => fn(tx, user.id));
 }
@@ -64,7 +90,7 @@ export async function requireAdminPage(): Promise<{ user: SessionUser; isAdmin: 
   if (access === "MFA_LOCKED") redirect(ADMIN_MFA_LOCKED_PATH);
   if (access === "MFA_ENROLL") redirect(ADMIN_MFA_ENROLL_PATH);
   if (access === "MFA_CHALLENGE") redirect(ADMIN_MFA_CHALLENGE_PATH);
-  return { user, isAdmin: access === "GRANTED" };
+  return { user, isAdmin: isAdminGranted(access) };
 }
 
 export type OperatorViewer =
@@ -81,7 +107,7 @@ export type OperatorViewer =
 export async function resolveOperatorViewer(): Promise<OperatorViewer> {
   const { access, user } = await getAdminAccess();
   if (!user) return { kind: "ANONYMOUS" };
-  if (access === "GRANTED") return { kind: "ADMIN", user };
+  if (isAdminGranted(access)) return { kind: "ADMIN", user };
   if (access === "NOT_ADMIN") return { kind: "PARTNER", user };
   return { kind: "MFA_REQUIRED", user };
 }

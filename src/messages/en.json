@@ -720,7 +720,8 @@
     "partnerArea": "Partner",
     "adminArea": "Admin",
     "security": "Security",
-    "inventory": "Inventory"
+    "inventory": "Inventory",
+    "mfaPausedBanner": "Two-factor sign-in is temporarily paused for this account until {until}. Refunds, chargebacks, payouts, prices and payment reconciliation are disabled until it is restored."
   },
   "enums": {
     "partnerStatus": {

@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { signOutAction } from "@/lib/auth/actions";
-import { getAdminAccess } from "@/lib/auth/admin";
+import { currentAdminMfaPause, getAdminAccess } from "@/lib/auth/admin";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const { access } = await getAdminAccess();
@@ -27,7 +27,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       signOutAction={signOutAction.bind(null, "/admin/login")}
       signOutLabel={t("signOut")}
     >
+      {access === "GRANTED_MFA_PAUSED" && <MfaPausedBanner text={pausedText(t)} />}
       {children}
     </DashboardShell>
+  );
+}
+
+function pausedText(t: Awaited<ReturnType<typeof getTranslations<"nav">>>): string {
+  const pause = currentAdminMfaPause();
+  const until = pause.active ? pause.until.toISOString().slice(0, 16).replace("T", " ") + " UTC" : "";
+  return t("mfaPausedBanner", { until });
+}
+
+function MfaPausedBanner({ text }: { text: string }) {
+  return (
+    <p role="status" className="mb-4 rounded-md border border-amber-400 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+      {text}
+    </p>
   );
 }

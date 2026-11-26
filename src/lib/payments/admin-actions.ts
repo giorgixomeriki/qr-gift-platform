@@ -30,7 +30,7 @@ function errorResult(scope: string, err: unknown, context: Record<string, string
  */
 export async function reconcileActivationsAction(): Promise<ActionResult<{ checked: number; activated: number }>> {
   try {
-    const stuck = await requireAdmin((tx, adminUserId) => findOrdersNeedingActivation(adminUserId));
+    const stuck = await requireAdmin((tx, adminUserId) => findOrdersNeedingActivation(adminUserId), { financial: true });
 
     let activated = 0;
     for (const row of stuck) {
@@ -67,7 +67,7 @@ export async function adminReconcilePaymentAction(orderId: string): Promise<Acti
     await requireAdmin(async (tx) => {
       const [order] = await tx.select({ id: orders.id }).from(orders).where(eq(orders.id, orderId)).limit(1);
       if (!order) throw new Error(`Order ${orderId} not found`);
-    });
+    }, { financial: true });
     const result = await verifyAndReconcileOrder(orderId);
     revalidatePath("/admin/dashboard");
     return { ok: true, data: result };
@@ -90,7 +90,7 @@ export async function adminRefundPaidOrderAction(orderId: string): Promise<Actio
       const [order] = await tx.select({ partnerId: orders.partnerId }).from(orders).where(eq(orders.id, orderId)).limit(1);
       if (!order) throw new Error(`Order ${orderId} not found`);
       return { adminUserId, partnerId: order.partnerId };
-    });
+    }, { financial: true });
     const result = await refundPaidOrder(adminUserId, orderId);
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true, data: result };
@@ -115,7 +115,7 @@ export async function adminRecordChargebackAction(
       const [order] = await tx.select({ partnerId: orders.partnerId }).from(orders).where(eq(orders.id, orderId)).limit(1);
       if (!order) throw new Error(`Order ${orderId} not found`);
       return { adminUserId, partnerId: order.partnerId };
-    });
+    }, { financial: true });
     const { commissionReversedMinor } = await recordChargeback(adminUserId, orderId, parsed);
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true, data: { commissionReversedMinor } };
