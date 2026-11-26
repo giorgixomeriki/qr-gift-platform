@@ -3,12 +3,13 @@
 For partners and administrators of QR Starr only. Senders and recipients of
 greetings never receive email from us and are not affected.
 
-**Basis:** Law of Georgia on Personal Data Protection (2023): transfer to a
-state without recognised adequate protection on the data subject's written
-consent, given after being told that appropriate safeguards are missing and
-what the risks are. Contract-based safeguards (SCCs) would need a permit from
-the Personal Data Protection Service, so consent is the simplest route for a
-handful of people.
+**Basis:** Law of Georgia on Personal Data Protection (2023): the United
+States is not on the list of countries with adequate safeguards (Order No. 007
+of the Auditor General of the State Audit Office, 14 April 2026). The transfer
+rests on each person's informed written consent. The contract route would need
+a permit from the State Audit Office (procedure: Order No. 012, 18 May 2026),
+so consent is the simplest route for a handful of people. Users of the site
+(senders, recipients) are not affected: their data stays in Germany.
 
 **How to use:** send the Georgian text (English for non-Georgian speakers)
 before the next invitation or sign-in email. Accept a signed copy, or an email
@@ -34,17 +35,17 @@ QR Starr-ის პარტნიორის ან ადმინისტ�
 
 **რატომ:** მხოლოდ იმისთვის, რომ შეძლოთ ანგარიშში შესვლა და მოწვევის მიღება.
 
-**რისკები:** აშშ საქართველოს კანონმდებლობით აღიარებულ, მონაცემთა დაცვის ადეკვატური გარანტიების მქონე ქვეყნად შეიძლება არ ითვლებოდეს. ეს ნიშნავს, რომ:
+**რისკები:** აშშ არ შედის პერსონალურ მონაცემთა დაცვის სათანადო გარანტიების მქონე ქვეყნების ნუსხაში (სახელმწიფო აუდიტის სამსახურის გენერალური აუდიტორის 2026 წლის 14 აპრილის №007 ბრძანება). ეს ნიშნავს, რომ:
 - აშშ-ის სახელმწიფო ორგანოებს შეიძლება ჰქონდეთ წვდომა მონაცემებზე ისეთი წესით, რომელიც საქართველოში არ მოქმედებს;
-- თქვენი უფლებების დაცვა აშშ-ში შეიძლება უფრო რთული იყოს და საქართველოს პერსონალურ მონაცემთა დაცვის სამსახურის ზედამხედველობა იქ არ ვრცელდება.
+- თქვენი უფლებების დაცვა აშშ-ში შეიძლება უფრო რთული იყოს და საქართველოს სახელმწიფო აუდიტის სამსახურის ზედამხედველობა იქ არ ვრცელდება.
 
-**დაცვის ზომები:** Resend მონაცემებს მხოლოდ ჩვენი დავალებით ამუშავებს, მონაცემთა დამუშავების ხელშეკრულებით, რომელიც ევროკავშირის სტანდარტულ სახელშეკრულებო პირობებს მოიცავს; Resend სერტიფიცირებულია ევროკავშირი–აშშ-ის მონაცემთა კონფიდენციალურობის ჩარჩოში.
+**დაცვის ზომები:** Resend მონაცემებს მხოლოდ ჩვენი დავალებით ამუშავებს, მონაცემთა დამუშავების ხელშეკრულების საფუძველზე. ეს ზომები საქართველოს კანონმდებლობით აღიარებულ სათანადო გარანტიებს არ ანაცვლებს.
 
 **ნებაყოფლობითობა:** თანხმობა ნებაყოფლობითია. თუ არ დაეთანხმებით, ეს არ იმოქმედებს ჩვენს თანამშრომლობაზე — შევთანხმდებით ანგარიშზე წვდომის სხვა გზაზე.
 
 **თანხმობის გამოხმობა:** შეგიძლიათ ნებისმიერ დროს გამოიხმოთ თანხმობა წერილით Qr.app21@gmail.com-ზე. გამოხმობის შემდეგ Resend-ის მეშვეობით აღარ გამოგიგზავნით წერილებს; გამოხმობა არ ახდენს გავლენას მანამდე განხორციელებული დამუშავების კანონიერებაზე.
 
-**თქვენი უფლებები:** შეგიძლიათ მოითხოვოთ ინფორმაცია, მონაცემების გასწორება ან წაშლა და მიმართოთ პერსონალურ მონაცემთა დაცვის სამსახურს. დაწვრილებით: qrapp.ge/privacy.
+**თქვენი უფლებები:** შეგიძლიათ მოითხოვოთ ინფორმაცია, მონაცემების გასწორება ან წაშლა და საჩივრით მიმართოთ საქართველოს სახელმწიფო აუდიტის სამსახურს. დაწვრილებით: qrapp.ge/privacy.
 
 > ვეცნობი ზემოთ მოცემულ ინფორმაციას, მათ შორის აშშ-ში გადაცემის რისკებს, და ნებაყოფლობით ვეთანხმები, რომ ჩემი ელფოსტის მისამართი და QR Starr-ის ანგარიშთან დაკავშირებული წერილები დამუშავდეს Resend, Inc.-ის მიერ აშშ-ში. ვიცი, რომ თანხმობის გამოხმობა ნებისმიერ დროს შემიძლია.
 >
@@ -64,17 +65,17 @@ For your QR Starr partner or administrator account we send you email (invitation
 
 **Why:** only so that you can receive invitations and sign in to your account.
 
-**Risks:** the United States may not be recognised under Georgian law as a country with adequate data-protection safeguards. This means that:
+**Risks:** the United States is not on the list of countries with adequate data-protection safeguards (Order No. 007 of the Auditor General of the State Audit Office, 14 April 2026). This means that:
 - US public authorities may be able to access the data under rules that do not apply in Georgia;
-- enforcing your rights in the United States may be harder, and the Personal Data Protection Service of Georgia does not supervise processing there.
+- enforcing your rights in the United States may be harder, and the State Audit Office of Georgia does not supervise processing there.
 
-**Safeguards:** Resend processes the data only on our instructions, under a data processing agreement that includes the EU Standard Contractual Clauses, and is certified under the EU–US Data Privacy Framework.
+**Safeguards:** Resend processes the data only on our instructions, under its data processing agreement. This does not replace the safeguards recognised under Georgian law.
 
 **Voluntary:** your consent is voluntary. If you do not consent, our cooperation is not affected; we will agree another way to give you access.
 
 **Withdrawal:** you can withdraw your consent at any time by writing to Qr.app21@gmail.com. After that we stop sending you email through Resend. Withdrawal does not affect the lawfulness of processing before it.
 
-**Your rights:** you can ask for information about your data, its correction or deletion, and complain to the Personal Data Protection Service of Georgia. Details: qrapp.ge/privacy.
+**Your rights:** you can ask for information about your data, its correction or deletion, and complain to the State Audit Office of Georgia. Details: qrapp.ge/privacy.
 
 > I have read the information above, including the risks of the transfer to the United States, and I voluntarily consent to my email address and emails about my QR Starr account being processed by Resend, Inc. in the United States. I know I can withdraw this consent at any time.
 >

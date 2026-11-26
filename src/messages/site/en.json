@@ -620,7 +620,7 @@
             ]
           },
           { "type": "p", "text": "Data is stored in Germany (Frankfurt): the website servers by Render, the database and media by Supabase. We do not send emails to senders or recipients." },
-          { "type": "p", "text": "Supabase and Render process data in the European Union (Germany), under data processing agreements that form part of their terms of service. Like most hosting providers, they use sub-processors, some in the United States (for example for network security, logs and support), which may process technical data such as IP addresses. This happens under the providers’ data processing agreements and, for Render, its certification under the EU–US Data Privacy Framework. Email sent through Resend goes only to partners and administrators and is processed in the United States. We make this transfer only with the written consent of each partner and administrator, given after we have told them that the United States may not protect personal data to the same standard as Georgia and what that can mean for them. Resend processes the data only on our instructions, under its data processing agreement, which includes the EU Standard Contractual Clauses." }
+          { "type": "p", "text": "Supabase and Render store and process our users’ data in Germany (Frankfurt). Website and media traffic passes through Cloudflare’s network nodes in Europe (for users in Georgia, currently Sofia, Bulgaria). Germany and the other EU member states are on the list of countries with adequate data-protection safeguards approved by Order No. 007 of the Auditor General of the State Audit Office of 14 April 2026. Supabase and Render act only on our instructions, under data processing agreements that form part of their terms of service. Email sent through Resend goes only to partners and administrators and is processed in the United States, which is not on that list. We send it only with the written consent of each partner and administrator, given after we have told them about the risks of this transfer. Resend processes the data only on our instructions, under its data processing agreement." }
         ]
       },
       {
@@ -694,7 +694,7 @@
               "transfer it, where that right applies."
             ]
           },
-          { "type": "p", "text": "Where processing is based on your consent, you can withdraw it at any time. You can also lodge a complaint with the Personal Data Protection Service of Georgia." },
+          { "type": "p", "text": "Where processing is based on your consent, you can withdraw it at any time. You can also lodge a complaint with the State Audit Office of Georgia." },
           { "type": "p", "text": "You can also object to processing based on our legitimate interest. We do not make automated decisions that have legal effects on you. Some rights may be limited where the law allows, for example when the law requires us to keep a payment record." }
         ]
       },
@@ -720,7 +720,7 @@
               "We never receive full card details."
             ]
           },
-          { "type": "p", "text": "If an incident affects your data, we notify the Personal Data Protection Service where and within the time the law requires, and, if the incident creates a significant risk for you, we also inform you without undue delay." }
+          { "type": "p", "text": "If an incident affects your data, we notify the State Audit Office of Georgia where and within the time the law requires, and, if the incident creates a significant risk for you, we also inform you without undue delay." }
         ]
       },
       {
