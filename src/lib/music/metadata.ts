@@ -1,26 +1,27 @@
 import "server-only";
 import { musicKey, musicOpenUrl, type MusicMeta, type MusicRef } from "./link";
 import { musicMetadataEnabled } from "./flag";
-import { youTubeThumbnailUrl } from "./youtube";
+import { youTubeThumbnailUrl, type YouTubeMusic } from "./youtube";
 
 /**
- * "Our Song" metadata: title / artist-or-channel / artwork for the card, from
- * the provider's public oEmbed endpoint. Server-side only, per view.
+ * "Our Song" metadata for YouTube / YouTube Music only: title, channel and
+ * thumbnail from YouTube's public oEmbed endpoint. Server-side only, per view.
+ * Spotify is never fetched: its Developer Policy / Terms do not clear cover art
+ * or titles in a paid, branded product (lib/music/flag.ts).
  *
  * Safety (docs/music/OUR-SONG.md §3):
- * - No arbitrary fetch: the only URLs ever requested are the two fixed oEmbed
- *   endpoints, with a `url` parameter rebuilt from the validated id
+ * - No arbitrary fetch: the only URL ever requested is YouTube's fixed oEmbed
+ *   endpoint, with a `url` parameter rebuilt from the validated id
  *   (musicOpenUrl). Sender text never reaches a request. Redirects are refused.
  * - 2.5 s timeout, 64 KB body cap, JSON only. Anything unexpected = no metadata.
  * - The response's `html` is never read. Text fields are stripped of control /
  *   bidi characters, whitespace-collapsed and capped; React escapes them.
- * - Artwork must be https on an allowlisted provider image host (CSP img-src
- *   matches), else it is dropped. YouTube's is rebuilt from the id.
+ * - The thumbnail is used only if YouTube reports one on i.ytimg.com, and is
+ *   then rebuilt from the validated id (CSP img-src matches), never copied.
  * - Nothing is stored: an in-memory cache (1 h for answers, 5 min for
- *   failures, 500 entries) only spares the provider repeated calls — Spotify
- *   Terms IV.3.2 allow temporary caching of metadata/cover art; YouTube's
- *   limit is 30 days. Process restart = cache gone.
- * - Outbound budget: 60 calls/min per provider per process; over budget =
+ *   failures, 500 entries) only spares the provider repeated calls — well
+ *   inside YouTube's 30-day limit. Process restart = cache gone.
+ * - Outbound budget: 60 calls/min per process; over budget =
  *   no metadata (the card falls back to the sleeve), never an error.
  * - Any failure returns null: music metadata can never stop a greeting opening.
  */
@@ -33,7 +34,6 @@ const FAIL_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX = 500;
 const BUDGET_PER_MIN = 60;
 
-const SPOTIFY_ART_HOST = /^(i\.scdn\.co|mosaic\.scdn\.co|image-cdn-[a-z]{2}\.spotifycdn\.com)$/;
 
 type Entry = { at: number; ttl: number; value: MusicMeta | null };
 const cache = new Map<string, Entry>();
@@ -63,21 +63,8 @@ export function cleanText(v: unknown): string | null {
   return s.length > TEXT_MAX ? `${s.slice(0, TEXT_MAX - 1).trimEnd()}…` : s;
 }
 
-export function cleanSpotifyArtwork(v: unknown): string | null {
-  if (typeof v !== "string" || v.length > 512) return null;
-  try {
-    const u = new URL(v);
-    if (u.protocol !== "https:" || u.username || u.password || u.port || !SPOTIFY_ART_HOST.test(u.hostname)) return null;
-    if (/[\s"'<>\\]/.test(u.pathname + u.search)) return null;
-    return u.toString();
-  } catch {
-    return null;
-  }
-}
-
-function endpoint(music: MusicRef): string {
-  const target = encodeURIComponent(musicOpenUrl(music));
-  return music.provider === "spotify" ? `https://open.spotify.com/oembed?url=${target}` : `https://www.youtube.com/oembed?url=${target}&format=json`;
+function endpoint(music: YouTubeMusic): string {
+  return `https://www.youtube.com/oembed?url=${encodeURIComponent(musicOpenUrl(music))}&format=json`;
 }
 
 function takeBudget(provider: string): boolean {
@@ -92,7 +79,7 @@ function takeBudget(provider: string): boolean {
   return true;
 }
 
-async function fetchMeta(music: MusicRef): Promise<{ value: MusicMeta | null; ttl: number }> {
+async function fetchMeta(music: YouTubeMusic): Promise<{ value: MusicMeta | null; ttl: number }> {
   let res: Response;
   try {
     res = await __musicMetaTest.fetch(endpoint(music), {
@@ -123,14 +110,11 @@ async function fetchMeta(music: MusicRef): Promise<{ value: MusicMeta | null; tt
   const o = body as Record<string, unknown>;
 
   const title = cleanText(o.title);
-  // Spotify's oEmbed carries no artist: it stays null (never inferred from the title).
-  const author = music.provider === "youtube" ? cleanText(o.author_name) : null;
-  let artworkUrl: string | null;
-  if (music.provider === "spotify") artworkUrl = cleanSpotifyArtwork(o.thumbnail_url);
-  else artworkUrl = typeof o.thumbnail_url === "string" && o.thumbnail_url.startsWith("https://i.ytimg.com/") ? youTubeThumbnailUrl(music) : null;
+  const author = cleanText(o.author_name);
+  const artworkUrl = typeof o.thumbnail_url === "string" && o.thumbnail_url.startsWith("https://i.ytimg.com/") ? youTubeThumbnailUrl(music) : null;
 
   if (!title && !artworkUrl) return { value: null, ttl: FAIL_TTL_MS };
-  return { value: { status: "ok", title, author, artworkUrl, artworkAspect: music.provider === "spotify" ? "square" : "wide" }, ttl: OK_TTL_MS };
+  return { value: { status: "ok", title, author, artworkUrl, artworkAspect: "wide" }, ttl: OK_TTL_MS };
 }
 
 /**
@@ -141,7 +125,7 @@ async function fetchMeta(music: MusicRef): Promise<{ value: MusicMeta | null; tt
  */
 export async function getMusicMetadata(music: MusicRef | null | undefined): Promise<MusicMeta | null> {
   try {
-    if (!music || !musicMetadataEnabled(music.provider)) return null;
+    if (!music || music.provider !== "youtube" || !musicMetadataEnabled(music.provider)) return null;
     const key = musicKey(music);
     const now = __musicMetaTest.now();
     const hit = cache.get(key);

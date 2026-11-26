@@ -233,7 +233,7 @@ test.describe(`Our Song providers — metadata ${META ? "ON" : "OFF"}`, () => {
     }
   });
 
-  test("an existing Spotify greeting still opens (and shows artwork only with the flag)", async ({ browser }) => {
+  test("an existing Spotify greeting still opens as our sleeve + link (never Spotify artwork)", async ({ browser }) => {
     const g = await gid(token);
     await fixture(`update greeting_content set text_value = 'spotify:track:${SPOTIFY_TRACK}' where greeting_id = '${g}' and type = 'music'`);
     try {
@@ -243,10 +243,10 @@ test.describe(`Our Song providers — metadata ${META ? "ON" : "OFF"}`, () => {
       await expect(beat).toHaveAttribute("data-spotify-id", SPOTIFY_TRACK);
       await expect(beat.getByTestId("music-listen")).toHaveAttribute("href", `https://open.spotify.com/track/${SPOTIFY_TRACK}`);
       await expect(beat.getByTestId("music-listen")).toContainText("Listen on Spotify");
-      await expectArtwork(beat, META);
-      // Spotify's oEmbed has no artist: none is shown, none invented.
+      await expectArtwork(beat, false);
+      // Spotify metadata is never fetched (policy): no artist, no title from Spotify.
       await expect(beat.getByTestId("music-author")).toHaveCount(0);
-      if (META) await expect(beat.getByTestId("music-title")).toHaveText("Never Gonna Give You Up");
+      await expect(beat.getByTestId("music-title")).toHaveCount(0);
       await r.waitForTimeout(300);
       await shot(r, "spotify-existing-pixel7");
       await ctx.close();
@@ -281,7 +281,7 @@ test.describe(`Our Song providers — metadata ${META ? "ON" : "OFF"}`, () => {
       const { ctx, page: r, res, providerCalls } = await recipient(browser, token);
       await expect(r.getByTestId("scheduled-reveal")).toBeVisible();
       const html = (await res!.text()) + (await r.content());
-      for (const s of [VID, "music.youtube.com", "Never Gonna", "Rick Astley", MESSAGE]) expect(html).not.toContain(s);
+      for (const s of [VID, "music.youtube.com/watch", "Never Gonna", "Rick Astley", MESSAGE]) expect(html).not.toContain(s);
       await expect(r.getByTestId("greeting-music-beat")).toHaveCount(0);
       expect(providerCalls).toEqual([]);
       await ctx.close();
@@ -291,16 +291,17 @@ test.describe(`Our Song providers — metadata ${META ? "ON" : "OFF"}`, () => {
   });
 
   test("Refund Model C: a suspended greeting shows nothing about the song", async ({ browser }) => {
-    await sql`update orders set status = 'REFUNDED' where qr_code_id = (select id from qr_codes where public_token = ${token}) and status = 'PAID'`;
+    // FIXTURE: REFUNDED is terminal for the app role (trigger); the replica-role fixture flips it and back.
+    await fixture(`update orders set status = 'REFUNDED' where qr_code_id = (select id from qr_codes where public_token = '${token}') and status = 'PAID'`);
     try {
       const { ctx, page: r, res, providerCalls } = await recipient(browser, token);
       const html = (await res!.text()) + (await r.content());
-      for (const s of [VID, "music.youtube.com", "Never Gonna", "Rick Astley", MESSAGE]) expect(html).not.toContain(s);
+      for (const s of [VID, "music.youtube.com/watch", "Never Gonna", "Rick Astley", MESSAGE]) expect(html).not.toContain(s);
       await expect(r.getByTestId("greeting-music-beat")).toHaveCount(0);
       expect(providerCalls).toEqual([]);
       await ctx.close();
     } finally {
-      await sql`update orders set status = 'PAID' where qr_code_id = (select id from qr_codes where public_token = ${token}) and status = 'REFUNDED'`;
+      await fixture(`update orders set status = 'PAID' where qr_code_id = (select id from qr_codes where public_token = '${token}') and status = 'REFUNDED'`);
     }
   });
 });

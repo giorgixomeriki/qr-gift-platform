@@ -17,12 +17,15 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   reporter: [["list"]],
   use: { baseURL: `http://localhost:${port}`, trace: "retain-on-failure" },
-  projects: [{ name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    { name: "desktop-chromium", use: { ...devices["Desktop Chrome"] } },
+    { name: "iphone-webkit", use: { ...devices["iPhone 14"] } },
+  ],
   webServer: {
     command: `node --env-file=.env.local ./node_modules/.bin/next dev -p ${port}`,
     url: `http://localhost:${port}`,
     reuseExistingServer: true,
     timeout: 180_000,
-    env: { PAYMENTS_PROVIDER: "TEST", ALLOW_TEST_PAYMENTS: "true", MUSIC_METADATA_SPOTIFY: meta, MUSIC_METADATA_YOUTUBE: meta },
+    env: { PAYMENTS_PROVIDER: "TEST", ALLOW_TEST_PAYMENTS: "true", MUSIC_METADATA_YOUTUBE: meta },
   },
 });

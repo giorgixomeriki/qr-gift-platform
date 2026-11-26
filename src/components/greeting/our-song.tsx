@@ -19,10 +19,9 @@ function pausePageMedia() {
  * "Listen on …" action, never autoplay. Never a provider widget by default.
  *
  * Two faces, same card:
- * - Metadata on (MUSIC_METADATA_SPOTIFY / _YOUTUBE, server-side, default
- *   off): the provider's own title, channel (YouTube; Spotify's oEmbed has no
- *   artist, so none is shown) and artwork, unmodified (scaled only, 4/8 px
- *   corners, nothing over it), named source and the link back.
+ * - YouTube with MUSIC_METADATA_YOUTUBE=1 (server-side, default off): YouTube's
+ *   own title, channel and thumbnail, unmodified (scaled only, 4/8 px corners,
+ *   nothing over it), named source and the link back. Spotify: never (policy).
  * - Otherwise (and when the artwork fails to load): QR STARR's record sleeve,
  *   exactly as before.
  *

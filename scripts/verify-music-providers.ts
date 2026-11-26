@@ -32,7 +32,7 @@ const check = (cond: unknown, msg: string) => {
 async function main() {
   const { parseMusicInput, parseStoredMusic, toStoredMusic, musicOpenUrl, musicService } = await import("../src/lib/music/link");
   const { youTubeOpenUrl, youTubeThumbnailUrl } = await import("../src/lib/music/youtube");
-  const { getMusicMetadata, cleanText, cleanSpotifyArtwork, __musicMetaTest } = await import("../src/lib/music/metadata");
+  const { getMusicMetadata, cleanText, __musicMetaTest } = await import("../src/lib/music/metadata");
   const { musicArtOrigins } = await import("../src/lib/music/flag");
   const { buildContentSecurityPolicy } = await import("../src/lib/security/csp");
 
@@ -133,10 +133,6 @@ async function main() {
   check(cleanText("<script>alert(1)</script>") === "<script>alert(1)</script>", "text is text (React escapes it)");
   check(cleanText(42) === null && cleanText("   ") === null, "non-strings/empty → null");
   check(cleanText("x".repeat(500))!.length === 200, "capped");
-  check(cleanSpotifyArtwork("https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02") !== null, "spotify cdn ok");
-  check(cleanSpotifyArtwork("https://i.scdn.co/image/ab67616d") !== null, "scdn ok");
-  for (const u of ["http://i.scdn.co/image/x", "https://evil.example/image/x", "https://i.scdn.co.evil.example/x", "https://user@i.scdn.co/x", "https://i.scdn.co:444/x", "javascript:alert(1)", "https://spotifycdn.com/x", 7])
-    check(cleanSpotifyArtwork(u) === null, `art reject ${String(u)}`);
 
   // ---- Metadata with a stubbed network
   type Call = { url: string; init: RequestInit };
@@ -163,39 +159,14 @@ async function main() {
   fresh();
   check((await getMusicMetadata(spotify)) === null && (await getMusicMetadata(yt)) === null && calls.length === 0, "flags off → no fetch");
   check((await getMusicMetadata(null)) === null, "no music → null");
-  process.env.MUSIC_METADATA_SPOTIFY = "1";
+  process.env.MUSIC_METADATA_SPOTIFY = "1"; // the retired switch must do nothing
   fresh();
   await getMusicMetadata(yt);
-  check(calls.length === 0, "spotify flag does not enable youtube");
+  check(calls.length === 0, "legacy spotify env does not enable youtube");
   process.env.MUSIC_METADATA_YOUTUBE = "1";
-
-  // Spotify: fixed endpoint, rebuilt URL, redirects refused, html ignored, no artist invented.
   fresh();
-  reply = async () =>
-    json({
-      html: '<iframe src="https://evil.example"></iframe><script>alert(1)</script>',
-      title: "Never Gonna Give You Up",
-      thumbnail_url: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02baf89eb11ec7c657805d2da0",
-      author_name: "should be ignored for spotify",
-      provider_name: "Spotify",
-    });
-  const sm = await getMusicMetadata(spotify);
-  check(calls.length === 1 && calls[0]!.url === `https://open.spotify.com/oembed?url=${encodeURIComponent(`https://open.spotify.com/track/${TRACK}`)}`, "spotify endpoint fixed");
-  check(calls[0]!.init.redirect === "error" && calls[0]!.init.signal instanceof AbortSignal, "redirect refused + timeout signal");
-  assert.deepEqual(sm, { status: "ok", title: "Never Gonna Give You Up", author: null, artworkUrl: "https://image-cdn-fa.spotifycdn.com/image/ab67616d00001e02baf89eb11ec7c657805d2da0", artworkAspect: "square" });
-  n++;
-  check(!JSON.stringify(sm).includes("iframe") && !JSON.stringify(sm).includes("script"), "html never surfaces");
-
-  // Spotify without artwork: title only, artwork stays null (nothing substituted).
-  fresh();
-  reply = async () => json({ title: "Untitled demo", thumbnail_url: null });
-  const noArt = await getMusicMetadata(spotify);
-  check(noArt?.status === "ok" && noArt.artworkUrl === null && noArt.title === "Untitled demo", "spotify without artwork");
-  // Off-allowlist artwork dropped.
-  fresh();
-  reply = async () => json({ title: "T", thumbnail_url: "https://evil.example/pixel.gif" });
-  const offHost = await getMusicMetadata(spotify);
-  check(offHost?.status === "ok" && offHost.artworkUrl === null, "off-allowlist artwork dropped");
+  reply = async () => json({ title: "T", thumbnail_url: "https://i.scdn.co/image/x" });
+  check((await getMusicMetadata(spotify)) === null && calls.length === 0, "spotify never fetched, even with every switch on");
 
   // YouTube: endpoint + channel + thumbnail rebuilt from the id (not the response's URL).
   fresh();
@@ -246,29 +217,29 @@ async function main() {
   const t0 = Date.now();
   // AbortSignal.timeout's timer is unref'd: keep this script's event loop alive (a server always has one).
   const keepAlive = setInterval(() => {}, 1000);
-  const hung = await getMusicMetadata(spotify);
+  const hung = await getMusicMetadata(yt);
   clearInterval(keepAlive);
   check(hung === null && Date.now() - t0 >= 2400 && Date.now() - t0 < 4000, `hung provider times out → null (${Date.now() - t0} ms)`);
 
   // Cache: an answer is reused for an hour; failures retried after 5 minutes; in-flight de-duplicated.
   fresh();
   reply = async () => json({ title: "Cached", thumbnail_url: null });
-  await Promise.all([getMusicMetadata(spotify), getMusicMetadata(spotify), getMusicMetadata(spotify)]);
+  await Promise.all([getMusicMetadata(yt), getMusicMetadata(yt), getMusicMetadata(yt)]);
   check(calls.length === 1, "in-flight dedupe");
   clock += 30 * 60_000;
-  await getMusicMetadata(spotify);
+  await getMusicMetadata(yt);
   check(calls.length === 1, "cached within 1 h");
   clock += 31 * 60_000;
-  await getMusicMetadata(spotify);
+  await getMusicMetadata(yt);
   check(calls.length === 2, "refetched after 1 h");
 
   // Budget: at most 60 provider calls per minute per process; over budget → null, no call.
   fresh();
   reply = async () => json({ title: "x", thumbnail_url: null });
-  for (let i = 0; i < 70; i++) await getMusicMetadata({ provider: "spotify", kind: "track", id: `${"A".repeat(20)}${String(i).padStart(2, "0")}` });
+  for (let i = 0; i < 70; i++) await getMusicMetadata({ provider: "youtube", kind: "video", id: `${"A".repeat(9)}${String(i).padStart(2, "0")}` });
   check(calls.length === 60, `budget caps calls (${calls.length})`);
   clock += 61_000;
-  await getMusicMetadata({ provider: "spotify", kind: "track", id: "B".repeat(22) });
+  await getMusicMetadata({ provider: "youtube", kind: "video", id: "B".repeat(11) });
   check(calls.length === 61, "budget refills");
 
   // ---- CSP: image hosts only for enabled providers.
@@ -283,7 +254,7 @@ async function main() {
   check(!/frame-src/.test(ytCsp), "no frames added");
   process.env.MUSIC_METADATA_SPOTIFY = "1";
   const both = buildContentSecurityPolicy("n", "https://x.supabase.co", { musicArtOrigins: musicArtOrigins() });
-  check(/img-src [^;]*https:\/\/i\.scdn\.co[^;]*https:\/\/\*\.spotifycdn\.com/.test(both), "CSP spotify hosts");
+  check(!both.includes("scdn") && !both.includes("spotifycdn"), "CSP never allows Spotify image hosts");
 
   console.log(`verify:music-providers — ${n} checks passed`);
 }
