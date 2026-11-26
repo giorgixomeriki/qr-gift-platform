@@ -22,14 +22,21 @@ export function RevealEnvelope({
   state,
   addressee,
   onOpen,
+  locked = false,
+  unlocking = false,
 }: {
   state: "sealed" | "opening";
   /** The line on the sheet ("For you"). */
   addressee: string;
   onOpen: () => void;
+  /** Scheduled Reveal: tied with a satin ribbon and not openable until its moment (scheduled-reveal.tsx). */
+  locked?: boolean;
+  /** The moment has come: the ribbon slips off. */
+  unlocking?: boolean;
 }) {
+  const ribbon = locked || unlocking;
   return (
-    <div className="sx-env" data-state={state} aria-hidden>
+    <div className="sx-env" data-state={state} data-ribbon={ribbon ? (unlocking ? "off" : "on") : undefined} aria-hidden>
       <span className="sx-env__back" />
       <span className="sx-env__card">
         <span className="sx-env__sheet">
@@ -42,7 +49,13 @@ export function RevealEnvelope({
       </span>
       <span className="sx-env__pocket" />
       <span className="sx-env__flap" />
-      <button type="button" className="sx-env__seal" onClick={onOpen} disabled={state !== "sealed"} tabIndex={-1} data-pressed={state === "opening" || undefined}>
+      {ribbon && (
+        <span className="sx-env__ribbon">
+          <span className="sx-env__ribbon-band" />
+          <span className="sx-env__ribbon-band sx-env__ribbon-band--h" />
+        </span>
+      )}
+      <button type="button" className="sx-env__seal" onClick={onOpen} disabled={state !== "sealed" || ribbon} tabIndex={-1} data-pressed={state === "opening" || undefined}>
         <WaxSeal className="sx-env__wax" />
       </button>
     </div>

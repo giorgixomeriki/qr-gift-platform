@@ -18,6 +18,8 @@ import { RevealEnvelope } from "./reveal-envelope";
 import { VoicePlayer } from "./voice-player";
 import { OurSong } from "./our-song";
 import type { SpotifyMusic } from "@/lib/music/spotify";
+import type { EventCountdown } from "@/lib/greetings/countdown";
+import { EventCountdownCard } from "@/components/countdown/event-countdown";
 import "./reveal.css";
 import "./reveal-signature.css";
 import "./envelope-luxe.css";
@@ -30,6 +32,8 @@ export type GreetingRenderContent = {
   audio: { url: string; refresh?: () => Promise<string | null> } | null;
   /** "Our Song": a validated Spotify reference (lib/music/spotify.ts). Optional: older callers and greetings have none. */
   music?: SpotifyMusic | null;
+  /** Celebration Countdown (lib/greetings/countdown.ts): a countdown to another day, its own beat before the ending. */
+  countdown?: EventCountdown | null;
 };
 
 type Beat =
@@ -39,6 +43,7 @@ type Beat =
   | { kind: "video" }
   | { kind: "audio" }
   | { kind: "music" }
+  | { kind: "countdown" }
   | { kind: "ending" };
 
 /**
@@ -105,6 +110,8 @@ export function GreetingRenderer({
   onContentPlayed,
   onEndingSettled,
   spotifyEmbed = false,
+  serverNow,
+  continuation = false,
 }: {
   themeKey: string;
   /** The exact template version to render (a sent greeting's frozen version); latest when omitted. */
@@ -131,6 +138,10 @@ export function GreetingRenderer({
   onEndingSettled?: (settled: boolean) => void;
   /** SPOTIFY_EMBED_ENABLED, decided server-side; off by default (see lib/music/flag.ts). */
   spotifyEmbed?: boolean;
+  /** The server's clock when the page rendered (recipient): the countdown beat counts from it, not the device clock. */
+  serverNow?: number;
+  /** Arrived from the Scheduled Reveal lock screen: the envelope is already in place, so it does not set down again. */
+  continuation?: boolean;
 }) {
   const t = useTranslations("greeting");
   const tt = useTranslations("themes");
@@ -146,6 +157,7 @@ export function GreetingRenderer({
     if (content.video) list.push({ kind: "video" });
     if (content.audio) list.push({ kind: "audio" });
     if (content.music) list.push({ kind: "music" });
+    if (content.countdown) list.push({ kind: "countdown" });
     list.push({ kind: "ending" });
     return list;
   }, [content]);
@@ -286,6 +298,7 @@ export function GreetingRenderer({
       data-stage={isOpening ? (pressing ? "opening" : "closed") : "open"}
       data-room={template.spec.room.dark ? "dark" : "light"}
       data-composition={world.composition}
+      data-continuation={(continuation && isOpening) || undefined}
     >
       <header className="px-page relative z-20 flex flex-col gap-3 pt-[max(0.875rem,var(--safe-top))]">
         <div className="flex min-h-9 items-center gap-3">
@@ -366,6 +379,12 @@ export function GreetingRenderer({
         {beat.kind === "music" && content.music && (
           <div key="music" className="reveal__music reveal-enter">
             <OurSong music={content.music} embedAllowed={spotifyEmbed} variant="beat" />
+          </div>
+        )}
+
+        {beat.kind === "countdown" && content.countdown && (
+          <div key="countdown" className="reveal__countdown" data-testid="greeting-countdown-beat">
+            <EventCountdownCard countdown={content.countdown} serverNow={serverNow} />
           </div>
         )}
 

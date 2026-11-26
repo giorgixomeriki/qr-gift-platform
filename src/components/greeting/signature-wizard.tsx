@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatMoment } from "@/lib/greetings/moment-format";
 import { BackIcon, EditIcon, ErrorIcon, PhotoIcon, PlayIcon } from "@/components/customer/icons";
 import { BackButton, Brand, Dock, Mast, SealedEnvelope, SigAction, SigRoot, Steps } from "@/components/signature/chrome";
 import { ThemeWorld } from "@/components/themes/theme-world";
@@ -66,6 +67,8 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
   const savedMessageRef = useRef(initial.message);
   const media = useMediaUploads(initial.greetingId, initial);
   const [music, setMusic] = useState(initial.music ?? null);
+  const [schedule, setSchedule] = useState(initial.schedule ?? null);
+  const [countdown, setCountdown] = useState(initial.countdown ?? null);
   /** Desktop studio: the live world beside the letter (never mounted on phones). */
   const wide = useMediaQuery("(min-width: 1024px)");
 
@@ -157,7 +160,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
     [media, goToStep],
   );
 
-  const content: GreetingRenderContent = { message: message.trim() || null, ...media.content, music };
+  const content: GreetingRenderContent = { message: message.trim() || null, ...media.content, music, countdown };
 
   if (step === "checkout") {
     return (
@@ -211,6 +214,7 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
               greetingId={initial.greetingId}
               themeKey={themeKey}
               content={content}
+              schedule={schedule}
               priceLabel={initial.priceLabel}
               onWatch={() => goToStep("preview", { view: "recipient" })}
               onEditText={() => goToStep("create")}
@@ -237,6 +241,10 @@ export function SignatureWizard({ initial }: { initial: WizardInitialState }) {
                   greetingId={initial.greetingId}
                   music={music}
                   onMusicChange={setMusic}
+                  schedule={schedule}
+                  onScheduleChange={setSchedule}
+                  countdown={countdown}
+                  onCountdownChange={setCountdown}
                 />
               </div>
               {wide && <StudioAside themeKey={themeKey} content={content} />}
@@ -266,6 +274,7 @@ function SignaturePreview({
   greetingId,
   themeKey,
   content,
+  schedule,
   priceLabel,
   onWatch,
   onEditText,
@@ -275,6 +284,7 @@ function SignaturePreview({
   greetingId: string;
   themeKey: ThemeKey;
   content: GreetingRenderContent;
+  schedule: { unlockAt: string; timeZone: string } | null;
   priceLabel: string | null;
   onWatch: () => void;
   onEditText: () => void;
@@ -299,7 +309,10 @@ function SignaturePreview({
     content.video ? ts("itemsVideo") : null,
     content.audio ? ts("itemsVoice") : null,
     content.music ? ts("itemsMusic") : null,
+    content.countdown ? ts("itemsCountdown") : null,
   ].filter(Boolean) as string[];
+  const locale = useLocale();
+  const opens = schedule ? formatMoment(schedule.unlockAt, schedule.timeZone, locale) : null;
 
   return (
     <div className="flex flex-1 flex-col" data-testid="preview-step">
@@ -318,6 +331,11 @@ function SignaturePreview({
       <p className="sig-contents" data-testid="preview-contents">
         {ts("contents", { items: items.join(" · ") })}
       </p>
+      {opens && (
+        <p className="sig-contents sig-contents--opens" data-testid="preview-opens">
+          {ts("opensOn", { day: opens.day, time: opens.time, zone: opens.zone })}
+        </p>
+      )}
 
       <nav className="sig-edits" aria-label={ts("editNav")}>
         <button type="button" onClick={onEditText} data-testid="preview-edit">

@@ -244,7 +244,9 @@
       "itemsPhotos": "{count, plural, one {# photo} other {# photos}}",
       "itemsVideo": "video",
       "itemsVoice": "voice",
-      "itemsMusic": "song"
+      "itemsMusic": "song",
+      "itemsCountdown": "countdown",
+      "opensOn": "Opens for them {day} at {time} ({zone})"
     },
     "music": {
       "title": "Our song",
@@ -273,6 +275,73 @@
         "remove": "Couldn't remove it. Please try again."
       },
       "added": "Added to your greeting"
+    },
+    "timing": {
+      "kicker": "Timing",
+      "openTitle": "When should it open?",
+      "openNow": "As soon as it's sent",
+      "openNowHint": "They can open it the moment it's activated",
+      "openLater": "On a date I choose",
+      "openLaterHint": "Until then they'll see a sealed envelope and a countdown",
+      "date": "Date",
+      "time": "Time",
+      "zone": "Time zone",
+      "opensSummary": "Opens {day} at {time} ({zone})",
+      "countdownTitle": "Countdown to a special day",
+      "countdownHint": "Opens with the greeting and counts down to another day — a wedding, a trip, a birthday.",
+      "countdownToggle": "Add a countdown",
+      "occasion": "Occasion",
+      "occasions": {
+        "wedding": "Wedding",
+        "birthday": "Birthday",
+        "anniversary": "Anniversary",
+        "reunion": "Reunion",
+        "vacation": "Trip",
+        "baby": "Baby",
+        "newYear": "New Year",
+        "custom": "Other"
+      },
+      "occasionTitles": {
+        "wedding": "Our wedding",
+        "birthday": "Your birthday",
+        "anniversary": "Our anniversary",
+        "reunion": "Until we meet again",
+        "vacation": "Our trip",
+        "baby": "Our little one",
+        "newYear": "New Year",
+        "custom": ""
+      },
+      "eventTitle": "What are we counting down to?",
+      "eventTitlePlaceholder": "Our wedding",
+      "style": "Style",
+      "styles": {
+        "editorial": "Editorial",
+        "atelier": "Atelier",
+        "midnight": "Midnight"
+      },
+      "styleHints": {
+        "editorial": "Clean, printed, quiet",
+        "atelier": "Ivory and champagne",
+        "midnight": "Charcoal and gold"
+      },
+      "note": "A line to go with it",
+      "notePlaceholder": "I can't wait to see you there.",
+      "optional": "optional",
+      "saving": "Saving…",
+      "saved": "Saved",
+      "remove": "Remove countdown",
+      "errors": {
+        "past": "Choose a moment in the future.",
+        "too_far": "That's too far ahead. Choose a date within the next {days} days.",
+        "nonexistent": "That time doesn't exist on that day — the clocks change. Choose another time.",
+        "invalid": "Check the date and time.",
+        "before_unlock": "The countdown day comes before the greeting opens. Choose a later day, or open the greeting earlier.",
+        "invalid_input": "Check the details.",
+        "titleRequired": "Give the day a name.",
+        "save": "We couldn't save it. Check your connection and try again."
+      },
+      "blocked": "Finish the countdown, or turn it off, to continue.",
+      "pastWarning": "This moment has already passed — the greeting will open as soon as it's activated."
     }
   },
   "greeting": {
@@ -1215,5 +1284,29 @@
       "hint": "Adds every assignable card of the batch (max 500). Use only when the whole batch physically moves.",
       "added": "Added {count} cards"
     }
+  },
+  "countdown": {
+    "until": "Counting down to",
+    "theDay": "The day",
+    "today": "Today is the day",
+    "celebrated": "This day has come",
+    "days": "{count, plural, one {day} other {days}}",
+    "hours": "{count, plural, one {hour} other {hours}}",
+    "minutes": "{count, plural, one {minute} other {minutes}}",
+    "seconds": "{count, plural, one {second} other {seconds}}",
+    "timerLabel": "{title}: {days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}} to go"
+  },
+  "scheduled": {
+    "waiting": "Something is waiting for its moment",
+    "itsTime": "It's time",
+    "opensOn": "Opens {day} · {time}",
+    "yourTime": "{time} where you are",
+    "timerLabel": "Opens in {days, plural, one {# day} other {# days}}, {hours, plural, one {# hour} other {# hours}} and {minutes, plural, one {# minute} other {# minutes}} — {when}",
+    "openNow": "Open",
+    "stalledHint": "It's ready. If it didn't open by itself, tap Open.",
+    "senderKicker": "Scheduled",
+    "senderTitle": "Sealed until its moment",
+    "senderBody": "It opens for them on {when}. Until then, scanning the card shows only this envelope.",
+    "opensLabel": "Opens"
   }
 }

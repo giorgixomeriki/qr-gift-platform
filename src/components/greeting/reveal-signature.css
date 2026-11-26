@@ -1058,3 +1058,21 @@
     animation: sx-set-down 700ms var(--sx-settle) 120ms both;
   }
 }
+
+/* Scheduled Reveal → the greeting (scheduled-reveal.tsx): the envelope is already lying in the room, so it does not set down again. */
+.reveal[data-continuation] .sx-env,
+.reveal[data-continuation] .sx-opening__line {
+  animation: none;
+}
+
+/* Celebration Countdown beat (components/countdown/event-countdown.tsx): the card carries its own material, centred in the room. */
+.reveal__countdown {
+  display: flex;
+  width: min(100%, 25rem);
+  justify-content: center;
+  padding: 0 0.25rem;
+}
+.reveal[data-room="dark"] .reveal__countdown .ec[data-style="editorial"],
+.reveal[data-room="dark"] .reveal__countdown .ec[data-style="atelier"] {
+  box-shadow: 0 2.2em 3.6em -1.6em rgb(0 0 0 / 0.7);
+}

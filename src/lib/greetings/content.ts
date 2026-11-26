@@ -11,6 +11,8 @@ import { buildStorageKey, createSignedUploadUrl, createSignedReadUrl, deleteStor
 import { verifyUploadedContentMatchesMime, ContentVerificationError } from "@/lib/storage/verify-upload";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 import { parseSpotifyInput, toSpotifyUri, type SpotifyMusic, type SpotifyParseError } from "@/lib/music/spotify";
+import { checkCountdownInstant, checkUnlockInstant, isValidTimeZone, zonedWallTimeToUtc, type ScheduleError } from "./schedule";
+import { countdownInputSchema, parseStoredCountdown, serializeCountdown, type CountdownInput, type EventCountdown } from "./countdown";
 
 export { InvalidEditTokenError };
 export class ContentActionError extends Error {}
@@ -18,6 +20,13 @@ export class ContentActionError extends Error {}
 export class MusicLinkError extends ContentActionError {
   constructor(readonly code: SpotifyParseError) {
     super(`Invalid music link: ${code}`);
+  }
+}
+
+/** A refused date/time; `code` is mapped to localized copy by the client. */
+export class ScheduleInputError extends ContentActionError {
+  constructor(readonly code: ScheduleError | "before_unlock" | "invalid_input") {
+    super(`Invalid schedule: ${code}`);
   }
 }
 
@@ -306,3 +315,99 @@ export async function markPreviewViewed(greetingId: string, editToken: string) {
 }
 
 export { allowedMimeTypesFor };
+
+/**
+ * Scheduled Reveal: when the recipient may open the greeting. `null` = as
+ * soon as it is activated. The wall time is converted to an instant here, on
+ * the server, in the zone the sender chose (lib/greetings/schedule.ts); the
+ * client's own conversion is never trusted. Editable only while DRAFT (edit
+ * token + greetings_update_by_token RLS), frozen afterwards (DB trigger).
+ *
+ * Refused when a countdown is already set for a moment before the new unlock
+ * time: the recipient could never see that countdown counting.
+ */
+export async function setGreetingSchedule(
+  greetingId: string,
+  editToken: string,
+  input: { date: string; time: string; timeZone: string } | null,
+): Promise<{ unlockAt: string | null; timeZone: string | null }> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  if (input === null) {
+    await withEditableGreeting(greetingId, (tx) =>
+      tx.update(greetings).set({ unlockAt: null, unlockTimeZone: null, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId)),
+    );
+    return { unlockAt: null, timeZone: null };
+  }
+  if (typeof input.date !== "string" || typeof input.time !== "string" || !isValidTimeZone(input.timeZone)) throw new ScheduleInputError("invalid_input");
+  const zoned = zonedWallTimeToUtc(input.date, input.time, input.timeZone);
+  if (!zoned.ok) throw new ScheduleInputError(zoned.error);
+  const problem = checkUnlockInstant(zoned.instant);
+  if (problem) throw new ScheduleInputError(problem);
+
+  await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-schedule:${greetingId}`}))`);
+    const [row] = await tx
+      .select({ textValue: greetingContent.textValue })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "countdown")))
+      .limit(1);
+    const countdown = parseStoredCountdown(row?.textValue);
+    if (countdown && new Date(countdown.at).getTime() <= zoned.instant.getTime()) throw new ScheduleInputError("before_unlock");
+    await tx.update(greetings).set({ unlockAt: zoned.instant, unlockTimeZone: input.timeZone, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId));
+  });
+  return { unlockAt: zoned.instant.toISOString(), timeZone: input.timeZone };
+}
+
+/**
+ * Celebration Countdown: attach (or replace) the greeting's one countdown.
+ * Stored like "Our Song" — one greeting_content row, slot 0, READY — so it is
+ * gated exactly like the message (migrations/0030). Serialized per greeting
+ * (shared lock with the schedule) so two quick saves never leave two rows.
+ */
+export async function setGreetingCountdown(greetingId: string, editToken: string, raw: CountdownInput): Promise<EventCountdown> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  const parsed = countdownInputSchema.safeParse(raw);
+  if (!parsed.success) throw new ScheduleInputError("invalid_input");
+  const input = parsed.data;
+  const zoned = zonedWallTimeToUtc(input.date, input.time, input.timeZone);
+  if (!zoned.ok) throw new ScheduleInputError(zoned.error);
+  const problem = checkCountdownInstant(zoned.instant);
+  if (problem) throw new ScheduleInputError(problem);
+
+  const countdown: EventCountdown = {
+    title: input.title,
+    at: zoned.instant.toISOString(),
+    timeZone: input.timeZone,
+    style: input.style,
+    note: input.note || null,
+    occasion: input.occasion,
+  };
+  const value = serializeCountdown(countdown);
+
+  await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-schedule:${greetingId}`}))`);
+    const [g] = await tx.select({ unlockAt: greetings.unlockAt }).from(greetings).where(eq(greetings.id, greetingId)).limit(1);
+    if (g?.unlockAt && zoned.instant.getTime() <= g.unlockAt.getTime()) throw new ScheduleInputError("before_unlock");
+    const rows = await tx
+      .select({ id: greetingContent.id })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "countdown")));
+    const [keep, ...extra] = rows;
+    if (keep) {
+      await tx.update(greetingContent).set({ textValue: value, slot: 0, status: "READY", updatedAt: sql`now()` }).where(eq(greetingContent.id, keep.id));
+    } else {
+      await tx.insert(greetingContent).values({ greetingId, type: "countdown", slot: 0, textValue: value, status: "READY" });
+    }
+    for (const r of extra) await tx.delete(greetingContent).where(eq(greetingContent.id, r.id));
+  });
+
+  return countdown;
+}
+
+/** Removes the greeting's countdown (idempotent). */
+export async function removeGreetingCountdown(greetingId: string, editToken: string): Promise<void> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  await withEditableGreeting(greetingId, (tx) =>
+    tx.delete(greetingContent).where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "countdown"))),
+  );
+}

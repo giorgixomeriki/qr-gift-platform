@@ -41,6 +41,15 @@ export const greetings = pgTable("greetings", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
   activatedAt: timestamp("activated_at", { withTimezone: true }),
+  /**
+   * Scheduled Reveal (migrations/0030): the recipient can open the greeting
+   * from this instant on. Null = opens immediately. Authority is the DB
+   * function app_greeting_public_state() on the database clock; frozen once
+   * the greeting leaves DRAFT (trigger).
+   */
+  unlockAt: timestamp("unlock_at", { withTimezone: true }),
+  /** The IANA zone the sender chose the unlock time in (display only; unlock_at is the instant). */
+  unlockTimeZone: text("unlock_time_zone"),
 }).enableRLS();
 
 /**

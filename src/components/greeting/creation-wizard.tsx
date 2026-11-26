@@ -1,5 +1,6 @@
 "use client";
 
+import type { EventCountdown } from "@/lib/greetings/countdown";
 import type { SpotifyMusic } from "@/lib/music/spotify";
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
@@ -49,6 +50,10 @@ export type WizardInitialState = {
   merchantSeller: CheckoutSeller | null;
   /** Owner-declared VAT status (MERCHANT_VAT_STATUS) — display only, never changes the price. */
   merchantVatStatus: "NOT_REGISTERED" | "REGISTERED" | null;
+  /** Scheduled Reveal: the saved unlock instant (ISO) and its zone; null = opens immediately (migrations/0030). */
+  schedule?: { unlockAt: string; timeZone: string } | null;
+  /** Celebration Countdown: the saved countdown, already re-validated (lib/greetings/countdown.ts). */
+  countdown?: EventCountdown | null;
 };
 
 const STEPS = ["theme", "message", "media", "preview", "checkout"] as const;

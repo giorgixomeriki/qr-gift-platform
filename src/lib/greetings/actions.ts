@@ -16,7 +16,12 @@ import {
   removeGreetingMusic,
   ContentActionError,
   MusicLinkError,
+  ScheduleInputError,
+  setGreetingSchedule,
+  setGreetingCountdown,
+  removeGreetingCountdown,
 } from "./content";
+import type { CountdownInput, EventCountdown } from "./countdown";
 import type { SpotifyMusic, SpotifyParseError } from "@/lib/music/spotify";
 import { getEditToken } from "./edit-token-cookie";
 import { editTokenCookieName, EDIT_TOKEN_COOKIE_OPTIONS } from "@/lib/security/edit-token";
@@ -176,6 +181,50 @@ export async function viewPreviewAction(greetingId: string): Promise<ActionResul
 }
 
 export { ContentActionError };
+
+type ScheduleResult<T> = { ok: true; data: T } | { ok: false; error: string; code?: ScheduleInputError["code"] };
+
+/**
+ * Scheduled Reveal: set (date + time + IANA zone) or clear (null) when the
+ * recipient may open the greeting. A refused date is ordinary input — it
+ * comes back with a `code` for localized copy, not as a logged fault.
+ */
+export async function setScheduleAction(
+  greetingId: string,
+  input: { date: string; time: string; timeZone: string } | null,
+): Promise<ScheduleResult<{ unlockAt: string | null; timeZone: string | null }>> {
+  try {
+    await enforceRateLimit({ key: `greeting-schedule:${greetingId}`, limit: 30, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    return { ok: true, data: await setGreetingSchedule(greetingId, token, input) };
+  } catch (err) {
+    if (err instanceof ScheduleInputError) return { ok: false, error: err.message, code: err.code };
+    return errorResult("setScheduleAction", err, { greetingId });
+  }
+}
+
+/** Celebration Countdown: attach or replace the greeting's countdown. */
+export async function setCountdownAction(greetingId: string, input: CountdownInput): Promise<ScheduleResult<EventCountdown>> {
+  try {
+    await enforceRateLimit({ key: `greeting-schedule:${greetingId}`, limit: 30, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    return { ok: true, data: await setGreetingCountdown(greetingId, token, input) };
+  } catch (err) {
+    if (err instanceof ScheduleInputError) return { ok: false, error: err.message, code: err.code };
+    return errorResult("setCountdownAction", err, { greetingId });
+  }
+}
+
+export async function removeCountdownAction(greetingId: string): Promise<ActionResult> {
+  try {
+    await enforceRateLimit({ key: `greeting-schedule:${greetingId}`, limit: 30, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    await removeGreetingCountdown(greetingId, token);
+    return { ok: true, data: undefined };
+  } catch (err) {
+    return errorResult("removeCountdownAction", err, { greetingId });
+  }
+}
 
 /** Server-side re-fetch the wizard uses after mutations that change content shape. */
 export async function getDraftStateAction(greetingId: string): Promise<ActionResult<Awaited<ReturnType<typeof loadDraftForEdit>>>> {

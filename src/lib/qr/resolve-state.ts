@@ -11,10 +11,9 @@ export type QrResolution =
   | { kind: "active"; qrId: string; greetingId: string; partnerId: string }
   /** Paid and activated, but past its availability window (lib/greetings/availability.ts). Nothing is deleted. */
   | { kind: "expired"; qrId: string; greetingId: string; partnerId: string }
-  /**
-   * Refund Model C: the purchase was fully refunded (admin refund or recorded chargeback), so the
-   * greeting is not shown publicly. Nothing is deleted — QR token, greeting, content and media stay.
-   */
+  /** Paid and activated, but the sender chose a later moment (migrations/0030): only the locked envelope and its countdown render. */
+  | { kind: "scheduled"; qrId: string; greetingId: string; partnerId: string }
+  /** A confirmed full refund (Refund Model C): public access is suspended, the content is kept. Never re-opened by a schedule. */
   | { kind: "suspended"; qrId: string; greetingId: string; partnerId: string }
   | { kind: "blocked" };
 
@@ -76,10 +75,17 @@ export async function resolveQrState(publicToken: string): Promise<QrResolution>
           .limit(1);
         if (!greeting) return { kind: "blocked" }; // inconsistent state — fail closed, not found-shaped
         if (qr.status === "ACTIVE" && greeting.status === "ACTIVE") {
-          // Checked before expiry and before anything else that could show the greeting.
-          if (greeting.refundSuspended !== false) return { kind: "suspended", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
-          if (isGreetingExpired(greeting.activatedAt)) return { kind: "expired", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
-          return { kind: "active", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
+          const ids = { qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
+          // The database decides, on its own clock (migrations/0030): the same
+          // function gates the content table's RLS, so page and data agree.
+          // Model C first, belt and braces: the direct authority, then the combined state.
+          if (greeting.refundSuspended !== false) return { kind: "suspended", ...ids };
+          const [access] = await tx.execute<{ state: string }>(sql`select app_greeting_public_state(${greeting.id}::uuid) as state`);
+          if (access?.state === "SUSPENDED") return { kind: "suspended", ...ids };
+          if (isGreetingExpired(greeting.activatedAt)) return { kind: "expired", ...ids };
+          if (access?.state === "SCHEDULED") return { kind: "scheduled", ...ids };
+          if (access?.state !== "OPEN") return { kind: "blocked" }; // fail closed
+          return { kind: "active", ...ids };
         }
         return { kind: "draft", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
       }

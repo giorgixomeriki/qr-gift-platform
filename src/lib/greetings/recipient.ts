@@ -6,15 +6,30 @@ import { verifyEditToken } from "@/lib/security/edit-token";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { createSignedReadUrl } from "@/lib/storage/media";
 import { isGreetingExpired } from "./availability";
+import { parseStoredCountdown } from "./countdown";
 
 export class RecipientAccessError extends Error {}
+/** The greeting is paid and active but its scheduled moment has not come (migrations/0030). */
+export class GreetingLockedError extends RecipientAccessError {}
+/** The scheduled moment arrived between resolving the QR and loading the lock: render the greeting instead. */
+export class GreetingNowOpenError extends Error {}
 
 type Tx = Parameters<Parameters<typeof withPublicContext>[0]>[0];
 
-/** Refund Model C (migrations/0029): fully refunded → no public content. Anything but an explicit false = suspended. */
-async function assertNotRefundSuspended(tx: Tx, greetingId: string): Promise<void> {
-  const rows = (await tx.execute(sql`select app_greeting_refund_suspended(${greetingId}::uuid) as suspended`)) as unknown as { suspended: boolean }[];
-  if (rows[0]?.suspended !== false) throw new RecipientAccessError("Greeting access is suspended");
+/**
+ * app_greeting_public_state() — the one authority (database clock) on whether
+ * the public may see this greeting's content now: OPEN, SCHEDULED, SUSPENDED
+ * (confirmed full refund) or UNAVAILABLE. Re-checked by every loader here
+ * rather than trusted from resolveQrState, and enforced again by RLS.
+ */
+async function publicState(tx: Tx, greetingId: string): Promise<{ state: string; now: Date }> {
+  const [row] = await tx.execute<{ state: string; now: Date | string }>(sql`select app_greeting_public_state(${greetingId}::uuid) as state, now() as now`);
+  return { state: row?.state ?? "UNAVAILABLE", now: new Date(row?.now ?? Date.now()) };
+}
+
+function assertOpen(state: string) {
+  if (state === "SCHEDULED") throw new GreetingLockedError("Greeting is scheduled to open later");
+  if (state !== "OPEN") throw new RecipientAccessError(`Greeting is not open (${state})`);
 }
 
 /**
@@ -39,7 +54,9 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
 
     const [qr] = await tx.select({ status: qrCodes.status }).from(qrCodes).where(eq(qrCodes.id, greeting.qrCodeId)).limit(1);
     if (!qr || qr.status !== "ACTIVE") throw new RecipientAccessError("QR is not active");
-    await assertNotRefundSuspended(tx, greetingId);
+    // Scheduled / refund-suspended: no content row is read and no media URL is signed.
+    const { state, now } = await publicState(tx, greetingId);
+    assertOpen(state);
 
     const [themeRow] = await tx.select({ key: themes.key }).from(themes).where(eq(themes.id, greeting.themeId)).limit(1);
 
@@ -53,7 +70,45 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
       })),
     );
 
-    return { greeting, themeKey: (themeRow?.key ?? "minimal") as ThemeKey, themeVersion: greeting.themeVersion, content };
+    const countdownRow = content.find((c) => c.type === "countdown" && c.status === "READY");
+    return {
+      greeting,
+      themeKey: (themeRow?.key ?? "minimal") as ThemeKey,
+      themeVersion: greeting.themeVersion,
+      content,
+      countdown: parseStoredCountdown(countdownRow?.textValue),
+      serverNow: now,
+    };
+  });
+}
+
+/**
+ * Everything the locked (scheduled) screen may show — and nothing more: the
+ * world it will open in (theme metadata is public, like the QR's status), the
+ * moment it opens, the zone the sender chose, and the database's clock so the
+ * countdown does not depend on the recipient's device clock. Never reads
+ * greeting_content (RLS would refuse it anyway) and never signs a URL.
+ */
+export async function loadScheduledGreetingShell(greetingId: string) {
+  return withPublicContext(async (tx) => {
+    const [greeting] = await tx
+      .select({ id: greetings.id, status: greetings.status, themeId: greetings.themeId, themeVersion: greetings.themeVersion, unlockAt: greetings.unlockAt, unlockTimeZone: greetings.unlockTimeZone, activatedAt: greetings.activatedAt })
+      .from(greetings)
+      .where(eq(greetings.id, greetingId))
+      .limit(1);
+    if (!greeting || greeting.status !== "ACTIVE" || !greeting.unlockAt) throw new RecipientAccessError("Greeting is not scheduled");
+    if (isGreetingExpired(greeting.activatedAt)) throw new RecipientAccessError("Greeting availability has ended");
+    const { state, now } = await publicState(tx, greetingId);
+    if (state === "OPEN") throw new GreetingNowOpenError("Greeting has just opened");
+    if (state !== "SCHEDULED") throw new RecipientAccessError(`Greeting is not scheduled (${state})`);
+    const [themeRow] = await tx.select({ key: themes.key }).from(themes).where(eq(themes.id, greeting.themeId)).limit(1);
+    return {
+      themeKey: (themeRow?.key ?? "minimal") as ThemeKey,
+      themeVersion: greeting.themeVersion,
+      unlockAt: greeting.unlockAt,
+      timeZone: greeting.unlockTimeZone ?? "Asia/Tbilisi",
+      serverNow: now,
+    };
   });
 }
 
@@ -78,7 +133,7 @@ export async function signRecipientVoiceUrl(greetingId: string): Promise<string 
     if (isGreetingExpired(greeting.activatedAt)) throw new RecipientAccessError("Greeting availability has ended");
     const [qr] = await tx.select({ status: qrCodes.status }).from(qrCodes).where(eq(qrCodes.id, greeting.qrCodeId)).limit(1);
     if (!qr || qr.status !== "ACTIVE") throw new RecipientAccessError("QR is not active");
-    await assertNotRefundSuspended(tx, greetingId);
+    assertOpen((await publicState(tx, greetingId)).state);
     const [row] = await tx
       .select({ storageKey: greetingContent.storageKey, status: greetingContent.status })
       .from(greetingContent)

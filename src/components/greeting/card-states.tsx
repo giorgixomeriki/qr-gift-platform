@@ -16,6 +16,7 @@ const LazySenderEntry = lazy(() => import("./sender-entry").then((m) => ({ defau
 const LazyCreationWizard = lazy(() => import("./creation-wizard").then((m) => ({ default: m.CreationWizard })));
 const LazySignatureWizard = lazy(() => import("./signature-wizard").then((m) => ({ default: m.SignatureWizard })));
 const LazyRecipientView = lazy(() => import("./recipient-view").then((m) => ({ default: m.RecipientView })));
+const LazyScheduledReveal = lazy(() => import("./scheduled-reveal").then((m) => ({ default: m.ScheduledReveal })));
 
 export function SenderEntry(props: ComponentProps<typeof LazySenderEntry>) {
   return (
@@ -42,6 +43,13 @@ export function RecipientView(props: ComponentProps<typeof LazyRecipientView>) {
   return (
     <Suspense>
       <LazyRecipientView {...props} />
+    </Suspense>
+  );
+}
+export function ScheduledReveal(props: ComponentProps<typeof LazyScheduledReveal>) {
+  return (
+    <Suspense>
+      <LazyScheduledReveal {...props} />
     </Suspense>
   );
 }

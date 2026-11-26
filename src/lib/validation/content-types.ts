@@ -11,10 +11,14 @@ import { z } from "zod";
  * add its metadata shape below, seed a `content_types` row, ship a renderer.
  * No column/enum migration required.
  */
-export const SUPPORTED_CONTENT_TYPES = ["text", "photo", "video", "audio", "music"] as const;
+export const SUPPORTED_CONTENT_TYPES = ["text", "photo", "video", "audio", "music", "countdown"] as const;
 export type SupportedContentType = (typeof SUPPORTED_CONTENT_TYPES)[number];
-/** Types stored as uploaded files (Storage objects). "text" and "music" (a Spotify reference, lib/music/spotify.ts) live in text_value. */
-type MediaContentType = Exclude<SupportedContentType, "text" | "music">;
+/**
+ * Types stored as uploaded files (Storage objects). "text", "music" (a Spotify
+ * reference, lib/music/spotify.ts) and "countdown" (an event countdown,
+ * lib/greetings/countdown.ts) live in text_value.
+ */
+type MediaContentType = Exclude<SupportedContentType, "text" | "music" | "countdown">;
 
 export const contentTypeSchema = z.enum(SUPPORTED_CONTENT_TYPES);
 

@@ -14,6 +14,8 @@ export function RecipientView({
   content,
   isOriginalSender,
   spotifyEmbed = false,
+  serverNow,
+  arrivedFromLock = false,
 }: {
   greetingId: string;
   themeKey: ThemeKey;
@@ -22,6 +24,10 @@ export function RecipientView({
   content: GreetingRenderContent;
   isOriginalSender: boolean;
   spotifyEmbed?: boolean;
+  /** The database clock when the page rendered (the countdown beat counts from it). */
+  serverNow?: number;
+  /** Came from the Scheduled Reveal lock screen at its moment (?from=lock). */
+  arrivedFromLock?: boolean;
 }) {
   const t = useTranslations("success");
   const handlePlayed = useCallback(
@@ -43,6 +49,8 @@ export function RecipientView({
       content={withRefresh}
       mode="recipient"
       spotifyEmbed={spotifyEmbed}
+      serverNow={serverNow}
+      continuation={arrivedFromLock}
       onContentPlayed={handlePlayed}
       senderBanner={
         isOriginalSender ? (

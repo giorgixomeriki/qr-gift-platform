@@ -41,7 +41,8 @@ export async function ExpiredPlaceholder() {
 /**
  * Refund Model C: the purchase was fully refunded, so the greeting is not
  * shown publicly. Deliberately neutral — never says "refunded", names no
- * sender, content or dates. Nothing has been deleted.
+ * sender, content or dates. Nothing has been deleted. A scheduled unlock or
+ * countdown never re-opens it (app_greeting_public_state, migrations/0030).
  */
 export async function SuspendedPlaceholder() {
   const t = await getTranslations("qr");

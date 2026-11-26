@@ -8,9 +8,10 @@ import { recordAnalyticsEvent } from "@/lib/analytics";
 import { getDefaultProductPrice, formatMinorAmount } from "@/lib/payments/display-price";
 import { editTokenCookieName } from "@/lib/security/edit-token";
 import { loadDraftForEdit, InvalidEditTokenError } from "@/lib/greetings/content";
-import { loadActiveGreetingForRecipient, isOriginalSender, RecipientAccessError } from "@/lib/greetings/recipient";
+import { loadActiveGreetingForRecipient, loadScheduledGreetingShell, isOriginalSender, GreetingLockedError, GreetingNowOpenError, RecipientAccessError } from "@/lib/greetings/recipient";
+import { parseStoredCountdown } from "@/lib/greetings/countdown";
 import type { WizardInitialState } from "@/components/greeting/creation-wizard";
-import { CreationWizard, RecipientView, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
+import { CreationWizard, RecipientView, ScheduledReveal, SenderEntry, SignatureWizard } from "@/components/greeting/card-states";
 import { signatureUiEnabled } from "@/components/signature/flag";
 import { getMerchantInfo } from "@/lib/merchant/server";
 import { checkoutSeller } from "@/lib/merchant/info";
@@ -42,10 +43,10 @@ export default async function QrEntryPage({
   searchParams,
 }: {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ step?: string | string[] }>;
+  searchParams: Promise<{ step?: string | string[]; from?: string | string[] }>;
 }) {
   const { token } = await params;
-  const { step } = await searchParams;
+  const { step, from } = await searchParams;
   const resolution = await resolveQrState(token);
   const locale = await getLocale();
 
@@ -61,6 +62,19 @@ export default async function QrEntryPage({
 
     case "suspended":
       return <SuspendedPlaceholder />;
+
+    case "scheduled": {
+      const cookieStore = await cookies();
+      const isSender = await isOriginalSender(resolution.greetingId, cookieStore.get(editTokenCookieName(resolution.greetingId))?.value);
+      if (!isSender) await recordAnalyticsEvent({ eventType: "QR_SCANNED", qrCodeId: resolution.qrId }, { partnerId: resolution.partnerId });
+      try {
+        return await lockedGreeting(resolution.greetingId, isSender);
+      } catch (err) {
+        if (err instanceof GreetingNowOpenError) redirect(`/g/${encodeURIComponent(token)}?from=lock`);
+        if (err instanceof RecipientAccessError) return <BlockedPlaceholder />;
+        throw err;
+      }
+    }
 
     case "available": {
       await recordAnalyticsEvent({ eventType: "QR_SCANNED", qrCodeId: resolution.qrId }, { partnerId: resolution.partnerId });
@@ -89,6 +103,7 @@ export default async function QrEntryPage({
         const audioRow = draft.content.find((c) => c.type === "audio" && c.signedUrl);
         const textRow = draft.content.find((c) => c.type === "text");
         const musicRow = draft.content.find((c) => c.type === "music" && c.status === "READY");
+        const countdownRow = draft.content.find((c) => c.type === "countdown" && c.status === "READY");
 
         // A message is required before preview/checkout. The server refuses
         // to create an order without one anyway (lib/payments/eligibility.ts);
@@ -111,6 +126,8 @@ export default async function QrEntryPage({
           isTestPayments: env.PAYMENTS_PROVIDER === "TEST",
           merchantSeller: checkoutSeller(getMerchantInfo(), locale === "en" ? "en" : "ka"),
           merchantVatStatus: checkoutVatStatus(),
+          schedule: draft.greeting.unlockAt ? { unlockAt: draft.greeting.unlockAt.toISOString(), timeZone: draft.greeting.unlockTimeZone ?? "Asia/Tbilisi" } : null,
+          countdown: parseStoredCountdown(countdownRow?.textValue),
         };
 
         return <Suspense>{signatureUiEnabled() ? <SignatureWizard initial={initial} /> : <CreationWizard initial={initial} />}</Suspense>;
@@ -156,16 +173,40 @@ export default async function QrEntryPage({
               video: videoRow ? { url: videoRow.signedUrl! } : null,
               audio: audioRow ? { url: audioRow.signedUrl! } : null,
               music: parseStoredMusic(musicRow?.textValue),
+              countdown: data.countdown,
             }}
+            serverNow={data.serverNow.getTime()}
+            arrivedFromLock={from === "lock"}
             spotifyEmbed={spotifyEmbedEnabled()}
           />
         );
       } catch (err) {
+        // Resolved as open a moment ago but the database says not yet: show the lock, never an empty greeting.
+        if (err instanceof GreetingLockedError) return await lockedGreeting(resolution.greetingId, isSender).catch(() => <BlockedPlaceholder />);
         if (err instanceof RecipientAccessError) return <BlockedPlaceholder />;
         throw err;
       }
     }
   }
+}
+
+/**
+ * Scheduled Reveal: the locked envelope in the greeting's own world and a
+ * countdown to the moment it opens. Gets only what may be shown before
+ * unlock (lib/greetings/recipient.ts → loadScheduledGreetingShell).
+ */
+async function lockedGreeting(greetingId: string, isSender: boolean) {
+  const shell = await loadScheduledGreetingShell(greetingId);
+  return (
+    <ScheduledReveal
+      themeKey={shell.themeKey}
+      themeVersion={shell.themeVersion}
+      unlockAt={shell.unlockAt.toISOString()}
+      timeZone={shell.timeZone}
+      serverNow={shell.serverNow.getTime()}
+      isOriginalSender={isSender}
+    />
+  );
 }
 
 /** The configured VAT status for the checkout disclosure (display only), never from the demo profile. */

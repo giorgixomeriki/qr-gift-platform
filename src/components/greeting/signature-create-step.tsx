@@ -12,7 +12,9 @@ import { useWaveformPeaks } from "@/lib/client/waveform";
 import { SLOT_LIMITS, type MediaItem, type MediaKind, type MediaUploads } from "./use-media-uploads";
 import { SignatureVoiceCapture } from "./signature-voice-capture";
 import { SignatureMusicField } from "./signature-music-field";
+import { SignatureTimingField } from "./signature-timing-field";
 import type { SpotifyMusic } from "@/lib/music/spotify";
+import type { EventCountdown } from "@/lib/greetings/countdown";
 
 const KINDS = ["photo", "video", "audio"] as const;
 
@@ -46,6 +48,10 @@ export function SignatureCreateStep({
   greetingId,
   music,
   onMusicChange,
+  schedule,
+  onScheduleChange,
+  countdown,
+  onCountdownChange,
 }: {
   themeKey: ThemeKey;
   message: string;
@@ -61,12 +67,18 @@ export function SignatureCreateStep({
   /** "Our song": saved independently of the message and media (signature-music-field.tsx). */
   music: SpotifyMusic | null;
   onMusicChange: (music: SpotifyMusic | null) => void;
+  /** Scheduled Reveal + Celebration Countdown (signature-timing-field.tsx), saved independently like the song. */
+  schedule: { unlockAt: string; timeZone: string } | null;
+  onScheduleChange: (s: { unlockAt: string; timeZone: string } | null) => void;
+  countdown: EventCountdown | null;
+  onCountdownChange: (c: EventCountdown | null) => void;
 }) {
   const t = useTranslations("wizard");
   const tm = useTranslations("wizard.message");
   const ts = useTranslations("wizard.sig");
   const tt = useTranslations("themes");
   const tc = useTranslations("common");
+  const tTiming = useTranslations("wizard.timing");
   const fieldRef = useRef<HTMLTextAreaElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const photoInput = useRef<HTMLInputElement>(null);
@@ -77,6 +89,12 @@ export function SignatureCreateStep({
   /** Continue tapped while a file had failed: say so (never a silent, dead button). */
   const [blocked, setBlocked] = useState(false);
   const { uploading, failed } = media;
+  /** The countdown is switched on but not complete and saved yet. */
+  const [timingBlocking, setTimingBlocking] = useState(false);
+  const [timingBlocked, setTimingBlocked] = useState(false);
+  useEffect(() => {
+    if (!timingBlocking) setTimingBlocked(false);
+  }, [timingBlocking]);
 
   useEffect(() => {
     if (!queued) return;
@@ -104,6 +122,11 @@ export function SignatureCreateStep({
     if (failed) {
       setBlocked(true);
       listRef.current?.querySelector<HTMLElement>('[data-status="failed"] button, [data-status="invalid"] button')?.focus();
+      return;
+    }
+    if (timingBlocking) {
+      setTimingBlocked(true);
+      document.querySelector<HTMLElement>('[data-testid="countdown-panel"]')?.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
     if (uploading) return setQueued(true);
@@ -290,7 +313,22 @@ export function SignatureCreateStep({
 
       <SignatureMusicField greetingId={greetingId} music={music} onChange={onMusicChange} onEditingChange={setMusicEditing} />
 
+      <SignatureTimingField
+        greetingId={greetingId}
+        schedule={schedule}
+        onScheduleChange={onScheduleChange}
+        countdown={countdown}
+        onCountdownChange={onCountdownChange}
+        onBlockingChange={setTimingBlocking}
+      />
+
       <Dock className="sigf-dock-create">
+        {timingBlocked && (
+          <p className="sigf-dock-note" role="alert" data-testid="timing-block">
+            <ErrorIcon size={16} weight="fill" aria-hidden />
+            {tTiming("blocked")}
+          </p>
+        )}
         {blocked && failed > 0 && (
           <p className="sigf-dock-note" role="alert" data-testid="failed-block">
             <ErrorIcon size={16} weight="fill" aria-hidden />
