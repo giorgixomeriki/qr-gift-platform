@@ -167,6 +167,10 @@ export function SignatureCheckout({
             )}
           </div>
 
+          {/* In the page flow, not in the sticky dock: two full consent sentences would
+              make the dock cover a third of a phone screen and hide the order summary. */}
+          {!isRetry && <CheckoutConsent onChange={setConsent} className="sig-caption mt-6 mb-6" />}
+
           <Dock>
             {cancelled && (
               <p className="sig-status" data-tone="warning" role="status">
@@ -186,7 +190,6 @@ export function SignatureCheckout({
                 {t("errorGeneric")}
               </p>
             )}
-            {!isRetry && <CheckoutConsent onChange={setConsent} className="sig-caption" />}
             <SigAction
               className="sig-cta--pay"
               onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : void payReal())}
