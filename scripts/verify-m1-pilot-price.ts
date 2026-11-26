@@ -72,6 +72,23 @@ async function main() {
     BOG_REFUNDS_ENABLED: "false",
     LEGAL_EFFECTIVE_DATE: "2026-01-01",
   });
+  // The real policy copy still carries lawyer/owner notes, so the legal-readiness
+  // gate keeps real checkout closed; these suites test the money path, so they
+  // use the same copy with the notes removed (refused in production).
+  {
+    const L = require("../src/lib/site/legal-readiness") as typeof import("../src/lib/site/legal-readiness");
+    L.setLegalCopyForTesting(L.finalizedCopyForTesting());
+    // …and every merchant detail the policies name (test values, never real ones).
+    const merchantTest: Record<string, string> = {
+      MERCHANT_LEGAL_NAME_KA: "ი/მ ტესტი", MERCHANT_LEGAL_NAME_EN: "IE Test", MERCHANT_ENTITY_TYPE: "IE",
+      MERCHANT_ID_CODE: "01234567890", MERCHANT_PUBLISH_ID_CODE: "owner-approved",
+      MERCHANT_LEGAL_ADDRESS_KA: "თბილისი, ტესტის ქ. 1", MERCHANT_LEGAL_ADDRESS_EN: "1 Test St, Tbilisi", MERCHANT_PUBLISH_LEGAL_ADDRESS: "owner-approved",
+      MERCHANT_ACTUAL_ADDRESS_KA: "თბილისი, ტესტის ქ. 2", MERCHANT_ACTUAL_ADDRESS_EN: "2 Test St, Tbilisi",
+      MERCHANT_SUPPORT_EMAIL: "support@verify.test", MERCHANT_PHONE: "+995555000000",
+      MERCHANT_SUPPORT_HOURS_KA: "ორშ–პარ, 10:00–18:00", MERCHANT_SUPPORT_HOURS_EN: "Mon–Fri, 10:00–18:00",
+    };
+    for (const [k, v] of Object.entries(merchantTest)) process.env[k] ??= v;
+  }
   delete process.env.MERCHANT_PROFILE;
   delete process.env.ALLOW_TEST_PAYMENTS;
   delete process.env.VERCEL;

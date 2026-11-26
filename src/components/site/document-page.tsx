@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import { resolveMerchantToken } from "@/lib/merchant/info";
 import { analyseSections, publishableSections, sectionsSchema } from "@/lib/site/document";
+import { legalPackageInEffect } from "@/lib/site/legal-readiness";
 import { getSiteContext } from "./context";
 import { Inline } from "./inline";
 import { PageHeader } from "./page-header";
@@ -46,8 +47,10 @@ export async function DocumentPage({
 
   // A policy always states whether it is in effect — "Not yet in effect" until it is published with an
   // effective date, so a page without its internal notes never reads as an operative policy (audit UX-01/UX-011).
+  // "In effect" is the same answer real-money checkout uses (lib/site/legal-readiness.ts): every policy in
+  // every language final, every merchant detail set, and the effective date reached. Fail-closed.
   const status = isPolicy
-    ? effectiveDate && !isDraft
+    ? effectiveDate && !isDraft && legalPackageInEffect(ctx.merchant)
       ? ts("status.effectiveFrom", { date: formatEffectiveDate(effectiveDate, ctx.locale) })
       : ts("status.notYetEffective")
     : undefined;

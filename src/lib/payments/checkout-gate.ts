@@ -1,6 +1,8 @@
 import "server-only";
 import { env } from "@/lib/env";
-import { loadMerchantInfo, policiesInEffect } from "@/lib/merchant/info";
+import { loadMerchantInfo } from "@/lib/merchant/info";
+import { describeLegalProblems, legalReadiness } from "@/lib/site/legal-readiness";
+import { logServerWarning } from "@/lib/log";
 
 /**
  * Real-money checkout is off unless CHECKOUT_ENABLED=true. The simulated TEST
@@ -16,9 +18,13 @@ export class CheckoutUnavailableError extends Error {
 }
 
 /**
- * Real-money checkout also needs the policies in force (LEGAL_EFFECTIVE_DATE
- * set after legal approval, and reached): consent to terms marked "not yet in
- * effect" is no consent. CHECKOUT_ENABLED alone never opens it.
+ * Real-money checkout also needs the policies FINAL and in force: every
+ * policy (Terms, Privacy, Delivery & Refunds; ka and en) free of internal
+ * review/decision notes, every merchant detail it names set, and
+ * LEGAL_EFFECTIVE_DATE set and reached (lib/site/legal-readiness.ts) —
+ * exactly when the pages themselves say "In effect from …". Consent to terms
+ * marked "not yet in effect" is no consent. Fail-closed: any error = closed.
+ * CHECKOUT_ENABLED alone never opens it, and neither does the owner pilot.
  *
  * Owner pilot (M1): with CHECKOUT_ENABLED=false, a QR code listed in
  * CHECKOUT_PILOT_QR_IDS is still payable (same consent, same provider, same
@@ -30,9 +36,28 @@ export function isCheckoutOpen(qrCodeId?: string): boolean {
   // production deployment without a real provider is simply closed: the
   // sender sees "payments open soon" rather than a provider error.
   if (env.PAYMENTS_PROVIDER === "TEST") return env.NODE_ENV !== "production";
-  if (!policiesInEffect(loadMerchantInfo(process.env))) return false;
+  if (!legalDocumentsReady()) return false;
   if (env.CHECKOUT_ENABLED) return true;
   return !!qrCodeId && env.CHECKOUT_PILOT_QR_IDS.includes(qrCodeId.toLowerCase());
+}
+
+let lastLoggedProblems = "";
+function legalDocumentsReady(): boolean {
+  try {
+    const now = new Date();
+    const r = legalReadiness(loadMerchantInfo(process.env), now);
+    if (!r.ready) {
+      const summary = describeLegalProblems(r.problems, now);
+      // Once per distinct reason, not per request.
+      if (summary !== lastLoggedProblems) {
+        lastLoggedProblems = summary;
+        logServerWarning("checkoutGate", "LEGAL_NOT_READY", { problems: summary.slice(0, 900) });
+      }
+    }
+    return r.ready;
+  } catch {
+    return false;
+  }
 }
 
 export function assertCheckoutOpen(qrCodeId?: string): void {

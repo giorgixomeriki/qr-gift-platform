@@ -41,6 +41,7 @@
     "verify:partner-email": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-email.ts",
     "ops:check-partner-email": "node ./node_modules/.bin/tsx scripts/check-partner-email.ts",
     "verify:partner-auth": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-partner-auth.ts",
+    "verify:checkout-legal-guard": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-checkout-legal-guard.ts",
     "verify:qr-handover": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-qr-handover.ts",
     "verify:inventory-consistency": "node --env-file-if-exists=.env.local ./node_modules/.bin/tsx scripts/verify-inventory-consistency.ts",
     "verify:music": "node ./node_modules/.bin/tsx scripts/verify-music-links.ts",
