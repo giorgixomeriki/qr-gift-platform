@@ -171,6 +171,7 @@ test.describe(`Our Song providers — metadata ${META ? "ON" : "OFF"}`, () => {
 
     await page.getByTestId("preview-activate-cta").click();
     await page.getByTestId("checkout-consent").check();
+    await page.getByTestId("checkout-consent-activation").check();
     await page.getByTestId("checkout-pay").click();
     await expect(page.getByTestId("sender-success-banner")).toBeVisible({ timeout: 20_000 });
   });
