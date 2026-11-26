@@ -165,9 +165,11 @@ test.describe.serial("Scheduled Reveal + Celebration Countdown", () => {
     await ctx.addCookies([{ name: "NEXT_LOCALE", value: "en", url: info.project.use.baseURL! }]);
     const page = await ctx.newPage();
     const res = await page.goto(`/g/${token}`);
-    await expect(page.getByText("This greeting is no longer shown")).toBeVisible();
+    // Refund Model C's neutral placeholder (0029): never says "refunded".
+    await expect(page.getByText("This greeting is currently unavailable")).toBeVisible();
     const html = await res!.text();
     expect(html).not.toContain(MESSAGE);
+    await expect(page.locator("main")).not.toContainText(/refund/i);
     await expect(page.getByTestId("scheduled-reveal")).toHaveCount(0);
     await ctx.close();
   });
