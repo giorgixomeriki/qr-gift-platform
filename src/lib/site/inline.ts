@@ -44,8 +44,15 @@ export class InlineSyntaxError extends Error {}
 
 const PATTERN = /(\*\*.+?\*\*|\[[^\]]+\]\([^)\s]+\)|\{\{[a-zA-Z.]+\}\})/g;
 
+/**
+ * The only outside pages site copy may link to: the documents YouTube's API
+ * Services terms require our policies to link (Developer Policies III.A.1–2).
+ * Exact strings, not a pattern.
+ */
+export const EXTERNAL_POLICY_LINKS = new Set(["https://www.youtube.com/t/terms", "https://policies.google.com/privacy"]);
+
 export function isAllowedHref(href: string): boolean {
-  return /^\/[a-z0-9\-/#]*$/.test(href) || /^mailto:\S+@\S+$/.test(href) || /^tel:\+\d+$/.test(href);
+  return /^\/[a-z0-9\-/#]*$/.test(href) || /^mailto:\S+@\S+$/.test(href) || /^tel:\+\d+$/.test(href) || EXTERNAL_POLICY_LINKS.has(href);
 }
 
 export function parseInline(source: string): InlineNode[] {

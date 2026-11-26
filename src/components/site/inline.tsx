@@ -25,7 +25,7 @@ function renderNode(node: InlineNode, ctx: SiteContext, key: number): ReactNode 
           {renderNodes(node.children, ctx)}
         </Link>
       ) : (
-        <a key={key} href={node.href} className={linkClass}>
+        <a key={key} href={node.href} className={linkClass} {...(node.href.startsWith("https://") ? { target: "_blank", rel: "noopener noreferrer" } : {})}>
           {renderNodes(node.children, ctx)}
         </a>
       );

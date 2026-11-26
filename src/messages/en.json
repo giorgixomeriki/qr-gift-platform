@@ -171,7 +171,7 @@
         "refunds": "Delivery and Refunds",
         "age": "Greetings may be bought only by people aged 18 or over.",
         "consent": "I agree to the Terms and Conditions and the Delivery and Refunds policy, and I have read the Privacy Policy.",
-        "activationConsent": "I ask for my greeting to be activated immediately after payment, and I understand that once it is activated I lose my right to withdraw from the contract.",
+        "activationConsent": "I ask for performance to start immediately after payment by activating my greeting on the card, even if I chose a later opening time for the recipient, and I understand that I thereby lose my right to withdraw from the contract.",
         "vat": {
           "NOT_REGISTERED": "The seller is not registered for VAT; no VAT is added to the price.",
           "REGISTERED": "The seller is registered for VAT."
@@ -440,7 +440,8 @@
   "success": {
     "banner": "This is exactly what they'll see. Give the gift with the card — they scan it and it opens.",
     "title": "Your greeting is live",
-    "kicker": "Activated"
+    "kicker": "Activated",
+    "confirmation": "Download payment confirmation"
   },
   "partner": {
     "notAdmin": "Signed in as {email}, but not an admin.",
@@ -1308,6 +1309,7 @@
     "senderKicker": "Scheduled",
     "senderTitle": "Sealed until its moment",
     "senderBody": "It opens for them on {when}. Until then, scanning the card shows only this envelope.",
-    "opensLabel": "Opens"
+    "opensLabel": "Opens",
+    "confirmation": "Download payment confirmation"
   }
 }

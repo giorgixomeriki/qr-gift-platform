@@ -205,6 +205,7 @@ async function lockedGreeting(greetingId: string, isSender: boolean) {
       timeZone={shell.timeZone}
       serverNow={shell.serverNow.getTime()}
       isOriginalSender={isSender}
+      greetingId={greetingId}
     />
   );
 }

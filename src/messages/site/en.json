@@ -421,7 +421,7 @@
         "id": "digital-delivery",
         "title": "Digital delivery and activation",
         "blocks": [
-          { "type": "p", "text": "Delivery is **immediate and digital**. Your greeting is activated on the card as soon as your payment is confirmed; from then on, scanning the card opens it. Nothing is sent by post." },
+          { "type": "p", "text": "Delivery is **immediate and digital**. Your greeting is activated on the card as soon as your payment is confirmed. From then on, scanning the card opens it; if you chose an opening date and time, the card shows a waiting screen until that moment and then opens the greeting. Nothing is sent by post." },
           { "type": "p", "text": "If a payment fails, nothing is activated and you can try again." }
         ]
       },
@@ -433,7 +433,7 @@
             "type": "list",
             "items": [
               "**Successful payment:** the greeting is activated only after our server has verified the payment with the bank. Returning from the payment page does not, by itself, activate anything.",
-              "**Activation confirmation:** once activated, you see a confirmation on screen, and scanning the card opens the greeting.",
+              "**Activation confirmation:** once activated, you see a confirmation on screen and can download a confirmation of your payment and contract (order reference, amount, the terms that apply and your consents). Scanning the card opens the greeting, or shows the waiting screen until the opening time you chose.",
               "**Failed or cancelled payment:** nothing is activated and you can try again. If you still notice a charge, contact us.",
               "**Payment still processing:** if the bank is still processing the payment, the screen shows that we are checking its status. Don’t pay again; we check the status ourselves.",
               "**Charged twice:** if you are charged twice for the same greeting, the extra payment is refunded in full."
@@ -454,7 +454,7 @@
         "title": "After activation",
         "blocks": [
           { "type": "p", "text": "Your greeting is digital content delivered immediately at your request, and it can’t be changed once it is activated." },
-          { "type": "p", "text": "Before paying, you separately ask for the greeting to be activated immediately and acknowledge that once it is activated you lose the right to withdraw from the contract. After activation, the fee is therefore refunded only in the cases set out in this policy or where the law requires it." },
+          { "type": "p", "text": "Before paying, you separately ask us to start performing the contract immediately, by activating the greeting, and acknowledge that you thereby lose the right to withdraw from the contract. This also applies if you chose a later opening time for the recipient. After activation, the fee is therefore refunded only in the cases set out in this policy or where the law requires it." },
           { "type": "p", "text": "This policy does not limit your rights as a consumer under Georgian law." }
         ]
       },
@@ -519,7 +519,7 @@
         "title": "Interruptions and availability period",
         "blocks": [
           { "type": "p", "text": "The service may be briefly unavailable for maintenance or because of a fault. A paid greeting is not lost during an interruption and opens again once the service is restored." },
-          { "type": "p", "text": "A greeting is available for 12 months after activation. The end of that period is not a reason for a refund." }
+          { "type": "p", "text": "A greeting is available for 12 months after activation, not after its opening time. The end of that period is not a reason for a refund." }
         ]
       },
       {
@@ -615,11 +615,30 @@
               ["Supabase", "Database, storage of greeting media, and partner and administrator sign-in (servers in Frankfurt, Germany)"],
               ["Render", "Website hosting (servers in Frankfurt, Germany)"],
               ["Resend", "Email delivery to partners and administrators only (sign-in and invitation links)"],
+              ["Google (YouTube)", "Title, channel and thumbnail of YouTube links in a greeting (YouTube API Services), as an independent controller under the Google Privacy Policy"],
               ["Bank of Georgia", "Card payments, as an independent controller under its own privacy policy"]
             ]
           },
           { "type": "p", "text": "Data is stored and processed in Germany (Frankfurt): the website servers by Render, the database and media by Supabase. We do not send emails to senders or recipients." },
-          { "type": "p", "text": "Supabase and Render process data in the European Union (Germany). Email sent through Resend goes only to partners and administrators and may be processed in the United States. Providers process data only on our instructions, under data processing agreements (DPAs) and the EU Standard Contractual Clauses." }
+          { "type": "p", "text": "Supabase and Render process data in the European Union (Germany), under data processing agreements that form part of their terms of service. Email sent through Resend goes only to partners and administrators and is processed in the United States. We make this transfer only with the written consent of each partner and administrator, given after we have told them that the United States may not protect personal data to the same standard as Georgia and what that can mean for them. Resend processes the data only on our instructions, under its data processing agreement, which includes the EU Standard Contractual Clauses." }
+        ]
+      },
+      {
+        "id": "music-links",
+        "title": "Music links: YouTube and Spotify",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "If a greeting contains a YouTube or YouTube Music link, we use YouTube API Services. Our server sends YouTube only the video's identifier to get its title, channel and thumbnail. The thumbnail is then loaded in the viewer's browser directly from YouTube's servers, so YouTube receives that browser's IP address and standard request information. Opening the link takes you to YouTube. Google's use of this data is governed by the [Google Privacy Policy](https://policies.google.com/privacy)."
+          },
+          {
+            "type": "p",
+            "text": "We send YouTube nothing else about you, and we keep the title, channel and thumbnail address for at most one hour, only to avoid asking YouTube again."
+          },
+          {
+            "type": "p",
+            "text": "Spotify links are plain links. We send Spotify nothing; Spotify receives information about you only if you open the link."
+          }
         ]
       },
       {
@@ -749,7 +768,8 @@
               "A QR Starr card is a physical card with a QR code, which you receive from one of our partner shops.",
               "By scanning an unused card you can create a **digital greeting**: a written message, up to {{fact.photoCount}} photos, one video and one voice note, in a design you choose.",
               "To make the greeting available on the card you pay a one-time **activation fee**, shown in Georgian lari (GEL) before you pay.",
-              "The greeting is delivered digitally and immediately: it becomes available on the card as soon as payment is confirmed, and the recipient opens it by scanning the same card."
+              "The greeting is delivered digitally and immediately: it is activated on the card as soon as payment is confirmed. The recipient opens it by scanning the same card, straight away or, if you chose an opening date and time, from that moment.",
+              "You can also add a link to a song on Spotify, YouTube or YouTube Music. The song stays on that service and opens there; QR Starr does not play, copy or sell it."
             ]
           },
           { "type": "p", "text": "What a greeting can hold, and its limits, are described on [How it works](/how-it-works)." }
@@ -800,10 +820,10 @@
             "Scan an unused QR Starr card and create your greeting.",
             "Preview it exactly as the recipient will see it. Until you pay, you can go back and change or correct anything.",
             "At checkout, check the price and these terms, then complete the payment on the payment page.",
-            "Once your payment is confirmed, the greeting is activated and you see a confirmation on screen."
+            "Once your payment is confirmed, the greeting is activated and you see a confirmation on screen. From there you can download a confirmation of your payment and contract."
           ] },
           { "type": "p", "text": "The website and these terms are available in Georgian and English." },
-          { "type": "p", "text": "The service has no customer accounts, so we do not keep a personal copy of the contract for you to open later. You can save or print these terms. We keep the payment record of your purchase as described in the [Privacy policy](/privacy)." },
+          { "type": "p", "text": "The service has no customer accounts. After payment, the confirmation you can download shows the order reference, the amount, the payment and activation times, the opening time you chose, the date from which these terms apply and the two consents you gave. It can be downloaded from the device you used to create the greeting, so please save it. If you lose it, contact us with the card and payment details and we will confirm your purchase." },
           { "type": "p", "text": "The contract is concluded when the bank confirms your payment and the greeting is activated. Until then you can stop at any time and nothing is charged." }
         ]
       },
@@ -811,7 +831,7 @@
         "id": "withdrawal",
         "title": "Right of withdrawal",
         "blocks": [
-          { "type": "p", "text": "The greeting is digital content not supplied on a physical medium. Before paying, you separately ask for it to be activated immediately and acknowledge that once it is activated you lose the right to withdraw from the contract. You can stop at any time before payment is completed at no cost. When you do get a refund is set out in [Delivery and refunds](/delivery-and-refunds)." },
+          { "type": "p", "text": "The greeting is digital content supplied not on a tangible medium. Before paying, you separately ask us to start performing the contract immediately after payment, by activating the greeting on the card, and you acknowledge that you thereby lose the right to withdraw from the contract. This also applies if you chose a later opening time for the recipient: performance starts at activation, and the opening time only sets when the recipient can open the greeting. You can stop at any time before payment is completed, at no cost. When you do get a refund is set out in [Delivery and refunds](/delivery-and-refunds)." },
           { "type": "p", "text": "Nothing in these terms limits your rights as a consumer under Georgian law." }
         ]
       },
@@ -827,6 +847,20 @@
             ]
           },
           { "type": "p", "text": "This permission is free of charge and non-exclusive, is used only to provide the service, and ends when the greeting is deleted (backups may remain for a limited time). We never use your content in advertising or for any other purpose without your separate consent." }
+        ]
+      },
+      {
+        "id": "music-links",
+        "title": "Music links",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "A greeting may include a link to a song on Spotify, YouTube or YouTube Music. The song stays on that service and opens there, under that service's own terms. We don't play, copy or sell it, and we can't guarantee that it stays available there."
+          },
+          {
+            "type": "p",
+            "text": "For YouTube and YouTube Music links we use YouTube API Services to show the video's title, channel and thumbnail. By adding or opening a YouTube link in a greeting, you agree to be bound by the [YouTube Terms of Service](https://www.youtube.com/t/terms)."
+          }
         ]
       },
       {
@@ -867,7 +901,7 @@
         "title": "Service availability",
         "blocks": [
           { "type": "p", "text": "We work to keep greetings available at all times, but we can’t guarantee uninterrupted access. The service may be briefly unavailable for maintenance or because of a fault." },
-          { "type": "p", "text": "An activated greeting opens when the card is scanned **for 12 months after activation** (activation happens only after the payment is verified on our server). After that period the greeting no longer opens from the card. The end of this period does not mean your data is deleted automatically: see our [Privacy Policy](/privacy) for how data is kept." },
+          { "type": "p", "text": "Activation and access are different. **Activation** happens when our server has verified your payment. **Access** is when the recipient can open the greeting by scanning the card: straight away, or from the opening date and time you chose. An activated greeting opens **for 12 months after activation**. The 12 months count from activation, not from the opening time, so a later opening time leaves less time to view it; an opening time can be set at most 360 days ahead. After that period the greeting no longer opens from the card. The end of this period does not mean your data is deleted automatically: see our [Privacy Policy](/privacy) for how data is kept." },
           { "type": "p", "text": "If your payment went through but a technical fault on our side means the greeting was not activated or does not open, we check the payment and the activation and try to restore access without charging you again. If delivery cannot be restored, we refund the full amount. See [Delivery and Refunds](/delivery-and-refunds)." },
           { "type": "p", "text": "In that case, contact us. If we cannot restore access within 5 business days, we refund the activation fee in full." }
         ]

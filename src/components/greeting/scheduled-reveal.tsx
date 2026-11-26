@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { ConfirmationLink } from "./confirmation-link";
 import { WaxSeal } from "@/components/customer/wax-seal";
 import { RollingNumber } from "@/components/countdown/rolling-number";
 import { useAnchoredClock, useCountdown } from "@/components/countdown/use-countdown";
@@ -48,6 +49,7 @@ export function ScheduledReveal({
   timeZone,
   serverNow,
   isOriginalSender,
+  greetingId,
 }: {
   themeKey: string;
   themeVersion?: number;
@@ -57,6 +59,8 @@ export function ScheduledReveal({
   /** The database's clock when this page was rendered (ms). */
   serverNow: number;
   isOriginalSender: boolean;
+  /** For the sender's confirmation download; absent in labs. */
+  greetingId?: string;
 }) {
   const t = useTranslations("scheduled");
   const tc = useTranslations("countdown");
@@ -149,6 +153,7 @@ export function ScheduledReveal({
                 <p className="sx-banner__kicker">{t("senderKicker")}</p>
                 <p className="sx-banner__title">{t("senderTitle")}</p>
                 <p className="sx-banner__body">{t("senderBody", { when: `${when.day}, ${when.time}` })}</p>
+                {greetingId && <ConfirmationLink greetingId={greetingId} label={t("confirmation")} />}
               </div>
             </div>
           </div>

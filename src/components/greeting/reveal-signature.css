@@ -1076,3 +1076,15 @@
 .reveal[data-room="dark"] .reveal__countdown .ec[data-style="atelier"] {
   box-shadow: 0 2.2em 3.6em -1.6em rgb(0 0 0 / 0.7);
 }
+
+/* The sender's confirmation download inside the paper note. */
+.sx-banner__link {
+  display: inline-block;
+  margin-top: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  min-height: 24px;
+}

@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { ConfirmationLink } from "./confirmation-link";
 import { WaxSeal } from "@/components/customer/wax-seal";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import type { ThemeKey } from "@/lib/themes/registry";
@@ -61,6 +62,7 @@ export function RecipientView({
               <p className="sx-banner__kicker">{t("kicker")}</p>
               <p className="sx-banner__title">{t("title")}</p>
               <p className="sx-banner__body">{t("banner")}</p>
+              <ConfirmationLink greetingId={greetingId} label={t("confirmation")} />
             </div>
           </div>
         ) : undefined
