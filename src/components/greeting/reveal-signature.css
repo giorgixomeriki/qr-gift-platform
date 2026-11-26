@@ -990,7 +990,8 @@
   display: block;
   width: 6.5rem;
   overflow: hidden;
-  border-radius: 4px;
+  /* Square corners: YouTube thumbnails must be shown unaltered (Developer Policies guide). */
+  border-radius: 0;
   background: color-mix(in oklab, var(--qs-ink) 10%, var(--qs-cream));
   box-shadow: 0 0 0 1px rgb(0 0 0 / 0.08), 0 14px 26px -16px rgb(0 0 0 / 0.55);
 }
@@ -1017,11 +1018,6 @@
 }
 .qs-song[data-variant="beat"] .qs-song__cover[data-aspect="wide"] {
   width: min(19rem, 72vw);
-}
-@media (min-width: 1024px) {
-  .qs-song__cover {
-    border-radius: 8px;
-  }
 }
 .qs-song__title--song {
   display: -webkit-box;

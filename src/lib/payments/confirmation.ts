@@ -8,6 +8,7 @@ import { checkoutSeller } from "@/lib/merchant/info";
 import { getMerchantInfo } from "@/lib/merchant/server";
 import { consentTextSha256 } from "./checkout";
 import { renderConfirmationHtml, type ConfirmationData } from "./confirmation-html";
+import { confirmationDocuments } from "./confirmation-documents";
 import kaMessages from "@/messages/ka.json";
 import enMessages from "@/messages/en.json";
 
@@ -45,7 +46,8 @@ export async function loadPurchaseConfirmation(greetingId: string, editToken: st
       .limit(1);
     const consentLocale = consent?.locale === "en" ? "en" : "ka";
     const legal = (consentLocale === "en" ? enMessages : kaMessages).wizard.checkout.legal;
-    const seller = checkoutSeller(getMerchantInfo(), consentLocale);
+    const info = getMerchantInfo();
+    const seller = checkoutSeller(info, consentLocale);
     return {
       orderId: order.id,
       orderStatus: order.status,
@@ -67,6 +69,11 @@ export async function loadPurchaseConfirmation(greetingId: string, editToken: st
           }
         : null,
       seller,
+      // Only the version the buyer accepted: every text change ships with a new effective date.
+      documents:
+        (consent?.effective ?? null) === (info.values.legalEffectiveDate ?? null)
+          ? confirmationDocuments(info, consentLocale, `${(order.amountMinor / 100).toFixed(2)} ${order.currency}`)
+          : undefined,
     };
   });
 }

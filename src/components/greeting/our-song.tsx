@@ -20,7 +20,7 @@ function pausePageMedia() {
  *
  * Two faces, same card:
  * - YouTube with MUSIC_METADATA_YOUTUBE=1 (server-side, default off): YouTube's
- *   own title, channel and thumbnail, unmodified (scaled only, 4/8 px corners,
+ *   own title, channel and thumbnail, unmodified (scaled only, square corners,
  *   nothing over it), named source and the link back. Spotify: never (policy).
  * - Otherwise (and when the artwork fails to load): QR STARR's record sleeve,
  *   exactly as before.
@@ -109,7 +109,7 @@ export function OurSong({
     >
       <div className="qs-song__card">
         {showArt ? (
-          // Provider artwork exactly as served: no crop, overlay, filter or animation — only scaled (Spotify Terms IV.2.2(b)).
+          // YouTube thumbnail exactly as served: no crop, rounding, overlay, filter or animation — only scaled.
           <span className="qs-song__cover" data-aspect={known!.artworkAspect}>
             {/* eslint-disable-next-line @next/next/no-img-element -- provider CDN image, shown as served; next/image would re-encode it */}
             <img

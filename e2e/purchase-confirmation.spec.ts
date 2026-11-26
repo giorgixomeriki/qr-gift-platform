@@ -53,6 +53,11 @@ test("sender downloads the confirmation; strangers get 404; scheduled greetings 
     expect(html).not.toContain("<script");
     expect(html).toContain("ხელშეკრულებაზე უარის თქმის უფლებას");
     expect(html).not.toContain("გასვლის უფლება");
+    // Art. 12(6): the full Terms and Delivery and Refunds text travel with the confirmation.
+    expect(html).toContain("პირობების სრული ტექსტი, რომლებსაც დაეთანხმეთ");
+    expect(html).toContain("ხელშეკრულებაზე უარის თქმის უფლება"); // Terms withdrawal section title
+    expect(html).toContain("თანხის დაბრუნების"); // refunds policy
+    expect(html).not.toMatch(/\{\{|\*\*/); // no raw tokens or markdown
 
     // Anyone else: 404, nothing revealed.
     const stranger = await browser.newContext({ baseURL: base });

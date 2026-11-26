@@ -21,6 +21,8 @@ export type ConfirmationData = {
     statements: [string, string] | string[] | null;
   } | null;
   seller: { name: string; idCode: string | null; legalAddress: string | null; supportEmail: string | null } | null;
+  /** Full Terms + Delivery and Refunds text as accepted (Consumer Rights Protection Law Art. 12(6)). */
+  documents?: { title: string; sections: { title: string; lines: string[] }[] }[];
 };
 
 const L = {
@@ -51,6 +53,9 @@ const L = {
     links: "პირობები: qrapp.ge/terms · qrapp.ge/privacy · qrapp.ge/delivery-and-refunds",
     tz: "თბილისის დრო",
     footer: "დოკუმენტი შექმნილია qrapp.ge-ზე",
+    docs: "პირობების სრული ტექსტი, რომლებსაც დაეთანხმეთ",
+    works: "ფუნქციონალობა",
+    worksValue: "იხსნება ტელეფონის ან კომპიუტერის თანამედროვე ბრაუზერში QR კოდის დასკანერებით ან ბმულით; აპლიკაცია და ანგარიში საჭირო არ არის.",
   },
   en: {
     title: "Payment and contract confirmation",
@@ -79,6 +84,9 @@ const L = {
     links: "Terms: qrapp.ge/terms · qrapp.ge/privacy · qrapp.ge/delivery-and-refunds",
     tz: "Tbilisi time",
     footer: "Generated on qrapp.ge",
+    docs: "Full text of the terms you accepted",
+    works: "Functionality",
+    worksValue: "Opens in an up-to-date phone or computer browser by scanning the QR code or following its link; no app or account needed.",
   },
 } as const;
 
@@ -112,6 +120,7 @@ export function renderConfirmationHtml(d: ConfirmationData, now: Date = new Date
     d.seller?.supportEmail ? row(t.support, esc(d.seller.supportEmail)) : "",
     row(t.order, `<strong>${esc(orderReference(d.orderId))}</strong><br><small>${esc(d.orderId)}</small>`),
     row(t.service, esc(t.serviceValue)),
+    row(t.works, esc(t.worksValue)),
     row(t.amount, `<strong>${esc(money(d.amountMinor, d.currency))}</strong>`),
     row(t.paidAt, `${esc(when(d.paidAt, locale))} (${t.tz})`),
     row(t.activatedAt, `${esc(when(d.activatedAt, locale))} (${t.tz})`),
@@ -141,6 +150,7 @@ th{width:42%;font-weight:600;padding-right:12px;color:#6d5a60}
 ul{padding-left:0;list-style:none;margin:0}li{margin:0 0 8px}
 .m,small,footer{color:#6d5a60;font-size:13px}code{word-break:break-all}
 .r{color:#8a4b00;font-weight:600}
+.doc{border-top:1px solid #e6dcd2;margin-top:16px;padding-top:8px;font-size:14px}.doc h3{font-size:15px;margin:8px 0}.doc h4{font-size:14px;margin:14px 0 4px}.doc p{margin:0 0 6px}
 </style></head><body><main>
 <p class="m">QR Starr · qrapp.ge</p>
 <h1>${esc(t.title)}</h1>
@@ -151,6 +161,7 @@ ${d.orderStatus === "REFUNDED" ? `<p class="r">${esc(t.statusRefunded)}</p>` : "
 ${consentBlock}
 <p>${esc(t.withdrawal)}</p>
 <p class="m">${esc(t.links)}</p>
+${(d.documents ?? []).length ? `<h2>${esc(t.docs)}</h2>` + (d.documents ?? []).map((doc) => `<section class="doc"><h3>${esc(doc.title)}</h3>${doc.sections.map((sec, i) => `<h4>${i + 1}. ${esc(sec.title)}</h4>${sec.lines.map((l) => `<p>${esc(l)}</p>`).join("")}`).join("")}</section>`).join("") : ""}
 <footer><p>${esc(t.footer)}: ${esc(when(now, locale))} (${t.tz})</p></footer>
 </main></body></html>
 `;
