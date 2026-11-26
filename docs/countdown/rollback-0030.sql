@@ -44,5 +44,4 @@ alter table greetings drop constraint if exists greetings_unlock_pair;
 alter table greetings drop column if exists unlock_at;
 alter table greetings drop column if exists unlock_time_zone;
 
-delete from drizzle.__drizzle_migrations where hash = (select hash from drizzle.__drizzle_migrations order by created_at desc limit 1)
-  and created_at = 1795766400000;
+delete from drizzle.__drizzle_migrations where created_at = 1795766400000;
