@@ -4,6 +4,7 @@ import path from "node:path";
 import { spawn, execFile, type ChildProcess } from "node:child_process";
 import { randomBytes, sign } from "node:crypto";
 import type { AddressInfo } from "node:net";
+import { ALL_CHECKOUT_CONSENTS } from "../src/lib/payments/checkout-codes";
 
 // Same server-only shim as the verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -232,7 +233,7 @@ async function main() {
     const { greetingId, editToken } = await startGreeting(token);
     await updateGreetingMessage(greetingId, editToken, "Free-tier drill");
     const { summary } = await getOrCreateCheckoutOrder(greetingId, editToken);
-    await acceptCheckoutTerms(greetingId, editToken, "ka");
+    await acceptCheckoutTerms(greetingId, editToken, "ka", ALL_CHECKOUT_CONSENTS);
     const [pay] = await db`select provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
     return { greetingId, orderId: summary.orderId, bogId: pay!.provider_payment_id as string };
   }

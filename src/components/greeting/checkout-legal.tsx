@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { CheckoutSeller } from "@/lib/merchant/info";
 
@@ -85,24 +86,49 @@ function PolicyLinks() {
 }
 
 /**
- * The buyer's explicit agreement to the Terms and the Delivery and Refunds
- * policy, and acknowledgement of the Privacy Policy, before payment. Unticked
- * by default; the checkout screens keep the Pay button disabled until it is
- * ticked. Consent is given per visit and is not stored: it gates the redirect
- * to the bank's page, which is the moment the purchase is made.
+ * The two consents a buyer gives before payment, both unticked by default:
+ *   1. agreement to the Terms and the Delivery and Refunds policy, and
+ *      acknowledgement of the Privacy Policy;
+ *   2. the request for immediate activation and the acknowledgement that the
+ *      right of withdrawal ends once the greeting is activated (digital
+ *      content not on a physical medium).
+ * onChange reports true only while both are ticked; the checkout screens keep
+ * Pay disabled until then, and the server refuses a payment without both
+ * (acceptCheckoutTerms), recording them against the order.
  */
-export function CheckoutConsent({ checked, onChange, className }: { checked: boolean; onChange: (checked: boolean) => void; className?: string }) {
+export function CheckoutConsent({ onChange, className }: { onChange: (bothGiven: boolean) => void; className?: string }) {
   const t = useTranslations("wizard.checkout.legal");
+  const [terms, setTerms] = useState(false);
+  const [activation, setActivation] = useState(false);
+  const box = "mt-0.5 size-5 shrink-0 accent-current";
   return (
-    <label className={["flex items-start gap-2.5", className].filter(Boolean).join(" ")}>
-      <input
-        type="checkbox"
-        className="mt-0.5 size-5 shrink-0 accent-current"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        data-testid="checkout-consent"
-      />
-      <span>{t("consent")}</span>
-    </label>
+    <div className={["flex flex-col gap-3", className].filter(Boolean).join(" ")}>
+      <label className="flex items-start gap-2.5">
+        <input
+          type="checkbox"
+          className={box}
+          checked={terms}
+          onChange={(e) => {
+            setTerms(e.target.checked);
+            onChange(e.target.checked && activation);
+          }}
+          data-testid="checkout-consent"
+        />
+        <span>{t("consent")}</span>
+      </label>
+      <label className="flex items-start gap-2.5">
+        <input
+          type="checkbox"
+          className={box}
+          checked={activation}
+          onChange={(e) => {
+            setActivation(e.target.checked);
+            onChange(terms && e.target.checked);
+          }}
+          data-testid="checkout-consent-activation"
+        />
+        <span>{t("activationConsent")}</span>
+      </label>
+    </div>
   );
 }

@@ -1,6 +1,8 @@
 import Module from "node:module";
 import type { AddressInfo } from "node:net";
 import { sign } from "node:crypto";
+import { createHash } from "node:crypto";
+import { ALL_CHECKOUT_CONSENTS } from "../src/lib/payments/checkout-codes";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,7 +172,7 @@ async function main() {
   async function newOrder(p = standard) {
     const g = await newGreeting(p);
     const { summary } = await getOrCreateCheckoutOrder(g.greetingId, g.editToken);
-    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "ka");
+    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "ka", ALL_CHECKOUT_CONSENTS);
     const [pay] = await admin`select provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
     return { ...g, orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl };
   }
@@ -211,7 +213,23 @@ async function main() {
     const [{ n: attemptsBefore }] = (await admin`select count(*)::int as n from payments where order_id = ${summary.orderId}`) as unknown as [{ n: number }];
     check("1d. Entering checkout opens our order but no BOG payment (no redirect before consent)", attemptsBefore === 0 && bog.calls.filter((c) => c.path === "/ecommerce/orders").length === bog.calls.slice(0, before).filter((c) => c.path === "/ecommerce/orders").length && !("redirectUrl" in summary));
 
-    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "en");
+    // Both consents are required server-side: anything less records nothing and opens no BOG payment.
+    const { ConsentRequiredError, isFullCheckoutConsent } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
+    const bogBefore = bog.calls.filter((c) => c.path === "/ecommerce/orders").length;
+    const partial = [undefined, null, {}, { terms: true }, { immediateActivation: true }, { terms: "true", immediateActivation: true }, { terms: true, immediateActivation: 1 }];
+    let allRefused = true;
+    for (const c of partial) {
+      try { await acceptCheckoutTerms(g.greetingId, g.editToken, "en", c as never); allRefused = false; } catch (e) { if (!(e instanceof ConsentRequiredError)) allRefused = false; }
+    }
+    const [{ n: rowsAfterPartial }] = (await admin`select count(*)::int as n from checkout_consents where order_id = ${summary.orderId}`) as unknown as [{ n: number }];
+    check("1d2. Missing or partial consent (terms only, activation only, non-boolean values) → refused, no consent row, no BOG payment",
+      allRefused && rowsAfterPartial === 0 && bog.calls.filter((c) => c.path === "/ecommerce/orders").length === bogBefore);
+    check("1d3. isFullCheckoutConsent accepts only { terms: true, immediateActivation: true }",
+      isFullCheckoutConsent(ALL_CHECKOUT_CONSENTS) && partial.every((c) => !isFullCheckoutConsent(c)));
+    const msgs = { ka: require("../src/messages/ka.json"), en: require("../src/messages/en.json") } as Record<"ka" | "en", { wizard: { checkout: { legal: { consent: string; activationConsent: string } } } }>;
+    check("1d4. The recorded hash covers both sentences shown (terms + immediate activation / withdrawal)",
+      (["ka", "en"] as const).every((l) => consentTextSha256(l) === createHash("sha256").update(`${msgs[l].wizard.checkout.legal.consent}\n${msgs[l].wizard.checkout.legal.activationConsent}`, "utf8").digest("hex")));
+    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "en", ALL_CHECKOUT_CONSENTS);
     const consents = await admin`select order_id, greeting_id, locale, consent_text_sha256, policies_effective_date::text as d, accepted_at from checkout_consents where order_id = ${summary.orderId}`;
     const [pay] = await admin`select created_at from payments where order_id = ${summary.orderId}`;
     check(
@@ -221,7 +239,7 @@ async function main() {
     );
     check("1f. The Georgian and English consent sentences hash differently (the evidence names the language shown)", consentTextSha256("ka") !== consentTextSha256("en"));
     const other = await newGreeting();
-    const forged = await attempt(() => acceptCheckoutTerms(other.greetingId, g.editToken, "ka"));
+    const forged = await attempt(() => acceptCheckoutTerms(other.greetingId, g.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("1g. Another greeting's edit token cannot record consent", !forged.ok);
   }
 
@@ -418,7 +436,7 @@ async function main() {
   {
     const o = await newOrder();
     const reentry = await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry while BOG's page is open
-    const again = await attempt(() => acceptCheckoutTerms(o.greetingId, o.editToken, "en")); // consent again
+    const again = await attempt(() => acceptCheckoutTerms(o.greetingId, o.editToken, "en", ALL_CHECKOUT_CONSENTS)); // consent again
     check("16-. M1 guard: re-entry waits for the bank, a second consent opens no second BOG payment", reentry.awaitingProvider === true && !again.ok && again.error === "A payment for this card is still being processed");
     // A second charge can still happen outside that guard (an attempt opened
     // before the guard existed, or a race between two tabs): open it directly.
@@ -478,7 +496,7 @@ async function main() {
     const refundOut = await attempt(() => refundPaidOrder(adminUserId, outPaid.orderId));
     const reconOut = await attempt(() => reconcileOrderRefunds(outStuck.orderId));
     const verifyOut = await attempt(() => checkPaymentReturn(outPending.greetingId, outPending.editToken));
-    const payOut = await attempt(() => acceptCheckoutTerms(outFresh.greetingId, outFresh.editToken, "ka"));
+    const payOut = await attempt(() => acceptCheckoutTerms(outFresh.greetingId, outFresh.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     const after = await counts();
     const scopeMsg = (r: { ok: boolean; error?: string }) => !r.ok && /outside this deployment's payment scope/.test((r as { error: string }).error);
     check("17a. Admin refund of another partner's PAID order: refused, nothing sent to BOG", scopeMsg(refundOut) && !bog.calls.slice(callsBefore).some((c) => c.path.startsWith("/payment/refund/")), JSON.stringify(refundOut));

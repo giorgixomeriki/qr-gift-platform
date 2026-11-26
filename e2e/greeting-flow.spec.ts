@@ -66,8 +66,13 @@ test.describe("Sender greeting creation -> TEST checkout -> recipient reveal", (
     await expect(page.getByTestId("checkout-currency")).toBeVisible();
     // No payment before explicit agreement to the terms.
     await expect(page.getByTestId("checkout-consent")).not.toBeChecked();
+    await expect(page.getByTestId("checkout-consent-activation")).not.toBeChecked();
     await expect(page.getByTestId("checkout-pay")).toBeDisabled();
     await page.getByTestId("checkout-consent").check();
+    // Terms alone are not enough: the immediate-activation consent is separate and also required.
+    await expect(page.getByTestId("checkout-pay")).toBeDisabled();
+    await page.getByTestId("checkout-consent-activation").check();
+    await expect(page.getByTestId("checkout-pay")).toBeEnabled();
     await page.getByTestId("checkout-pay").click();
 
     // simulateTestPaymentAction succeeds -> full reload of /g/{token}, which

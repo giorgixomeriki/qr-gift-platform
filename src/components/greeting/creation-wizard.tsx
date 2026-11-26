@@ -771,7 +771,7 @@ export function CheckoutStep({
               </Notice>
             )}
             {error && <Notice tone="danger">{t("errorGeneric")}</Notice>}
-            {!isRetry && <CheckoutConsent checked={consent} onChange={setConsent} className="text-body-sm text-ink" />}
+            {!isRetry && <CheckoutConsent onChange={setConsent} className="text-body-sm text-ink" />}
             <Button
               size="lg"
               block

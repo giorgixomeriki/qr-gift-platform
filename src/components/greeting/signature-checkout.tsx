@@ -186,7 +186,7 @@ export function SignatureCheckout({
                 {t("errorGeneric")}
               </p>
             )}
-            {!isRetry && <CheckoutConsent checked={consent} onChange={setConsent} className="sig-caption" />}
+            {!isRetry && <CheckoutConsent onChange={setConsent} className="sig-caption" />}
             <SigAction
               className="sig-cta--pay"
               onClick={() => (failed || cancelled ? retry() : isTestPayments ? pay("success") : void payReal())}

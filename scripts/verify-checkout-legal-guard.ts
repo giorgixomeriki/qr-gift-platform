@@ -69,20 +69,17 @@ async function main() {
     return out;
   };
 
-  console.log("\n--- A. Today's real copy keeps checkout closed ---");
+  console.log("\n--- A. Today's real copy is final: only the date and merchant details decide ---");
   {
     real();
     const r = L.legalReadiness(info(), NOW);
-    const ann = r.problems.filter((p): p is Extract<typeof p, { kind: "annotations" }> => p.kind === "annotations");
-    const refs = (locale: string, policy: string) => ann.find((p) => p.locale === locale && p.policy === policy)?.decisions.join(",") ?? "";
-    check("A1. Complete merchant details + valid date, real copy → NOT ready", !r.ready);
-    check("A2. All 6 documents (3 policies × ka/en) are reported with notes", ann.length === 6, ann.map((p) => `${p.locale}/${p.policy}`));
-    check("A3. Owner decisions per policy match the copy: terms M1,M5,D6 / privacy M4,M1,D8 / refunds M2,M5,M6,C4,M6 (ka = en)",
-      ["ka", "en"].every((l) => refs(l, "terms") === "M1,M5,D6" && refs(l, "privacy") === "M4,M1,D8" && refs(l, "refunds") === "M2,M5,M6,C4,M6"),
-      { ka: [refs("ka", "terms"), refs("ka", "privacy"), refs("ka", "refunds")], en: [refs("en", "terms"), refs("en", "privacy"), refs("en", "refunds")] });
-    const reviews = ann.filter((p) => p.locale === "en").reduce((n, p) => n + p.reviews, 0);
-    const decisions = ann.filter((p) => p.locale === "en").reduce((n, p) => n + p.decisions.length, 0);
-    check("A4. 17 lawyer-review notes and 11 owner-decision notes per language", reviews === 17 && decisions === 11, { reviews, decisions });
+    const ann = r.problems.filter((p) => p.kind === "annotations");
+    check("A1. Real copy has no review or decision notes in any policy (ka + en)", ann.length === 0, ann);
+    check("A2. Real copy + complete merchant details + date reached → ready", r.ready, r.problems);
+    check("A3. Real copy without LEGAL_EFFECTIVE_DATE → not ready (no_date)",
+      JSON.stringify(L.legalReadiness(info({ LEGAL_EFFECTIVE_DATE: undefined }), NOW).problems) === JSON.stringify([{ kind: "not_in_effect", detail: "no_date" }]));
+    check("A4. Real copy names only merchant details the guard checks (phone unset → not ready)",
+      kinds(L.legalReadiness(info({ MERCHANT_PHONE: undefined }), NOW)).includes("missing_merchant_detail"));
   }
 
   console.log("\n--- B. Final copy: every rule fails closed ---");
@@ -117,7 +114,8 @@ async function main() {
   console.log("\n--- P. Policy pages say \"In effect\" on exactly the checkout answer ---");
   {
     real();
-    check("P1. Real copy + complete details + date: pages say NOT in effect", L.legalPackageInEffect(info(), NOW) === false);
+    check("P1. Real copy + complete details + date reached: pages say in effect", L.legalPackageInEffect(info(), NOW) === true);
+    check("P1b. Real copy without a date: pages say NOT in effect", L.legalPackageInEffect(info({ LEGAL_EFFECTIVE_DATE: undefined }), NOW) === false);
     L.setLegalCopyForTesting(finalCopy);
     check("P2. Final copy + date reached: in effect", L.legalPackageInEffect(info(), NOW) === true);
     check("P3. Final copy + future date: not yet in effect", L.legalPackageInEffect(info({ LEGAL_EFFECTIVE_DATE: "2026-11-27" }), NOW) === false);
@@ -136,13 +134,15 @@ async function main() {
     console.warn = (...a: unknown[]) => { warns.push(a.map(String).join(" ")); };
     try {
       real();
-      check("C1. Real copy today: the pilot card is CLOSED even with the date set and the pilot listed", isCheckoutOpen(PILOT) === false);
+      process.env.LEGAL_EFFECTIVE_DATE = "";
+      check("C1. Real copy, no LEGAL_EFFECTIVE_DATE: the pilot card is CLOSED", isCheckoutOpen(PILOT) === false);
       let refused = false;
       try { assertCheckoutOpen(PILOT); } catch (e) { refused = e instanceof CheckoutUnavailableError; }
       check("C2. …assertCheckoutOpen refuses it (what every order / bank-payment step calls)", refused);
       isCheckoutOpen(PILOT);
       isCheckoutOpen(OTHER);
       check("C3. Logged once per distinct reason (LEGAL_NOT_READY), not per request", warns.filter((w) => w.includes("LEGAL_NOT_READY")).length === 1, warns.length);
+      process.env.LEGAL_EFFECTIVE_DATE = "2026-01-01";
       check("C4. The log names refs and counts only, no copy text or merchant values",
         warns.every((w) => !w.includes("support@verify.test") && !w.includes("01234567890") && !w.includes("will be stated here")));
 
@@ -157,7 +157,10 @@ async function main() {
       process.env.MERCHANT_SUPPORT_EMAIL = MERCHANT.MERCHANT_SUPPORT_EMAIL!;
       check("C9. Restored: open again (the gate is evaluated per request, nothing cached)", isCheckoutOpen(PILOT) === true);
       L.setLegalCopyForTesting(null);
-      check("C10. Back to the real copy: closed again", isCheckoutOpen(PILOT) === false);
+      check("C10. Back to the real (final) copy with the date set: the pilot card opens", isCheckoutOpen(PILOT) === true);
+      process.env.LEGAL_EFFECTIVE_DATE = "2999-01-01";
+      check("C10b. Real copy, future date: closed again", isCheckoutOpen(PILOT) === false);
+      process.env.LEGAL_EFFECTIVE_DATE = "2026-01-01";
     } finally {
       console.warn = origWarn;
     }

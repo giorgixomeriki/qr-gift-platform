@@ -2,6 +2,7 @@ import Module from "node:module";
 import type { AddressInfo } from "node:net";
 import { sign } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { ALL_CHECKOUT_CONSENTS } from "../src/lib/payments/checkout-codes";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -170,7 +171,7 @@ async function main() {
   };
   async function payStarted(card: Awaited<ReturnType<typeof newCard>>) {
     const { summary } = await getOrCreateCheckoutOrder(card.greetingId, card.editToken);
-    const { redirectUrl } = await acceptCheckoutTerms(card.greetingId, card.editToken, "ka");
+    const { redirectUrl } = await acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS);
     const [pay] = await admin`select provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
     return { summary, orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl };
   }
@@ -222,7 +223,7 @@ async function main() {
     const ret = await checkPaymentReturn(pilotCard.greetingId, pilotCard.editToken);
     const revisit = await attempt(() => getOrCreateCheckoutOrder(pilotCard.greetingId, pilotCard.editToken));
     check("S1. 3 replayed callbacks + return check + revisit (edit link closed once ACTIVE): no second payment/commission", results.every((r) => r.status === 200) && ret.status === "PAID" && !revisit.ok && revisit.name === "InvalidEditTokenError" && (await paymentsOf(pilotCard.greetingId)).length === 1 && (await ledgerOf(pilotCard.greetingId)) === "COMMISSION_EARNED:30" && (await ordersOf(pilotCard.greetingId)).length === 1);
-    const t = await attempt(() => acceptCheckoutTerms(pilotCard.greetingId, pilotCard.editToken, "ka"));
+    const t = await attempt(() => acceptCheckoutTerms(pilotCard.greetingId, pilotCard.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("S2. Pay again on a PAID card is refused, no new BOG order", !t.ok && bogCreates().length === creates + 1);
     const run = await runPaymentReconciliation(adminUserId, { apply: true });
     check("S3. Reconciliation: no anomaly, no action for the 1.00 order", !run.anomalies.some((a) => a.orderId === o!.id) && !run.actions.some((a) => a.orderId === o!.id), JSON.stringify(run.anomalies.filter((a) => a.orderId === o!.id)));
@@ -251,7 +252,7 @@ async function main() {
     // A card with a 10.00 order opened BEFORE it became the 1.00 pilot: refused, not silently re-priced.
     setPilot(forged.qrId, 100);
     const before = bogCreates().length;
-    const x = await attempt(() => acceptCheckoutTerms(forged.greetingId, forged.editToken, "ka"));
+    const x = await attempt(() => acceptCheckoutTerms(forged.greetingId, forged.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("R4. 10.00 order on a card later priced 1.00 → refused (PilotPriceMismatchError), no BOG call", !x.ok && x.name === "PilotPriceMismatchError" && bogCreates().length === before, x.ok ? "accepted" : x.name);
 
     // Override withdrawn while a 1.00 order is open (pilot card itself still listed).
@@ -261,18 +262,18 @@ async function main() {
     check("R5. Open 1.00 order created", summary.grossAmountMinor === 100);
     setPilot(card.qrId, null);
     const b2 = bogCreates().length;
-    const y = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const y = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("R6. Override withdrawn → the open 1.00 order can no longer reach BOG", !y.ok && y.name === "PilotPriceMismatchError" && bogCreates().length === b2, y.ok ? "accepted" : y.name);
     // The pilot list moves to another card: the old 1.00 order is closed too.
     setPilot(otherCard.qrId, 100);
-    const z = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const z = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("R7. Pilot moved to another card → old card closed, no BOG call", !z.ok && z.name === "CheckoutUnavailableError" && bogCreates().length === b2);
 
     // Public checkout opened at runtime (startup validation forbids it; defense in depth).
     setPilot(card.qrId, 100);
     mutableEnv.CHECKOUT_ENABLED = true;
     check("R8. CHECKOUT_ENABLED=true → no override for anyone", pilotPriceOverrideMinor(card.qrId) === null && (await getDefaultProductPrice(partnerId, card.qrId))?.amountMinor === 1000);
-    const w = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const w = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("R9. …and the open 1.00 order is refused then too", !w.ok && w.name === "PilotPriceMismatchError" && bogCreates().length === b2);
     mutableEnv.CHECKOUT_ENABLED = false;
 
@@ -296,7 +297,7 @@ async function main() {
     check("S5. Triple tap on checkout → one 1.00 order", ids.size === 1 && (await ordersOf(card.greetingId)).length === 1, taps.map((t) => t.status).join());
 
     const before = bogCreates().length;
-    const pays = await Promise.allSettled([acceptCheckoutTerms(card.greetingId, card.editToken, "ka"), acceptCheckoutTerms(card.greetingId, card.editToken, "ka")]);
+    const pays = await Promise.allSettled([acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS), acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS)]);
     const createdNow = bogCreates().length - before;
     const pending = (await paymentsOf(card.greetingId)).filter((p) => p.status === "PENDING").length;
     const losers = pays.filter((r) => r.status === "rejected" && (r.reason as Error).name === "PaymentInProgressError").length;
@@ -305,7 +306,7 @@ async function main() {
     const [open] = await admin`select provider_payment_id from payments p join orders o on o.id = p.order_id where o.greeting_id = ${card.greetingId} and p.status = 'PENDING'`;
     const bogId = open?.provider_payment_id as string;
     const revisit = await getOrCreateCheckoutOrder(card.greetingId, card.editToken);
-    const again = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const again = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("S7. Revisit while BOG attempt is open: wait screen, second Pay refused", revisit.awaitingProvider === true && !again.ok && again.name === "PaymentInProgressError");
 
     const forgedCb = await callback(bogId, forger.privateKey);
@@ -336,7 +337,7 @@ async function main() {
     const p = await payStarted(card);
     reject(p.bogId);
     const r = await getOrCreateCheckoutOrder(card.greetingId, card.editToken);
-    const again = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const again = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("S12. Declined → fresh order, again 1.00 GEL at BOG", r.summary.grossAmountMinor === 100 && again.ok && lastCreate()?.purchase_units.total_amount === 1 && (await ledgerOf(card.greetingId)) === "");
   }
 

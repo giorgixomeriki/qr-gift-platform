@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { useLocale } from "next-intl";
 import { startCheckoutAction, simulateTestPaymentAction, checkPaymentReturnAction, acceptCheckoutTermsAction } from "@/lib/payments/actions";
 import type { CheckoutOrderSummary } from "@/lib/payments/checkout";
-import { CHECKOUT_CLOSED, PAYMENT_IN_PROGRESS } from "@/lib/payments/checkout-codes";
+import { ALL_CHECKOUT_CONSENTS, CHECKOUT_CLOSED, PAYMENT_IN_PROGRESS } from "@/lib/payments/checkout-codes";
 
 /**
  * Checkout's state machine, shared by the legacy and the Signature checkout
@@ -153,7 +153,7 @@ export function useCheckoutFlow(greetingId: string) {
 
   /** Records the buyer's consent server-side (linked to the order); for a real provider also opens the bank payment. */
   async function acceptTerms(): Promise<{ redirectUrl?: string } | "IN_PROGRESS" | null> {
-    const result = await acceptCheckoutTermsAction(greetingId, locale).catch(() => null);
+    const result = await acceptCheckoutTermsAction(greetingId, locale, ALL_CHECKOUT_CONSENTS).catch(() => null);
     if (result?.ok) return result.data;
     if (result?.error === CHECKOUT_CLOSED) setClosed(true);
     else if (result?.error === PAYMENT_IN_PROGRESS) {

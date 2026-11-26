@@ -101,6 +101,7 @@ test.describe.serial("Scheduled Reveal + Celebration Countdown", () => {
     await page.getByTestId("greeting-continue").click();
     await page.getByTestId("preview-activate-cta").click();
     await page.getByTestId("checkout-consent").check();
+    await page.getByTestId("checkout-consent-activation").check();
     await page.getByTestId("checkout-pay").click();
 
     // The sender lands on their own card: locked, with their note about when it opens.

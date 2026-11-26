@@ -52,6 +52,7 @@ test.describe("Pilot protections", () => {
       await startAndWrite(page, paid.publicToken, "Paid before the shop was suspended.");
       await page.goto(`/g/${paid.publicToken}?step=checkout`);
       await page.getByTestId("checkout-consent").check();
+      await page.getByTestId("checkout-consent-activation").check();
       await page.getByTestId("checkout-pay").click();
       await expect(page.getByTestId("greeting-renderer")).toBeVisible({ timeout: 15_000 });
 
@@ -84,6 +85,7 @@ test.describe("Pilot protections", () => {
 
       await setPartnerStatus(qr.partnerId, "SUSPENDED");
       await page.getByTestId("checkout-consent").check();
+      await page.getByTestId("checkout-consent-activation").check();
       await page.getByTestId("checkout-pay").click();
       await expect(page.getByText("You haven't been charged")).toBeVisible();
 

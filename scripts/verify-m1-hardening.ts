@@ -2,6 +2,7 @@ import Module from "node:module";
 import type { AddressInfo } from "node:net";
 import { sign } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { ALL_CHECKOUT_CONSENTS } from "../src/lib/payments/checkout-codes";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -142,7 +143,7 @@ async function main() {
   /** Opens the order and the bank payment for a card (the customer pressed Pay). */
   async function payStarted(card: Awaited<ReturnType<typeof newCard>>) {
     const { summary } = await getOrCreateCheckoutOrder(card.greetingId, card.editToken);
-    const { redirectUrl } = await acceptCheckoutTerms(card.greetingId, card.editToken, "ka");
+    const { redirectUrl } = await acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS);
     const [pay] = await admin`select provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
     return { orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl };
   }
@@ -216,7 +217,7 @@ async function main() {
     // The customer is on BOG's page (status "created") and comes back to the card in another tab.
     const r = await getOrCreateCheckoutOrder(card.greetingId, card.editToken);
     check("B1. Revisit while the bank attempt is open → awaitingProvider, no Pay", r.awaitingProvider === true && r.recovered === false);
-    const t = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const t = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("B2. Server refuses a second bank payment (PaymentInProgressError)", !t.ok && t.name === new PaymentInProgressError().name);
     check("B3. …no new BOG order, still exactly one payment attempt", bogCreates() === creates && (await paymentRows(card.greetingId)).length === 1);
 
@@ -236,7 +237,7 @@ async function main() {
     bog.receiptFailure = "503";
     const r = await attempt(() => getOrCreateCheckoutOrder(card.greetingId, card.editToken));
     check("B7. BOG unreachable on revisit → awaitingProvider (unknown is never 'pay again')", r.ok && r.value.awaitingProvider === true);
-    const t = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const t = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("B8. …and no second bank payment", !t.ok && t.name === "PaymentInProgressError" && (await paymentRows(card.greetingId)).length === 1);
     bog.receiptFailure = null;
     // Checkout closes entirely (pilot removed) while the customer had paid.
@@ -295,7 +296,7 @@ async function main() {
     const r = await getOrCreateCheckoutOrder(card.greetingId, card.editToken);
     check("E1. Revisit after a rejected attempt: no wait, a fresh order is offered", !r.awaitingProvider && !r.recovered && r.summary.status === "PENDING_PAYMENT" && (await orderRows(card.greetingId)).join() === "FAILED,PENDING_PAYMENT");
     check("E2. Card stays DRAFT/inactive, no commission", (await state(card.greetingId)).startsWith("DRAFT/") && (await ledger(card.greetingId)) === "");
-    const again = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka"));
+    const again = await attempt(() => acceptCheckoutTerms(card.greetingId, card.editToken, "ka", ALL_CHECKOUT_CONSENTS));
     check("E3. A new bank payment can be started for the new order", again.ok && again.value.redirectUrl?.startsWith("https://payment.bog.ge/") === true, again.ok ? "" : again.error);
   }
   {

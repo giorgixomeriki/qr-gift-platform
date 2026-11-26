@@ -171,6 +171,7 @@
         "refunds": "Delivery and Refunds",
         "age": "Greetings may be bought only by people aged 18 or over.",
         "consent": "I agree to the Terms and Conditions and the Delivery and Refunds policy, and I have read the Privacy Policy.",
+        "activationConsent": "I ask for my greeting to be activated immediately after payment, and I understand that once it is activated I lose my right to withdraw from the contract.",
         "vat": {
           "NOT_REGISTERED": "The seller is not registered for VAT; no VAT is added to the price.",
           "REGISTERED": "The seller is registered for VAT."

@@ -133,7 +133,7 @@ function main() {
   const GEORGIAN = /[Ⴀ-ჿᲐ-Ჿ]/;
   // Strings that are legitimately language-neutral: tokens only (e.g. a
   // list of file formats), cookie names, product names, the copyright line.
-  const NEUTRAL = new Set(["NEXT_LOCALE", "qr_edit_…", "Supabase", "Render", "© {year} QR Starr"]);
+  const NEUTRAL = new Set(["NEXT_LOCALE", "qr_edit_…", "Supabase", "Render", "Resend", "© {year} QR Starr"]);
   const neutral = (s: string) => NEUTRAL.has(s) || s.replace(/\{\{[a-zA-Z.]+\}\}/g, "").trim() === "";
   const notGeorgian = strings(site.ka).filter(([, s]) => !GEORGIAN.test(s) && !neutral(s)).map(([p, s]) => `${p}: ${s}`);
   check("C1. Every KA string is written in Georgian", notGeorgian.length === 0, notGeorgian.slice(0, 10));
@@ -272,7 +272,7 @@ function main() {
   }
   const undocumented = [...refs].filter((r) => !new RegExp(`\\|\\s*${r}\\s*\\|`).test(checklist));
   check(`H1. Every decision marker in the copy (${[...refs].sort().join(", ")}) is listed in docs/merchant/BOG_WEBSITE_REQUIREMENTS.md`, undocumented.length === 0, undocumented);
-  check(`H2. Legal-review markers are present where provisions await review (${reviews} in total)`, reviews > 0);
+  check(`H2. No legal-review markers remain in the published copy (${reviews} in total)`, reviews === 0);
 
   console.log("\n--- I. Demo profile isolation ---");
   const plain = loadMerchantInfo({});

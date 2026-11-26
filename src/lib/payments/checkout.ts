@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { withEditableGreeting, withPaymentActivation } from "@/db/client";
 import { checkoutConsents, orders, payments, qrCodes } from "@/db/schema";
+import { isFullCheckoutConsent, type CheckoutConsents } from "./checkout-codes";
 import { verifyGreetingEditAccess } from "@/lib/greetings/access";
 import { startCheckout, activatePaidOrder, confirmPaymentSuccess, markPaymentFailed, createPaymentAttempt, verifyAndReconcileOrder, settleConfirmedPayment, isUniqueViolation } from "./service";
 import { assertGreetingPurchasable } from "./eligibility";
@@ -171,18 +172,28 @@ export async function getOrCreateCheckoutOrder(
   }
 }
 
+/** Both checkout consents, exactly as shown (terms + immediate activation / withdrawal acknowledgement). */
 const CONSENT_TEXT = {
-  ka: kaMessages.wizard.checkout.legal.consent,
-  en: enMessages.wizard.checkout.legal.consent,
+  ka: `${kaMessages.wizard.checkout.legal.consent}\n${kaMessages.wizard.checkout.legal.activationConsent}`,
+  en: `${enMessages.wizard.checkout.legal.consent}\n${enMessages.wizard.checkout.legal.activationConsent}`,
 } as const;
 
-/** SHA-256 of the exact consent sentence the buyer saw, per language. */
+export { ALL_CHECKOUT_CONSENTS, isFullCheckoutConsent, type CheckoutConsents } from "./checkout-codes";
+
+export class ConsentRequiredError extends Error {
+  constructor() {
+    super("Both checkout consents are required before payment");
+    this.name = "ConsentRequiredError";
+  }
+}
+
+/** SHA-256 of the exact consent sentences the buyer saw (both, newline-joined), per language. */
 export function consentTextSha256(locale: "ka" | "en"): string {
   return createHash("sha256").update(CONSENT_TEXT[locale], "utf8").digest("hex");
 }
 
 /**
- * The buyer ticked "I agree…" and pressed Pay. Records the consent against
+ * The buyer ticked both consents and pressed Pay. Records the consent against
  * the greeting's own open order (checkout_consents, append-only), then — for
  * a real provider — opens a fresh bank payment and returns where to send the
  * browser. The bank payment never exists before the consent row, so every
@@ -193,7 +204,10 @@ export async function acceptCheckoutTerms(
   greetingId: string,
   editToken: string,
   locale: "ka" | "en",
+  consents: CheckoutConsents,
 ): Promise<{ orderId: string; redirectUrl?: string }> {
+  // Refused before anything else: no consent row and no bank payment without both consents.
+  if (!isFullCheckoutConsent(consents)) throw new ConsentRequiredError();
   const greeting = await verifyGreetingEditAccess(greetingId, editToken);
   assertCheckoutOpen(greeting.qrCodeId);
   await assertGreetingPurchasable(greetingId);

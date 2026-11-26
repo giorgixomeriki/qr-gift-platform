@@ -2,6 +2,7 @@ import Module from "node:module";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { sign } from "node:crypto";
+import { ALL_CHECKOUT_CONSENTS } from "../src/lib/payments/checkout-codes";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -114,7 +115,7 @@ async function main() {
     const { greetingId, editToken } = await startGreeting(token);
     await updateGreetingMessage(greetingId, editToken, SECRET_MESSAGE);
     const { summary } = await getOrCreateCheckoutOrder(greetingId, editToken);
-    await acceptCheckoutTerms(greetingId, editToken, "ka"); // the BOG payment opens after consent
+    await acceptCheckoutTerms(greetingId, editToken, "ka", ALL_CHECKOUT_CONSENTS); // the BOG payment opens after consent
     const [pay] = await pg`select id, provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
     return { qrId, token, greetingId, editToken, orderId: summary.orderId, paymentId: pay!.id as string, bogId: pay!.provider_payment_id as string };
   }

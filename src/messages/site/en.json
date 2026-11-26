@@ -186,7 +186,7 @@
         "blocks": [
           { "type": "p", "text": "You buy the **activation of one digital greeting on one QR Starr card**. The activation fee is a one-time payment, shown in Georgian lari (GEL) before you pay. See [Pricing](/pricing)." },
           { "type": "p", "text": "The physical card comes with your gift from the partner shop." },
-          { "type": "decision", "ref": "M2", "text": "How physical cards reach customers, and whether a card may be charged for separately, will be confirmed here." }
+          { "type": "p", "text": "The only amount QR Starr charges is the activation fee. The partner shop sets its own terms for the card." }
         ]
       },
       {
@@ -229,7 +229,7 @@
         "blocks": [
           { "type": "p", "text": "Before paying, you see a preview of the greeting exactly as the recipient will see it. The activation fee is paid once, and nothing is charged until you complete payment." },
           { "type": "p", "text": "If a payment fails, nothing is activated and you can try again." },
-          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before this page is published." }
+          { "type": "p", "text": "Payment is made on the secure payment page of JSC Bank of Georgia, with any payment method the bank offers there. QR Starr never receives your card details." }
         ]
       },
       {
@@ -313,7 +313,7 @@
               "Nothing is charged if you stop before completing payment."
             ]
           },
-          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before this page is published." }
+          { "type": "p", "text": "You pay on the secure payment page of JSC Bank of Georgia, using any payment method the bank offers there." }
         ]
       },
       {
@@ -342,7 +342,7 @@
         "title": "The physical card",
         "blocks": [
           { "type": "p", "text": "The QR Starr card comes with your gift from the partner shop. QR Starr’s fee is the activation fee shown above." },
-          { "type": "decision", "ref": "M2", "text": "How physical cards reach customers, and whether a card may be charged for separately, will be confirmed here." }
+          { "type": "p", "text": "The partner shop sets its own terms for the card." }
         ]
       }
     ]
@@ -361,7 +361,7 @@
         "blocks": [
           { "type": "p", "text": "For help with a greeting, a payment or a refund, email {{merchant.supportEmail}} or call {{merchant.phone}}." },
           { "type": "p", "text": "If you are writing about a specific greeting, please include the card’s link (the address that opens when you scan the card) and, for a payment, its date and amount." },
-          { "type": "decision", "ref": "M6", "text": "Our response time for support requests will be stated here." }
+          { "type": "p", "text": "Refund requests and complaints are answered within the times set out in [Delivery and refunds](/delivery-and-refunds)." }
         ]
       },
       {
@@ -376,7 +376,7 @@
         "title": "Reporting a greeting",
         "blocks": [
           { "type": "p", "text": "If a greeting is abusive or unlawful, or infringes your rights, email {{merchant.supportEmail}} with the card’s link. We review reports and can block a greeting." },
-          { "type": "decision", "ref": "D7", "text": "A dedicated channel for reporting content may be announced here." }
+          { "type": "p", "text": "To report a greeting’s content, email {{merchant.supportEmail}} with the subject “Content report” and include the card link." }
         ]
       },
       {
@@ -414,7 +414,7 @@
         "title": "Physical QR cards",
         "blocks": [
           { "type": "p", "text": "QR Starr cards are handed out by our partner shops together with the gift you buy from them. QR Starr does not post or ship physical items to customers. Questions about the card itself, or about the gift, go to the shop that provided it." },
-          { "type": "decision", "ref": "M2", "text": "How physical cards reach customers, and whether a card may be charged for separately, will be confirmed here." }
+          { "type": "p", "text": "The only amount QR Starr charges is the activation fee for the greeting, shown before you pay. The partner shop sets its own terms for the card." }
         ]
       },
       {
@@ -454,7 +454,7 @@
         "title": "After activation",
         "blocks": [
           { "type": "p", "text": "Your greeting is digital content delivered immediately at your request, and it can’t be changed once it is activated." },
-          { "type": "review", "text": "Whether, and on what conditions, the right to withdraw from a distance contract ends once the greeting is activated, including any consent required before payment, must be confirmed under the Law of Georgia on the Protection of Consumer Rights." },
+          { "type": "p", "text": "Before paying, you separately ask for the greeting to be activated immediately and acknowledge that once it is activated you lose the right to withdraw from the contract. After activation, the fee is therefore refunded only in the cases set out in this policy or where the law requires it." },
           { "type": "p", "text": "This policy does not limit your rights as a consumer under Georgian law." }
         ]
       },
@@ -471,15 +471,16 @@
               "**a technical fault on our side** means a paid greeting was not activated or does not open, and access could not be restored without charging you again."
             ]
           },
-          { "type": "review", "text": "No deadline for refund requests is set; any time limit must be agreed with a lawyer in line with consumer protection law." }
+          { "type": "p", "text": "Please make your request while the greeting is available (12 months from activation); for a double or excess charge, at any time. This does not shorten any period set by law." }
         ]
       },
       {
         "id": "exclusions",
         "title": "When a refund may not apply",
         "blocks": [
-          { "type": "review", "text": "Refusing a refund after activation when you have simply changed your mind must be confirmed against consumer protection law before this policy is published." },
-          { "type": "decision", "ref": "M5", "text": "Whether the activation fee is refunded when a greeting is blocked for breaking our Terms, and whether a refunded greeting stays available on the card, will be stated here." }
+          { "type": "p", "text": "After activation, the fee is not refunded if you simply changed your mind, no longer like the greeting’s content, the recipient did not scan or lost the card, or the card or its link was passed to someone else." },
+          { "type": "p", "text": "If a greeting is blocked for breaking our [Terms](/terms), we assess the case individually and fairly, and decide whether any part of the activation fee is returned in line with the law. This never limits your rights under consumer protection law." },
+          { "type": "p", "text": "Once the activation fee has been refunded in full, including when a payment is reversed by the bank at the cardholder’s request, the greeting no longer opens from the card. Its content is not deleted automatically; you can ask us to delete it (see our [Privacy Policy](/privacy)). Returning a duplicate or excess charge does not affect a greeting that remains paid for." }
         ]
       },
       {
@@ -495,7 +496,7 @@
               "Tell us briefly what went wrong."
             ]
           },
-          { "type": "decision", "ref": "M6", "text": "Our response time for refund requests will be stated here." }
+          { "type": "p", "text": "We confirm that we have received your request within 1 business day and tell you our decision within 5 business days. Where the law sets a shorter time limit, we follow the law." }
         ]
       },
       {
@@ -503,7 +504,7 @@
         "title": "How refunds are processed",
         "blocks": [
           { "type": "p", "text": "Refunds are paid back to the card you paid with, through the bank that processed the payment. We refund the full activation fee; partial refunds are not offered. We reply to the email address you wrote from and let you know when the refund has been issued." },
-          { "type": "decision", "ref": "C4", "text": "How long the bank takes to return a refund to your card will be stated here once confirmed." }
+          { "type": "p", "text": "After we have issued a refund, how long it takes to appear on your card depends on Bank of Georgia and on the bank that issued your card, so we cannot promise an exact date. If you don’t see the refund, contact us and we will help you check its status with the bank." }
         ]
       },
       {
@@ -526,7 +527,7 @@
         "title": "Complaints",
         "blocks": [
           { "type": "p", "text": "For a complaint, email {{merchant.supportEmail}} or call {{merchant.phone}} ({{merchant.supportHours}}). Include the card’s link, the date of payment and what happened. We review every complaint and reply through the same channel." },
-          { "type": "decision", "ref": "M6", "text": "Our response time for complaints will be stated here." }
+          { "type": "p", "text": "We reply to complaints within 10 business days. Where the law sets a shorter time limit, we follow the law." }
         ]
       },
       {
@@ -552,7 +553,7 @@
           { "type": "p", "text": "The controller of the personal data described here is {{merchant.legalName}} (“QR Starr”, “we”)." },
           { "type": "p", "text": "Identification code: {{merchant.idCode}}. Registered legal address: {{merchant.legalAddress}}." },
           { "type": "p", "text": "Contact address: {{merchant.actualAddress}}. Email: {{merchant.privacyEmail}}." },
-          { "type": "review", "text": "Whether a personal data protection officer must be appointed and, if so, their contact details." }
+          { "type": "p", "text": "We have not appointed a personal data protection officer. For any question about your data, write to {{merchant.privacyEmail}}." }
         ]
       },
       {
@@ -572,7 +573,8 @@
               ["Anyone who contacts us", "Your message and contact details", "Answering you"]
             ]
           },
-          { "type": "review", "text": "The legal basis for each purpose (for example, performance of a contract, a legal obligation or a legitimate interest) under the Law of Georgia on Personal Data Protection." },
+          { "type": "p", "text": "Legal bases for processing (Law of Georgia on Personal Data Protection):" },
+          { "type": "list", "items": ["**Performance of a contract:** creating, storing and showing the greeting, the edit key, payment, refunds, answering you, and partner and administrator accounts;", "**Legal obligation:** keeping payment records for accounting and tax purposes and complying with lawful requests from competent authorities;", "**Legitimate interest:** security, abuse prevention, technical logs, the time a greeting is opened, usage statistics and evidence in payment disputes."]},
           { "type": "p", "text": "We do not sell personal data, and we do not use advertising or third-party tracking." }
         ]
       },
@@ -589,7 +591,7 @@
               "Partner shops can’t see greeting content; they only see whether a card has been used."
             ]
           },
-          { "type": "decision", "ref": "M4", "text": "Who at QR Starr may access greeting content, and in which situations (for example, to handle a report or a legal request), will be stated here." }
+          { "type": "p", "text": "QR Starr staff do not look at greeting content as a matter of routine. A small number of authorised administrators may open a specific greeting only when it is necessary: when you ask us for technical help with it, when the law or a competent authority lawfully requires it, or to handle a report that it breaks our [Terms](/terms) or the law. They access only what that purpose needs, and every such access is recorded." }
         ]
       },
       {
@@ -612,11 +614,12 @@
             "rows": [
               ["Supabase", "Database, storage of greeting media, and partner and administrator sign-in (servers in Frankfurt, Germany)"],
               ["Render", "Website hosting (servers in Frankfurt, Germany)"],
+              ["Resend", "Email delivery to partners and administrators only (sign-in and invitation links)"],
               ["Bank of Georgia", "Card payments, as an independent controller under its own privacy policy"]
             ]
           },
           { "type": "p", "text": "Data is stored and processed in Germany (Frankfurt): the website servers by Render, the database and media by Supabase. We do not send emails to senders or recipients." },
-          { "type": "review", "text": "The legal basis for transferring data to providers outside Georgia, and the data processing agreements with them." }
+          { "type": "p", "text": "Supabase and Render process data in the European Union (Germany). Email sent through Resend goes only to partners and administrators and may be processed in the United States. Providers process data only on our instructions, under data processing agreements (DPAs) and the EU Standard Contractual Clauses." }
         ]
       },
       {
@@ -634,7 +637,7 @@
               ["Supabase sign-in cookies, active_partner_id", "Partner and administrator accounts only: keeping you signed in and remembering the selected partner", "Session; 90 days"]
             ]
           },
-          { "type": "review", "text": "Whether a consent banner is required for strictly necessary cookies." }
+          { "type": "p", "text": "These cookies are strictly necessary for the service to work, so we do not show a consent banner. If we ever add analytics or advertising cookies, we will ask for your consent first." }
         ]
       },
       {
@@ -643,7 +646,7 @@
         "blocks": [
           { "type": "p", "text": "Card details are entered on the payment page of the bank that processes the payment. QR Starr never receives or stores full card numbers or security codes." },
           { "type": "p", "text": "We keep a record of each payment (amount, currency, time, the bank’s reference and, where provided, the card brand and last 4 digits) for refunds, accounting and disputes." },
-          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before this policy is published." }
+          { "type": "p", "text": "Payments are processed by JSC Bank of Georgia on its own payment page, using the payment methods the bank offers there. From the bank we receive only the result of the payment: whether it succeeded, the amount and currency, the time, the bank’s order and transaction references, the type of payment method and, where the bank provides them, the card brand and a masked card number. We keep these records for as long as accounting and tax law requires." }
         ]
       },
       {
@@ -673,7 +676,7 @@
             ]
           },
           { "type": "p", "text": "Where processing is based on your consent, you can withdraw it at any time. You can also lodge a complaint with the Personal Data Protection Service of Georgia." },
-          { "type": "review", "text": "The full list of rights, response deadlines and any exceptions must be confirmed against the Law of Georgia on Personal Data Protection." }
+          { "type": "p", "text": "You can also object to processing based on our legitimate interest. We do not make automated decisions that have legal effects on you. Some rights may be limited where the law allows, for example when the law requires us to keep a payment record." }
         ]
       },
       {
@@ -682,7 +685,7 @@
         "blocks": [
           { "type": "p", "text": "Write to {{merchant.privacyEmail}}. So that we can find a greeting without asking you for more personal data, please include the card’s link. We may need to confirm that the request comes from you." },
           { "type": "p", "text": "If an activated greeting is removed at your request, it will no longer open from the card for anyone. Payment records are kept for as long as the law requires." },
-          { "type": "decision", "ref": "D8", "text": "Who handles data requests, and within what time, will be stated here." }
+          { "type": "p", "text": "Data requests are handled by QR Starr through the email address above. We answer within the time limits set by the Law of Georgia on Personal Data Protection and tell you if we need more time where the law allows it." }
         ]
       },
       {
@@ -698,7 +701,7 @@
               "We never receive full card details."
             ]
           },
-          { "type": "review", "text": "Notification duties towards the Personal Data Protection Service and affected people in the event of a data breach." }
+          { "type": "p", "text": "If an incident affects your data, we notify the Personal Data Protection Service where and within the time the law requires, and, if the incident creates a significant risk for you, we also inform you without undue delay." }
         ]
       },
       {
@@ -714,7 +717,7 @@
         "title": "Changes to this policy",
         "blocks": [
           { "type": "p", "text": "We will publish any changes on this page with a new effective date." },
-          { "type": "review", "text": "Whether material changes require advance notice." }
+          { "type": "p", "text": "We announce material changes on this page at least 14 days before they take effect, unless a change is required by law." }
         ]
       }
     ]
@@ -757,7 +760,6 @@
         "title": "Who can use the service",
         "blocks": [
           { "type": "p", "text": "Only people **aged 18 or over** may create and pay for a greeting. By paying, you confirm that you meet this requirement." },
-          { "type": "review", "text": "Whether an age declaration at payment is sufficient, or further verification is needed, must be confirmed with a lawyer." },
           { "type": "p", "text": "You must give accurate information when you pay or contact us." }
         ]
       },
@@ -787,7 +789,7 @@
               "If you are charged twice for the same greeting, or for a greeting that could not be activated, the extra payment is returned (see [Delivery and refunds](/delivery-and-refunds))."
             ]
           },
-          { "type": "decision", "ref": "M1", "text": "Details of the payment method will be confirmed here before these terms are published." }
+          { "type": "p", "text": "Payment is made on the secure payment page of JSC Bank of Georgia, which processes the payment for us. You can use any payment method the bank offers on that page. Card details are entered only on the bank’s page; QR Starr never receives or stores them. What payment information we receive from the bank, and why we keep it, is explained in our [Privacy Policy](/privacy)." }
         ]
       },
       {
@@ -802,14 +804,14 @@
           ] },
           { "type": "p", "text": "The website and these terms are available in Georgian and English." },
           { "type": "p", "text": "The service has no customer accounts, so we do not keep a personal copy of the contract for you to open later. You can save or print these terms. We keep the payment record of your purchase as described in the [Privacy policy](/privacy)." },
-          { "type": "review", "text": "Whether these steps fully meet Article 8 of the Law of Georgia on Electronic Commerce, and when the contract counts as concluded, must be confirmed by a lawyer." }
+          { "type": "p", "text": "The contract is concluded when the bank confirms your payment and the greeting is activated. Until then you can stop at any time and nothing is charged." }
         ]
       },
       {
         "id": "withdrawal",
         "title": "Right of withdrawal",
         "blocks": [
-          { "type": "review", "text": "The greeting is digital content supplied immediately at your request. Whether the right to withdraw ends once it is activated, and the consent this requires before payment, must be confirmed under the Law of Georgia on the Protection of Consumer Rights." },
+          { "type": "p", "text": "The greeting is digital content not supplied on a physical medium. Before paying, you separately ask for it to be activated immediately and acknowledge that once it is activated you lose the right to withdraw from the contract. You can stop at any time before payment is completed at no cost. When you do get a refund is set out in [Delivery and refunds](/delivery-and-refunds)." },
           { "type": "p", "text": "Nothing in these terms limits your rights as a consumer under Georgian law." }
         ]
       },
@@ -824,7 +826,7 @@
               "You keep ownership of your content. You give us a limited permission to store, process and display it, only to provide the greeting to whoever opens the card."
             ]
           },
-          { "type": "review", "text": "The scope and duration of the permission you grant us to use your content." }
+          { "type": "p", "text": "This permission is free of charge and non-exclusive, is used only to provide the service, and ends when the greeting is deleted (backups may remain for a limited time). We never use your content in advertising or for any other purpose without your separate consent." }
         ]
       },
       {
@@ -857,7 +859,7 @@
         "title": "Moderation",
         "blocks": [
           { "type": "p", "text": "We may block a greeting that breaks these terms or the law, or when an authority lawfully requires it. A blocked greeting no longer opens from its card. To report a greeting, email {{merchant.supportEmail}} with the card’s link." },
-          { "type": "decision", "ref": "M5", "text": "Whether the activation fee is refunded when a greeting is blocked for breaking these terms will be stated here." }
+          { "type": "p", "text": "Each case is assessed individually and fairly, taking into account what happened and the applicable law. Whether any part of the activation fee is returned when a greeting is blocked is decided in the same way. Blocking a greeting never limits the rights you have under consumer protection law." }
         ]
       },
       {
@@ -867,7 +869,7 @@
           { "type": "p", "text": "We work to keep greetings available at all times, but we can’t guarantee uninterrupted access. The service may be briefly unavailable for maintenance or because of a fault." },
           { "type": "p", "text": "An activated greeting opens when the card is scanned **for 12 months after activation** (activation happens only after the payment is verified on our server). After that period the greeting no longer opens from the card. The end of this period does not mean your data is deleted automatically: see our [Privacy Policy](/privacy) for how data is kept." },
           { "type": "p", "text": "If your payment went through but a technical fault on our side means the greeting was not activated or does not open, we check the payment and the activation and try to restore access without charging you again. If delivery cannot be restored, we refund the full amount. See [Delivery and Refunds](/delivery-and-refunds)." },
-          { "type": "review", "text": "Your remedies if a technical fault on our side stops an activated greeting from opening." }
+          { "type": "p", "text": "In that case, contact us. If we cannot restore access within 5 business days, we refund the activation fee in full." }
         ]
       },
       {
@@ -875,8 +877,7 @@
         "title": "Liability",
         "blocks": [
           { "type": "p", "text": "Nothing in these terms limits liability that can’t be limited under Georgian law, including your rights as a consumer." },
-          { "type": "p", "text": "We are not responsible for the physical card, its loss, or someone opening a greeting with a card or link you shared." },
-          { "type": "review", "text": "Any further limitation of liability (for example, to the activation fee paid) and whether it is enforceable." }
+          { "type": "p", "text": "We are not responsible for the physical card, its loss, or someone opening a greeting with a card or link you shared." }
         ]
       },
       {
@@ -884,7 +885,7 @@
         "title": "Applicable law and disputes",
         "blocks": [
           { "type": "p", "text": "These terms are governed by the law of Georgia. If something goes wrong, please contact us first; most issues can be resolved quickly." },
-          { "type": "decision", "ref": "D6", "text": "The competent court and any alternative dispute resolution will be stated here." }
+          { "type": "p", "text": "If a dispute cannot be resolved with us directly, it is decided by the competent court of Georgia under the general rules of jurisdiction. Nothing in these terms limits the mandatory rights you have as a consumer, including your right to turn to the bodies responsible for consumer protection." }
         ]
       },
       {
@@ -892,7 +893,7 @@
         "title": "Changes and language",
         "blocks": [
           { "type": "p", "text": "We may update these terms. The version in force when you paid applies to that greeting." },
-          { "type": "review", "text": "Which language version prevails if the Georgian and English versions differ." }
+          { "type": "p", "text": "If the Georgian and English versions differ, the Georgian version prevails." }
         ]
       },
       {
