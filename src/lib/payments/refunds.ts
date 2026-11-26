@@ -401,7 +401,8 @@ export class ChargebackError extends Error {
  * same bookkeeping as an admin refund: charge + order REFUNDED, the order's
  * own snapshot commission reversed exactly once. A reversal of commission
  * already paid out is netted into the partner's next payout (CLAWBACK,
- * payouts.ts) — recommended decision B6. The greeting stays live.
+ * payouts.ts) — recommended decision B6. The greeting row and its content are
+ * kept, but public access is suspended (Refund Model C, migrations/0029).
  *
  * Refused when the order is not PAID, or the charge already has a refund open
  * or completed (returning the money twice is a dispute to contest with the

@@ -96,7 +96,8 @@ on the PAID order: enter the bank's case reference and date, then confirm.
 In one transaction the charge and order become REFUNDED and the partner's
 commission for that order (its own snapshot) is reversed once; if that
 commission was already paid out, the reversal is netted into the partner's
-next payout (CLAWBACK). Nothing is sent to BOG and the greeting stays live.
+next payout (CLAWBACK). Nothing is sent to BOG. The greeting and its content are
+kept, but public access is suspended (Refund Model C, migration 0029).
 Refused when the order isn't PAID or a refund for the charge is open or done
 (contest that with the bank instead). **Evidence** on the same row downloads a
 dispute pack (order, charge reference, card brand/last 4, activation times,

@@ -23,7 +23,9 @@
     "notFoundTitle": "We couldn't find this card",
     "notFoundBody": "Make sure the whole code was scanned, then try again.",
     "expiredTitle": "This greeting's availability has ended",
-    "expiredBody": "A greeting can be opened for 12 months after it is activated, and that period has passed. If you have a question, contact us at qrapp.ge/contact."
+    "expiredBody": "A greeting can be opened for 12 months after it is activated, and that period has passed. If you have a question, contact us at qrapp.ge/contact.",
+    "suspendedTitle": "This greeting is currently unavailable",
+    "suspendedBody": "The greeting for this QR code can’t be viewed at the moment. If you have a question, contact us at qrapp.ge/contact."
   },
   "sender": {
     "entry": {

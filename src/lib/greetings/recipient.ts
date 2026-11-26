@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { withPublicContext } from "@/db/client";
 import { greetings, greetingContent, themes, qrCodes } from "@/db/schema";
 import { verifyEditToken } from "@/lib/security/edit-token";
@@ -9,12 +9,22 @@ import { isGreetingExpired } from "./availability";
 
 export class RecipientAccessError extends Error {}
 
+type Tx = Parameters<Parameters<typeof withPublicContext>[0]>[0];
+
+/** Refund Model C (migrations/0029): fully refunded → no public content. Anything but an explicit false = suspended. */
+async function assertNotRefundSuspended(tx: Tx, greetingId: string): Promise<void> {
+  const rows = (await tx.execute(sql`select app_greeting_refund_suspended(${greetingId}::uuid) as suspended`)) as unknown as { suspended: boolean }[];
+  if (rows[0]?.suspended !== false) throw new RecipientAccessError("Greeting access is suspended");
+}
+
 /**
  * The ACTIVE-only counterpart to loadDraftForEdit (Phase 3 §9/§11). No edit
  * token is required or accepted — authorization here IS "QR ACTIVE AND
  * Greeting ACTIVE", enforced twice: once by the caller only ever reaching
  * this function via resolveQrState's "active" branch, and again here by
- * re-checking both statuses directly rather than trusting the caller.
+ * re-checking both statuses directly rather than trusting the caller — and
+ * the Refund Model C suspension (migrations/0029), so no signed media URL is
+ * ever issued for a fully refunded greeting.
  * greeting_content_select's RLS policy has its own unconditional `g.status =
  * 'ACTIVE'` public branch (migrations/0001), so this needs no special
  * transaction context — the same guarantee exists at the DB layer, not just
@@ -29,6 +39,7 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
 
     const [qr] = await tx.select({ status: qrCodes.status }).from(qrCodes).where(eq(qrCodes.id, greeting.qrCodeId)).limit(1);
     if (!qr || qr.status !== "ACTIVE") throw new RecipientAccessError("QR is not active");
+    await assertNotRefundSuspended(tx, greetingId);
 
     const [themeRow] = await tx.select({ key: themes.key }).from(themes).where(eq(themes.id, greeting.themeId)).limit(1);
 
@@ -56,7 +67,7 @@ export async function loadActiveGreetingForRecipient(greetingId: string) {
  * before expiry and after a load error (voice-player.tsx).
  *
  * Exactly the page's access rule, re-checked here rather than trusted:
- * greeting ACTIVE, availability not ended, QR ACTIVE (as
+ * greeting ACTIVE, availability not ended, QR ACTIVE, not refund-suspended (as
  * loadActiveGreetingForRecipient). Signs only the READY audio row, so it
  * reveals nothing the recipient page doesn't already show.
  */
@@ -67,6 +78,7 @@ export async function signRecipientVoiceUrl(greetingId: string): Promise<string 
     if (isGreetingExpired(greeting.activatedAt)) throw new RecipientAccessError("Greeting availability has ended");
     const [qr] = await tx.select({ status: qrCodes.status }).from(qrCodes).where(eq(qrCodes.id, greeting.qrCodeId)).limit(1);
     if (!qr || qr.status !== "ACTIVE") throw new RecipientAccessError("QR is not active");
+    await assertNotRefundSuspended(tx, greetingId);
     const [row] = await tx
       .select({ storageKey: greetingContent.storageKey, status: greetingContent.status })
       .from(greetingContent)

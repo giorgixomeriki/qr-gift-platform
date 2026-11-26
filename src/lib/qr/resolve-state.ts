@@ -11,6 +11,11 @@ export type QrResolution =
   | { kind: "active"; qrId: string; greetingId: string; partnerId: string }
   /** Paid and activated, but past its availability window (lib/greetings/availability.ts). Nothing is deleted. */
   | { kind: "expired"; qrId: string; greetingId: string; partnerId: string }
+  /**
+   * Refund Model C: the purchase was fully refunded (admin refund or recorded chargeback), so the
+   * greeting is not shown publicly. Nothing is deleted — QR token, greeting, content and media stay.
+   */
+  | { kind: "suspended"; qrId: string; greetingId: string; partnerId: string }
   | { kind: "blocked" };
 
 /**
@@ -28,6 +33,10 @@ export type QrResolution =
  * resolve to "blocked". A greeting that is already ACTIVE (paid for) stays
  * readable by its recipient: suspension is about the partner's business,
  * not about taking away something a customer already bought.
+ *
+ * Refund Model C: an ACTIVE greeting whose purchase was fully refunded
+ * (order REFUNDED, no PAID order — app_greeting_refund_suspended) resolves to
+ * "suspended". A duplicate-charge refund or a partial refund does not.
  */
 export async function resolveQrState(publicToken: string): Promise<QrResolution> {
   return withPublicContext(async (tx) => {
@@ -55,12 +64,20 @@ export async function resolveQrState(publicToken: string): Promise<QrResolution>
       case "DRAFT":
       case "ACTIVE": {
         const [greeting] = await tx
-          .select({ id: greetings.id, status: greetings.status, activatedAt: greetings.activatedAt })
+          .select({
+            id: greetings.id,
+            status: greetings.status,
+            activatedAt: greetings.activatedAt,
+            // migrations/0029: the one authority for "fully refunded" (also enforced by greeting_content RLS).
+            refundSuspended: sql<boolean>`app_greeting_refund_suspended(${greetings.id})`,
+          })
           .from(greetings)
           .where(eq(greetings.qrCodeId, qr.id))
           .limit(1);
         if (!greeting) return { kind: "blocked" }; // inconsistent state — fail closed, not found-shaped
         if (qr.status === "ACTIVE" && greeting.status === "ACTIVE") {
+          // Checked before expiry and before anything else that could show the greeting.
+          if (greeting.refundSuspended !== false) return { kind: "suspended", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
           if (isGreetingExpired(greeting.activatedAt)) return { kind: "expired", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
           return { kind: "active", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
         }

@@ -16,7 +16,7 @@ import { getMerchantInfo } from "@/lib/merchant/server";
 import { checkoutSeller } from "@/lib/merchant/info";
 import { parseStoredMusic } from "@/lib/music/spotify";
 import { spotifyEmbedEnabled } from "@/lib/music/flag";
-import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder } from "@/components/qr/placeholders";
+import { BlockedPlaceholder, DraftNoAccessPlaceholder, ExpiredPlaceholder, SuspendedPlaceholder } from "@/components/qr/placeholders";
 
 /**
  * The permanent public entry point printed on every physical card
@@ -58,6 +58,9 @@ export default async function QrEntryPage({
 
     case "expired":
       return <ExpiredPlaceholder />;
+
+    case "suspended":
+      return <SuspendedPlaceholder />;
 
     case "available": {
       await recordAnalyticsEvent({ eventType: "QR_SCANNED", qrCodeId: resolution.qrId }, { partnerId: resolution.partnerId });

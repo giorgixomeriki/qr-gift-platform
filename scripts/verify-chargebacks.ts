@@ -28,7 +28,8 @@ const { getPartnerPayoutStatement, recordManualPayout } = require("../src/lib/pa
  *
  *  1. Recording one on a PAID order: charge + order REFUNDED, one CHARGEBACK
  *     refund row (COMPLETED, with the bank reference), the order's own
- *     snapshot commission reversed exactly once, audited; greeting stays live.
+ *     snapshot commission reversed exactly once, audited; greeting kept but
+ *     publicly suspended (Refund Model C).
  *  2. Refused for an order that is not PAID (a second record, an unpaid order).
  *  3. Refused while a provider refund for the charge is open.
  *  4. Two simultaneous records → exactly one chargeback, one reversal.
@@ -113,7 +114,9 @@ async function main() {
     const audits = await admin`select action from audit_logs where target_id = ${s1.orderId} and action in ('PAYMENT_CHARGEBACK_RECORDED', 'ORDER_CHARGED_BACK', 'PAYMENT_REFUND_REQUESTED')`;
     check("1d. Audited (recorded + charged back); no refund was ever requested from a provider", audits.filter((a) => a.action === "PAYMENT_CHARGEBACK_RECORDED").length === 1 && audits.filter((a) => a.action === "ORDER_CHARGED_BACK").length === 1 && !audits.some((a) => a.action === "PAYMENT_REFUND_REQUESTED"));
     const [g] = await admin`select status from greetings where id = ${s1.greetingId}`;
-    check("1e. The greeting stays live (moderation is a separate decision)", g?.status === "ACTIVE");
+    const { resolveQrState } = require("../src/lib/qr/resolve-state") as typeof import("../src/lib/qr/resolve-state");
+    const [q1] = await admin`select public_token from qr_codes where id = ${s1.qrId}`;
+    check("1e. The greeting is kept (ACTIVE, not deleted) but public access is suspended (Refund Model C)", g?.status === "ACTIVE" && (await resolveQrState(q1!.public_token)).kind === "suspended");
     const anomalies = await findPaymentAnomalies(adminUserId);
     check("1f. Leaves no payment anomaly behind", !anomalies.some((a) => a.orderId === s1.orderId), JSON.stringify(anomalies.filter((a) => a.orderId === s1.orderId)));
   }

@@ -204,6 +204,13 @@
       "when": 1795593600000,
       "tag": "0028_partner_locations",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795680000000,
+      "tag": "0029_refund_access_suspension",
+      "breakpoints": true
     }
   ]
 }

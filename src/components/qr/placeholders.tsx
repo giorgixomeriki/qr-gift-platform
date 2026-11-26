@@ -37,3 +37,13 @@ export async function ExpiredPlaceholder() {
   const t = await getTranslations("qr");
   return <StatusScreen icon={<Hourglass aria-hidden />} title={t("expiredTitle")} body={t("expiredBody")} headerEnd={<LocaleSwitcher />} />;
 }
+
+/**
+ * Refund Model C: the purchase was fully refunded, so the greeting is not
+ * shown publicly. Deliberately neutral — never says "refunded", names no
+ * sender, content or dates. Nothing has been deleted.
+ */
+export async function SuspendedPlaceholder() {
+  const t = await getTranslations("qr");
+  return <StatusScreen icon={<Ban aria-hidden />} title={t("suspendedTitle")} body={t("suspendedBody")} headerEnd={<LocaleSwitcher />} />;
+}

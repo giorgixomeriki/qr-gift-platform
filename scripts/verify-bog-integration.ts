@@ -602,8 +602,13 @@ async function main() {
       doneT.completed === 1 && (await orderRow(t.orderId)).status === "REFUNDED" && (await ledger(t.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
     const cbT = await callback(callbackBody(t.bogId));
     check("19e. A late refund callback afterwards changes nothing (200, same ledger)", cbT.status === 200 && (await ledger(t.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
-    check("19f. After the refund the greeting and QR are kept (not deleted; product rule: stays live)",
-      (await greetingStatus(t.greetingId)) === "ACTIVE" && (await qrStatus19(t.greetingId)) === "ACTIVE");
+    {
+      // Refund Model C (migrations/0029): kept, but no longer public.
+      const { resolveQrState } = require("../src/lib/qr/resolve-state") as typeof import("../src/lib/qr/resolve-state");
+      const token19 = (await admin`select q.public_token from qr_codes q join greetings g on g.qr_code_id = q.id where g.id = ${t.greetingId}`)[0]!.public_token as string;
+      check("19f. After the full refund the greeting and QR are kept (not deleted) but public access is suspended (Model C)",
+        (await greetingStatus(t.greetingId)) === "ACTIVE" && (await qrStatus19(t.greetingId)) === "ACTIVE" && (await resolveQrState(token19)).kind === "suspended");
+    }
     check("19g. A refunded order can't be refunded again (no BOG call)",
       (await refundPaidOrder(adminUserId, t.orderId)).alreadyRefunded === true && refundCalls(t.bogId).length === callsT0);
 
