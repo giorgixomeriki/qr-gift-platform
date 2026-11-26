@@ -68,7 +68,7 @@ export async function resolveQrState(publicToken: string): Promise<QrResolution>
             id: greetings.id,
             status: greetings.status,
             activatedAt: greetings.activatedAt,
-            // migrations/0029: the one authority for "fully refunded" (also enforced by greeting_content RLS).
+            // migrations/0029: the one authority for "fully refunded" (the content RLS policy enforces it too).
             refundSuspended: sql<boolean>`app_greeting_refund_suspended(${greetings.id})`,
           })
           .from(greetings)
