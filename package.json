@@ -78,6 +78,7 @@
     "@phosphor-icons/react": "2.1.10",
     "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.116.0",
+    "@use-gesture/react": "10.3.1",
     "canvas-confetti": "^1.9.4",
     "drizzle-orm": "^0.45.2",
     "gsap": "3.15.0",
@@ -93,6 +94,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
+    "three": "0.187.0",
     "wavesurfer.js": "7.12.12",
     "zod": "^4.6.7"
   },
@@ -105,6 +107,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/three": "0.187.0",
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "15.5.28",

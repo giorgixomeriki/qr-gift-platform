@@ -114,6 +114,7 @@ export function GreetingRenderer({
   spotifyEmbed = false,
   serverNow,
   continuation = false,
+  openingInterlude,
 }: {
   themeKey: string;
   /** The exact template version to render (a sent greeting's frozen version); latest when omitted. */
@@ -144,6 +145,13 @@ export function GreetingRenderer({
   serverNow?: number;
   /** Arrived from the Scheduled Reveal lock screen: the envelope is already in place, so it does not set down again. */
   continuation?: boolean;
+  /**
+   * Lab only (components/cinematic): a full-screen interlude played over the
+   * opening envelope instead of the fixed ENVELOPE_OPEN_MS wait. It calls
+   * `reveal` when the letter should start arriving beneath it and `done` when
+   * it has gone. Absent (every production caller) = behaviour unchanged.
+   */
+  openingInterlude?: (controls: { reveal: () => void; done: () => void }) => React.ReactNode;
 }) {
   const t = useTranslations("greeting");
   const tt = useTranslations("themes");
@@ -166,6 +174,7 @@ export function GreetingRenderer({
 
   const [beatIndex, setBeatIndex] = useState(0);
   const [pressing, setPressing] = useState(false);
+  const [interlude, setInterlude] = useState(false);
   /** Bumped each time the greeting is opened, so the world's scene plays again on replay. */
   const [runId, setRunId] = useState(0);
   /** The message does not fit the card: it is presented as a letter once the world is at rest. */
@@ -195,20 +204,26 @@ export function GreetingRenderer({
     beatAtRef.current = performance.now();
     setBeatIndex((i) => Math.max(1, i - 1));
   }
+  function arrive() {
+    setPressing(false);
+    setAtRest(false);
+    setRunId((n) => n + 1);
+    beatAtRef.current = performance.now();
+    setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
+  }
   function open() {
     if (pressing) return;
     tick();
     setPressing(true);
+    if (openingInterlude) {
+      setInterlude(true);
+      return;
+    }
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    window.setTimeout(() => {
-      setPressing(false);
-      setAtRest(false);
-      setRunId((n) => n + 1);
-      beatAtRef.current = performance.now();
-      setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
-    }, reduce ? ENVELOPE_OPEN_REDUCED_MS : ENVELOPE_OPEN_MS);
+    window.setTimeout(arrive, reduce ? ENVELOPE_OPEN_REDUCED_MS : ENVELOPE_OPEN_MS);
   }
   function restart() {
+    setInterlude(false);
     playedRef.current = new Set();
     setAtRest(false);
     setBeatIndex(0);
@@ -464,6 +479,7 @@ export function GreetingRenderer({
           </div>
         )}
       </footer>
+      {interlude && openingInterlude?.({ reveal: arrive, done: () => setInterlude(false) })}
     </div>
   );
 }
