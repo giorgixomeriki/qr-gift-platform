@@ -131,3 +131,19 @@
     transform: translateY(10px);
   }
 }
+
+/* Film looks (C2, C3): the night opens from the envelope outward (iris), never a flat full-screen fade. */
+.ci[data-variant="C2"] .ci-veil,
+.ci[data-variant="C3"] .ci-veil {
+  --r: 0vmax;
+  opacity: 0;
+  background:
+    radial-gradient(circle at var(--ox, 50%) var(--oy, 50%), #120706 0, #0f0605 calc(var(--r) * 0.55), rgba(15, 6, 5, 0) var(--r)),
+    transparent;
+}
+.ci[data-variant="C2"] .ci-light,
+.ci[data-variant="C3"] .ci-light {
+  /* warm interior light: wider than tall, like light spilling out of the opened envelope */
+  transform-origin: 50% 50%;
+  background: radial-gradient(ellipse 34% 20% at 50% 50%, rgba(255, 236, 196, 0.95) 0%, rgba(244, 196, 120, 0.5) 30%, rgba(200, 120, 70, 0.14) 62%, transparent 100%);
+}

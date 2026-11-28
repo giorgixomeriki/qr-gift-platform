@@ -26,7 +26,7 @@ import "./cinematic.css";
 
 const MemoryGalaxy = lazy(() => import("./memory-galaxy"));
 
-export type Variant = "A" | "B" | "C";
+export type Variant = "A" | "B" | "C" | "C2" | "C3";
 export type QualityPref = "auto" | "high" | "mid" | "lite";
 export type CinematicMetrics = {
   variant: Variant;
@@ -89,6 +89,7 @@ export default function CinematicInterlude({
   forceReduced = false,
   galaxyHoldMs,
   labels,
+  petalAtlas = { high: "/lab/cinematic/petals-2048.webp", mid: "/lab/cinematic/petals-1024.webp" },
   reveal,
   done,
   onMetrics,
@@ -103,6 +104,8 @@ export default function CinematicInterlude({
   /** C: how long the galaxy waits before the letter (the recipient can go on sooner). */
   galaxyHoldMs?: number;
   labels: { skip: string; openLetter: string };
+  /** C2/C3: the photoreal petal atlas (high, mid). */
+  petalAtlas?: { high: string; mid: string };
   reveal: () => void;
   done: () => void;
   onMetrics?: (m: CinematicMetrics) => void;
@@ -124,6 +127,7 @@ export default function CinematicInterlude({
   const [showGalaxy, setShowGalaxy] = useState(false);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const [litePetals, setLitePetals] = useState<string[] | null>(null);
+  const film = variant === "C2" || variant === "C3";
 
   useEffect(() => {
     const root = rootRef.current!;
@@ -132,6 +136,7 @@ export default function CinematicInterlude({
     setOrigin(o);
     root.style.setProperty("--ox", `${o.x}px`);
     root.style.setProperty("--oy", `${o.y}px`);
+    const mouthPx = env ? env.width * 0.82 : 240;
 
     const t0 = performance.now();
     let revealedAt = 0;
@@ -147,7 +152,7 @@ export default function CinematicInterlude({
     let hiddenMs = 0;
     const timers: number[] = [];
     const tls: gsap.core.Timeline[] = [];
-    const galaxyOn = variant === "C";
+    const galaxyOn = variant === "C" || film;
     const webgl = mode.q !== "lite" && !mode.reduced;
     const glow = { v: 0 };
     const fieldOp = { v: 0 };
@@ -244,6 +249,18 @@ export default function CinematicInterlude({
       setHolding(false);
       const out = gsap.timeline();
       tls.push(out);
+      if (film && !mode.reduced) {
+        // Dolly through the photographs toward a warm light; the letter is already beneath it.
+        out.to(galaxyRef.current, { scale: 1.3, opacity: 0, duration: 0.8, ease: "power2.in" }, 0);
+        out.to(canvasRef.current, { opacity: 0, duration: 0.65, ease: "power1.in" }, 0.05);
+        out.to(fieldOp, { v: 0, duration: 0.65 }, 0);
+        out.fromTo(lightRef.current, { opacity: 0, scale: 0.6 }, { opacity: 0.75, scale: 1.4, duration: 0.45, ease: "sine.in" }, 0.05);
+        out.call(doReveal, [], 0.3);
+        out.to(veilRef.current, { opacity: 0, duration: 0.65, ease: "power1.inOut" }, 0.4);
+        out.to(lightRef.current, { opacity: 0, duration: 0.5, ease: "sine.out" }, 0.55);
+        out.call(() => finish(false), [], 1.08);
+        return;
+      }
       out.to(galaxyRef.current, { scale: mode.reduced ? 1 : 1.5, opacity: 0, duration: mode.reduced ? 0.3 : 0.75, ease: "power2.in" }, 0);
       out.to(fieldOp, { v: 0, duration: 0.6 }, 0);
       out.call(doReveal, [], 0.25);
@@ -271,6 +288,18 @@ export default function CinematicInterlude({
         tl.call(() => finish(false), [], 3.0);
         return;
       }
+      if (film) {
+        // Interior light holds while the petals rise out of the mouth; the night opens from the
+        // envelope outward (an iris, not a full-screen fade); the photographs arrive in it.
+        tl.to(lightRef.current, { scale: 1.3, opacity: 0.9, duration: 0.9, ease: "sine.inOut" }, 0.6);
+        tl.fromTo(veilRef.current, { opacity: 1, "--r": "0vmax" }, { "--r": "170vmax", duration: 1.15, ease: "power2.in" }, 0.8);
+        tl.to(fieldOp, { v: variant === "C3" ? 0.55 : 0.8, duration: 1.2 }, 1.3);
+        tl.call(() => setShowGalaxy(true), [], variant === "C3" ? 1.6 : 1.45);
+        tl.to(lightRef.current, { opacity: 0, duration: 0.8 }, 1.45);
+        tl.to(glow, { v: 0, duration: 0.9 }, 1.5);
+        tl.call(() => beginHold(), [], 2.3);
+        return;
+      }
       // Stage 2: petals burst toward the viewer (engine timing: start 0.42 s); the veil hides the change of scene.
       tl.to(lightRef.current, { scale: 1.5, opacity: 0.85, duration: 0.8, ease: "sine.inOut" }, 0.65);
       if (variant === "A") {
@@ -293,10 +322,41 @@ export default function CinematicInterlude({
 
     // ---------- WebGL layer (lazy) or CSS fallback ----------
     if (webgl) {
-      void import("./engine").then(({ createEngine }) => {
+      const atlas = film
+        ? new Promise<HTMLImageElement | null>((res) => {
+            const img = new Image();
+            img.decoding = "async";
+            img.onload = () => res(img);
+            img.onerror = () => res(null);
+            img.src = mode.q === "high" ? petalAtlas.high : petalAtlas.mid;
+          })
+        : Promise.resolve(null);
+      void Promise.all([import("./engine"), atlas]).then(([{ createEngine }, image]) => {
         if (finished || !canvasRef.current) return;
+        const high = mode.q === "high";
+        const c3 = variant === "C3";
         try {
           engine = createEngine({
+            film: image
+              ? {
+                  image,
+                  burst: c3 ? (high ? 64 : 44) : high ? 170 : 100,
+                  drift: c3 ? (high ? 18 : 12) : high ? 60 : 36,
+                  macro: c3 ? (high ? 7 : 5) : 0,
+                  start: 0.4,
+                  spread: c3 ? 0.7 : 0.55,
+                  end: 2.9,
+                  macroEnd: 600,
+                  focus: c3 ? 6.6 : 6.0,
+                  dof: c3 ? 1.0 : 0.7,
+                  breeze: c3 ? 0.8 : 1.0,
+                  // Film looks lean on burgundy and deep red; ivory is an accent.
+                  weights: (WEIGHTS[themeKey] ?? WEIGHTS.romantic!).map((w, i) => w * [1.3, 1.1, 0.8, 0.55][i]!) as [number, number, number, number],
+                  mouthPx,
+                  cameraPush: c3 ? 1.3 : 0.5,
+                  dust: c3 ? 0.45 : 0.8,
+                }
+              : undefined,
             canvas: canvasRef.current,
             quality: mode.q as Quality,
             origin: o,
@@ -305,7 +365,7 @@ export default function CinematicInterlude({
             petals: variant !== "B",
             stream: true,
             field: variant !== "A",
-            petalWindow: { start: 0.42, spread: 0.55, push: variant === "C" ? 1.15 : 1, end: variant === "C" ? 2.9 : 3.0 },
+            petalWindow: { start: 0.42, spread: 0.55, push: galaxyOn ? 1.15 : 1, end: galaxyOn ? 2.9 : 3.0 },
             streamWindow:
               variant === "B"
                 ? { start: 0.22, spread: 0.85, burst: 1.0, end: 2.9 }
@@ -318,7 +378,7 @@ export default function CinematicInterlude({
         gsap.ticker.add(tick);
       });
     } else if (!mode.reduced && variant !== "B") {
-      setLitePetals(petalDataUrls(PETALS_DEFAULT, 96));
+      setLitePetals(film ? [petalAtlas.mid] : petalDataUrls(PETALS_DEFAULT, 96));
     }
 
     const onVis = () => {
@@ -359,7 +419,13 @@ export default function CinematicInterlude({
     for (let i = 0; i < 16; i++) {
       const el = document.createElement("span");
       el.className = "ci-lite__petal";
-      el.style.backgroundImage = `url(${litePetals[i % 4]})`;
+      if (litePetals.length === 1) {
+        // Film looks: the real petal atlas as a sprite sheet (8 × 4 tiles).
+        el.style.backgroundImage = `url(${litePetals[0]})`;
+        el.style.backgroundSize = "800% 400%";
+        el.style.backgroundPosition = `${((i * 3) % 8) * (100 / 7)}% ${((i % 4) * 100) / 3}%`;
+        el.style.height = "48px";
+      } else el.style.backgroundImage = `url(${litePetals[i % 4]})`;
       host.appendChild(el);
       const a = (i / 16) * Math.PI * 2;
       const dx = Math.cos(a) * W * (0.4 + (i % 3) * 0.15);
@@ -395,11 +461,11 @@ export default function CinematicInterlude({
       <canvas ref={canvasRef} className="ci-canvas" aria-hidden />
       {variant === "B" && <div ref={flashRef} className="ci-flash" aria-hidden />}
       {litePetals && <div ref={liteRef} className="ci-lite" aria-hidden />}
-      {mode.q === "lite" && variant === "C" && <div className="ci-stars" aria-hidden />}
+      {mode.q === "lite" && (variant === "C" || film) && <div className="ci-stars" aria-hidden />}
       {showGalaxy && (
         <div ref={galaxyRef} className="ci-galaxy">
           <Suspense fallback={null}>
-            <MemoryGalaxy photos={photos} phrases={phrases} centerLabel={centerLabel} autoRotate={!mode.reduced} />
+            <MemoryGalaxy photos={photos} phrases={phrases} centerLabel={centerLabel} autoRotate={!mode.reduced} look={film ? "print" : "classic"} />
           </Suspense>
         </div>
       )}

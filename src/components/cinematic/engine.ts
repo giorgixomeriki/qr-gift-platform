@@ -37,6 +37,7 @@ import {
   type Texture,
 } from "three";
 import { petalAtlas, rng, sparkSprite, type PetalPalette } from "./textures";
+import { createFilmPetals, type FilmOptions } from "./film-petals";
 
 export type Quality = "high" | "mid";
 
@@ -54,6 +55,15 @@ export type EngineOptions = {
   /** Seconds (on the interlude clock). */
   petalWindow: { start: number; spread: number; push: number; end: number };
   streamWindow: { start: number; spread: number; burst: number; end: number };
+  /** C2/C3: photoreal petals instead of the classic ones (film-petals.ts). */
+  film?: FilmOptions & {
+    /** Envelope mouth width in CSS px. */
+    mouthPx: number;
+    /** Slow camera push-in (world units over ~6 s) and lateral drift, for the film look. */
+    cameraPush: number;
+    /** Stream particle count multiplier (C3 is more restrained). */
+    dust: number;
+  };
 };
 
 const FOV = 40;
@@ -245,7 +255,9 @@ export function createEngine(o: EngineOptions): Engine {
   let petalGeo: InstancedBufferGeometry | null = null;
   let petalMat: ShaderMaterial | null = null;
   let petalTotal = 0;
-  if (o.petals) {
+  const film = o.film && o.petals ? createFilmPetals(scene, rand, o.film) : null;
+  if (film) disposables.push(film);
+  if (o.petals && !film) {
     const burst = high ? 300 : 170;
     const drift = high ? 70 : 40;
     petalTotal = burst + drift;
@@ -312,7 +324,7 @@ export function createEngine(o: EngineOptions): Engine {
   let streamMat: ShaderMaterial | null = null;
   let streamTotal = 0;
   if (o.stream) {
-    streamTotal = high ? 1600 : 800;
+    streamTotal = Math.round((high ? 1600 : 800) * (o.film?.dust ?? 1));
     streamGeo = own(new BufferGeometry());
     const pos = new Float32Array(streamTotal * 3);
     const aR = new Float32Array(streamTotal * 4);
@@ -392,6 +404,14 @@ export function createEngine(o: EngineOptions): Engine {
       // Petals keep a similar on-screen size on phones and desktops.
       petalMat.uniforms.uSize!.value = Math.min(1.25, Math.max(0.8, 1.15 * Math.sqrt(Math.min(w / h, 1.4))));
     }
+    if (film && o.film) {
+      const u = film.mat.uniforms;
+      u.uAspect!.value = w / h;
+      u.uOrigin!.value = origin;
+      u.uSize!.value = Math.min(1.2, Math.max(0.8, 1.1 * Math.sqrt(Math.min(w / h, 1.4))));
+      const halfH = Math.tan(((FOV / 2) * Math.PI) / 180) * CAM_Z;
+      u.uMouthW!.value = ((o.film.mouthPx / h) * 2 * halfH) * 0.8;
+    }
     if (streamMat) {
       streamMat.uniforms.uOrigin!.value = origin;
       streamMat.uniforms.uScale!.value = (h * renderer.getPixelRatio()) / (2 * Math.tan(((FOV / 2) * Math.PI) / 180));
@@ -406,6 +426,19 @@ export function createEngine(o: EngineOptions): Engine {
         petalMat.uniforms.uGlow!.value = glow;
       }
       if (streamMat) streamMat.uniforms.uTime!.value = t;
+      if (film) {
+        film.mat.uniforms.uTime!.value = t;
+        film.mat.uniforms.uGlow!.value = glow;
+      }
+      if (o.film?.cameraPush) {
+        // A slow dolly in with a slight lateral drift: parallax between near and far petals.
+        const k = 1 - Math.exp(-Math.max(0, t - 0.4) / 3);
+        camera.position.set(Math.sin(t * 0.35) * 0.12, 0, CAM_Z - o.film.cameraPush * k);
+      }
+      if (film) {
+        film.mat.uniforms.uCamZ!.value = camera.position.z;
+        film.mat.uniforms.uCamX!.value = camera.position.x;
+      }
       // The example's motion: each layer rotates at its own rate, colour breathing within the gold band.
       const ft = t * 0.04;
       for (const f of field) {
@@ -421,6 +454,7 @@ export function createEngine(o: EngineOptions): Engine {
       pixelRatio = 1;
       renderer.setPixelRatio(1);
       if (petalGeo) petalGeo.instanceCount = Math.round(petalTotal * 0.55);
+      if (film) film.geo.instanceCount = Math.round(film.total * 0.55);
       if (streamGeo) streamGeo.setDrawRange(0, Math.round(streamTotal * 0.5));
       for (const f of field) f.pts.geometry.setDrawRange(0, Math.round(fieldTotal * 0.5));
       resize();
@@ -438,7 +472,7 @@ export function createEngine(o: EngineOptions): Engine {
         triangles: i.render.triangles,
         points: i.render.points,
         pixelRatio,
-        petals: petalGeo?.instanceCount ?? 0,
+        petals: film ? film.geo.instanceCount : (petalGeo?.instanceCount ?? 0),
         dust: streamTotal + fieldTotal,
       };
     },

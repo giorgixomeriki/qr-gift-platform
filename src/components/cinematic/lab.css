@@ -42,7 +42,7 @@
 }
 .cl-variants {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
   max-width: 1280px;
   margin: 0 auto 12px;

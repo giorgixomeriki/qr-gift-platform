@@ -30,10 +30,17 @@
   perspective-origin: 50% 46%;
   contain: layout paint size;
 }
+.cg-camera,
 .cg-sphere,
 .cg-item,
 .cg-face {
   transform-style: preserve-3d;
+}
+.cg-camera {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
 }
 .cg-sphere {
   transform: translateZ(calc(var(--radius) * -1));
@@ -173,6 +180,100 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .cg-core__glow {
+    animation: none;
+  }
+}
+
+/* ---------- Print look (C2/C3) ---------- */
+/* A slow camera: a gentle dolly in with a slight tilt settling, over the whole hold. */
+.cg-root[data-look="print"] .cg-camera {
+  animation: cg-dolly 9s cubic-bezier(0.22, 0.6, 0.3, 1) both;
+}
+@keyframes cg-dolly {
+  from {
+    transform: translateZ(calc(var(--radius) * -0.35)) rotateX(5deg);
+  }
+  to {
+    transform: translateZ(calc(var(--radius) * 0.06)) rotateX(-1deg);
+  }
+}
+/* A premium print: ivory photo paper (fine tooth), a white border, a visible edge (thickness),
+   a soft contact shadow, and a glossy sheen that glides as the print turns. The photograph itself
+   is untouched and keeps its own proportions. */
+.cg-root[data-look="print"] .cg-item[data-kind="photo"] .cg-face {
+  overflow: visible;
+  padding: 6% 6% 6%;
+  border-radius: 2px;
+  border: 0;
+  background-color: #f7f1e6;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .38 0 0 0 0 .3 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E"),
+    linear-gradient(165deg, #fbf7ee, #efe6d5);
+  box-shadow:
+    0 1px 0 #e3d8c4,
+    0 2px 0 #d4c6ad,
+    0 3px 0 rgba(150, 125, 95, 0.55),
+    0 22px 38px -14px rgba(0, 0, 0, 0.85),
+    0 8px 14px -6px rgba(0, 0, 0, 0.5),
+    0 0 50px -12px rgba(255, 214, 160, 0.35);
+}
+.cg-root[data-look="print"] .cg-item[data-kind="photo"] .cg-face img {
+  /* never cropped: the whole photograph, the paper takes up the difference (deeper lower margin) */
+  object-fit: contain;
+  object-position: 50% 30%;
+  border-radius: 1px;
+  image-rendering: auto;
+}
+.cg-gloss {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 2px;
+  background: linear-gradient(115deg, transparent calc(var(--sheen, 50%) - 22%), rgba(255, 250, 238, 0.16) var(--sheen, 50%), transparent calc(var(--sheen, 50%) + 22%));
+  mix-blend-mode: screen;
+}
+/* Phrases become quiet engraved light, not pills. */
+.cg-root[data-look="print"] .cg-item[data-kind="phrase"] .cg-face {
+  background: none;
+  border: 0;
+  box-shadow: none;
+}
+.cg-root[data-look="print"] .cg-phrase {
+  font-style: italic;
+  color: rgba(245, 226, 190, 0.86);
+  text-shadow: 0 0 14px rgba(240, 190, 120, 0.45), 0 1px 0 rgba(0, 0, 0, 0.6);
+  letter-spacing: 0.02em;
+}
+.cg-root[data-look="print"] .cg-core__glow {
+  background: radial-gradient(circle, rgba(255, 226, 180, 0.32) 0%, rgba(190, 110, 80, 0.16) 24%, rgba(100, 18, 36, 0.14) 48%, transparent 70%);
+}
+.cg-root[data-look="print"] .cg-core__label {
+  font-style: italic;
+  font-size: clamp(16px, 4.4vw, 22px);
+  color: rgba(251, 236, 208, 0.9);
+  text-shadow: 0 0 22px rgba(255, 200, 130, 0.55);
+}
+/* Atmosphere: out-of-focus warm motes drifting slowly (no geometric ornaments). */
+.cg-bokeh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.cg-bokeh span {
+  position: absolute;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 160, 0.22) 0%, rgba(255, 200, 140, 0.1) 45%, transparent 70%);
+  animation: cg-mote calc(9s + var(--i) * 1.3s) ease-in-out infinite alternate;
+}
+@keyframes cg-mote {
+  to {
+    transform: translate(calc((var(--i) - 4) * 6px), -26px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cg-root[data-look="print"] .cg-camera,
+  .cg-bokeh span {
     animation: none;
   }
 }

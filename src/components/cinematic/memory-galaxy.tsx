@@ -43,11 +43,17 @@ function computeItemBaseRotation(offsetX: number, offsetY: number, sizeX: number
  * the largest places, evenly spaced; phrases sit between them; small gilt frames
  * complete the ring so the sphere never looks empty, without repeating a photo.
  */
-function placeTiles(photos: GalaxyTile[], phrases: GalaxyTile[]): Placed[] {
+function placeTiles(photos: GalaxyTile[], phrases: GalaxyTile[], print = false, aspects: Record<string, number> = {}): Placed[] {
   const out: Placed[] = [];
   const turn = SEGMENTS * 2;
   const n = photos.length;
-  photos.forEach((p, i) => out.push({ ...p, x: Math.round((i * turn) / n) - 1, y: 0, sizeX: 2.5, sizeY: 3.2 }));
+  photos.forEach((p, i) => {
+    // Print look: the tile takes the photograph's own proportions (same area), never a crop.
+    const ar = print && p.kind === "photo" ? aspects[p.src] : undefined;
+    const sx = ar ? Math.sqrt(10.5 * ar) : 2.5;
+    const sy = ar ? Math.sqrt(10.5 / ar) : 3.2;
+    out.push({ ...p, x: Math.round((i * turn) / n) - 1, y: 0, sizeX: sx, sizeY: sy });
+  });
   const taken = (x: number) => out.some((t) => Math.abs(wrapAngleSigned(((t.x - x) * 360) / turn)) < 30);
   const phraseSlots = [34, 9, 24, 16, 3, 29, 12];
   const ys = [-4, 3, -5, 4, -4, 3, -5];
@@ -61,7 +67,7 @@ function placeTiles(photos: GalaxyTile[], phrases: GalaxyTile[]): Placed[] {
   const frameSlots: [number, number][] = [
     [5, 3], [11, -4], [17, 5], [23, -5], [29, 4], [34, -3], [38, 5], [2, -5], [13, 1], [27, -1],
   ];
-  for (const [x, y] of frameSlots) {
+  for (const [x, y] of print ? [] : frameSlots) {
     if (out.length >= 14) break;
     if (out.some((t) => Math.abs(wrapAngleSigned(((t.x - x) * 360) / turn)) < 14 && Math.abs(t.y - y) < 4)) continue;
     out.push({ kind: "frame", x, y, sizeX: 1, sizeY: 1 });
@@ -74,11 +80,14 @@ export function MemoryGalaxy({
   phrases,
   autoRotate = true,
   centerLabel,
+  look = "classic",
 }: {
   photos: { url: string; alt: string }[];
   phrases: string[];
   autoRotate?: boolean;
   centerLabel?: string;
+  /** "print": premium printed photographs, atmospheric details, slow camera dolly (C2/C3). */
+  look?: "classic" | "print";
 }) {
   const rootRef = useRef<HTMLDivElement>(null);
   const mainRef = useRef<HTMLDivElement>(null);
@@ -91,14 +100,30 @@ export function MemoryGalaxy({
   const inertiaRAF = useRef<number | null>(null);
   const lastInteraction = useRef(0);
   const [focused, setFocused] = useState<{ src: string; alt: string } | null>(null);
+  const print = look === "print";
+  const [aspects, setAspects] = useState<Record<string, number>>({});
+  useEffect(() => {
+    if (!print) return;
+    let live = true;
+    for (const p of photos.slice(0, 3)) {
+      const img = new Image();
+      img.onload = () => live && img.naturalWidth && setAspects((a) => ({ ...a, [p.url]: img.naturalWidth / img.naturalHeight }));
+      img.src = p.url;
+    }
+    return () => {
+      live = false;
+    };
+  }, [photos, print]);
 
   const items = useMemo(
     () =>
       placeTiles(
         photos.slice(0, 3).map((p) => ({ kind: "photo" as const, src: p.url, alt: p.alt })),
         phrases.map((text) => ({ kind: "phrase" as const, text })),
+        print,
+        aspects,
       ),
-    [photos, phrases],
+    [photos, phrases, print, aspects],
   );
   const bases = useMemo(() => items.map((it) => computeItemBaseRotation(it.x, it.y, it.sizeX, it.sizeY, SEGMENTS)), [items]);
   const faceRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -116,9 +141,11 @@ export function MemoryGalaxy({
         // (opacity on the face, not the 3D item: opacity flattens preserve-3d children)
         face.style.opacity = (0.3 + 0.7 * Math.pow((facing + 1) / 2, 1.4)).toFixed(3);
         face.style.transform = `rotateX(${-b.rotateX}deg) rotateY(${-(b.rotateY + yDeg)}deg) rotateX(${-xDeg}deg)`;
+        // Print look: light glides across the glossy print as it travels round the ring.
+        if (print) face.style.setProperty("--sheen", `${(50 + 60 * Math.sin(((b.rotateY + yDeg) * Math.PI) / 180)).toFixed(1)}%`);
       });
     },
-    [bases],
+    [bases, print],
   );
 
   useEffect(() => {
@@ -238,13 +265,21 @@ export function MemoryGalaxy({
   };
 
   return (
-    <div ref={rootRef} className="cg-root" style={{ "--segments": SEGMENTS } as CSSProperties} data-testid="memory-galaxy">
+    <div ref={rootRef} className="cg-root" data-look={look} style={{ "--segments": SEGMENTS } as CSSProperties} data-testid="memory-galaxy">
       <div ref={mainRef} className="cg-main">
         <div className="cg-core" aria-hidden>
           <span className="cg-core__glow" />
           {centerLabel && <span className="cg-core__label">{centerLabel}</span>}
         </div>
+        {print && (
+          <div className="cg-bokeh" aria-hidden>
+            {Array.from({ length: 9 }, (_, i) => (
+              <span key={i} style={{ "--i": i, left: `${8 + ((i * 37) % 84)}%`, top: `${10 + ((i * 53) % 78)}%`, width: 26 + ((i * 13) % 40) } as CSSProperties} />
+            ))}
+          </div>
+        )}
         <div className="cg-stage">
+          <div className="cg-camera">
           <div ref={sphereRef} className="cg-sphere">
             {items.map((it, i) => (
               <div
@@ -263,11 +298,13 @@ export function MemoryGalaxy({
                     // eslint-disable-next-line @next/next/no-img-element -- signed media URL (same as the photo beat), not next/image
                     <img src={it.src} alt="" draggable={false} decoding="async" />
                   )}
+                  {it.kind === "photo" && print && <span className="cg-gloss" aria-hidden />}
                   {it.kind === "phrase" && <span className="cg-phrase">{it.text}</span>}
                   {it.kind === "frame" && <span className="cg-frame" />}
                 </div>
               </div>
             ))}
+          </div>
           </div>
         </div>
         <div className="cg-vignette" aria-hidden />

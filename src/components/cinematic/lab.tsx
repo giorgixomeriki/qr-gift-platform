@@ -23,7 +23,7 @@ const LABELS = { skip: "გამოტოვება", openLetter: "წერ�
 const pick = <T extends string>(v: string | undefined, all: readonly T[], d: T): T => (all.includes(v as T) ? (v as T) : d);
 
 export function CinematicStage({ params }: { params: Record<string, string | undefined> }) {
-  const variant = pick(params.v, ["A", "B", "C"] as const, "A");
+  const variant = pick(params.v, ["A", "B", "C", "C2", "C3"] as const, "A");
   const theme = pick(params.theme, THEMES, "romantic");
   const n = Math.max(0, Math.min(3, Number(params.photos ?? 3) || 0));
   const quality = pick(params.q, ["auto", "high", "mid", "lite"] as const, "auto") as QualityPref;
@@ -90,7 +90,10 @@ const VARIANTS: { id: Variant; name: string; line: string }[] = [
   { id: "A", name: "Luxury Floral Reveal", line: "Golden light, then rose petals burst toward you and part over the letter." },
   { id: "B", name: "Golden Stardust Reveal", line: "A helix of gold dust rises from the envelope and bursts past you into the letter." },
   { id: "C", name: "Floral + Memory Galaxy", line: "The petals clear into a dark galaxy of the sender's photos; the letter follows." },
+  { id: "C2", name: "Photorealistic Floral Galaxy", line: "Real photographed petals, cinematic light and depth, printed photographs in the night." },
+  { id: "C3", name: "Luxury Film Reveal", line: "Fewer petals, macro foreground, deep focus falloff, a slow camera, understated." },
 ];
+const SETS: Record<string, Variant[]> = { abc: ["A", "B", "C"], c: ["C", "C2", "C3"] };
 
 function Phone({ src, device, runKey, scale }: { src: string; device: Device; runKey: number; scale: number }) {
   const d = DEVICES[device];
@@ -102,8 +105,8 @@ function Phone({ src, device, runKey, scale }: { src: string; device: Device; ru
 }
 
 export function CinematicCompare() {
-  const [variant, setVariant] = useState<Variant>("C");
-  const [all, setAll] = useState(false);
+  const [variant, setVariant] = useState<Variant>("C2");
+  const [all, setAll] = useState<false | "abc" | "c">(false);
   const [theme, setTheme] = useState<(typeof THEMES)[number]>("romantic");
   const [photos, setPhotos] = useState(3);
   const [quality, setQuality] = useState<QualityPref>("auto");
@@ -177,10 +180,15 @@ export function CinematicCompare() {
             <span className="cl-variant__line">{v.line}</span>
           </button>
         ))}
-        <button role="tab" aria-selected={all} className="cl-variant cl-variant--all" onClick={() => (setAll(true), replay())} data-testid="lab-variant-all">
+        <button role="tab" aria-selected={all === "c"} className="cl-variant cl-variant--all" onClick={() => (setAll("c"), replay())} data-testid="lab-variant-c-all">
+          <span className="cl-variant__id">C·C2·C3</span>
+          <span className="cl-variant__name">Photoreal comparison</span>
+          <span className="cl-variant__line">Original C beside C2 and C3, started together.</span>
+        </button>
+        <button role="tab" aria-selected={all === "abc"} className="cl-variant cl-variant--all" onClick={() => (setAll("abc"), replay())} data-testid="lab-variant-all">
           <span className="cl-variant__id">A·B·C</span>
           <span className="cl-variant__name">Side by side</span>
-          <span className="cl-variant__line">All three, started together.</span>
+          <span className="cl-variant__line">The first three, started together.</span>
         </button>
       </section>
 
@@ -234,7 +242,7 @@ export function CinematicCompare() {
       </section>
 
       <div ref={stageRef} className="cl-stage" data-all={all || undefined}>
-        {(all ? (["A", "B", "C"] as Variant[]) : [variant]).map((v) => (
+        {(all ? SETS[all]! : [variant]).map((v) => (
           <figure key={v} className="cl-fig">
             <Phone src={src(v)} device={device} runKey={runKey} scale={scale} />
             {all && <figcaption>{v}</figcaption>}
@@ -273,6 +281,9 @@ export function CinematicCompare() {
             </table>
           )}
           <p className="cl-muted">Synthetic letter and photos. Nothing leaves this device.</p>
+          <p className="cl-muted">
+            C2/C3 petals: “Red Rose Petals” by THOR (CC BY 2.0, adapted) and three petal photos by cogdogblog (CC0), via Wikimedia Commons.
+          </p>
         </aside>
       </div>
     </main>
