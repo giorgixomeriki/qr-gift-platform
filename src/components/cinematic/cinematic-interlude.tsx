@@ -228,7 +228,8 @@ export default function CinematicInterlude({
       const tl = gsap.timeline();
       tls.push(tl);
       tl.fromTo(lightRef.current, { opacity: 0 }, { opacity: 0.9, duration: 0.2 }, 0);
-      if (galaxyOn) {
+      // Reduced motion opens the letter at once (the photos keep their own beats); the still galaxy is lab-only (forceReduced).
+      if (galaxyOn && showsGalaxy && forceReduced) {
         tl.to(veilRef.current, { opacity: 1, duration: 0.25 }, 0.1);
         if (showsGalaxy) tl.call(() => setShowGalaxy(true), [], 0.3);
         tl.call(() => beginHold(), [], 0.35);
