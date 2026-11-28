@@ -8,6 +8,6 @@ export function prefetchCinematic(variant: Variant) {
   if (variant === "C2" || variant === "C3") {
     // The petal atlas (decoded later by the interlude; the browser cache serves it then).
     const img = new Image();
-    img.src = window.devicePixelRatio > 1 && (navigator.hardwareConcurrency ?? 4) > 4 ? "/lab/cinematic/petals-2048.webp" : "/lab/cinematic/petals-1024.webp";
+    img.src = window.devicePixelRatio > 1 && (navigator.hardwareConcurrency ?? 4) > 4 ? "/customer/cinematic/petals-2048.webp" : "/customer/cinematic/petals-1024.webp";
   }
 }

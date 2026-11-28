@@ -89,7 +89,8 @@ export default function CinematicInterlude({
   forceReduced = false,
   galaxyHoldMs,
   labels,
-  petalAtlas = { high: "/lab/cinematic/petals-2048.webp", mid: "/lab/cinematic/petals-1024.webp" },
+  galaxy: galaxyWanted = true,
+  petalAtlas = { high: "/customer/cinematic/petals-2048.webp", mid: "/customer/cinematic/petals-1024.webp" },
   reveal,
   done,
   onMetrics,
@@ -104,6 +105,8 @@ export default function CinematicInterlude({
   /** C: how long the galaxy waits before the letter (the recipient can go on sooner). */
   galaxyHoldMs?: number;
   labels: { skip: string; openLetter: string };
+  /** Show the memory galaxy (C/C2/C3). Production: only when the greeting has photos. */
+  galaxy?: boolean;
   /** C2/C3: the photoreal petal atlas (high, mid). */
   petalAtlas?: { high: string; mid: string };
   reveal: () => void;
@@ -153,6 +156,8 @@ export default function CinematicInterlude({
     const timers: number[] = [];
     const tls: gsap.core.Timeline[] = [];
     const galaxyOn = variant === "C" || film;
+    // Without photographs there is no galaxy to show: the petals lead straight to the letter.
+    const showsGalaxy = galaxyOn && galaxyWanted;
     const webgl = mode.q !== "lite" && !mode.reduced;
     const glow = { v: 0 };
     const fieldOp = { v: 0 };
@@ -225,7 +230,7 @@ export default function CinematicInterlude({
       tl.fromTo(lightRef.current, { opacity: 0 }, { opacity: 0.9, duration: 0.2 }, 0);
       if (galaxyOn) {
         tl.to(veilRef.current, { opacity: 1, duration: 0.25 }, 0.1);
-        tl.call(() => setShowGalaxy(true), [], 0.3);
+        if (showsGalaxy) tl.call(() => setShowGalaxy(true), [], 0.3);
         tl.call(() => beginHold(), [], 0.35);
       } else {
         tl.call(doReveal, [], 0.25);
@@ -238,8 +243,8 @@ export default function CinematicInterlude({
 
     function beginHold() {
       holdStarted = performance.now();
-      setHolding(true);
-      const hold = galaxyHoldMs ?? (photos.length ? 6500 : 3800);
+      if (showsGalaxy) setHolding(true);
+      const hold = !showsGalaxy ? 0 : (galaxyHoldMs ?? (photos.length ? 6500 : 3800));
       timers.push(window.setTimeout(() => proceedRef.current(), hold));
     }
     proceedRef.current = () => {
@@ -251,7 +256,7 @@ export default function CinematicInterlude({
       tls.push(out);
       if (film && !mode.reduced) {
         // Dolly through the photographs toward a warm light; the letter is already beneath it.
-        out.to(galaxyRef.current, { scale: 1.3, opacity: 0, duration: 0.8, ease: "power2.in" }, 0);
+        if (galaxyRef.current) out.to(galaxyRef.current, { scale: 1.3, opacity: 0, duration: 0.8, ease: "power2.in" }, 0);
         out.to(canvasRef.current, { opacity: 0, duration: 0.65, ease: "power1.in" }, 0.05);
         out.to(fieldOp, { v: 0, duration: 0.65 }, 0);
         out.fromTo(lightRef.current, { opacity: 0, scale: 0.6 }, { opacity: 0.75, scale: 1.4, duration: 0.45, ease: "sine.in" }, 0.05);
@@ -261,7 +266,7 @@ export default function CinematicInterlude({
         out.call(() => finish(false), [], 1.08);
         return;
       }
-      out.to(galaxyRef.current, { scale: mode.reduced ? 1 : 1.5, opacity: 0, duration: mode.reduced ? 0.3 : 0.75, ease: "power2.in" }, 0);
+      if (galaxyRef.current) out.to(galaxyRef.current, { scale: mode.reduced ? 1 : 1.5, opacity: 0, duration: mode.reduced ? 0.3 : 0.75, ease: "power2.in" }, 0);
       out.to(fieldOp, { v: 0, duration: 0.6 }, 0);
       out.call(doReveal, [], 0.25);
       out.to(veilRef.current, { opacity: 0, duration: 0.6, ease: "power1.inOut" }, 0.35);
@@ -294,7 +299,7 @@ export default function CinematicInterlude({
         tl.to(lightRef.current, { scale: 1.3, opacity: 0.9, duration: 0.9, ease: "sine.inOut" }, 0.6);
         tl.fromTo(veilRef.current, { opacity: 1, "--r": "0vmax" }, { "--r": "170vmax", duration: 1.15, ease: "power2.in" }, 0.8);
         tl.to(fieldOp, { v: variant === "C3" ? 0.55 : 0.8, duration: 1.2 }, 1.3);
-        tl.call(() => setShowGalaxy(true), [], variant === "C3" ? 1.6 : 1.45);
+        if (showsGalaxy) tl.call(() => setShowGalaxy(true), [], variant === "C3" ? 1.6 : 1.45);
         tl.to(lightRef.current, { opacity: 0, duration: 0.8 }, 1.45);
         tl.to(glow, { v: 0, duration: 0.9 }, 1.5);
         tl.call(() => beginHold(), [], 2.3);
@@ -314,7 +319,7 @@ export default function CinematicInterlude({
       // C — Stage 3: the petals clear into a dark galaxy of photographs.
       tl.fromTo(veilRef.current, { opacity: 0 }, { opacity: 1, duration: 0.55, ease: "sine.in" }, 0.95);
       tl.to(fieldOp, { v: 0.9, duration: 1.0 }, 1.25);
-      tl.call(() => setShowGalaxy(true), [], 1.3);
+      if (showsGalaxy) tl.call(() => setShowGalaxy(true), [], 1.3);
       tl.to(lightRef.current, { opacity: 0, duration: 0.7 }, 1.35);
       tl.to(glow, { v: 0, duration: 0.8 }, 1.4);
       tl.call(() => beginHold(), [], 2.3);

@@ -360,6 +360,8 @@
     "voiceTitle": "A voice message for you",
     "videoLabel": "Video message",
     "photoAlt": "Photo {n} of {total}",
+    "cinematicSkip": "Skip",
+    "cinematicOpenLetter": "Open the letter",
     "play": "Play",
     "pause": "Pause",
     "seek": "Playback position",

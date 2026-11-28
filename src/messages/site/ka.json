@@ -163,6 +163,16 @@
           },
           { "type": "p", "text": "პარტნიორობის პირობები ინდივიდუალურად თანხმდება. პარტნიორობისთვის [დაგვიკავშირდით](/contact)." }
         ]
+      },
+      {
+        "id": "image-credits",
+        "title": "გამოსახულებების ავტორები",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "მილოცვის გახსნის ანიმაციაში ვარდის ფურცლები ადაპტირებულია Wikimedia Commons-ის ფოტოებიდან: [THOR-ის „Red Rose Petals“](https://commons.wikimedia.org/w/index.php?curid=40606596), ლიცენზია [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/), და cogdogblog-ის ფოტოები, გადაცემული საჯარო საკუთრებაში (CC0)."
+          }
+        ]
       }
     ]
   },

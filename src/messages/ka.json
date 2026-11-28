@@ -360,6 +360,8 @@
     "voiceTitle": "ხმოვანი შეტყობინება შენთვის",
     "videoLabel": "ვიდეომილოცვა",
     "photoAlt": "ფოტო {n} / {total}",
+    "cinematicSkip": "გამოტოვება",
+    "cinematicOpenLetter": "წერილის გახსნა",
     "play": "დაკვრა",
     "pause": "პაუზა",
     "seek": "მოსმენის პოზიცია",

@@ -1,12 +1,16 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { ConfirmationLink } from "./confirmation-link";
 import { WaxSeal } from "@/components/customer/wax-seal";
 import { GreetingRenderer, type GreetingRenderContent } from "./greeting-renderer";
 import type { ThemeKey } from "@/lib/themes/registry";
 import { recordContentPlayedAction, refreshRecipientVoiceUrlAction } from "@/lib/greetings/recipient-actions";
+import { prefetchCinematic } from "@/components/cinematic/prefetch";
+
+/** The approved cinematic opening (C3 · Luxury Film Reveal): loaded on demand, never before the envelope paints. */
+const CinematicInterlude = lazy(() => import("@/components/cinematic/cinematic-interlude"));
 
 export function RecipientView({
   greetingId,
@@ -31,6 +35,18 @@ export function RecipientView({
   arrivedFromLock?: boolean;
 }) {
   const t = useTranslations("success");
+  const tg = useTranslations("greeting");
+  // Warm the opening (code + petal atlas) in idle time while the envelope is sealed.
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 600));
+    const h = idle(() => prefetchCinematic("C3"));
+    return () => (window.cancelIdleCallback ?? window.clearTimeout)(h as number);
+  }, []);
+  // The galaxy shows the greeting's own photographs (the same signed URLs as the photo beats), never repeated.
+  const galleryPhotos = useMemo(
+    () => content.photos.map((p, i) => ({ url: p.url, alt: tg("photoAlt", { n: i + 1, total: content.photos.length }) })),
+    [content.photos, tg],
+  );
   const handlePlayed = useCallback(
     (type: "video" | "audio") => {
       void recordContentPlayedAction(greetingId, type);
@@ -53,6 +69,20 @@ export function RecipientView({
       serverNow={serverNow}
       continuation={arrivedFromLock}
       onContentPlayed={handlePlayed}
+      openingInterlude={({ reveal, done }) => (
+        <Suspense fallback={null}>
+          <CinematicInterlude
+            variant="C3"
+            themeKey={themeKey}
+            photos={galleryPhotos}
+            phrases={[]}
+            galaxy={galleryPhotos.length > 0}
+            labels={{ skip: tg("cinematicSkip"), openLetter: tg("cinematicOpenLetter") }}
+            reveal={reveal}
+            done={done}
+          />
+        </Suspense>
+      )}
       senderBanner={
         isOriginalSender ? (
           // The sender's own first look: a paper note with the seal, never a system toast.

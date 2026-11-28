@@ -51,8 +51,11 @@ const PATTERN = /(\*\*.+?\*\*|\[[^\]]+\]\([^)\s]+\)|\{\{[a-zA-Z.]+\}\})/g;
  */
 export const EXTERNAL_POLICY_LINKS = new Set(["https://www.youtube.com/t/terms", "https://policies.google.com/privacy"]);
 
+/** Licence attribution (About → Image credits): the CC BY 2.0 petal photograph and its licence. */
+export const EXTERNAL_CREDIT_LINKS = new Set(["https://commons.wikimedia.org/w/index.php?curid=40606596", "https://creativecommons.org/licenses/by/2.0/"]);
+
 export function isAllowedHref(href: string): boolean {
-  return /^\/[a-z0-9\-/#]*$/.test(href) || /^mailto:\S+@\S+$/.test(href) || /^tel:\+\d+$/.test(href) || EXTERNAL_POLICY_LINKS.has(href);
+  return /^\/[a-z0-9\-/#]*$/.test(href) || /^mailto:\S+@\S+$/.test(href) || /^tel:\+\d+$/.test(href) || EXTERNAL_POLICY_LINKS.has(href) || EXTERNAL_CREDIT_LINKS.has(href);
 }
 
 export function parseInline(source: string): InlineNode[] {

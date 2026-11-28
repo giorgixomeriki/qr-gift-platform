@@ -163,6 +163,16 @@
           },
           { "type": "p", "text": "Partnership terms are agreed individually. To become a partner, please [contact us](/contact)." }
         ]
+      },
+      {
+        "id": "image-credits",
+        "title": "Image credits",
+        "blocks": [
+          {
+            "type": "p",
+            "text": "The rose petals in the greeting's opening animation are adapted from photographs on Wikimedia Commons: [“Red Rose Petals” by THOR](https://commons.wikimedia.org/w/index.php?curid=40606596), licensed under [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/), and photographs by cogdogblog dedicated to the public domain (CC0)."
+          }
+        ]
       }
     ]
   },
