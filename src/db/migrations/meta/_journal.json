@@ -141,6 +141,83 @@
       "when": 1790486880000,
       "tag": "0019_payment_refunds",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1792310400000,
+      "tag": "0020_close_data_api",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1792656000000,
+      "tag": "0021_luxury_vintage_theme",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1795161600000,
+      "tag": "0022_music_content_type",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1795219200000,
+      "tag": "0023_checkout_consents",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795222800000,
+      "tag": "0024_payment_release_safety",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1795334400000,
+      "tag": "0025_partner_login_access",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1795420800000,
+      "tag": "0026_qr_handovers",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1795507200000,
+      "tag": "0027_qr_handover_immediate",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1795593600000,
+      "tag": "0028_partner_locations",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1795680000000,
+      "tag": "0029_refund_access_suspension",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1795766400000,
+      "tag": "0030_greeting_schedule",
+      "breakpoints": true
     }
   ]
 }

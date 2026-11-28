@@ -1,11 +1,11 @@
 "use server";
 
 import { getEditToken } from "@/lib/greetings/edit-token-cookie";
-import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, type CheckoutOrderSummary } from "./checkout";
+import { getOrCreateCheckoutOrder, simulateTestPayment, checkPaymentReturn, acceptCheckoutTerms, PaymentInProgressError, type CheckoutOrderSummary } from "./checkout";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logServerError } from "@/lib/log";
 import { CheckoutUnavailableError } from "./checkout-gate";
-import { CHECKOUT_CLOSED } from "./checkout-codes";
+import { CHECKOUT_CLOSED, CONSENT_REQUIRED, PAYMENT_IN_PROGRESS, isFullCheckoutConsent } from "./checkout-codes";
 
 export type ActionResult<T = undefined> = { ok: true; data: T } | { ok: false; error: string };
 
@@ -15,7 +15,7 @@ function errorResult(scope: string, err: unknown, context: Record<string, string
 }
 
 /** PUBLIC EXPENSIVE: creates/re-enters a checkout order. Keyed by greetingId — a genuine checkout/retry flow calls this a handful of times, never dozens per minute. */
-export async function startCheckoutAction(greetingId: string): Promise<ActionResult<{ summary: CheckoutOrderSummary; recovered: boolean }>> {
+export async function startCheckoutAction(greetingId: string): Promise<ActionResult<{ summary: CheckoutOrderSummary; recovered: boolean; awaitingProvider?: boolean }>> {
   try {
     await enforceRateLimit({ key: `checkout-start:${greetingId}`, limit: 20, windowSeconds: 60 });
     const token = await getEditToken(greetingId);
@@ -26,6 +26,30 @@ export async function startCheckoutAction(greetingId: string): Promise<ActionRes
     // not a failure — the UI shows "payments open soon", nothing is logged.
     if (err instanceof CheckoutUnavailableError) return { ok: false, error: CHECKOUT_CLOSED };
     return errorResult("startCheckoutAction", err, { greetingId });
+  }
+}
+
+/**
+ * PUBLIC EXPENSIVE: the buyer agreed to the terms and pressed Pay. Records the
+ * consent (server-side evidence, linked to the order) and, for a real
+ * provider, opens the bank payment and returns its page. Keyed by greetingId.
+ */
+export async function acceptCheckoutTermsAction(
+  greetingId: string,
+  locale: string,
+  consents: unknown,
+): Promise<ActionResult<{ redirectUrl?: string }>> {
+  try {
+    // Client input: both consents must be explicitly true, or nothing happens.
+    if (!isFullCheckoutConsent(consents)) return { ok: false, error: CONSENT_REQUIRED };
+    await enforceRateLimit({ key: `checkout-consent:${greetingId}`, limit: 10, windowSeconds: 60 });
+    const token = await getEditToken(greetingId);
+    const { redirectUrl } = await acceptCheckoutTerms(greetingId, token, locale === "en" ? "en" : "ka", consents);
+    return { ok: true, data: { redirectUrl } };
+  } catch (err) {
+    if (err instanceof PaymentInProgressError) return { ok: false, error: PAYMENT_IN_PROGRESS };
+    if (err instanceof CheckoutUnavailableError) return { ok: false, error: CHECKOUT_CLOSED };
+    return errorResult("acceptCheckoutTermsAction", err, { greetingId });
   }
 }
 

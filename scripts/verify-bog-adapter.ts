@@ -16,7 +16,7 @@ const { receiptSchema } = require("../src/lib/payments/providers/bog/schemas") a
 const { verifyBogSignature, parseBogPublicKey } = require("../src/lib/payments/providers/bog/signature") as typeof import("../src/lib/payments/providers/bog/signature");
 const { BogTokenClient, bogRequest } = require("../src/lib/payments/providers/bog/http") as typeof import("../src/lib/payments/providers/bog/http");
 const { idempotencyKeyFor } = require("../src/lib/payments/idempotency") as typeof import("../src/lib/payments/idempotency");
-const { BOGPaymentProvider, BogRefundsDisabledError } = require("../src/lib/payments/providers/bog-provider") as typeof import("../src/lib/payments/providers/bog-provider");
+const { BOGPaymentProvider, BogRefundsDisabledError, safeDiagnosticCode } = require("../src/lib/payments/providers/bog-provider") as typeof import("../src/lib/payments/providers/bog-provider");
 const { ProviderNotImplementedError } = require("../src/lib/payments/types") as typeof import("../src/lib/payments/types");
 const { tokenResponseSchema } = require("../src/lib/payments/providers/bog/schemas") as typeof import("../src/lib/payments/providers/bog/schemas");
 
@@ -166,6 +166,16 @@ async function main() {
     check("2h. A rejected refund action is reported by id", rejected.refund?.rejectedActionIds.join() === "act-1");
     check("2i. A completed receipt without transfer_amount is refused, not guessed", !!(await rejects(() => mapReceipt(receipt({}, { transfer_amount: null })))));
     check("2j. A completed receipt with a sub-tetri amount is refused", !!(await rejects(() => mapReceipt(receipt({}, { transfer_amount: 10.001 })))));
+    // As BOG documents a full refund: transfer_amount "0.0", refund_amount = charge.
+    const full = mapReceipt(receipt({ order_status: { key: "refunded" } }, { transfer_amount: "0.0", refund_amount: "10.0" }));
+    check("2k. Fully refunded receipt (transfer 0.0): refund COMPLETED 10.00, charge reported as 10.00 (request), never 0",
+      full.refund?.status === "COMPLETED" && full.refund.refundedAmountMinor === 1000 && full.amountMinor === 1000 && full.status === "SUCCEEDED");
+    const noTransfer = await rejects(() => mapReceipt(receipt({ order_status: { key: "refunded" } }, { transfer_amount: null, refund_amount: 10 })));
+    check("2l. A refunded receipt without transfer_amount still maps (refund completion must not stall)", !noTransfer);
+    const partial = mapReceipt(receipt({ order_status: { key: "refunded_partially" } }, { transfer_amount: "6.0", refund_amount: "4.0" }));
+    check("2m. Partially refunded: PARTIAL with 4.00 refunded", partial.refund?.status === "PARTIAL" && partial.refund.refundedAmountMinor === 400);
+    check("2n. A 1.00 GEL charge refunded in full maps to 100 tetri",
+      mapReceipt(receipt({ order_status: { key: "refunded" } }, { request_amount: 1, transfer_amount: "0.0", refund_amount: "1.0" })).refund?.refundedAmountMinor === 100);
   }
 
   console.log("\n--- 3. Callback signature (SHA256withRSA over the raw body) ---");
@@ -275,7 +285,11 @@ async function main() {
     check("7d. State comes from the receipt, not the body (body said completed/9999 → PENDING/1000)", result.status === "PENDING" && result.amountMinor === 1000);
     check("7e. Our order id comes from the receipt's external_order_id", result.orderId === "11111111-1111-4111-8111-111111111111");
     const otherEvent = JSON.stringify({ event: "something_else", body: { order_id: "bog-1" } });
-    check("7f. An unhandled event type is rejected", !!(await rejects(() => p.handleWebhook(otherEvent, h(signBody(otherEvent))))));
+    const before = bog.calls.length;
+    const otherResult = await p.handleWebhook(otherEvent, h(signBody(otherEvent)));
+    check("7f. A signed callback with another event name is settled from a fresh receipt, like order_payment (FA-03)", otherResult.orderId === "11111111-1111-4111-8111-111111111111" && bog.calls.length === before + 1 && bog.calls[before]!.url.endsWith("/receipt/bog-1"));
+    const forgedOther = await rejects(() => p.handleWebhook(otherEvent, h(signBody(otherEvent, other.privateKey))));
+    check("7f2. …but only when signed by BOG", !!forgedOther && bog.calls.length === before + 1);
     const mismatch = provider(() => ({ status: 200, json: receipt({ order_id: "bog-OTHER" }) }));
     check("7g. A receipt for a different BOG order than asked is refused", !!(await rejects(() => mismatch.p.handleWebhook(raw, h(signBody(raw))))));
     const noExternal = provider(() => ({ status: 200, json: receipt({ external_order_id: null }) }));
@@ -297,6 +311,11 @@ async function main() {
     check("8d. No idempotency key or no amount → refused before calling BOG", !!(await rejects(() => p.refundPayment("bog-1", 1000))) && !!(await rejects(() => p.refundPayment("bog-1", undefined, key))) && bog.calls.length === 1);
     const refused = provider(() => ({ status: 400, json: { key: "refund_not_allowed" } }));
     check("8e. A 4xx is a definite refusal → FAILED", (await refused.p.refundPayment("bog-1", 1000, key)).status === "FAILED");
+    let n8 = 0;
+    const flaky = provider(() => (n8++ === 0 ? { status: 503 } : { status: 409, json: { key: "conflict" } }));
+    const flakyErr = await rejects(() => flaky.p.refundPayment("bog-1", 1000, key));
+    check("8g. 5xx then 4xx on the retry → thrown as UNKNOWN (BOG may hold the first attempt), never FAILED",
+      !!flakyErr && (flakyErr as { afterRetry?: boolean }).afterRetry === true && flaky.bog.calls.length === 2);
     const down = provider(() => ({ status: 503 }));
     check("8f. A repeated 5xx is an unknown outcome → thrown (caller keeps it REQUESTED)", !!(await rejects(() => down.p.refundPayment("bog-1", 1000, key))) && down.bog.calls.length === 2 && down.bog.calls[0]!.headers["idempotency-key"] === down.bog.calls[1]!.headers["idempotency-key"]);
   }
@@ -311,6 +330,65 @@ async function main() {
     );
     const e = await rejects(() => p.createPayment(orderInput(1000)));
     check("9a. A failed token request reports the status only — no secret, no Basic header", !!e && !e.message.includes(SECRET) && !e.message.includes(Buffer.from(`client-1:${SECRET}`).toString("base64")), e?.message);
+  }
+
+  console.log("\n--- 10. Diagnostics: unknown events and refund answers (codes only) ---");
+  {
+    // Capture console.warn for the duration of each call.
+    const captureWarn = async (fn: () => Promise<unknown>): Promise<string[]> => {
+      const lines: string[] = [];
+      const orig = console.warn;
+      console.warn = (...args: unknown[]) => void lines.push(args.map(String).join(" "));
+      try {
+        await fn().catch(() => undefined);
+      } finally {
+        console.warn = orig;
+      }
+      return lines;
+    };
+    const parse = (l: string) => {
+      try {
+        return JSON.parse(l) as Record<string, unknown>;
+      } catch {
+        return {};
+      }
+    };
+    const FORBIDDEN = [SECRET, "548888", "Bearer", "callback-signature", "9999", "transfer_amount"];
+    const clean = (lines: string[]) => lines.every((l) => FORBIDDEN.every((f) => !l.includes(f)));
+
+    const h = (sig: string) => new Headers({ "Callback-Signature": sig });
+    const evt = JSON.stringify({ event: "refund_status", body: { order_id: "bog-1", purchase_units: { transfer_amount: 9999 }, payer_identifier: "548888xxxxxx1234" } });
+    const w1 = provider(() => ({ status: 200, json: receipt() }));
+    const l1 = await captureWarn(() => w1.p.handleWebhook(evt, h(signBody(evt))));
+    const j1 = parse(l1[0] ?? "");
+    check("10a. A signed callback with another event logs OTHER_EVENT with the event name and BOG order id", l1.length === 1 && j1.diagnostic === "OTHER_EVENT" && j1.event === "refund_status" && j1.bogOrderId === "bog-1", l1.join("|"));
+    check("10b. …is settled from one receipt lookup, and the log carries no body, amounts, card data or secrets", w1.bog.calls.length === 1 && clean(l1), l1.join("|"));
+
+    const hostile = JSON.stringify({ event: "x\n{\"injected\":true} card 5488 8800 0000 1234", body: { order_id: "bog-1" } });
+    const l2 = await captureWarn(() => w1.p.handleWebhook(hostile, h(signBody(hostile))));
+    check("10c. Free text in the event name is never echoed (<unrecognized>)", parse(l2[0] ?? "").event === "<unrecognized>" && !l2.join("").includes("5488") && !l2.join("").includes("injected"), l2.join("|"));
+
+    const unsigned = await captureWarn(() => w1.p.handleWebhook(evt, new Headers()));
+    check("10d. An unsigned callback logs no diagnostic (only BOG-signed content is described)", unsigned.length === 0);
+
+    const key = idempotencyKeyFor("refund:diag");
+    const odd = provider(() => ({ status: 200, json: { key: "request_queued", message: "Refund for card 548888xxxxxx1234", action_id: "act-9" } }));
+    let r: Awaited<ReturnType<typeof odd.p.refundPayment>> | undefined;
+    const l3 = await captureWarn(async () => (r = await odd.p.refundPayment("bog-1", 1000, key)));
+    const j3 = parse(l3[0] ?? "");
+    check("10e. An unexpected 2xx refund key → PENDING (unknown, never a final rejection), logged as UNEXPECTED_REFUND_RESPONSE with the key", r?.status === "PENDING" && j3.diagnostic === "UNEXPECTED_REFUND_RESPONSE" && j3.key === "request_queued" && j3.actionIdPresent === true, l3.join("|"));
+    check("10f. …without BOG's free-text message, amount, card data or the Idempotency-Key", clean(l3) && !l3.join("").includes(key) && !l3.join("").includes("Refund for"), l3.join("|"));
+
+    const no = provider(() => ({ status: 409, json: { key: "refund_not_allowed", message: "x" } }));
+    const l4 = await captureWarn(() => no.p.refundPayment("bog-1", 1000, key));
+    const j4 = parse(l4[0] ?? "");
+    check("10g. A 4xx refusal logs REFUND_REFUSED with status and BOG's key", j4.diagnostic === "REFUND_REFUSED" && j4.httpStatus === 409 && j4.key === "refund_not_allowed" && clean(l4), l4.join("|"));
+
+    const garbled = provider(() => ({ status: 200, json: { unexpected: true } }));
+    const l5 = await captureWarn(() => garbled.p.refundPayment("bog-1", 1000, key));
+    check("10h. A 2xx unreadable refund answer logs UNREADABLE_REFUND_RESPONSE and is rethrown (kept REQUESTED)", parse(l5[0] ?? "").diagnostic === "UNREADABLE_REFUND_RESPONSE" && !!(await rejects(() => garbled.p.refundPayment("bog-1", 1000, key))), l5.join("|"));
+
+    check("10i. safeDiagnosticCode keeps short codes, drops anything else", safeDiagnosticCode("request_received") === "request_received" && safeDiagnosticCode("a b") === "<unrecognized>" && safeDiagnosticCode("x".repeat(65)) === "<unrecognized>" && safeDiagnosticCode(undefined) === "<unrecognized>" && safeDiagnosticCode({}) === "<unrecognized>");
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

@@ -4,12 +4,19 @@ import {
   uuid,
   text,
   integer,
+  boolean,
   jsonb,
   timestamp,
   unique,
   check,
 } from "drizzle-orm/pg-core";
-import { partnerRoleEnum, partnerStatusEnum } from "./enums";
+import {
+  partnerInvitationChannelEnum,
+  partnerInvitationPurposeEnum,
+  partnerInvitationStatusEnum,
+  partnerRoleEnum,
+  partnerStatusEnum,
+} from "./enums";
 
 export const partners = pgTable("partners", {
   id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -21,6 +28,14 @@ export const partners = pgTable("partners", {
   commissionRateBps: integer("commission_rate_bps").notNull().default(0),
   branding: jsonb("branding").notNull().default({}),
   status: partnerStatusEnum("status").notNull().default("ACTIVE"),
+  // Login contact (migrations/0023). Lowercase email / +9955XXXXXXXX, each
+  // unique across partners. Empty on partners created before 0023.
+  contactEmail: text("contact_email"),
+  contactPhone: text("contact_phone"),
+  // migrations/0026: the ONE partner row holding QR STARR's own unsorted card
+  // stock. Cards move from it to a store only through an accepted handover
+  // (lib/qr/handovers.ts). Settable by admins only (DB trigger).
+  isCentralStock: boolean("is_central_stock").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().default(sql`now()`),
 }, (table) => [
@@ -45,3 +60,28 @@ export const partnerMembers = pgTable(
   },
   (table) => [unique("partner_members_partner_user_unique").on(table.partnerId, table.userId)],
 ).enableRLS();
+
+/**
+ * How a partner's single login gets linked (migrations/0023). Admin-only
+ * under RLS; claimed only through app_accept_partner_invitation(). See
+ * lib/partners/login-access.ts.
+ */
+export const partnerInvitations = pgTable("partner_invitations", {
+  id: uuid("id").primaryKey().default(sql`gen_random_uuid()`),
+  partnerId: uuid("partner_id")
+    .notNull()
+    .references(() => partners.id, { onDelete: "cascade" }),
+  channel: partnerInvitationChannelEnum("channel").notNull(),
+  purpose: partnerInvitationPurposeEnum("purpose").notNull().default("ACTIVATION"),
+  contact: text("contact").notNull(),
+  tokenHash: text("token_hash").unique(),
+  targetUserId: uuid("target_user_id"),
+  status: partnerInvitationStatusEnum("status").notNull().default("PENDING"),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdBy: uuid("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().default(sql`now()`),
+  acceptedUserId: uuid("accepted_user_id"),
+  acceptedAt: timestamp("accepted_at", { withTimezone: true }),
+  revokedBy: uuid("revoked_by"),
+  revokedAt: timestamp("revoked_at", { withTimezone: true }),
+}).enableRLS();

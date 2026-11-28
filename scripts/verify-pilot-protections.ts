@@ -327,6 +327,7 @@ async function main() {
   await admin`delete from analytics_events where qr_code_id in (select id from qr_codes where batch_id = ${batchId})`;
   await admin`delete from partner_ledger_entries where partner_id = ${partnerId}`;
   await admin`delete from payments where order_id in (select id from orders where partner_id = ${partnerId})`;
+  await admin`delete from checkout_consents where order_id in (select id from orders where partner_id = ${partnerId})`;
   await admin`delete from orders where partner_id = ${partnerId}`;
   await admin`delete from greeting_content where greeting_id in (select g.id from greetings g join qr_codes q on q.id = g.qr_code_id where q.batch_id = ${batchId})`;
   await admin`delete from greetings where qr_code_id in (select id from qr_codes where batch_id = ${batchId})`;

@@ -1,0 +1,741 @@
+/*
+ * Celebration Countdown — three art directions (event-countdown.tsx).
+ * Every measure is in em of the card's own size, so the recipient's beat and
+ * the sender's miniature in the style picker are the same drawing.
+ * Fonts are the site's own (globals.css): Newsreader, Cormorant Garamond,
+ * Google Sans, Noto Serif Georgian. No images; no new font files.
+ */
+
+.ec {
+  --ec-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ec-ease-inout: cubic-bezier(0.65, 0, 0.35, 1);
+  position: relative;
+  isolation: isolate;
+  box-sizing: border-box;
+  width: min(100%, 23.5em);
+  margin-inline: auto;
+  font-size: 1rem;
+  text-align: left;
+  font-kerning: normal;
+  -webkit-font-smoothing: antialiased;
+}
+.ec[data-size="thumb"] {
+  font-size: 0.4rem;
+  pointer-events: none;
+}
+.ec *,
+.ec *::before,
+.ec *::after {
+  box-sizing: border-box;
+}
+.ec p,
+.ec h2 {
+  margin: 0;
+}
+
+/* ---- Rolling digits (shared mechanics; each style sets the motion) ---- */
+.rn {
+  display: inline-flex;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  white-space: nowrap;
+}
+.rn__cell {
+  position: relative;
+  display: inline-block;
+}
+.rn__ghost {
+  visibility: hidden;
+}
+.rn__face {
+  position: absolute;
+  inset: 0;
+  display: block;
+  text-align: center;
+  will-change: transform, opacity;
+}
+
+.ec__clock {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+}
+.ec__unit {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.ec__num {
+  line-height: 1;
+}
+.ec__label {
+  white-space: nowrap;
+}
+/* The day on one line, the hour and its zone on the next — never a separator stranded at a line end. */
+.ec__when {
+  display: grid;
+  row-gap: 0.15em;
+}
+.ec__day,
+.ec__hour {
+  display: block;
+}
+.ec__hour {
+  font-variant-numeric: lining-nums tabular-nums;
+}
+.ec__dot {
+  display: inline-block;
+  width: 0.22em;
+  height: 0.22em;
+  margin: 0 0.55em 0.2em;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  vertical-align: middle;
+}
+.ec__title {
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+  hyphens: auto;
+}
+.ec__note {
+  overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+/* Arrival of the card in the beat: head, clock, dateline, note — one after another. */
+@keyframes ec-rise {
+  from {
+    opacity: 0;
+    translate: 0 0.6em;
+  }
+}
+.ec[data-size="beat"] > * {
+  animation: ec-rise 820ms var(--ec-ease) both;
+}
+.ec[data-size="beat"] > :nth-child(2) {
+  animation-delay: 90ms;
+}
+.ec[data-size="beat"] > :nth-child(3) {
+  animation-delay: 200ms;
+}
+.ec[data-size="beat"] > :nth-child(4) {
+  animation-delay: 320ms;
+}
+.ec[data-size="beat"] > :nth-child(5) {
+  animation-delay: 420ms;
+}
+.ec[data-size="beat"] > :nth-child(6) {
+  animation-delay: 500ms;
+}
+
+/* =====================================================================
+ * A · Editorial Minimal — a printed page
+ * ===================================================================== */
+.ec[data-style="editorial"] {
+  --ink: #1c1a17;
+  --ink-soft: #6a645a;
+  --rule: rgb(28 26 23 / 0.16);
+  padding: 1.9em 1.75em 1.6em;
+  background: #faf8f3;
+  color: var(--ink);
+  border-radius: 0.125em;
+  box-shadow:
+    0 0.06em 0 rgb(0 0 0 / 0.04),
+    0 1.6em 3em -1.8em rgb(20 14 6 / 0.45);
+}
+.ec[data-style="editorial"] .ec__kicker {
+  font-family: "Google Sans", system-ui, sans-serif;
+  font-size: 0.6875em;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.ec[data-style="editorial"] .ec__title {
+  margin-top: 0.5em;
+  font-family: "Newsreader", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 2em;
+  line-height: 1.08;
+  letter-spacing: -0.012em;
+}
+/* The days set large on their own line; the hours, minutes and seconds a quiet row beneath. */
+.ec[data-style="editorial"] .ec__clock {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 1.25em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--rule);
+}
+.ec[data-style="editorial"] .ec__unit {
+  align-items: flex-start;
+  padding-inline: 0 0.5em;
+}
+.ec[data-style="editorial"] .ec__unit[data-unit="d"] {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  align-items: baseline;
+  gap: 0.35em;
+  margin-bottom: 0.9em;
+}
+.ec[data-style="editorial"] .ec__unit[data-unit="d"] .ec__num {
+  font-family: "Newsreader", Georgia, serif;
+  font-weight: 400;
+  font-size: 5.25em;
+  letter-spacing: -0.04em;
+  line-height: 0.82;
+}
+.ec[data-style="editorial"] .ec__unit[data-unit="d"] .ec__label {
+  font-family: "Newsreader", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 1.375em;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--ink);
+}
+.ec[data-style="editorial"] .ec__num {
+  font-family: "Newsreader", Georgia, serif;
+  font-size: 2.125em;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+.ec[data-style="editorial"] .ec__label {
+  margin-top: 0.55em;
+  font-family: "Google Sans", system-ui, sans-serif;
+  font-size: 0.625em;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+.ec[data-style="editorial"] .ec__sep {
+  position: absolute;
+  inset-block: 0.35em 1.4em;
+  right: 0.75em;
+  width: 1px;
+  background: var(--rule);
+}
+.ec[data-style="editorial"] .ec__unit[data-unit="d"] .ec__sep {
+  display: none;
+}
+.ec[data-style="editorial"] .ec__when {
+  margin-top: 1.4em;
+  padding-top: 0.85em;
+  border-top: 1px solid var(--rule);
+  font-family: "Google Sans", system-ui, sans-serif;
+  font-size: 0.75em;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+.ec[data-style="editorial"] .ec__city {
+  color: var(--ink-soft);
+}
+.ec[data-style="editorial"] .ec__note {
+  margin-top: 1.1em;
+  padding-left: 0.85em;
+  border-left: 1px solid var(--ink);
+  font-family: "Newsreader", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 1.0625em;
+  line-height: 1.45;
+  color: #37332c;
+}
+.ec[data-style="editorial"] .ec__arrived {
+  margin-top: 1.25em;
+  padding-top: 1.1em;
+  border-top: 1px solid var(--rule);
+}
+.ec[data-style="editorial"] .ec__arrived-line {
+  font-family: "Newsreader", "Noto Serif Georgian", Georgia, serif;
+  font-size: 3em;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+.ec[data-style="editorial"][data-phase="celebrated"] .ec__arrived-line {
+  font-size: 1.5em;
+  font-style: italic;
+  letter-spacing: 0;
+}
+/* Digits roll: the old one leaves downward, the new one drops in from above, clipped to its cell. */
+.ec[data-style="editorial"] .rn__cell {
+  overflow: hidden;
+}
+@keyframes ec-roll-in {
+  from {
+    translate: 0 -62%;
+    opacity: 0;
+  }
+}
+@keyframes ec-roll-out {
+  to {
+    translate: 0 62%;
+    opacity: 0;
+  }
+}
+.ec[data-style="editorial"] .rn__face--in:not([data-first]) {
+  animation: ec-roll-in 440ms var(--ec-ease) both;
+}
+.ec[data-style="editorial"] .rn__face--out {
+  animation: ec-roll-out 440ms var(--ec-ease) both;
+}
+
+/* =====================================================================
+ * B · Romantic Atelier — ivory stationery, champagne rules
+ * ===================================================================== */
+.ec[data-style="atelier"] {
+  --ink: #4a3326;
+  --ink-soft: #7d6453;
+  --champagne: #b08d57;
+  padding: 1.7em 1.5em 1.5em;
+  text-align: center;
+  color: var(--ink);
+  background:
+    radial-gradient(120% 70% at 50% 0%, rgb(255 252 244 / 0.9), transparent 70%),
+    linear-gradient(#f5ede0, #efe4d3);
+  border: 1px solid rgb(176 141 87 / 0.38);
+  outline: 1px solid rgb(176 141 87 / 0.55);
+  outline-offset: -0.6em;
+  border-radius: 0.2em;
+  box-shadow:
+    0 0.05em 0.1em rgb(74 51 38 / 0.08),
+    0 1.8em 3.2em -2em rgb(60 32 18 / 0.5);
+}
+.ec[data-style="atelier"]::before {
+  /* the paper's tooth: a fine noise, no image request */
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  opacity: 0.5;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .45  0 0 0 0 .36  0 0 0 0 .25  0 0 0 .09 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  pointer-events: none;
+}
+.ec[data-style="atelier"] .ec__ornament {
+  display: block;
+  width: 8.5em;
+  height: auto;
+  margin: 0.15em auto 0.9em;
+  fill: var(--champagne);
+  stroke: var(--champagne);
+  stroke-width: 0.9;
+  stroke-linecap: round;
+  overflow: visible;
+}
+.ec[data-style="atelier"] .ec__ornament path:last-of-type {
+  fill: none;
+}
+.ec[data-style="atelier"] .ec__ornament--foot {
+  margin: 1.1em auto 0.1em;
+  rotate: 180deg;
+}
+.ec[data-style="atelier"] .ec__draw {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 0;
+  fill: none;
+}
+@keyframes ec-draw {
+  from {
+    stroke-dashoffset: 160;
+  }
+}
+.ec[data-style="atelier"][data-size="beat"] .ec__draw {
+  animation: ec-draw 1400ms var(--ec-ease-inout) 250ms both;
+}
+.ec[data-style="atelier"] .ec__kicker {
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 1.125em;
+  color: var(--champagne);
+}
+.ec[data-style="atelier"] .ec__title {
+  margin-top: 0.15em;
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-weight: 500;
+  font-size: 2.125em;
+  line-height: 1.05;
+  letter-spacing: 0.005em;
+}
+.ec[data-style="atelier"] .ec__clock {
+  justify-content: center;
+  gap: 1.15em;
+  margin-top: 1.05em;
+}
+.ec[data-style="atelier"] .ec__unit {
+  min-width: 2.6em;
+}
+.ec[data-style="atelier"] .ec__num {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 300;
+  font-size: 3.25em;
+  letter-spacing: 0.01em;
+}
+.ec[data-style="atelier"] .ec__label {
+  margin-top: 0.15em;
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 0.9375em;
+  color: var(--ink-soft);
+}
+.ec[data-style="atelier"] .ec__sep {
+  position: absolute;
+  top: 1.45em;
+  right: -0.725em;
+  width: 0.3em;
+  height: 0.3em;
+  border-radius: 50%;
+  background: var(--champagne);
+  opacity: 0.75;
+}
+.ec[data-style="atelier"] .ec__when {
+  justify-content: center;
+  margin-top: 1.05em;
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 1.0625em;
+  color: var(--ink-soft);
+}
+.ec[data-style="atelier"] .ec__note {
+  margin-top: 0.85em;
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 1.1875em;
+  line-height: 1.4;
+  color: var(--ink);
+}
+.ec[data-style="atelier"] .ec__note::before {
+  content: open-quote;
+}
+.ec[data-style="atelier"] .ec__note::after {
+  content: close-quote;
+}
+.ec[data-style="atelier"] .ec__arrived {
+  margin-top: 0.9em;
+}
+.ec[data-style="atelier"] .ec__arrived-line {
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: 2.25em;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.ec[data-style="atelier"][data-phase="celebrated"] .ec__arrived-line {
+  font-size: 1.375em;
+}
+@keyframes ec-glow {
+  50% {
+    box-shadow:
+      0 0 0 0.35em rgb(214 184 128 / 0.18),
+      0 1.8em 3.2em -2em rgb(60 32 18 / 0.5);
+  }
+}
+.ec[data-style="atelier"][data-phase="today"][data-size="beat"] {
+  animation: ec-glow 2400ms var(--ec-ease-inout) 400ms 1 both;
+}
+/* Digits dissolve: a soft blur from one number into the next. */
+@keyframes ec-dissolve-in {
+  from {
+    opacity: 0;
+    filter: blur(0.12em);
+    scale: 0.96;
+  }
+}
+@keyframes ec-dissolve-out {
+  to {
+    opacity: 0;
+    filter: blur(0.1em);
+  }
+}
+.ec[data-style="atelier"] .rn__face--in:not([data-first]) {
+  animation: ec-dissolve-in 720ms var(--ec-ease) both;
+}
+.ec[data-style="atelier"] .rn__face--out {
+  animation: ec-dissolve-out 520ms var(--ec-ease) both;
+}
+
+/* =====================================================================
+ * C · Midnight Luxury — a charcoal plate, gilded numerals
+ * ===================================================================== */
+.ec[data-style="midnight"] {
+  --gold-1: #f6e7c4;
+  --gold-2: #dcbf86;
+  --gold-3: #a98445;
+  --text: #efe6d4;
+  --muted: #b9a47c;
+  padding: 2em 1.6em 1.7em;
+  text-align: center;
+  color: var(--text);
+  background:
+    radial-gradient(140% 90% at 50% -10%, #2b2723 0%, #171516 52%, #0f0e0f 100%);
+  border: 1px solid rgb(201 169 110 / 0.3);
+  border-radius: 0.15em;
+  box-shadow:
+    inset 0 0 0 0.4em #121112,
+    inset 0 0 0 calc(0.4em + 1px) rgb(201 169 110 / 0.16),
+    0 2em 3.6em -2em rgb(0 0 0 / 0.75);
+  overflow: hidden;
+}
+.ec[data-style="midnight"] .ec__pool {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: 2.2em;
+  width: 22em;
+  height: 12em;
+  translate: -50% 0;
+  background: radial-gradient(closest-side, rgb(233 205 150 / 0.13), transparent);
+  pointer-events: none;
+}
+@keyframes ec-pool {
+  from {
+    opacity: 0;
+    scale: 0.6;
+  }
+}
+.ec[data-style="midnight"][data-size="beat"] .ec__pool {
+  animation: ec-pool 1800ms var(--ec-ease) both;
+}
+.ec[data-style="midnight"] .ec__kicker {
+  font-family: "Google Sans", system-ui, sans-serif;
+  font-size: 0.65em;
+  font-weight: 500;
+  letter-spacing: 0.38em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ec[data-style="midnight"] .ec__title {
+  margin-top: 0.7em;
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-weight: 500;
+  font-size: 1.625em;
+  line-height: 1.15;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.ec[data-style="midnight"] .ec__clock {
+  justify-content: center;
+  gap: 1.1em;
+  margin-top: 1.15em;
+}
+.ec[data-style="midnight"] .ec__unit {
+  min-width: 2.6em;
+}
+.ec[data-style="midnight"] .ec__num {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-weight: 400;
+  font-size: 3.25em;
+  letter-spacing: 0.01em;
+}
+/* Gilded: a vertical metal gradient clipped to each figure. */
+.ec[data-style="midnight"] .rn__face {
+  background: linear-gradient(180deg, var(--gold-1) 8%, var(--gold-2) 42%, var(--gold-3) 66%, var(--gold-2) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ec[data-style="midnight"] .ec__label {
+  margin-top: 0.75em;
+  font-family: "Google Sans", system-ui, sans-serif;
+  font-size: 0.5625em;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ec[data-style="midnight"] .ec__sep {
+  position: absolute;
+  top: 1.5em;
+  right: -0.72em;
+  width: 0.34em;
+  height: 0.34em;
+  rotate: 45deg;
+  background: var(--gold-2);
+  opacity: 0.6;
+}
+.ec[data-style="midnight"] .ec__when {
+  justify-content: center;
+  margin-top: 1.4em;
+  font-family: "Google Sans", system-ui, sans-serif;
+  font-size: 0.75em;
+  letter-spacing: 0.05em;
+  color: #d2c4a5;
+}
+.ec[data-style="midnight"] .ec__city {
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  font-size: 0.9em;
+  color: var(--muted);
+}
+.ec[data-style="midnight"] .ec__note {
+  margin: 1.1em auto 0;
+  max-width: 18em;
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-style: italic;
+  font-size: 1.1875em;
+  line-height: 1.4;
+  color: #e6dbc5;
+}
+.ec[data-style="midnight"] .ec__arrived {
+  margin-top: 1.1em;
+}
+.ec[data-style="midnight"] .ec__star {
+  display: block;
+  width: 1.6em;
+  height: 1.6em;
+  margin: 0 auto 0.6em;
+  fill: var(--gold-2);
+}
+@keyframes ec-star {
+  from {
+    opacity: 0;
+    scale: 0.3;
+    rotate: -45deg;
+  }
+}
+.ec[data-style="midnight"][data-size="beat"] .ec__star {
+  animation: ec-star 1300ms var(--ec-ease) 350ms both;
+}
+.ec[data-style="midnight"] .ec__arrived-line {
+  font-family: "Cormorant Garamond", "Noto Serif Georgian", Georgia, serif;
+  font-weight: 400;
+  font-size: 2.25em;
+  line-height: 1.1;
+  background: linear-gradient(180deg, var(--gold-1), var(--gold-2) 55%, var(--gold-3));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.ec[data-style="midnight"][data-phase="celebrated"] .ec__arrived-line {
+  font-size: 1.375em;
+  font-style: italic;
+}
+/* Digits are unveiled top to bottom, catching the light as they arrive. */
+@keyframes ec-curtain-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+    filter: brightness(1.9);
+  }
+  60% {
+    filter: brightness(1.35);
+  }
+}
+@keyframes ec-curtain-out {
+  to {
+    opacity: 0;
+    translate: 0 0.08em;
+  }
+}
+.ec[data-style="midnight"] .rn__face--in:not([data-first]) {
+  animation: ec-curtain-in 620ms var(--ec-ease) both;
+}
+.ec[data-style="midnight"] .rn__face--out {
+  animation: ec-curtain-out 380ms var(--ec-ease) both;
+}
+
+/* ---- Georgian: no capitals (they would become Mtavruli), calmer tracking, the Georgian serif ---- */
+.ec:lang(ka) .ec__kicker,
+.ec:lang(ka) .ec__label,
+.ec:lang(ka) .ec__city,
+.ec:lang(ka) .ec__title {
+  text-transform: none;
+}
+.ec[data-style="editorial"]:lang(ka) .ec__kicker,
+.ec[data-style="midnight"]:lang(ka) .ec__kicker {
+  letter-spacing: 0.06em;
+  font-size: 0.75em;
+}
+.ec:lang(ka) .ec__label {
+  letter-spacing: 0.02em;
+}
+.ec[data-style="editorial"]:lang(ka) .ec__label,
+.ec[data-style="midnight"]:lang(ka) .ec__label {
+  font-size: 0.6875em;
+}
+.ec:lang(ka) .ec__title {
+  font-family: "Noto Serif Georgian", Georgia, serif;
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+.ec[data-style="editorial"]:lang(ka) .ec__title {
+  font-size: 1.5em;
+  font-weight: 300;
+}
+.ec[data-style="atelier"]:lang(ka) .ec__title {
+  font-size: 1.5em;
+}
+.ec[data-style="midnight"]:lang(ka) .ec__title {
+  font-size: 1.3125em;
+  font-weight: 300;
+}
+.ec:lang(ka) .ec__arrived-line {
+  font-family: "Noto Serif Georgian", Georgia, serif;
+  font-style: normal;
+  font-weight: 300;
+  font-size: 1.75em;
+  line-height: 1.3;
+  letter-spacing: 0;
+}
+.ec:lang(ka)[data-phase="celebrated"] .ec__arrived-line {
+  font-size: 1.1875em;
+}
+.ec:lang(ka) .ec__note,
+.ec[data-style="editorial"]:lang(ka) .ec__unit[data-unit="d"] .ec__label {
+  font-family: "Noto Serif Georgian", Georgia, serif;
+  font-style: normal;
+  font-weight: 300;
+  font-size: 1em;
+  line-height: 1.55;
+}
+.ec[data-style="atelier"]:lang(ka) .ec__when,
+.ec[data-style="atelier"]:lang(ka) .ec__label,
+.ec[data-style="atelier"]:lang(ka) .ec__kicker {
+  font-family: "Noto Serif Georgian", Georgia, serif;
+  font-style: normal;
+  font-weight: 300;
+}
+.ec[data-style="atelier"]:lang(ka) .ec__kicker {
+  font-size: 0.9375em;
+}
+.ec[data-style="atelier"]:lang(ka) .ec__when {
+  font-size: 0.875em;
+}
+.ec[data-style="atelier"]:lang(ka) .ec__label {
+  font-size: 0.75em;
+  margin-top: 0.4em;
+}
+
+.ec:lang(ka) {
+  quotes: "„" "“";
+}
+.ec:lang(ka) .ec__city {
+  letter-spacing: 0.01em;
+  font-size: 1em;
+}
+
+/* ---- Narrow phones (320–359px): four units still fit on one line ---- */
+@media (max-width: 359px) {
+  .ec[data-size="beat"] {
+    font-size: 0.875rem;
+  }
+}
+
+/* ---- Reduced motion: everything at rest, digits swap in place ---- */
+@media (prefers-reduced-motion: reduce) {
+  .ec,
+  .ec *,
+  .ec[data-size="beat"] > * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ec .rn__face--out {
+    display: none;
+  }
+}

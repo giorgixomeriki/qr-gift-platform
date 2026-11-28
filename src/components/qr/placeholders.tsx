@@ -14,7 +14,7 @@ export async function DraftNoAccessPlaceholder() {
   const t = await getTranslations("sender.noAccess");
   return (
     <StatusScreen
-      icon={<Hourglass aria-hidden />}
+      envelope
       title={t("title")}
       body={t("body")}
       hint={t("hint")}
@@ -26,4 +26,25 @@ export async function DraftNoAccessPlaceholder() {
 export async function BlockedPlaceholder() {
   const t = await getTranslations("qr");
   return <StatusScreen icon={<Ban aria-hidden />} title={t("unavailableTitle")} body={t("unavailableBody")} headerEnd={<LocaleSwitcher />} />;
+}
+
+/**
+ * An activated greeting past its 12-month availability window
+ * (lib/greetings/availability.ts). Says only that the period has ended — no
+ * sender, content or dates — and where to ask. Nothing has been deleted.
+ */
+export async function ExpiredPlaceholder() {
+  const t = await getTranslations("qr");
+  return <StatusScreen icon={<Hourglass aria-hidden />} title={t("expiredTitle")} body={t("expiredBody")} headerEnd={<LocaleSwitcher />} />;
+}
+
+/**
+ * Refund Model C: the purchase was fully refunded, so the greeting is not
+ * shown publicly. Deliberately neutral — never says "refunded", names no
+ * sender, content or dates. Nothing has been deleted. A scheduled unlock or
+ * countdown never re-opens it (app_greeting_public_state, migrations/0030).
+ */
+export async function SuspendedPlaceholder() {
+  const t = await getTranslations("qr");
+  return <StatusScreen icon={<Ban aria-hidden />} title={t("suspendedTitle")} body={t("suspendedBody")} headerEnd={<LocaleSwitcher />} />;
 }

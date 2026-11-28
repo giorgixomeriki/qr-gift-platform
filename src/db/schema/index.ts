@@ -13,3 +13,5 @@ export * from "./reports";
 export * from "./audit-log";
 export * from "./analytics";
 export * from "./rate-limit";
+export * from "./checkout-consents";
+export * from "./partner-locations";

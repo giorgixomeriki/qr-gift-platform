@@ -2,6 +2,7 @@ import "server-only";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type { Tx } from "@/db/client";
 import { qrBatches, qrCodes, orders, payments, partnerLedgerEntries, paymentRefunds } from "@/db/schema";
+import { toInventoryRow } from "@/lib/qr/credential-access";
 
 export type BatchPerformance = {
   batchId: string;
@@ -35,7 +36,9 @@ export async function getBatchPerformance(tx: Tx, partnerId: string): Promise<Ba
       label: qrBatches.label,
       quantity: qrBatches.quantity,
       distributed: sql<number>`(select count(*) from qr_codes q where q.batch_id = ${batchIdRef} and q.distribution_status = 'DISTRIBUTED')::int`,
-      scanned: sql<number>`(select count(distinct e.qr_code_id) from analytics_events e join qr_codes q on q.id = e.qr_code_id where q.batch_id = ${batchIdRef} and e.event_type = 'QR_SCANNED')::int`,
+      // Scans made while THIS partner held the card (event stamp): a card that
+      // arrived by admin handover doesn't bring the previous shop's scans.
+      scanned: sql<number>`(select count(distinct e.qr_code_id) from analytics_events e join qr_codes q on q.id = e.qr_code_id where q.batch_id = ${batchIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = "qr_batches"."partner_id")::int`,
       paidActivations: sql<number>`(select count(*) from orders o join qr_codes q on q.id = o.qr_code_id where q.batch_id = ${batchIdRef} and o.status = 'PAID')::int`,
       netCommissionMinor: sql<number>`(select coalesce(sum(l.amount_minor), 0) from partner_ledger_entries l join orders o on o.id = l.order_id join qr_codes q on q.id = o.qr_code_id where q.batch_id = ${batchIdRef} and l.type in ('COMMISSION_EARNED', 'COMMISSION_REVERSAL'))::int`,
     })
@@ -130,5 +133,67 @@ export async function listPartnerSalesTrace(tx: Tx, partnerId: string, limit = 1
       commissionReversedMinor: reversal ? -reversal.amountMinor : null,
       chargedBack: chargebackRows.some((c) => c.orderId === row.orderId),
     };
+  });
+}
+
+export type QrResultRow = {
+  qrCodeId: string;
+  /** Masked unless still unclaimed (lib/qr/credential-access.ts). */
+  label: string;
+  batchLabel: string;
+  /** Partner view: AVAILABLE / USED only. */
+  status: string;
+  distributionStatus: string;
+  scans: number;
+  lastScannedAt: Date | null;
+  /** Orders on this card that are PAID — confirmed, successful payment only. */
+  paidActivations: number;
+  grossMinor: number;
+  /** Earned minus reversed commission booked for this card's sales. */
+  netCommissionMinor: number;
+};
+
+/**
+ * Results per individual QR card for the partner dashboard: scans, paid
+ * activations, revenue and commission. Handing a card over (DISTRIBUTED) is
+ * not a sale and adds nothing here; money counts only from PAID orders and
+ * the commission ledger, which is written only on a confirmed payment.
+ * Attribution stops at partner + card: no employee or user is recorded.
+ * Only cards with at least one scan or paid order are listed (newest
+ * activity first, capped); the full inventory is in the batch blocks.
+ */
+export async function getQrResults(tx: Tx, partnerId: string, viewer: "PARTNER" | "ADMIN" = "PARTNER", limit = 200): Promise<QrResultRow[]> {
+  const qrIdRef = sql.raw(`"qr_codes"."id"`);
+  const rows = await tx
+    .select({
+      qrCodeId: qrCodes.id,
+      publicToken: qrCodes.publicToken,
+      status: qrCodes.status,
+      distributionStatus: qrCodes.distributionStatus,
+      batchLabel: qrBatches.label,
+      // Only scans made while this partner held the card (event stamp).
+      scans: sql<number>`(select count(*) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = ${partnerId})::int`,
+      lastScannedAt: sql<Date | null>`(select max(e.created_at) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = ${partnerId})`,
+      paidActivations: sql<number>`(select count(*) from orders o where o.qr_code_id = ${qrIdRef} and o.status = 'PAID')::int`,
+      grossMinor: sql<number>`(select coalesce(sum(o.gross_amount_minor), 0) from orders o where o.qr_code_id = ${qrIdRef} and o.status = 'PAID')::int`,
+      netCommissionMinor: sql<number>`(select coalesce(sum(l.amount_minor), 0) from partner_ledger_entries l join orders o on o.id = l.order_id where o.qr_code_id = ${qrIdRef} and l.type in ('COMMISSION_EARNED', 'COMMISSION_REVERSAL'))::int`,
+    })
+    .from(qrCodes)
+    .innerJoin(qrBatches, eq(qrBatches.id, qrCodes.batchId))
+    .where(
+      and(
+        eq(qrCodes.partnerId, partnerId),
+        sql`(exists (select 1 from analytics_events e where e.qr_code_id = ${qrIdRef} and e.event_type = 'QR_SCANNED' and e.partner_id = ${partnerId})
+             or exists (select 1 from orders o where o.qr_code_id = ${qrIdRef} and o.status in ('PAID', 'REFUNDED', 'PARTIALLY_REFUNDED')))`,
+      ),
+    )
+    .orderBy(desc(sql`greatest(
+      (select max(e.created_at) from analytics_events e where e.qr_code_id = ${qrIdRef} and e.partner_id = ${partnerId}),
+      (select max(o.paid_at) from orders o where o.qr_code_id = ${qrIdRef}))`))
+    .limit(limit);
+
+  return rows.map(({ publicToken, ...r }) => {
+    const shaped = toInventoryRow({ id: r.qrCodeId, publicToken, status: r.status, distributionStatus: r.distributionStatus }, viewer);
+    return { ...r, label: shaped.label, status: shaped.status, lastScannedAt: r.lastScannedAt ? new Date(r.lastScannedAt) : null };
   });
 }

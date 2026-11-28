@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { withPublicContext } from "@/db/client";
 import { products } from "@/db/schema";
 import { resolveActivePrice } from "./pricing";
+import { pilotPriceOverrideMinor } from "./pilot-price";
 import { DEFAULT_PRODUCT_KEY } from "@/lib/greetings/constants";
 
 /**
@@ -27,10 +28,15 @@ export async function getDisplayPrice(
 }
 
 /** Convenience for the Sender Entry / Preview paths, which only ever price the one default product. */
-export async function getDefaultProductPrice(partnerId: string): Promise<{ amountMinor: number; currency: string } | null> {
+export async function getDefaultProductPrice(partnerId: string, qrCodeId?: string): Promise<{ amountMinor: number; currency: string } | null> {
   const [product] = await withPublicContext((tx) => tx.select({ id: products.id }).from(products).where(eq(products.key, DEFAULT_PRODUCT_KEY)).limit(1));
   if (!product) return null;
-  return getDisplayPrice(partnerId, product.id);
+  const price = await getDisplayPrice(partnerId, product.id);
+  // The owner pilot card shows the pilot price (the same rule startCheckout
+  // applies); every other card shows the configured price.
+  const pilotAmountMinor = pilotPriceOverrideMinor(qrCodeId);
+  if (price && pilotAmountMinor !== null) return { amountMinor: pilotAmountMinor, currency: price.currency };
+  return price;
 }
 
 /** Re-exported from the client-safe module so server and client format identically. */

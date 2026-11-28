@@ -19,6 +19,12 @@ export class BogApiError extends Error {
     message: string,
     /** Whether retrying the same request (same Idempotency-Key) is safe and useful. */
     readonly retryable: boolean,
+    /**
+     * An earlier attempt of this same exchange ended without a usable answer
+     * (network error or 5xx) and this answer came to the retry. BOG may then
+     * already hold the first attempt, so even a 4xx here is not a clean refusal.
+     */
+    readonly afterRetry: boolean = false,
   ) {
     super(message);
     this.name = "BogApiError";
@@ -126,7 +132,7 @@ export async function bogRequest<S extends z.ZodTypeAny>(
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch (err) {
-      const apiErr = err instanceof BogApiError ? err : new BogApiError(0, undefined, `BOG request failed: ${err instanceof Error ? err.name : "error"}`, true);
+      const apiErr = err instanceof BogApiError ? err : new BogApiError(0, undefined, `BOG request failed: ${err instanceof Error ? err.name : "error"}`, true, retried);
       if (apiErr.retryable && req.idempotent && !retried) {
         retried = true;
         continue;
@@ -147,10 +153,10 @@ export async function bogRequest<S extends z.ZodTypeAny>(
     const json = await res.json().catch(() => null);
     if (!res.ok) {
       const key = json && typeof json === "object" && "key" in json ? String((json as { key: unknown }).key) : undefined;
-      throw new BogApiError(res.status, key, `BOG ${req.method} returned ${res.status}${key ? ` (${key})` : ""}`, res.status >= 500);
+      throw new BogApiError(res.status, key, `BOG ${req.method} returned ${res.status}${key ? ` (${key})` : ""}`, res.status >= 500, retried);
     }
     const parsed = schema.safeParse(json);
-    if (!parsed.success) throw new BogApiError(res.status, undefined, `BOG ${req.method} response has an unexpected shape`, false);
+    if (!parsed.success) throw new BogApiError(res.status, undefined, `BOG ${req.method} response has an unexpected shape`, false, retried);
     return parsed.data;
   }
 }

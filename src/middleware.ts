@@ -2,6 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { publicEnv } from "@/lib/env.public";
 import { buildContentSecurityPolicy, createNonce } from "@/lib/security/csp";
+import { musicArtOrigins, spotifyEmbedEnabled } from "@/lib/music/flag";
 
 /**
  * Two jobs:
@@ -19,7 +20,7 @@ import { buildContentSecurityPolicy, createNonce } from "@/lib/security/csp";
  */
 export async function middleware(request: NextRequest) {
   const csp =
-    process.env.NODE_ENV === "production" ? buildContentSecurityPolicy(createNonce(), publicEnv.NEXT_PUBLIC_SUPABASE_URL) : null;
+    process.env.NODE_ENV === "production" ? buildContentSecurityPolicy(createNonce(), publicEnv.NEXT_PUBLIC_SUPABASE_URL, { spotifyEmbed: spotifyEmbedEnabled(), musicArtOrigins: musicArtOrigins() }) : null;
 
   // Rebuilt from the request each time so cookie updates made below by the
   // Supabase client are forwarded along with the CSP header.
@@ -33,7 +34,7 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
   if (pathname.startsWith("/partner") || pathname.startsWith("/admin")) {
-    const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
+    const supabase = createServerClient(publicEnv.NEXT_PUBLIC_SUPABASE_URL, publicEnv.SUPABASE_PUBLISHABLE_KEY, {
       cookies: {
         getAll() {
           return request.cookies.getAll();

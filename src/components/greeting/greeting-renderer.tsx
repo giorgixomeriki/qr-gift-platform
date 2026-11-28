@@ -2,25 +2,40 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { preload } from "react-dom";
-import { ChevronLeft, RotateCcw } from "lucide-react";
+import { ChevronDown, ChevronLeft, RotateCcw } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { prefetchMotion } from "@/components/themes/scenes/runtime";
 import { ThemeWorld } from "@/components/themes/theme-world";
-import { Spark, SPARK_PATH } from "@/components/ui/logo";
+import { Spark } from "@/components/ui/logo";
 import { DEFAULT_TEMPLATE_ID, getTemplate, restAssets } from "@/lib/templates/catalog";
 import { roomVars } from "@/lib/templates/room";
-import { COMPOSITIONS } from "@/lib/templates/vocabulary";
+import { ASSETS, COMPOSITIONS, ROOM_TEXTURE_ASSETS } from "@/lib/templates/vocabulary";
 import { getThemeWorld, worldVars } from "@/lib/themes/worlds";
 import { tick } from "@/lib/client/haptics";
 import { useChromeTint } from "@/lib/client/use-chrome-tint";
+import { RevealClosing } from "./reveal-closing";
+import { RevealEnvelope } from "./reveal-envelope";
 import { VoicePlayer } from "./voice-player";
+import { OurSong } from "./our-song";
+import type { MusicMeta, MusicRef } from "@/lib/music/link";
+import type { EventCountdown } from "@/lib/greetings/countdown";
+import { EventCountdownCard } from "@/components/countdown/event-countdown";
 import "./reveal.css";
+import "./reveal-signature.css";
+import "./envelope-luxe.css";
 
 export type GreetingRenderContent = {
   message: string | null;
   photos: { id: string; url: string }[];
   video: { url: string } | null;
-  audio: { url: string } | null;
+  /** `refresh` re-signs the voice URL (signed URLs expire; the voice beat may come much later). */
+  audio: { url: string; refresh?: () => Promise<string | null> } | null;
+  /** "Our Song": a validated Spotify/YouTube reference (lib/music/link.ts). Optional: older callers and greetings have none. */
+  music?: MusicRef | null;
+  /** Provider title/artwork for the song, fetched server-side per view (lib/music/metadata.ts); null = show our own sleeve. */
+  musicMeta?: MusicMeta | null;
+  /** Celebration Countdown (lib/greetings/countdown.ts): a countdown to another day, its own beat before the ending. */
+  countdown?: EventCountdown | null;
 };
 
 type Beat =
@@ -29,10 +44,18 @@ type Beat =
   | { kind: "photo"; index: number }
   | { kind: "video" }
   | { kind: "audio" }
+  | { kind: "music" }
+  | { kind: "countdown" }
   | { kind: "ending" };
 
-/** The seal gives under the finger before the world opens. */
-const SEAL_PRESS_MS = 180;
+/**
+ * The envelope opens before the world takes over: the seal gives, the flap
+ * folds back and the chosen card rises out (reveal-signature.css; the
+ * luxury envelope's 3D turn is in envelope-luxe.css). Short
+ * enough to feel like a gesture, not a wait; reduced motion skips it.
+ */
+const ENVELOPE_OPEN_MS = 1100;
+const ENVELOPE_OPEN_REDUCED_MS = 180;
 /** If a scene never reports rest (a stalled runtime), the letter still arrives this long after the scene should have ended. */
 const REST_GRACE_MS = 1800;
 /**
@@ -88,6 +111,10 @@ export function GreetingRenderer({
   onBeatChange,
   onContentPlayed,
   onEndingSettled,
+  spotifyEmbed = false,
+  serverNow,
+  continuation = false,
+  openingInterlude,
 }: {
   themeKey: string;
   /** The exact template version to render (a sent greeting's frozen version); latest when omitted. */
@@ -112,6 +139,19 @@ export function GreetingRenderer({
   onContentPlayed?: (type: "video" | "audio") => void;
   /** True once the ending's finale has come to rest (the greeting is complete); false on any other beat. */
   onEndingSettled?: (settled: boolean) => void;
+  /** SPOTIFY_EMBED_ENABLED, decided server-side; off by default (see lib/music/flag.ts). */
+  spotifyEmbed?: boolean;
+  /** The server's clock when the page rendered (recipient): the countdown beat counts from it, not the device clock. */
+  serverNow?: number;
+  /** Arrived from the Scheduled Reveal lock screen: the envelope is already in place, so it does not set down again. */
+  continuation?: boolean;
+  /**
+   * Lab only (components/cinematic): a full-screen interlude played over the
+   * opening envelope instead of the fixed ENVELOPE_OPEN_MS wait. It calls
+   * `reveal` when the letter should start arriving beneath it and `done` when
+   * it has gone. Absent (every production caller) = behaviour unchanged.
+   */
+  openingInterlude?: (controls: { reveal: () => void; done: () => void }) => React.ReactNode;
 }) {
   const t = useTranslations("greeting");
   const tt = useTranslations("themes");
@@ -126,12 +166,15 @@ export function GreetingRenderer({
     content.photos.forEach((_, index) => list.push({ kind: "photo", index }));
     if (content.video) list.push({ kind: "video" });
     if (content.audio) list.push({ kind: "audio" });
+    if (content.music) list.push({ kind: "music" });
+    if (content.countdown) list.push({ kind: "countdown" });
     list.push({ kind: "ending" });
     return list;
   }, [content]);
 
   const [beatIndex, setBeatIndex] = useState(0);
   const [pressing, setPressing] = useState(false);
+  const [interlude, setInterlude] = useState(false);
   /** Bumped each time the greeting is opened, so the world's scene plays again on replay. */
   const [runId, setRunId] = useState(0);
   /** The message does not fit the card: it is presented as a letter once the world is at rest. */
@@ -142,6 +185,7 @@ export function GreetingRenderer({
   const beat = beats[beatIndex] ?? beats[0]!;
   const playedRef = useRef<Set<string>>(new Set());
   const stageRef = useRef<HTMLDivElement>(null);
+  const closingRef = useRef<HTMLElement>(null);
   const beatAtRef = useRef(0);
 
   // Full screen, the browser around the greeting takes the room's colour.
@@ -160,19 +204,26 @@ export function GreetingRenderer({
     beatAtRef.current = performance.now();
     setBeatIndex((i) => Math.max(1, i - 1));
   }
+  function arrive() {
+    setPressing(false);
+    setAtRest(false);
+    setRunId((n) => n + 1);
+    beatAtRef.current = performance.now();
+    setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
+  }
   function open() {
     if (pressing) return;
     tick();
     setPressing(true);
-    window.setTimeout(() => {
-      setPressing(false);
-      setAtRest(false);
-      setRunId((n) => n + 1);
-      beatAtRef.current = performance.now();
-      setBeatIndex((i) => Math.min(i + 1, beats.length - 1));
-    }, SEAL_PRESS_MS);
+    if (openingInterlude) {
+      setInterlude(true);
+      return;
+    }
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.setTimeout(arrive, reduce ? ENVELOPE_OPEN_REDUCED_MS : ENVELOPE_OPEN_MS);
   }
   function restart() {
+    setInterlude(false);
     playedRef.current = new Set();
     setAtRest(false);
     setBeatIndex(0);
@@ -224,10 +275,27 @@ export function GreetingRenderer({
     return () => window.clearTimeout(timer);
   }, [onMessage, atRest, runId, composition.sceneMs]);
 
-  // The world's rest-state assets and typefaces, asked for up front (its largest paint).
-  for (const { asset, high } of restAssets(template)) {
+  // The world's rest-state assets. The room's texture and the paper tooth paint at once (the
+  // envelope lies on them), so they are preloaded. The world's own artwork only paints once the
+  // envelope is opened: it is warmed while the browser is idle, so it neither competes with the
+  // first paint nor goes unused for seconds (Chrome warns about such preloads).
+  const assets = restAssets(template);
+  const roomTextureId = ROOM_TEXTURE_ASSETS[template.spec.room.texture];
+  const roomTexture = roomTextureId ? ASSETS[roomTextureId] : null;
+  const atOnce = new Set<string>([ASSETS["paper-tooth"].href, ...(roomTexture ? [roomTexture.href] : [])]);
+  for (const { asset, high } of assets) {
+    if (!atOnce.has(asset.href)) continue;
     preload(asset.href, { as: "image", type: asset.type, ...(high && { fetchPriority: "high" }), ...("crossOrigin" in asset && { crossOrigin: "anonymous" }) });
   }
+  const laterHrefs = assets.filter(({ asset }) => !atOnce.has(asset.href)).map(({ asset }) => asset.href).join("|");
+  useEffect(() => {
+    if (!laterHrefs) return;
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 300));
+    const handle = idle(() => {
+      for (const href of laterHrefs.split("|")) new Image().src = href;
+    });
+    return () => (window.cancelIdleCallback ?? window.clearTimeout)(handle as number);
+  }, [laterHrefs]);
   preload(world.fontFiles.latin, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
   if (locale === "ka") preload(world.fontFiles.georgian, { as: "font", type: "font/woff2", crossOrigin: "anonymous" });
 
@@ -247,6 +315,7 @@ export function GreetingRenderer({
       data-stage={isOpening ? (pressing ? "opening" : "closed") : "open"}
       data-room={template.spec.room.dark ? "dark" : "light"}
       data-composition={world.composition}
+      data-continuation={(continuation && isOpening) || undefined}
     >
       <header className="px-page relative z-20 flex flex-col gap-3 pt-[max(0.875rem,var(--safe-top))]">
         <div className="flex min-h-9 items-center gap-3">
@@ -268,20 +337,13 @@ export function GreetingRenderer({
         )}
       </header>
 
-      <div ref={stageRef} tabIndex={-1} className="reveal__stage relative z-10 flex flex-1 flex-col items-center justify-center outline-none">
+      <div ref={stageRef} tabIndex={-1} className="reveal__stage relative z-10 flex flex-1 flex-col items-center justify-center outline-none" data-ending={isEnding || undefined}>
         {isOpening && (
-          <div className="reveal__frame">
-            <ThemeWorld key="sealed" themeKey={template.id} version={template.version} opening={openingLine} message={content.message ?? ""} sealed className="reveal__world" />
-            {/* The world's closed state: its opening line and a seal in its accent. The seal is a
-                large pointer target; the labelled Open button below is the accessible control. */}
-            <div className="reveal__cover">
-              <p className="reveal__opening">{openingLine}</p>
-              <button type="button" className="reveal__seal" onClick={open} disabled={pressing} tabIndex={-1} aria-hidden data-pressed={pressing || undefined}>
-                <svg viewBox="0 0 24 24">
-                  <path d={SPARK_PATH} />
-                </svg>
-              </button>
-            </div>
+          // The Signature opening: a sealed stationery envelope lying in the chosen world's room.
+          <div className="sx-opening">
+            <span className="sx-light" aria-hidden />
+            <p className="sx-opening__line">{openingLine}</p>
+            <RevealEnvelope state={pressing ? "opening" : "sealed"} addressee={t("forYou")} onOpen={open} />
           </div>
         )}
 
@@ -326,26 +388,53 @@ export function GreetingRenderer({
           <div key="audio" className="reveal__audio reveal-enter" data-testid="greeting-audio-beat">
             <p className="reveal__line">{t("listen")}</p>
             <div className="reveal__audio-card">
-              <VoicePlayer src={content.audio.url} durationMs={null} title={t("voiceTitle")} onPlay={() => notifyPlayed("audio")} />
+              <VoicePlayer src={content.audio.url} refreshSrc={content.audio.refresh} durationMs={null} title={t("voiceTitle")} onPlay={() => notifyPlayed("audio")} />
             </div>
           </div>
         )}
 
-        {isEnding && (
-          <div key={`ending-${runId}`} className="reveal__frame" data-testid="greeting-ending-beat" data-finale={template.spec.finale}>
-            <ThemeWorld
-              themeKey={template.id}
-              version={template.version}
-              opening={endingLine}
-              message={content.message ?? ""}
-              finale={template.spec.finale}
-              active
-              onRest={() => setEndingRest(true)}
-              fit
-              className="reveal__world"
-            />
-            {endingLine && <p className="sr-only">{endingLine}</p>}
+        {beat.kind === "music" && content.music && (
+          <div key="music" className="reveal__music reveal-enter">
+            <OurSong music={content.music} meta={content.musicMeta} embedAllowed={spotifyEmbed} variant="beat" />
           </div>
+        )}
+
+        {beat.kind === "countdown" && content.countdown && (
+          <div key="countdown" className="reveal__countdown" data-testid="greeting-countdown-beat">
+            <EventCountdownCard countdown={content.countdown} serverNow={serverNow} />
+          </div>
+        )}
+
+        {isEnding && (
+          <>
+            {/* The world fills the first screen exactly as before the closing arrived, so nothing moves when it does. */}
+            <div className="sx-ending-screen">
+              <div key={`ending-${runId}`} className="reveal__frame" data-testid="greeting-ending-beat" data-finale={template.spec.finale}>
+                <ThemeWorld
+                  themeKey={template.id}
+                  version={template.version}
+                  opening={endingLine}
+                  message={content.message ?? ""}
+                  finale={template.spec.finale}
+                  active
+                  onRest={() => setEndingRest(true)}
+                  fit
+                  className="reveal__world"
+                />
+                {endingLine && <p className="sr-only">{endingLine}</p>}
+              </div>
+              {/* Space for the cue is held from the start, so the world doesn't move when it arrives. */}
+              <div className="sx-cue-slot">
+                {endingRest && (
+                  <button type="button" className="sx-cue" onClick={() => closingRef.current?.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "start" })} data-testid="greeting-to-closing">
+                    {t("toLetter")}
+                    <ChevronDown className="size-4" aria-hidden />
+                  </button>
+                )}
+              </div>
+            </div>
+            {endingRest && <RevealClosing ref={closingRef} content={content} signOff={endingLine} onPlayed={notifyPlayed} vintage={world.composition === "keepsake"} spotifyEmbed={spotifyEmbed} />}
+          </>
         )}
       </div>
 
@@ -383,15 +472,20 @@ export function GreetingRenderer({
             {mode === "preview" && senderControls}
             {mode === "recipient" && (
               <p className="reveal__hint flex items-center justify-center gap-1.5">
-                <Spark className="size-3 text-[var(--w-accent)]" />
+                <Spark className="size-3 text-[var(--sx-accent)]" />
                 {t("madeWith")}
               </p>
             )}
           </div>
         )}
       </footer>
+      {interlude && openingInterlude?.({ reveal: arrive, done: () => setInterlude(false) })}
     </div>
   );
+}
+
+function reducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 /** A photo or video, framed the way the world frames media (reveal.css, [data-frame]). */

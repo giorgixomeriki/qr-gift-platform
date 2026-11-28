@@ -1,16 +1,15 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ScanLine } from "lucide-react";
 import { getLocale, getTranslations } from "next-intl/server";
-import { checkIsAdmin } from "@/db/client";
-import { getSessionUser } from "@/lib/auth/session";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdmin, requireAdminPage } from "@/lib/auth/admin";
 import { getAdminMetrics } from "@/lib/dashboard/admin-metrics";
+import { getPhysicalInventorySummary } from "@/lib/qr/handovers";
+import { getReconcileHealth } from "@/lib/payments/reconcile-heartbeat";
 import { formatMinorAmount } from "@/lib/format/money";
 import { ReconcileActivationsButton } from "@/components/admin/reconcile-activations-button";
 import { NotAdmin } from "@/components/admin/not-admin";
-import { PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
-import { buttonClasses } from "@/components/ui/button";
+import { Badge, PageHeader, Panel, Stat, StatGroup, table } from "@/components/dashboard/ui";
+import { ButtonLink, buttonClasses } from "@/components/ui/button";
 
 /**
  * Real platform-wide aggregates (Phase 1 — "no fake data"), computed live
@@ -18,15 +17,20 @@ import { buttonClasses } from "@/components/ui/button";
  * is re-verified server-side (requireAdmin) — this page's own guard is not
  * the enforcement boundary.
  */
+const RECONCILE_TONE = { OK: "success", ATTENTION: "warning", FAILING: "danger", STALE: "danger", NEVER: "neutral" } as const;
+
 export default async function AdminDashboardPage() {
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
+  const { user, isAdmin } = await requireAdminPage();
 
   const t = await getTranslations("admin");
-  const isAdmin = await checkIsAdmin(user.id);
   if (!isAdmin) return <NotAdmin message={t("notAdmin", { email: user.email ?? "" })} />;
 
-  const metrics = await requireAdmin((tx) => getAdminMetrics(tx));
+  const { metrics, reconcile, physical } = await requireAdmin(async (tx) => ({
+    metrics: await getAdminMetrics(tx),
+    reconcile: await getReconcileHealth(tx),
+    physical: await getPhysicalInventorySummary(tx),
+  }));
+  const th = await getTranslations("handover");
   const td = await getTranslations("admin.dashboard");
   const tStage = await getTranslations("admin.dashboard.funnel.stages");
   const tNav = await getTranslations("nav");
@@ -45,6 +49,27 @@ export default async function AdminDashboardPage() {
           </Link>
         }
       />
+
+      <Panel title={td("reconcile.title")} description={td("reconcile.description")} testId="admin-reconcile-health">
+        <div className="flex flex-wrap items-center gap-3 text-body-sm">
+          <span data-testid="reconcile-status">
+            <Badge tone={RECONCILE_TONE[reconcile.status]}>{td(`reconcile.status.${reconcile.status}`)}</Badge>
+          </span>
+          <span className="text-ink-2">
+            {reconcile.lastSuccessAt
+              ? td("reconcile.lastSuccess", { when: reconcile.lastSuccessAt.toLocaleString(locale === "ka" ? "ka-GE" : "en-GB", { timeZone: "Asia/Tbilisi", dateStyle: "medium", timeStyle: "short" }) })
+              : td("reconcile.noSuccess")}
+          </span>
+          {reconcile.lastRemaining !== null && reconcile.lastRemaining > 0 && (
+            <span className="text-danger">{td("reconcile.open", { count: reconcile.lastRemaining })}</span>
+          )}
+        </div>
+        {!reconcile.scheduleConfigured && (
+          <p className={`mt-2 text-caption ${reconcile.required ? "text-danger" : "text-ink-3"}`}>
+            {td(reconcile.required ? "reconcile.notConfiguredRequired" : "reconcile.notConfigured")}
+          </p>
+        )}
+      </Panel>
 
       <StatGroup title={td("salesTitle")}>
         <Stat label={td("stats.successfulSales")} value={metrics.successfulSales} testId="metric-sales" />
@@ -67,6 +92,28 @@ export default async function AdminDashboardPage() {
         <Stat label={td("stats.qrActive")} value={metrics.qrActive} testId="metric-qr-active" />
         <Stat label={td("stats.qrBlocked")} value={metrics.qrBlocked} testId="metric-qr-blocked" />
       </StatGroup>
+
+      <div className="flex flex-col gap-3" data-testid="admin-physical-inventory">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="text-label text-ink-2">{th("inventory.physicalTitle")}</h2>
+          <div className="flex flex-wrap gap-2">
+            <ButtonLink href="/admin/inventory" variant="secondary" size="sm">{tNav("inventory")}</ButtonLink>
+            {/* Plain <a>: the scanner needs its own camera=(self) document (next.config.ts). */}
+            <a href="/admin/inventory/scan" className={buttonClasses({ size: "sm" })} data-testid="dashboard-scan-assign">
+              <span className="inline-flex items-center gap-2"><ScanLine className="size-4" aria-hidden />{th("inventory.scanCta")}</span>
+            </a>
+          </div>
+        </div>
+        <StatGroup>
+          <Stat label={th("inventory.stats.inCentral")} value={physical.inCentralStock} testId="metric-central-stock" />
+          {physical.reserved > 0 && <Stat label={th("inventory.stats.reserved")} value={physical.reserved} testId="metric-reserved" />}
+          <Stat label={th("inventory.stats.heldByPartners")} value={physical.heldByPartners} testId="metric-held-by-partners" />
+          {physical.pendingHandovers + physical.disputedHandovers > 0 && (
+            <Stat label={th("inventory.stats.openHandovers")} value={physical.pendingHandovers + physical.disputedHandovers} testId="metric-open-handovers" />
+          )}
+          <Stat label={th("inventory.stats.received")} value={physical.receivedByPartners} testId="metric-received" />
+        </StatGroup>
+      </div>
 
       <Panel title={td("funnel.title")} description={td("funnel.description")} testId="admin-funnel" flush>
         <div className={table.wrap}>

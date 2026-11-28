@@ -2,18 +2,17 @@ import { z } from "zod";
 
 /**
  * Payment provider domain boundary (architecture plan §7 / Phase 0.5 §7).
- * No production provider (BOG/TBC/Stripe/...) is integrated yet — this is the
- * interface every future adapter implements, plus the local TEST adapter.
+ * Implemented by the BOG Payment Manager adapter (providers/bog-provider.ts)
+ * and the local TEST adapter (providers/test-provider.ts).
  * `lib/payments/service.ts` (the domain logic: idempotency, ledger, activation)
  * depends only on this interface, never on a concrete provider.
  */
 
 /**
- * "BOG" (Bank of Georgia) is the concrete example a real Georgian merchant
- * pilot would most likely integrate first — added here as the production
- * provider *key* only. See providers/bog-provider.ts: every method on that
- * adapter throws a clear "not implemented, official docs required" error.
- * Selecting PAYMENTS_PROVIDER=BOG does not mean BOG is actually integrated.
+ * "TEST" — simulated payments, refused in production (provider-factory.ts).
+ * "BOG" — Bank of Georgia Payment Manager (providers/bog-provider.ts):
+ * hosted payment page, SHA256withRSA-signed callbacks re-verified against
+ * BOG's receipt, and asynchronous refunds behind BOG_REFUNDS_ENABLED.
  */
 export const PAYMENT_PROVIDERS = ["TEST", "BOG"] as const;
 export type PaymentProviderKey = (typeof PAYMENT_PROVIDERS)[number];
@@ -73,12 +72,12 @@ export type RefundResult = {
 };
 
 /**
- * Thrown by a real-provider adapter method that cannot be implemented without
- * information this repo does not have (official API docs, sandbox
- * credentials, signature spec, etc). Distinct from a generic Error so callers
- * (checkout UI, webhook route, reconciliation) can render a specific
- * "payment provider not available" state instead of a generic crash, and so
- * it's unambiguous in logs that this is a known configuration gap, not a bug.
+ * Thrown when a provider operation is definitely NOT sent because this
+ * deployment has it switched off or unavailable (e.g. BOG refunds while
+ * BOG_REFUNDS_ENABLED=false — BogRefundsDisabledError). Distinct from a
+ * generic Error so callers know nothing reached the provider: a refund is
+ * closed as NOT_SENT, the webhook answers 501, and logs show a configuration
+ * gap rather than a bug.
  */
 export class ProviderNotImplementedError extends Error {
   constructor(provider: PaymentProviderKey, method: string, missing: string) {

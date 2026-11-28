@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { createAvailableQr, moneyTrailFor, DEV_ADMIN_EMAIL, DEV_PASSWORD } from "./fixtures";
+import { signInAdminWithMfa } from "./admin-session";
 
 /**
  * Chargeback administration through the real admin UI: a card is sold
@@ -28,22 +29,23 @@ test.describe("Admin chargeback", () => {
     await page.getByTestId("start-greeting-button").click();
     await page.getByTestId("theme-option-minimal").click();
     await page.getByTestId("wizard-continue").click();
+    // Message and media are one Create screen, then the Preview screen.
+    await expect(page.getByTestId("media-step")).toBeVisible();
     await page.getByTestId("message-textarea").fill("Chargeback end-to-end test greeting.");
     await page.getByTestId("wizard-continue").click();
-    await expect(page.getByTestId("media-step")).toBeVisible();
-    await page.getByTestId("wizard-continue").click();
+    await expect(page.getByTestId("preview-step")).toBeVisible();
+    await page.getByTestId("preview-watch").click();
     await page.getByTestId("greeting-tap-to-open").click();
     await page.getByTestId("greeting-continue").click();
     await page.getByTestId("preview-activate-cta").click();
+    await page.getByTestId("checkout-consent").check();
+    await page.getByTestId("checkout-consent-activation").check();
     await page.getByTestId("checkout-pay").click();
     await expect(page.getByTestId("greeting-renderer")).toBeVisible({ timeout: 15_000 });
 
     // The admin records the bank's chargeback.
     await page.context().clearCookies();
-    await page.goto("/admin/login");
-    await page.getByTestId("login-email").fill(DEV_ADMIN_EMAIL);
-    await page.getByTestId("login-password").fill(DEV_PASSWORD);
-    await page.getByTestId("login-submit").click();
+    await signInAdminWithMfa(page, DEV_ADMIN_EMAIL, DEV_PASSWORD);
     await expect(page).toHaveURL(/\/admin\/dashboard/);
     await page.goto(`/admin/partners/${qr.partnerId}`);
 

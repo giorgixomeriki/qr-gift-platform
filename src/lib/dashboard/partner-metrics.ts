@@ -1,7 +1,8 @@
 import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import type { Tx } from "@/db/client";
-import { qrCodes, qrBatches, orders, partnerLedgerEntries, analyticsEvents } from "@/db/schema";
+import { orders, partnerLedgerEntries } from "@/db/schema";
+import { getPartnerInventorySummary } from "./inventory";
 
 export type PartnerMetrics = {
   qrIssued: number;
@@ -10,6 +11,7 @@ export type PartnerMetrics = {
   qrActive: number;
   qrBlocked: number;
   qrDistributed: number;
+  /** Distinct cards scanned at least once (not scan events). */
   qrScanned: number;
   batchCount: number;
   successfulSales: number;
@@ -30,27 +32,9 @@ export type PartnerMetrics = {
  * fake data").
  */
 export async function getPartnerMetrics(tx: Tx, partnerId: string): Promise<PartnerMetrics> {
-  const [statusCounts] = await tx
-    .select({
-      total: sql<number>`count(*)::int`,
-      available: sql<number>`count(*) filter (where ${qrCodes.status} = 'AVAILABLE')::int`,
-      draft: sql<number>`count(*) filter (where ${qrCodes.status} = 'DRAFT')::int`,
-      active: sql<number>`count(*) filter (where ${qrCodes.status} = 'ACTIVE')::int`,
-      blocked: sql<number>`count(*) filter (where ${qrCodes.status} = 'BLOCKED')::int`,
-      distributed: sql<number>`count(*) filter (where ${qrCodes.distributionStatus} = 'DISTRIBUTED')::int`,
-    })
-    .from(qrCodes)
-    .where(eq(qrCodes.partnerId, partnerId));
-
-  const [batchRow] = await tx
-    .select({ count: sql<number>`count(*)::int` })
-    .from(qrBatches)
-    .where(eq(qrBatches.partnerId, partnerId));
-
-  const [scannedRow] = await tx
-    .select({ count: sql<number>`count(*)::int` })
-    .from(analyticsEvents)
-    .where(and(eq(analyticsEvents.partnerId, partnerId), eq(analyticsEvents.eventType, "QR_SCANNED")));
+  // Card counts come from the one shared definition (also on the admin's
+  // page for this partner), so the two screens can't disagree.
+  const inventory = await getPartnerInventorySummary(tx, partnerId);
 
   const [salesRow] = await tx
     .select({
@@ -80,14 +64,14 @@ export async function getPartnerMetrics(tx: Tx, partnerId: string): Promise<Part
     .where(eq(partnerLedgerEntries.partnerId, partnerId));
 
   return {
-    qrIssued: statusCounts?.total ?? 0,
-    qrAvailable: statusCounts?.available ?? 0,
-    qrDraft: statusCounts?.draft ?? 0,
-    qrActive: statusCounts?.active ?? 0,
-    qrBlocked: statusCounts?.blocked ?? 0,
-    qrDistributed: statusCounts?.distributed ?? 0,
-    qrScanned: scannedRow?.count ?? 0,
-    batchCount: batchRow?.count ?? 0,
+    qrIssued: inventory.issued,
+    qrAvailable: inventory.available,
+    qrDraft: inventory.draft,
+    qrActive: inventory.active,
+    qrBlocked: inventory.blocked,
+    qrDistributed: inventory.distributed,
+    qrScanned: inventory.scannedCards,
+    batchCount: inventory.batchCount,
     successfulSales: salesRow?.count ?? 0,
     grossSalesMinor: salesRow?.gross ?? 0,
     commissionEarnedMinor: ledgerRow?.earned ?? 0,

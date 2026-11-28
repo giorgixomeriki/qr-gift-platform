@@ -26,7 +26,17 @@ export type RateLimitResult = { allowed: boolean; retryAfterSeconds?: number };
  * on every call — silently swallowed by the fail-open catch below until a
  * real verify script (scripts/verify-rate-limiting.ts) caught it.
  */
-export async function checkRateLimit(params: { key: string; limit: number; windowSeconds: number }): Promise<RateLimitResult> {
+export async function checkRateLimit(params: {
+  key: string;
+  limit: number;
+  windowSeconds: number;
+  /**
+   * Refuse instead of failing open when the store is unreachable. For limits
+   * that guard something costly or brute-forceable with no other app-side
+   * backstop (SMS sends, OTP and activation-token attempts).
+   */
+  failClosed?: boolean;
+}): Promise<RateLimitResult> {
   const { key, limit, windowSeconds } = params;
   const windowMillis = windowSeconds * 1000;
   const windowStart = new Date(Math.floor(Date.now() / windowMillis) * windowMillis);
@@ -55,6 +65,10 @@ export async function checkRateLimit(params: { key: string; limit: number; windo
     }
     return { allowed: true };
   } catch (err) {
+    if (params.failClosed) {
+      console.error(`[rate-limit] store check failed for key "${key}" — failing closed`, err instanceof Error ? err.message : err);
+      return { allowed: false, retryAfterSeconds: 60 };
+    }
     console.error(`[rate-limit] store check failed for key "${key}" — failing open`, err instanceof Error ? err.message : err);
     return { allowed: true };
   }

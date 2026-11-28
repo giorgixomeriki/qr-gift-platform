@@ -29,7 +29,7 @@ export async function adminRecordPayoutAction(partnerId: string, input: unknown)
     const payout = await requireAdmin(async (tx, adminUserId) => {
       await enforceRateLimit({ key: `payout-record:${adminUserId}`, limit: 20, windowSeconds: 60 });
       return recordManualPayout(tx, adminUserId, { partnerId, ...parsed, ...businessDayRange(parsed.periodFrom, parsed.periodTo) });
-    });
+    }, { financial: true });
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true, data: { payoutId: payout.id } };
   } catch (err) {

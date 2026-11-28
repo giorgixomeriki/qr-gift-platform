@@ -26,7 +26,7 @@ function errorResult(scope: string, err: unknown, context: Record<string, string
 export async function adminSetDefaultPriceAction(input: unknown): Promise<PricingActionResult> {
   try {
     const parsed = setDefaultPriceSchema.parse(input);
-    const { changed } = await requireAdmin((tx, adminUserId) => setDefaultPrice(tx, adminUserId, parsed));
+    const { changed } = await requireAdmin((tx, adminUserId) => setDefaultPrice(tx, adminUserId, parsed), { financial: true });
     revalidatePath("/admin/partners", "layout");
     return { ok: true, changed };
   } catch (err) {
@@ -38,7 +38,7 @@ export async function adminSetPartnerPriceAction(partnerId: string, input: unkno
   try {
     const id = partnerIdSchema.parse(partnerId);
     const parsed = setPartnerPriceSchema.parse(input);
-    const { changed } = await requireAdmin((tx, adminUserId) => setPartnerPrice(tx, adminUserId, id, parsed));
+    const { changed } = await requireAdmin((tx, adminUserId) => setPartnerPrice(tx, adminUserId, id, parsed), { financial: true });
     revalidatePath(`/admin/partners/${id}`);
     revalidatePath("/admin/partners");
     return { ok: true, changed };
@@ -51,7 +51,7 @@ export async function adminSetPartnerCommissionAction(partnerId: string, input: 
   try {
     const id = partnerIdSchema.parse(partnerId);
     const parsed = setPartnerCommissionSchema.parse(input);
-    const { changed } = await requireAdmin((tx, adminUserId) => setPartnerCommission(tx, adminUserId, id, parsed));
+    const { changed } = await requireAdmin((tx, adminUserId) => setPartnerCommission(tx, adminUserId, id, parsed), { financial: true });
     revalidatePath(`/admin/partners/${id}`);
     revalidatePath("/admin/partners");
     return { ok: true, changed };

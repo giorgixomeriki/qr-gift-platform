@@ -14,11 +14,14 @@ import {
 import * as partnerService from "./service";
 import { enforceRateLimit } from "@/lib/rate-limit";
 import { logServerError } from "@/lib/log";
+import { env } from "@/lib/env";
+import { LoginAccessError } from "./login-access";
 
-export type ActionResult = { ok: true } | { ok: false; error: string };
+export type ActionResult = { ok: true } | { ok: false; error: string; code?: string };
 export type AddMemberByEmailResult = { ok: true; invited: boolean } | { ok: false; error: string };
 
 function errorResult(scope: string, err: unknown, context: Record<string, string | number | undefined> = {}): ActionResult {
+  if (err instanceof LoginAccessError) return { ok: false, error: err.code, code: err.code };
   logServerError(scope, err, context);
   return { ok: false, error: err instanceof Error ? err.message : "Something went wrong" };
 }
@@ -36,6 +39,22 @@ function requireManageRole(role: string) {
   }
 }
 
+/**
+ * One partner = one login while PARTNER_TEAM_MEMBERS_ENABLED is off: partner
+ * owners cannot add staff logins at all, and an admin can add a login only
+ * to a partner that has none (the activation flow in login-actions.ts is the
+ * normal path). Existing extra members are untouched and keep working.
+ */
+async function assertSingleLoginAllowed(tx: Parameters<Parameters<typeof requireAdmin>[0]>[0], partnerId: string) {
+  if (env.PARTNER_TEAM_MEMBERS_ENABLED) return;
+  const members = await partnerService.listPartnerMembers(tx, partnerId);
+  if (members.length > 0) throw new LoginAccessError("partner_has_login");
+}
+
+function assertTeamMembersEnabled() {
+  if (!env.PARTNER_TEAM_MEMBERS_ENABLED) throw new Error("Team member logins are not enabled");
+}
+
 // ---------------------------------------------------------------------------
 // Admin-only: Partner CRUD + status
 // ---------------------------------------------------------------------------
@@ -43,7 +62,7 @@ function requireManageRole(role: string) {
 export async function adminCreatePartnerAction(input: unknown): Promise<ActionResult> {
   try {
     const parsed = createPartnerSchema.parse(input);
-    await requireAdmin((tx, adminUserId) => partnerService.createPartner(tx, adminUserId, parsed));
+    await requireAdmin((tx, adminUserId) => partnerService.createPartner(tx, adminUserId, parsed, { requireEmail: !env.PARTNER_PHONE_AUTH_ENABLED }));
     revalidatePath("/admin/partners");
     return { ok: true };
   } catch (err) {
@@ -90,9 +109,10 @@ export async function adminSetPartnerStatusAction(partnerId: string, status: unk
 export async function adminAddPartnerMemberAction(partnerId: string, input: unknown): Promise<ActionResult> {
   try {
     const parsed = addPartnerMemberSchema.parse(input);
-    await requireAdmin((tx, adminUserId) =>
-      partnerService.addPartnerMember(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed),
-    );
+    await requireAdmin(async (tx, adminUserId) => {
+      await assertSingleLoginAllowed(tx, partnerId);
+      return partnerService.addPartnerMember(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed);
+    });
     revalidatePath(`/admin/partners/${partnerId}`);
     return { ok: true };
   } catch (err) {
@@ -105,6 +125,7 @@ export async function adminAddPartnerMemberByEmailAction(partnerId: string, inpu
     const parsed = addPartnerMemberByEmailSchema.parse(input);
     const result = await requireAdmin(async (tx, adminUserId) => {
       await enforceRateLimit({ key: `member-invite:${adminUserId}`, limit: 20, windowSeconds: 60 });
+      await assertSingleLoginAllowed(tx, partnerId);
       return partnerService.addPartnerMemberByEmail(tx, { actorType: "ADMIN", actorId: adminUserId }, partnerId, parsed);
     });
     revalidatePath(`/admin/partners/${partnerId}`);
@@ -152,6 +173,7 @@ export async function adminRemovePartnerMemberAction(partnerId: string, memberUs
 export async function partnerAddMemberByEmailAction(input: unknown): Promise<AddMemberByEmailResult> {
   try {
     const parsed = addPartnerMemberByEmailSchema.parse(input);
+    assertTeamMembersEnabled();
     const result = await requirePartnerContext(async (tx, ctx) => {
       requireManageRole(ctx.role);
       await enforceRateLimit({ key: `member-invite:${ctx.userId}`, limit: 20, windowSeconds: 60 });
@@ -167,6 +189,7 @@ export async function partnerAddMemberByEmailAction(input: unknown): Promise<Add
 export async function partnerAddMemberAction(input: unknown): Promise<ActionResult> {
   try {
     const parsed = addPartnerMemberSchema.parse(input);
+    assertTeamMembersEnabled();
     await requirePartnerContext(async (tx, ctx) => {
       requireManageRole(ctx.role);
       await partnerService.addPartnerMember(tx, { actorType: "PARTNER", actorId: ctx.userId }, ctx.partnerId, parsed);

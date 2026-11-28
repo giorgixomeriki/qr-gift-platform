@@ -7,13 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { requestUploadAction, finalizeUploadAction, deleteContentAction } from "@/lib/greetings/actions";
 import { uploadToSignedUrl } from "@/lib/client/upload-to-signed-url";
-import { sizeLimitFor } from "@/lib/validation/content-types";
+import { sizeLimitFor, VOICE_MAX_DURATION_SECONDS as MAX_DURATION_SECONDS } from "@/lib/validation/content-types";
 import { tick } from "@/lib/client/haptics";
 import { VoicePlayer } from "./voice-player";
 
 type ExistingItem = { contentId: string; url: string } | null;
 
-const MAX_DURATION_SECONDS = 60;
 const METER_BARS = 28;
 /** The meter takes a new reading this often: a readable scroll (~1.4 s across), and 20 renders a second instead of 60 on a mid-range phone. */
 const METER_INTERVAL_MS = 50;

@@ -1,6 +1,7 @@
 import Module from "node:module";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
+import { resolveSecretKey, resolvePublishableKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -28,8 +29,8 @@ const { eq } = require("drizzle-orm") as typeof import("drizzle-orm");
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const anonKey = resolvePublishableKey(process.env)?.key;
+const serviceKey = resolveSecretKey(process.env)?.key;
 const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
 if (!migrationsUrl || !supabaseUrl || !anonKey || !serviceKey) throw new Error("MIGRATIONS_DATABASE_URL and Supabase env vars are required");
 const admin = postgres(migrationsUrl, { max: 1 });
@@ -71,9 +72,11 @@ async function main() {
   const qr = (status: string) => ({ id: "id", publicToken: "ABCDEFGHJKMNPQRSTVWXYZ12", status, distributionStatus: "DISTRIBUTED" });
   const available = toInventoryRow(qr("AVAILABLE"), "PARTNER");
   check("1. Partner gets the full token for an unclaimed card", available.credentialReleased && available.label === "ABCDEFGHJKMNPQRSTVWXYZ12" && available.status === "AVAILABLE");
-  for (const status of ["DRAFT", "ACTIVE", "BLOCKED"]) {
+  // Status: the same business status admins see (DRAFT is not a sale), except
+  // a moderated card, which stays USED. The credential stays masked for all.
+  for (const [status, shown] of [["DRAFT", "DRAFT"], ["ACTIVE", "ACTIVE"], ["BLOCKED", "USED"]] as const) {
     const row = toInventoryRow(qr(status), "PARTNER");
-    check(`2. Partner gets a masked label and status USED for a ${status} card`, !row.credentialReleased && row.label === "••••YZ12" && row.status === "USED", JSON.stringify(row));
+    check(`2. Partner gets a masked label and status ${shown} for a ${status} card`, !row.credentialReleased && row.label === "••••YZ12" && row.status === shown, JSON.stringify(row));
   }
   const adminRow = toInventoryRow(qr("ACTIVE"), "ADMIN");
   check("3. Admin keeps the full token and real status", adminRow.credentialReleased && adminRow.label === "ABCDEFGHJKMNPQRSTVWXYZ12" && adminRow.status === "ACTIVE");

@@ -10,7 +10,9 @@ import { getPaymentProvider } from "./provider-factory";
 import { sanitizeProviderMetadata, type PaymentProviderKey } from "./types";
 import { getPurchaseBlocker, type PurchaseBlocker } from "./eligibility";
 import { assertCheckoutOpen } from "./checkout-gate";
+import { pilotPriceOverrideMinor, assertOrderAmountCurrent } from "./pilot-price";
 import { requestChargeRefund } from "./refunds";
+import { assertOrderInPaymentScope } from "./scope";
 import { logServerError } from "@/lib/log";
 import { recordAnalyticsEvent } from "@/lib/analytics";
 
@@ -68,11 +70,17 @@ export async function startCheckout(input: {
   greetingId: string;
   editToken: string;
   productId: string;
+  /**
+   * Open the provider payment now (default). False for a real provider at
+   * checkout entry: the bank payment is created only after the buyer's
+   * consent is recorded (acceptCheckoutTerms in ./checkout.ts).
+   */
+  createAttempt?: boolean;
 }): Promise<{ order: Order; redirectUrl?: string }> {
-  assertCheckoutOpen();
   const greeting = await verifyGreetingEditAccess(input.greetingId, input.editToken);
+  assertCheckoutOpen(greeting.qrCodeId);
 
-  const { order, qrPublicToken } = await withEditableGreeting(input.greetingId, async (tx) => {
+  const { order, qrPublicToken, pilot } = await withEditableGreeting(input.greetingId, async (tx) => {
     const [qr] = await tx
       .select({ id: qrCodes.id, partnerId: qrCodes.partnerId, publicToken: qrCodes.publicToken })
       .from(qrCodes)
@@ -81,9 +89,14 @@ export async function startCheckout(input: {
     if (!qr) throw new CheckoutError("QR code not found for greeting");
 
     const price = await resolveActivePrice(tx, input.productId, qr.partnerId);
+    // Owner pilot price (M1): only for the one pilot card while public
+    // checkout is closed; qr.id is the database's, never the request's. The
+    // order then has no price_id (it was not charged a prices row).
+    const pilotAmountMinor = pilotPriceOverrideMinor(qr.id);
+    const grossAmountMinor = pilotAmountMinor ?? price.amountMinor;
     const commissionRateBps = await getPartnerCommissionRateBps(tx, qr.partnerId);
     const { partnerCommissionMinor, platformShareMinor } = splitCommission(
-      price.amountMinor,
+      grossAmountMinor,
       commissionRateBps,
     );
 
@@ -94,9 +107,9 @@ export async function startCheckout(input: {
         qrCodeId: qr.id,
         partnerId: qr.partnerId,
         productId: input.productId,
-        priceId: price.id,
+        priceId: pilotAmountMinor === null ? price.id : null,
         currency: price.currency,
-        grossAmountMinor: price.amountMinor,
+        grossAmountMinor,
         partnerCommissionMinor,
         platformShareMinor,
         commissionRateBps,
@@ -105,9 +118,26 @@ export async function startCheckout(input: {
       .returning();
 
     if (!created) throw new CheckoutError("Failed to create order");
-    return { order: created, qrPublicToken: qr.publicToken };
+    return { order: created, qrPublicToken: qr.publicToken, pilot: pilotAmountMinor === null ? null : { standardPriceId: price.id, standardAmountMinor: price.amountMinor } };
   });
 
+  if (pilot) {
+    // Audit trail: this order was priced by the owner pilot override, not by
+    // a prices row. Ids and amounts only.
+    await withPaymentActivation(order.id, (tx) =>
+      recordAuditLog(tx, { actorType: "SYSTEM", action: "PRICING_PILOT_PRICE_APPLIED", targetType: "order", targetId: order.id, metadata: {
+      qrCodeId: order.qrCodeId,
+      grossAmountMinor: order.grossAmountMinor,
+      partnerCommissionMinor: order.partnerCommissionMinor,
+      platformShareMinor: order.platformShareMinor,
+      commissionRateBps: order.commissionRateBps,
+      standardPriceId: pilot.standardPriceId,
+      standardAmountMinor: pilot.standardAmountMinor,
+      } }),
+    ).catch((err) => logServerError("pilotPriceAudit", err, { orderId: order.id }));
+  }
+
+  if (input.createAttempt === false) return { order };
   const redirectUrl = await createPaymentAttempt(order, qrPublicToken);
   return { order, redirectUrl };
 }
@@ -122,7 +152,13 @@ export async function startCheckout(input: {
  * holding a Postgres transaction open.
  */
 export async function createPaymentAttempt(order: Order, qrPublicToken: string, locale?: "ka" | "en"): Promise<string | undefined> {
-  assertCheckoutOpen();
+  assertCheckoutOpen(order.qrCodeId);
+  // The amount sent to the bank is the order's snapshot, and it must still be
+  // the card's price now (owner pilot price on/off; lib/payments/pilot-price.ts).
+  assertOrderAmountCurrent(order);
+  // Staging fence (PAYMENTS_SCOPE_PARTNER_ID): no provider call for an order
+  // this deployment does not own.
+  await assertOrderInPaymentScope(order.id);
   const provider = getPaymentProvider();
   // Amount and currency are the order's own snapshot (gross_amount_minor,
   // resolved once at order creation, partner overrides included) — never a
@@ -367,10 +403,10 @@ async function confirmPaymentSuccessTx(input: Parameters<typeof confirmPaymentSu
  * it. Idempotent: a REFUNDED order is left alone, and the order only moves to
  * REFUNDED once the provider itself reports the full amount refunded.
  *
- * TEST refunds deterministically. A real provider whose refundPayment is not
- * implemented yet (BOG today — see providers/bog-provider.ts) leaves the
- * order in REFUND_REQUIRED — orders in that status are the manual-refund
- * queue until that adapter's refund call exists. The payment is never
+ * TEST refunds deterministically. BOG refunds asynchronously (the order turns
+ * REFUNDED when BOG confirms by callback or receipt). Where refunds cannot be
+ * sent (BOG_REFUNDS_ENABLED=false, or the order is outside the staging
+ * payment scope) the order stays REFUND_REQUIRED — the manual-refund queue. The payment is never
  * marked REFUNDED without the provider confirming it.
  */
 export async function refundIneligiblePayment(orderId: string): Promise<{ status: "REFUNDED" | "REFUND_REQUIRED" }> {
@@ -418,6 +454,11 @@ export class RefundError extends Error {}
  */
 export async function refundPaidOrder(adminUserId: string, orderId: string): Promise<{ alreadyRefunded: boolean; pending?: boolean }> {
   const { order, payment } = await withAdminPaymentContext(adminUserId, orderId, async (tx) => {
+    // The payment half of this context can read any one order, so the admin
+    // half is checked here, not only by the caller (FA-02: a revoked admin
+    // must not be able to send money back).
+    const [{ is_admin }] = (await tx.execute(sql`select app_is_admin() as is_admin`)) as unknown as [{ is_admin: boolean }];
+    if (!is_admin) throw new RefundError("Only a platform admin can refund an order");
     const [o] = await tx.select().from(orders).where(eq(orders.id, orderId)).limit(1);
     const [p] = await tx
       .select()
@@ -626,6 +667,7 @@ export async function verifyAndReconcileOrder(
     throw new ReconciliationError(`Order ${orderId} has no pending payment attempt to verify`);
   }
 
+  await assertOrderInPaymentScope(orderId);
   const provider = getPaymentProvider();
   const verification = await provider.verifyPayment(pendingPayment.providerPaymentId);
 
@@ -680,7 +722,11 @@ export type PaymentAnomalyKind =
   | "AMOUNT_MISMATCH"
   | "REFUND_AWAITING_PROVIDER"
   | "REFUND_REJECTED"
-  | "EXTERNAL_REFUND";
+  | "EXTERNAL_REFUND"
+  | "PAID_QR_NOT_ACTIVATED"
+  | "MISSING_PROVIDER_REFERENCE"
+  | "STATUS_MISMATCH"
+  | "ACTIVE_WITHOUT_PAYMENT";
 
 /**
  * Reconciliation report (provider-independent): every place where money and
@@ -706,6 +752,13 @@ export type PaymentAnomalyKind =
  *                         captured — contact the customer / bank
  * - EXTERNAL_REFUND       the provider reports a refund QR Starr never asked
  *                         for (e.g. from the bank's portal) — reconcile by hand (30 days)
+ * - PAID_QR_NOT_ACTIVATED  PAID with an ACTIVE greeting but its QR still not ACTIVE
+ *                         — activatePaidOrder repairs a DRAFT QR; anything else is investigated
+ * - MISSING_PROVIDER_REFERENCE  an open or confirmed charge with no provider id, or
+ *                         an order pending > 30 min with no attempt at all — investigate
+ * - STATUS_MISMATCH       the order's status contradicts its charges — investigate
+ * - ACTIVE_WITHOUT_PAYMENT  a live greeting no captured order explains; the
+ *                         reported id is the GREETING's — investigate
  *
  * What the provider itself recorded (a charge QR Starr never heard of) needs
  * the provider's transaction listing — see docs/PAYMENTS.md.
@@ -771,6 +824,39 @@ export async function findPaymentAnomalies(adminUserId: string): Promise<{ kind:
       select 'EXTERNAL_REFUND', a.target_id, 'provider reports ' || coalesce(a.metadata->>'refundedAmountMinor', '?') || ' refunded outside QR Starr'
         from audit_logs a
        where a.action = 'PAYMENT_EXTERNAL_REFUND' and a.target_type = 'order' and a.created_at > now() - interval '30 days'
+      union all
+      select 'PAID_QR_NOT_ACTIVATED', o.id::text, 'greeting ACTIVE, QR ' || q.status
+        from orders o join greetings g on g.id = o.greeting_id join qr_codes q on q.id = o.qr_code_id
+       where o.status = 'PAID' and g.status = 'ACTIVE' and q.status in ('AVAILABLE', 'DRAFT')
+      union all
+      select 'MISSING_PROVIDER_REFERENCE', p.order_id::text, p.status || ' charge has no provider reference'
+        from payments p
+       where p.provider_payment_id is null and p.status in ('PENDING', 'SUCCEEDED')
+      union all
+      select 'MISSING_PROVIDER_REFERENCE', o.id::text, 'pending since ' || to_char(o.created_at at time zone 'Asia/Tbilisi', 'YYYY-MM-DD HH24:MI') || ' with no payment attempt'
+        from orders o
+       where o.status = 'PENDING_PAYMENT' and o.created_at < now() - interval '30 minutes'
+         and not exists (select 1 from payments p where p.order_id = o.id)
+      union all
+      select 'STATUS_MISMATCH', o.id::text, 'order PAID but every charge is REFUNDED'
+        from orders o
+       where o.status = 'PAID'
+         and exists (select 1 from payments p where p.order_id = o.id and p.status = 'REFUNDED')
+         and not exists (select 1 from payments p where p.order_id = o.id and p.status = 'SUCCEEDED')
+      union all
+      select 'STATUS_MISMATCH', o.id::text, 'order REFUNDED but no charge is REFUNDED'
+        from orders o
+       where o.status = 'REFUNDED'
+         and not exists (select 1 from payments p where p.order_id = o.id and p.status = 'REFUNDED')
+      union all
+      select 'STATUS_MISMATCH', p.order_id::text, 'SUCCEEDED charge has no confirmation time'
+        from payments p
+       where p.status = 'SUCCEEDED' and p.confirmed_at is null
+      union all
+      select 'ACTIVE_WITHOUT_PAYMENT', g.id::text, 'ACTIVE greeting with no captured order'
+        from greetings g
+       where g.status = 'ACTIVE'
+         and not exists (select 1 from orders o where o.greeting_id = g.id and o.status in ('PAID', 'REFUNDED', 'PARTIALLY_REFUNDED', 'REFUND_REQUIRED'))
     `);
     return [...rows].map((r) => ({ kind: r.kind, orderId: r.order_id, detail: r.detail }));
   });

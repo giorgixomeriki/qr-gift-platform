@@ -2,12 +2,19 @@ import "server-only";
 import { eq, sql } from "drizzle-orm";
 import { withPublicContext } from "@/db/client";
 import { qrCodes, greetings } from "@/db/schema";
+import { isGreetingExpired } from "@/lib/greetings/availability";
 
 export type QrResolution =
   | { kind: "not_found" }
   | { kind: "available"; qrId: string; partnerId: string }
   | { kind: "draft"; qrId: string; greetingId: string; partnerId: string }
   | { kind: "active"; qrId: string; greetingId: string; partnerId: string }
+  /** Paid and activated, but past its availability window (lib/greetings/availability.ts). Nothing is deleted. */
+  | { kind: "expired"; qrId: string; greetingId: string; partnerId: string }
+  /** Paid and activated, but the sender chose a later moment (migrations/0030): only the locked envelope and its countdown render. */
+  | { kind: "scheduled"; qrId: string; greetingId: string; partnerId: string }
+  /** A confirmed full refund (Refund Model C): public access is suspended, the content is kept. Never re-opened by a schedule. */
+  | { kind: "suspended"; qrId: string; greetingId: string; partnerId: string }
   | { kind: "blocked" };
 
 /**
@@ -25,6 +32,10 @@ export type QrResolution =
  * resolve to "blocked". A greeting that is already ACTIVE (paid for) stays
  * readable by its recipient: suspension is about the partner's business,
  * not about taking away something a customer already bought.
+ *
+ * Refund Model C: an ACTIVE greeting whose purchase was fully refunded
+ * (order REFUNDED, no PAID order — app_greeting_refund_suspended) resolves to
+ * "suspended". A duplicate-charge refund or a partial refund does not.
  */
 export async function resolveQrState(publicToken: string): Promise<QrResolution> {
   return withPublicContext(async (tx) => {
@@ -52,13 +63,29 @@ export async function resolveQrState(publicToken: string): Promise<QrResolution>
       case "DRAFT":
       case "ACTIVE": {
         const [greeting] = await tx
-          .select({ id: greetings.id, status: greetings.status })
+          .select({
+            id: greetings.id,
+            status: greetings.status,
+            activatedAt: greetings.activatedAt,
+            // migrations/0029: the one authority for "fully refunded" (the content RLS policy enforces it too).
+            refundSuspended: sql<boolean>`app_greeting_refund_suspended(${greetings.id})`,
+          })
           .from(greetings)
           .where(eq(greetings.qrCodeId, qr.id))
           .limit(1);
         if (!greeting) return { kind: "blocked" }; // inconsistent state — fail closed, not found-shaped
         if (qr.status === "ACTIVE" && greeting.status === "ACTIVE") {
-          return { kind: "active", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
+          const ids = { qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
+          // The database decides, on its own clock (migrations/0030): the same
+          // function gates the content table's RLS, so page and data agree.
+          // Model C first, belt and braces: the direct authority, then the combined state.
+          if (greeting.refundSuspended !== false) return { kind: "suspended", ...ids };
+          const [access] = await tx.execute<{ state: string }>(sql`select app_greeting_public_state(${greeting.id}::uuid) as state`);
+          if (access?.state === "SUSPENDED") return { kind: "suspended", ...ids };
+          if (isGreetingExpired(greeting.activatedAt)) return { kind: "expired", ...ids };
+          if (access?.state === "SCHEDULED") return { kind: "scheduled", ...ids };
+          if (access?.state !== "OPEN") return { kind: "blocked" }; // fail closed
+          return { kind: "active", ...ids };
         }
         return { kind: "draft", qrId: qr.id, greetingId: greeting.id, partnerId: qr.partnerId };
       }

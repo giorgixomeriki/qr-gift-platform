@@ -9,8 +9,11 @@
  * behind it and no partner operation needs the credential any more. So:
  *   - ADMIN:   always (support/reprints; admins can read greetings anyway)
  *   - PARTNER: only while the card is AVAILABLE
- * and partners see a claimed card's lifecycle only as "USED" — never whether
- * a greeting is being written, live, or blocked.
+ * Partners see a card's business status as admins do — AVAILABLE, DRAFT
+ * (a greeting is being written: NOT a sale, NOT paid) or ACTIVE (paid
+ * activation) — so the two dashboards never disagree (owner decision
+ * 2026-11-21). A moderated card stays "USED" for partners: moderation is not
+ * theirs to see. Credentials still follow isCredentialReleasable only.
  *
  * This limits what the PLATFORM hands out. It cannot un-know a token a
  * partner copied while the card was still available (see PRIVACY_MODEL.md).
@@ -21,8 +24,8 @@
 
 export type CredentialViewer = "ADMIN" | "PARTNER";
 
-/** What a partner is told about a card: unclaimed, or used — nothing finer. */
-export type PartnerQrStatus = "AVAILABLE" | "USED";
+/** What a partner is told about a card. BLOCKED is shown as USED. */
+export type PartnerQrStatus = "AVAILABLE" | "DRAFT" | "ACTIVE" | "USED";
 export type InventoryQrStatus = PartnerQrStatus | "DRAFT" | "ACTIVE" | "BLOCKED";
 
 export type InventoryQrRow = {
@@ -45,7 +48,8 @@ export function maskPublicToken(publicToken: string): string {
 
 export function statusForViewer(viewer: CredentialViewer, qrStatus: string): InventoryQrStatus {
   if (viewer === "ADMIN") return qrStatus as InventoryQrStatus;
-  return qrStatus === "AVAILABLE" ? "AVAILABLE" : "USED";
+  if (qrStatus === "AVAILABLE" || qrStatus === "DRAFT" || qrStatus === "ACTIVE") return qrStatus;
+  return "USED";
 }
 
 /** The only shape QR rows leave the server in for the inventory UI — no raw row, no timestamps, no token unless releasable. */

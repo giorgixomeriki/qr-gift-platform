@@ -157,3 +157,65 @@ the world's rest state.
 |---|---|---|
 | Wax seal with the Starr spark | `src/components/customer/wax-seal.tsx` (inline SVG) | Drawn for QR Starr; uses the brand `SPARK_PATH` from `src/components/ui/logo.tsx`. Recolourable via `--cx-seal-*` tokens. Press animation in `globals.css`. |
 | Blind-embossed Starr maker's mark | `src/components/customer/starr-emboss.tsx` (inline SVG filter) | Drawn for QR Starr from `SPARK_PATH`; no ink, edges only. |
+
+## vintage/ (Luxury Vintage, the seventh world — added 2026-10-22)
+
+### `redoute-rose-720.{avif,webp}`, `redoute-rose-seal-160.{avif,webp}`
+
+| Field | Value |
+|---|---|
+| Source | Cleveland Museum of Art Open Access — Pierre-Joseph Redouté (engraved by Henry Joseph Redouté), *Les Roses: Rosa Damascena, subalba*, 1817–24 (accession 1965.291) |
+| Source URL | https://clevelandart.org/art/1965.291 (image: openaccess-cdn.clevelandart.org/1965.291/1965.291_print.jpg) |
+| Licence | Creative Commons CC0 1.0 — stated per object by the museum's API (`share_license_status: "CC0"`) |
+| Commercial use | Allowed · Attribution not required (credited here) |
+| Acquired | 2026-10-22, from the Open Access API's print image (2598×3400) |
+| Modifications | Cropped to the sprig (caption removed); the plate's paper divided out and cleaned to white so it multiplies onto parchment; resized (720 px; a 160 px crop of the blooms for selector tiles); AVIF q58/WebP q80 |
+| Where used | Luxury Vintage world (`.tw__rose`, `.tw-seal__rose` in theme-world.css), its create-step letter field and envelopes (signature/vintage.css, greeting/reveal-signature.css) |
+
+### `lace-edge-640.{avif,webp}`
+
+| Field | Value |
+|---|---|
+| Source | Cleveland Museum of Art Open Access — *Lace Towel End*, 1700s–1800s (accession 1931.107) |
+| Source URL | https://clevelandart.org/art/1931.107 |
+| Licence | CC0 1.0 (museum API `share_license_status: "CC0"`) |
+| Commercial use | Allowed · Attribution not required (credited here) |
+| Acquired | 2026-10-22, Open Access API print image (3400×2629) |
+| Modifications | The scalloped lower edge cropped; the threads' luminance kept as an alpha mask (no colour); 640 px; AVIF q42/WebP q60 |
+| Where used | The Luxury Vintage closing letter's lace edge (`.sx-letter--vintage::after`, greeting/reveal-signature.css) |
+
+### `linotype-vine-{h,v}.{avif,webp}`
+
+| Field | Value |
+|---|---|
+| Source | Mergenthaler Linotype Company, *Linotype Typography: Linotype Border Proofs for Use in Making Lay-outs*, Brooklyn, 1922 — "Benedictine" border 721 (Internet Archive `linotypetypograp00merg`, digitised by BYU Harold B. Lee Library; also on Wikimedia Commons as `File:Linotype borders.djvu`) |
+| Source URL | https://archive.org/details/linotypetypograp00merg |
+| Licence | Public domain (published in the US in 1922; corporate work published > 95 years ago; Commons: "Public domain") |
+| Commercial use | Allowed |
+| Acquired | 2026-10-22, full-resolution page image `page/n18.jpg` (2591×4251) |
+| Modifications | One border row cut out; ink converted to an alpha mask and inverted (the vine, not the block, is kept); four repeat periods (found by autocorrelation) as a seamless tile, 96 px tall; a rotated copy for the vertical edges; AVIF/WebP. Printed in a gold-leaf gradient via CSS mask |
+| Where used | The Luxury Vintage frame (`.tw__vine`), its letter field and envelope sheet |
+
+### `parchment-fibre-512.{avif,webp}`
+
+| Field | Value |
+|---|---|
+| Source | ambientCG — "Paper 006" |
+| Source URL | https://ambientcg.com/a/Paper006 |
+| Licence | CC0 1.0 — https://docs.ambientcg.com/license/ |
+| Commercial use | Allowed · Attribution not required (credited here) |
+| Acquired | 2026-10-22, `Paper006_1K-JPG.zip` (Color map) |
+| Modifications | Luminance high-passed around mid-grey (fibre relief only, no colour), made seamless, 512 px; AVIF q45/WebP q60 |
+| Where used | Luxury Vintage parchment (card, letter field, envelope sheet, closing letter), blended soft-light over #f3e7cf |
+
+Fonts for this world (`public/fonts/themes/`): IM Fell English (Igino Marini, from the Fell Types; `OFL-imfellenglish.txt`) and Pinyon Script (The Pinyon Project Authors; `OFL-pinyonscript.txt`), both SIL OFL 1.1, from github.com/google/fonts; Latin subset, woff2.
+
+## Reuse on the public home page (2026-10-21, design/public-site-redesign)
+
+No new external assets. These listed assets are also used, unmodified, by `src/components/site/home/home.css` on `/`:
+window-light-900 (hero light), romantic-leaves-rest (hero leaf shadow), paper-tooth-256 and linen-rough-256 (paper and linen),
+entry-stationery-mobile-640, celebration-sky-rest and celebration-room (photo prints and video poster in the illustrated phone and greeting tiles).
+Celebration's Mixkit footage is not redistributed as footage: only the existing still frames are shown, inside the product illustration.
+
+Update 2026-10-22: the home page now uses its own licensed photography in `public/site/photos/` (19 Unsplash photos, each checked as free under the Unsplash License). They are registered in `docs/design/site-redesign/ASSETS.md`, not here. The celebration stills and the stationery photo are no longer used on the home page; window-light and the paper and linen textures still are.
+

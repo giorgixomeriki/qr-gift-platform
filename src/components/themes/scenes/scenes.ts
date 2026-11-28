@@ -110,6 +110,33 @@ function minimal(ctx: SceneContext, tl: Timeline) {
   tl.from(q(ctx, ".tw__opening"), { opacity: 0, duration: 0.9 }, 3.6).from(q(ctx, ".tw__hairline"), { scaleX: 0, transformOrigin: "left", duration: 1.1, ease: "power2.inOut" }, 3.3);
 }
 
+/**
+ * Luxury Vintage — "The keepsake letter": candlelight on the desk; the parchment is laid down; the gold vine
+ * frame is printed edge by edge; the Redouté rose appears as if pressed into the page; the opening is written
+ * in script; the words are inked; the wax seal is pressed.
+ */
+function keepsake(ctx: SceneContext, tl: Timeline) {
+  const { cq } = ctx;
+  tl.from(q(ctx, ".tw__candle"), { opacity: 0, scale: 0.85, duration: 1.8, ease: "power1.out" }, 0);
+  tl.from(q(ctx, ".tw__card"), { opacity: 0, y: cq(12), rotation: -5, duration: 1.3, ease: "qs-settle" }, 0.3);
+  const [top, right, bottom, left] = qa(ctx, ".tw__vine i");
+  if (top && right && bottom && left) {
+    tl.fromTo(top, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 0.55, ease: "none", clearProps: "clipPath" }, 1.1)
+      .fromTo(right, { clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0 0 0% 0)", duration: 0.55, ease: "none", clearProps: "clipPath" }, 1.65)
+      .fromTo(bottom, { clipPath: "inset(0 0 0 100%)" }, { clipPath: "inset(0 0 0 0%)", duration: 0.55, ease: "none", clearProps: "clipPath" }, 2.2)
+      .fromTo(left, { clipPath: "inset(100% 0 0 0)" }, { clipPath: "inset(0% 0 0 0)", duration: 0.55, ease: "power1.out", clearProps: "clipPath" }, 2.75);
+  }
+  grow(tl, 1.4, q(ctx, ".tw__rose"), "bottom", 1.8);
+  tl.from(q(ctx, ".tw__opening"), { opacity: 0, y: cq(2), duration: 1.2, ease: "power2.out" }, 1.6);
+  inkLines(ctx, tl, 2.3, [q(ctx, ".tw__message")!], { stagger: 0.2 });
+  const wax = q(ctx, ".tw__wax");
+  if (wax) {
+    tl.from(wax, { scale: 1.35, opacity: 0, rotation: -12, duration: 0.55, ease: "power2.out" }, 3.5)
+      .to(wax, { scale: 0.9, duration: 0.16, ease: "power2.in" }, 4.05)
+      .to(wax, { scale: 1, duration: 0.45, ease: "back.out(3)" }, 4.21);
+  }
+}
+
 /** One signature scene per authored composition — every template set in a composition shares its story. */
 export const SCENES: Record<CompositionId, (ctx: SceneContext, tl: Timeline) => void> = {
   "quiet-light": romantic,
@@ -118,4 +145,5 @@ export const SCENES: Record<CompositionId, (ctx: SceneContext, tl: Timeline) => 
   signal: celebration,
   "ink-and-stone": elegant,
   "just-words": minimal,
+  keepsake,
 };

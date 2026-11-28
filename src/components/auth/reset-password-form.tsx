@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { meetsPasswordPolicy, PASSWORD_MIN_LENGTH_PUBLIC } from "@/lib/partners/login-rules";
 import { PasswordField } from "./password-field";
 
 const LOGIN_HREF: Record<string, string> = {
@@ -15,7 +16,7 @@ const LOGIN_HREF: Record<string, string> = {
   partner: "/partner/login",
 };
 
-const MIN_LENGTH = 6;
+const MIN_LENGTH = PASSWORD_MIN_LENGTH_PUBLIC;
 
 export function ResetPasswordForm() {
   const t = useTranslations("auth");
@@ -34,6 +35,10 @@ export function ResetPasswordForm() {
     e.preventDefault();
     setError(null);
 
+    if (!meetsPasswordPolicy(password)) {
+      setError(t("passwordRule", { min: MIN_LENGTH }));
+      return;
+    }
     if (password !== confirmPassword) {
       setError(t("passwordMismatch"));
       return;
@@ -46,7 +51,13 @@ export function ResetPasswordForm() {
 
     if (updateError) {
       console.error("[resetPassword]", updateError.message);
-      setError(/should be different|same/i.test(updateError.message) ? t("passwordSameAsOld") : t("resetFailed"));
+      setError(
+        updateError.code === "weak_password"
+          ? t("passwordRule", { min: MIN_LENGTH })
+          : /should be different|same/i.test(updateError.message)
+            ? t("passwordSameAsOld")
+            : t("resetFailed"),
+      );
       return;
     }
     setSucceeded(true);

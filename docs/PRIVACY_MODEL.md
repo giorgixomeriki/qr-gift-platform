@@ -32,11 +32,11 @@ the card (`AVAILABLE -> DRAFT`), and nothing a Partner does afterwards
 
 | Surface | Partner gets | Admin gets |
 |---|---|---|
-| Dashboard inventory (`/partner/dashboard`) | Full token + QR image link only for `AVAILABLE` cards; claimed cards show a masked label (`••••7YUC`), status **Used**, no link. Only the shaped row (`InventoryQrRow`) reaches the browser — never the raw DB row. | Everything |
-| CSV export (`/api/qr/batches/:id/export`) | Token + URL for `AVAILABLE` cards; claimed cards masked, empty URL, status `USED` | Everything |
+| Dashboard inventory (`/partner/dashboard`) | Full token + QR image link only for `AVAILABLE` cards; claimed cards show a masked label (`••••7YUC`), their business status (**Draft** / **Activated**; a moderated card shows **Used**), no link. Only the shaped row (`InventoryQrRow`) reaches the browser — never the raw DB row. | Everything |
+| CSV export (`/api/qr/batches/:id/export`) | Token + URL for `AVAILABLE` cards; claimed cards masked, empty URL, status `DRAFT` / `ACTIVE` (`USED` for a moderated card) | Everything |
 | Print sheet (`/print/batch/:id`) | Only `AVAILABLE` cards | Every card (reprints) |
 | QR image (`/api/qr/:id`) | `AVAILABLE` cards only; otherwise 404 (not 403 — doesn't confirm state) | Every card |
-| Card lifecycle | `Available` / `Used` only — never draft vs live vs blocked. Aggregate counts on the dashboard are unchanged. | Real status |
+| Card lifecycle | `Available` / `Draft` / `Activated` — the same terms as the admin (owner decision 2026-11-21: Draft is not a sale). Moderation is never shown: a blocked card reads `Used`. | Real status |
 | Greeting content / media | Nothing: no partner-facing module reads `greeting_content` or issues media URLs; RLS gives a partner context no content and (since `0012`) no extra greeting visibility; the Storage bucket is private with no partner policy | Via moderation |
 
 The rule lives in one place: `src/lib/qr/credential-access.ts`.

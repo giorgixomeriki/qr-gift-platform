@@ -224,10 +224,22 @@ checklist, once written), redeploy forward normally.
 
 ---
 
+## Rehearsal record: database restore (scenarios 1 and 2), 2026-11-21
+
+Rehearsed against the real production backup, in a disposable local scratch database. Production was only read.
+1. `scripts/ops/prod-backup.sh pre0023-bog` created the backup. It runs `pg_dump --format=custom` (pg_dump 17 for server 17.11) and records the sha256. It then restores the dump with privileges into a throwaway database and compares the `scripts/ops/backup-fingerprint.sql` results: schema, exact row counts, the full-content md5 of every table, and money totals. Result: 120/120 identical.
+2. Scenario 2 rehearsal:
+   - the same dump was restored into a separate scratch database, and its fingerprint was identical to production;
+   - the pending forward migrations (0023 + 0024) were applied there with `src/db/migrate.ts`;
+   - the end state was checked: ledger 25, new objects present, grants correct, no existing data changed.
+3. Expected `pg_restore` errors when restoring as `postgres` into a plain database: about 31, all Supabase platform objects (`supabase_admin` / `supabase_auth_admin` default privileges, `vault`, `realtime`, `pg_catalog`). They don't affect application data. Check `vault.secrets` is empty, or recreate its secrets by hand.
+4. The scratch database held production personal data and was dropped right after.
+
+Not covered by the dump: Supabase Storage **files** (only `storage.objects` metadata). See §3.
+
 ## What this document deliberately does not claim
 
-No scenario above has been rehearsed against a real database in this
-session. "Recovery" steps describe the correct procedure given this
+Apart from the database-restore rehearsal recorded above (2026-11-21), no scenario has been rehearsed against a real database. "Recovery" steps describe the correct procedure given this
 codebase's actual architecture (forward-only migrations, no in-app admin
 recovery flow, Supabase-managed backups) — they are not a report that a
 drill was run and succeeded. Before the pilot goes live, at least the

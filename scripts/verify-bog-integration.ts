@@ -1,7 +1,8 @@
 import Module from "node:module";
-import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { generateKeyPairSync, sign } from "node:crypto";
+import { sign } from "node:crypto";
+import { createHash } from "node:crypto";
+import { ALL_CHECKOUT_CONSENTS } from "../src/lib/payments/checkout-codes";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,6 +50,15 @@ const postgres = require("postgres") as typeof import("postgres");
  *     (REFUND_PENDING) — that would return the money twice.
  * 16. A second capture on a PAID order is refunded through BOG; while in
  *     flight it is not listed as an unrefunded DUPLICATE_CAPTURE.
+ * 17. Staging payment fence (PAYMENTS_SCOPE_PARTNER_ID): orders of any other
+ *     partner (e.g. simulator leftovers) never reach BOG — no payment, no
+ *     receipt lookup, no refund — and nothing is written for them; scoped
+ *     reconciliation reports and repairs the fenced partner only; the fenced
+ *     partner's own orders still work end to end.
+ * 18. Minimum-amount lifecycle (staging test plan, 1.00 GEL = the app's
+ *     MIN_PRICE_MINOR): BOG receives exactly 1, success / cancel / missed
+ *     callback / full refund all settle on 100 tetri with a 30 / 70 split;
+ *     below the floor is refused by the admin validation.
  */
 
 const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
@@ -74,142 +84,7 @@ async function attempt<T>(fn: () => Promise<T>): Promise<{ ok: true; value: T } 
   }
 }
 
-// ---------------------------------------------------------------------------
-// BOG simulator
-// ---------------------------------------------------------------------------
-const { publicKey, privateKey } = generateKeyPairSync("rsa", { modulusLength: 2048 });
-const forger = generateKeyPairSync("rsa", { modulusLength: 2048 });
-
-type BogOrder = {
-  id: string;
-  externalOrderId: string;
-  status: string;
-  requestAmount: number;
-  transferAmount: number | null;
-  refundAmount: number;
-  currency: string;
-  actions: { action_id: string; action: string; status: string; amount: number }[];
-};
-type Seen = { method: string; path: string; headers: Record<string, string>; body: unknown };
-
-const RUN = crypto.randomUUID().slice(0, 8);
-const bog = {
-  orders: new Map<string, BogOrder>(),
-  calls: [] as Seen[],
-  /** When set, the next refund calls answer with this HTTP status instead. */
-  refundFailStatus: null as number | null,
-  /** Override of what the receipt reports as transfer_amount (amount-mismatch case). */
-  transferOverride: new Map<string, number>(),
-  seq: 0,
-};
-
-function receiptOf(o: BogOrder) {
-  return {
-    order_id: o.id,
-    external_order_id: o.externalOrderId,
-    order_status: { key: o.status },
-    purchase_units: {
-      request_amount: o.requestAmount,
-      transfer_amount: bog.transferOverride.get(o.id) ?? o.transferAmount,
-      refund_amount: o.refundAmount,
-      currency_code: o.currency,
-    },
-    payment_detail: { transfer_method: { key: "card" }, transaction_id: `tx-${o.id}`, payer_identifier: "548888xxxxxx1234", card_type: "mc" },
-    actions: o.actions,
-  };
-}
-
-async function readBody(req: IncomingMessage): Promise<string> {
-  const chunks: Buffer[] = [];
-  for await (const c of req) chunks.push(c as Buffer);
-  return Buffer.concat(chunks).toString("utf8");
-}
-
-function send(res: ServerResponse, status: number, json?: unknown) {
-  res.writeHead(status, { "Content-Type": "application/json" });
-  res.end(json === undefined ? "" : JSON.stringify(json));
-}
-
-const server = createServer(async (req, res) => {
-  const raw = await readBody(req);
-  const path = (req.url ?? "").split("?")[0]!;
-  const headers: Record<string, string> = {};
-  for (const [k, v] of Object.entries(req.headers)) if (typeof v === "string") headers[k] = v;
-  const body = raw.startsWith("{") ? JSON.parse(raw) : raw;
-  if (path === "/token") {
-    const ok = headers.authorization === `Basic ${Buffer.from("qa-client:qa-secret").toString("base64")}` && raw === "grant_type=client_credentials";
-    if (!ok) return send(res, 401, { error: "invalid_client" });
-    return send(res, 200, { access_token: "qa-access-token", token_type: "Bearer", expires_in: 3600 });
-  }
-  bog.calls.push({ method: req.method ?? "", path, headers, body });
-  if (headers.authorization !== "Bearer qa-access-token") return send(res, 401, { key: "unauthorized" });
-
-  if (req.method === "POST" && path === "/ecommerce/orders") {
-    const b = body as { external_order_id: string; purchase_units: { total_amount: number; currency: string } };
-    // Same Idempotency-Key → same order (as BOG documents).
-    const key = headers["idempotency-key"];
-    const existing = [...bog.orders.values()].find((o) => (o as BogOrder & { key?: string }).key === key);
-    const order = existing ?? {
-      id: `bog-${RUN}-${++bog.seq}`,
-      externalOrderId: b.external_order_id,
-      status: "created",
-      requestAmount: b.purchase_units.total_amount,
-      transferAmount: null,
-      refundAmount: 0,
-      currency: b.purchase_units.currency,
-      actions: [],
-      key,
-    };
-    bog.orders.set(order.id, order);
-    return send(res, 200, { id: order.id, _links: { details: { href: `https://api.bog.ge/payments/v1/receipt/${order.id}` }, redirect: { href: `https://payment.bog.ge/?order_id=${order.id}` } } });
-  }
-  const receiptMatch = path.match(/^\/receipt\/(.+)$/);
-  if (req.method === "GET" && receiptMatch) {
-    const o = bog.orders.get(decodeURIComponent(receiptMatch[1]!));
-    return o ? send(res, 200, receiptOf(o)) : send(res, 404, { key: "not_found" });
-  }
-  const refundMatch = path.match(/^\/payment\/refund\/(.+)$/);
-  if (req.method === "POST" && refundMatch) {
-    if (bog.refundFailStatus) return send(res, bog.refundFailStatus, { key: "unavailable" });
-    const o = bog.orders.get(decodeURIComponent(refundMatch[1]!));
-    if (!o || o.status !== "completed") return send(res, 400, { key: "refund_not_allowed" });
-    const key = headers["idempotency-key"]!;
-    const prior = o.actions.find((a) => a.action_id === `act-${key}`);
-    if (!prior) {
-      o.actions.push({ action_id: `act-${key}`, action: "refund", status: "processing", amount: (body as { amount: number }).amount });
-      o.status = "refund_requested";
-    }
-    return send(res, 200, { key: "request_received", message: "Refund request received", action_id: `act-${key}` });
-  }
-  return send(res, 404, { key: "no_route" });
-});
-
-/** Bank-side state changes, as BOG would make them. */
-function complete(id: string) {
-  const o = bog.orders.get(id)!;
-  o.status = "completed";
-  o.transferAmount = o.requestAmount;
-}
-function reject(id: string) {
-  bog.orders.get(id)!.status = "rejected";
-}
-function settleRefund(id: string, outcome: "completed" | "rejected") {
-  const o = bog.orders.get(id)!;
-  const a = o.actions.at(-1)!;
-  a.status = outcome;
-  if (outcome === "completed") {
-    o.status = "refunded";
-    o.refundAmount = o.transferAmount ?? 0;
-  } else {
-    o.status = "completed";
-  }
-}
-function externalRefund(id: string) {
-  const o = bog.orders.get(id)!;
-  o.status = "refunded";
-  o.refundAmount = o.transferAmount ?? 0;
-  o.actions.push({ action_id: "act-portal", action: "refund", status: "completed", amount: o.refundAmount });
-}
+const { bog, server, publicKey, privateKey, forger, complete, reject, settleRefund, externalRefund } = require("./lib-bog-simulator") as typeof import("./lib-bog-simulator");
 
 async function main() {
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
@@ -225,7 +100,27 @@ async function main() {
     BOG_WEBHOOK_SIGNING_KEY: publicKey.export({ type: "spki", format: "pem" }).toString(),
     CHECKOUT_ENABLED: "true",
     BOG_REFUNDS_ENABLED: "true",
+    // Real checkout also needs the policies in force (checkout-gate.ts).
+    LEGAL_EFFECTIVE_DATE: "2026-01-01",
   });
+  // The real policy copy still carries lawyer/owner notes, so the legal-readiness
+  // gate keeps real checkout closed; these suites test the money path, so they
+  // use the same copy with the notes removed (refused in production).
+  {
+    const L = require("../src/lib/site/legal-readiness") as typeof import("../src/lib/site/legal-readiness");
+    L.setLegalCopyForTesting(L.finalizedCopyForTesting());
+    // …and every merchant detail the policies name (test values, never real ones).
+    const merchantTest: Record<string, string> = {
+      MERCHANT_LEGAL_NAME_KA: "ი/მ ტესტი", MERCHANT_LEGAL_NAME_EN: "IE Test", MERCHANT_ENTITY_TYPE: "IE",
+      MERCHANT_ID_CODE: "01234567890", MERCHANT_PUBLISH_ID_CODE: "owner-approved",
+      MERCHANT_LEGAL_ADDRESS_KA: "თბილისი, ტესტის ქ. 1", MERCHANT_LEGAL_ADDRESS_EN: "1 Test St, Tbilisi", MERCHANT_PUBLISH_LEGAL_ADDRESS: "owner-approved",
+      MERCHANT_ACTUAL_ADDRESS_KA: "თბილისი, ტესტის ქ. 2", MERCHANT_ACTUAL_ADDRESS_EN: "2 Test St, Tbilisi",
+      MERCHANT_SUPPORT_EMAIL: "support@verify.test", MERCHANT_PHONE: "+995555000000",
+      MERCHANT_SUPPORT_HOURS_KA: "ორშ–პარ, 10:00–18:00", MERCHANT_SUPPORT_HOURS_EN: "Mon–Fri, 10:00–18:00",
+    };
+    for (const [k, v] of Object.entries(merchantTest)) process.env[k] ??= v;
+  }
+  delete process.env.MERCHANT_PROFILE;
   delete process.env.ALLOW_TEST_PAYMENTS;
   delete process.env.VERCEL;
 
@@ -233,11 +128,15 @@ async function main() {
   const { generatePublicToken } = require("../src/lib/security/public-token") as typeof import("../src/lib/security/public-token");
   const { startGreeting } = require("../src/lib/greetings/start") as typeof import("../src/lib/greetings/start");
   const { updateGreetingMessage } = require("../src/lib/greetings/content") as typeof import("../src/lib/greetings/content");
-  const { getOrCreateCheckoutOrder, checkPaymentReturn } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
+  const { getOrCreateCheckoutOrder, checkPaymentReturn, acceptCheckoutTerms, consentTextSha256 } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
   const { CheckoutUnavailableError } = require("../src/lib/payments/checkout-gate") as typeof import("../src/lib/payments/checkout-gate");
-  const { refundPaidOrder, findPaymentAnomalies } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
+  const { refundPaidOrder, findPaymentAnomalies, createPaymentAttempt } = require("../src/lib/payments/service") as typeof import("../src/lib/payments/service");
   const { reconcileOrderRefunds } = require("../src/lib/payments/refunds") as typeof import("../src/lib/payments/refunds");
   const { handleProviderWebhook } = require("../src/lib/payments/webhook") as typeof import("../src/lib/payments/webhook");
+  const { runPaymentReconciliation, ReconcileScopeError } = require("../src/lib/payments/reconcile") as typeof import("../src/lib/payments/reconcile");
+  const { setPartnerPriceSchema } = require("../src/lib/validation/pricing") as typeof import("../src/lib/validation/pricing");
+  const { MIN_PRICE_MINOR } = require("../src/lib/payments/split") as typeof import("../src/lib/payments/split");
+  const { PaymentScopeError } = require("../src/lib/payments/scope") as typeof import("../src/lib/payments/scope");
   const { GET: cronReconcile } = require("../src/app/api/cron/payments-reconcile/route") as typeof import("../src/app/api/cron/payments-reconcile/route");
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mutableEnv = env as any;
@@ -273,8 +172,9 @@ async function main() {
   async function newOrder(p = standard) {
     const g = await newGreeting(p);
     const { summary } = await getOrCreateCheckoutOrder(g.greetingId, g.editToken);
+    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "ka", ALL_CHECKOUT_CONSENTS);
     const [pay] = await admin`select provider_payment_id from payments where order_id = ${summary.orderId} and status = 'PENDING'`;
-    return { ...g, orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl: summary.redirectUrl };
+    return { ...g, orderId: summary.orderId, bogId: pay!.provider_payment_id as string, redirectUrl };
   }
   const callbackBody = (bogId: string, claim: Record<string, unknown> = {}) =>
     JSON.stringify({ event: "order_payment", zoned_request_time: new Date().toISOString(), body: { order_id: bogId, ...claim } });
@@ -296,6 +196,51 @@ async function main() {
     check("1a. CHECKOUT_ENABLED=false: checkout refused as closed", !r.ok && r.error === new CheckoutUnavailableError().message, r.ok ? "opened" : r.error);
     check("1b. …no order created and nothing sent to BOG", n === 0 && bog.calls.length === before);
     mutableEnv.CHECKOUT_ENABLED = true;
+  }
+
+  console.log("\n--- 1c. Policies must be in force; consent precedes the bank payment ---");
+  {
+    const g = await newGreeting();
+    process.env.LEGAL_EFFECTIVE_DATE = "";
+    const unset = await attempt(() => getOrCreateCheckoutOrder(g.greetingId, g.editToken));
+    process.env.LEGAL_EFFECTIVE_DATE = "2999-01-01";
+    const future = await attempt(() => getOrCreateCheckoutOrder(g.greetingId, g.editToken));
+    process.env.LEGAL_EFFECTIVE_DATE = "2026-01-01";
+    check("1c. Without an effective date, or before it, real checkout is closed", !unset.ok && !future.ok && unset.error === new CheckoutUnavailableError().message && future.error === new CheckoutUnavailableError().message);
+
+    const before = bog.calls.length;
+    const { summary } = await getOrCreateCheckoutOrder(g.greetingId, g.editToken);
+    const [{ n: attemptsBefore }] = (await admin`select count(*)::int as n from payments where order_id = ${summary.orderId}`) as unknown as [{ n: number }];
+    check("1d. Entering checkout opens our order but no BOG payment (no redirect before consent)", attemptsBefore === 0 && bog.calls.filter((c) => c.path === "/ecommerce/orders").length === bog.calls.slice(0, before).filter((c) => c.path === "/ecommerce/orders").length && !("redirectUrl" in summary));
+
+    // Both consents are required server-side: anything less records nothing and opens no BOG payment.
+    const { ConsentRequiredError, isFullCheckoutConsent } = require("../src/lib/payments/checkout") as typeof import("../src/lib/payments/checkout");
+    const bogBefore = bog.calls.filter((c) => c.path === "/ecommerce/orders").length;
+    const partial = [undefined, null, {}, { terms: true }, { immediateActivation: true }, { terms: "true", immediateActivation: true }, { terms: true, immediateActivation: 1 }];
+    let allRefused = true;
+    for (const c of partial) {
+      try { await acceptCheckoutTerms(g.greetingId, g.editToken, "en", c as never); allRefused = false; } catch (e) { if (!(e instanceof ConsentRequiredError)) allRefused = false; }
+    }
+    const [{ n: rowsAfterPartial }] = (await admin`select count(*)::int as n from checkout_consents where order_id = ${summary.orderId}`) as unknown as [{ n: number }];
+    check("1d2. Missing or partial consent (terms only, activation only, non-boolean values) → refused, no consent row, no BOG payment",
+      allRefused && rowsAfterPartial === 0 && bog.calls.filter((c) => c.path === "/ecommerce/orders").length === bogBefore);
+    check("1d3. isFullCheckoutConsent accepts only { terms: true, immediateActivation: true }",
+      isFullCheckoutConsent(ALL_CHECKOUT_CONSENTS) && partial.every((c) => !isFullCheckoutConsent(c)));
+    const msgs = { ka: require("../src/messages/ka.json"), en: require("../src/messages/en.json") } as Record<"ka" | "en", { wizard: { checkout: { legal: { consent: string; activationConsent: string } } } }>;
+    check("1d4. The recorded hash covers both sentences shown (terms + immediate activation / withdrawal)",
+      (["ka", "en"] as const).every((l) => consentTextSha256(l) === createHash("sha256").update(`${msgs[l].wizard.checkout.legal.consent}\n${msgs[l].wizard.checkout.legal.activationConsent}`, "utf8").digest("hex")));
+    const { redirectUrl } = await acceptCheckoutTerms(g.greetingId, g.editToken, "en", ALL_CHECKOUT_CONSENTS);
+    const consents = await admin`select order_id, greeting_id, locale, consent_text_sha256, policies_effective_date::text as d, accepted_at from checkout_consents where order_id = ${summary.orderId}`;
+    const [pay] = await admin`select created_at from payments where order_id = ${summary.orderId}`;
+    check(
+      "1e. Consent is recorded against that order (language, hash of the exact sentence, effective date) before the BOG payment",
+      consents.length === 1 && consents[0]!.greeting_id === g.greetingId && consents[0]!.locale === "en" && consents[0]!.consent_text_sha256 === consentTextSha256("en") && consents[0]!.d === "2026-01-01" && !!pay && new Date(consents[0]!.accepted_at as string) <= new Date(pay.created_at as string) && redirectUrl?.startsWith("https://payment.bog.ge/") === true,
+      JSON.stringify(consents),
+    );
+    check("1f. The Georgian and English consent sentences hash differently (the evidence names the language shown)", consentTextSha256("ka") !== consentTextSha256("en"));
+    const other = await newGreeting();
+    const forged = await attempt(() => acceptCheckoutTerms(other.greetingId, g.editToken, "ka", ALL_CHECKOUT_CONSENTS));
+    check("1g. Another greeting's edit token cannot record consent", !forged.ok);
   }
 
   console.log("\n--- 2. Checkout ---");
@@ -490,8 +435,17 @@ async function main() {
   console.log("\n--- 16. Second capture on a PAID order ---");
   {
     const o = await newOrder();
-    const again = await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry: a second BOG attempt
-    const [second] = await admin`select provider_payment_id from payments where order_id = ${again.summary.orderId} and status = 'PENDING' and provider_payment_id <> ${o.bogId}`;
+    const reentry = await getOrCreateCheckoutOrder(o.greetingId, o.editToken); // re-entry while BOG's page is open
+    const again = await attempt(() => acceptCheckoutTerms(o.greetingId, o.editToken, "en", ALL_CHECKOUT_CONSENTS)); // consent again
+    check("16-. M1 guard: re-entry waits for the bank, a second consent opens no second BOG payment", reentry.awaitingProvider === true && !again.ok && again.error === "A payment for this card is still being processed");
+    // A second charge can still happen outside that guard (an attempt opened
+    // before the guard existed, or a race between two tabs): open it directly.
+    const [orderFull] = await admin`select o.*, q.public_token from orders o join qr_codes q on q.id = o.qr_code_id where o.id = ${o.orderId}`;
+    await createPaymentAttempt(
+      { ...orderFull, id: orderFull!.id, grossAmountMinor: orderFull!.gross_amount_minor, currency: orderFull!.currency, productId: orderFull!.product_id, qrCodeId: orderFull!.qr_code_id } as never,
+      orderFull!.public_token as string,
+    );
+    const [second] = await admin`select provider_payment_id from payments where order_id = ${o.orderId} and status = 'PENDING' and provider_payment_id <> ${o.bogId}`;
     const bog2 = second!.provider_payment_id as string;
     complete(o.bogId);
     complete(bog2);
@@ -506,6 +460,250 @@ async function main() {
     await callback(callbackBody(bog2));
     const [p2after] = await admin`select status from payments where provider_payment_id = ${bog2}`;
     check("16c. BOG confirms → that charge REFUNDED; order stays PAID, commission untouched", p2after?.status === "REFUNDED" && (await orderRow(o.orderId)).status === "PAID" && (await ledger(o.orderId)) === "COMMISSION_EARNED:300");
+  }
+
+  console.log("\n--- 17. Staging payment fence (PAYMENTS_SCOPE_PARTNER_ID) ---");
+  {
+    // Out-of-scope fixtures, made BEFORE the fence (as the simulator did):
+    // a PAID order, a pending one, one with a refund stuck REQUESTED, and a
+    // greeting with an open order but no consent yet.
+    const outPaid = await newOrder();
+    complete(outPaid.bogId);
+    await callback(callbackBody(outPaid.bogId));
+    const outPending = await newOrder();
+    const outStuck = await newOrder();
+    complete(outStuck.bogId);
+    await callback(callbackBody(outStuck.bogId));
+    bog.refundFailStatus = 503;
+    await refundPaidOrder(adminUserId, outStuck.orderId);
+    bog.refundFailStatus = null;
+    const outFresh = await newGreeting();
+    await getOrCreateCheckoutOrder(outFresh.greetingId, outFresh.editToken);
+    const outCallbackOrder = await newOrder();
+    complete(outCallbackOrder.bogId);
+    // In-scope fixtures (the fenced partner = `custom`).
+    const inStale = await newOrder(custom);
+    // Both pending attempts look stale (> 30 min) to reconciliation.
+    await admin`update payments set created_at = now() - interval '2 hours' where order_id in (${outPending.orderId}, ${inStale.orderId})`;
+    complete(inStale.bogId);
+
+    mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = custom.partnerId;
+    const counts = async () =>
+      (await admin`select (select count(*) from payment_refunds)::int as refunds, (select count(*) from payments)::int as payments, (select count(*) from checkout_consents)::int as consents, (select count(*) from audit_logs)::int as audits`)[0]!;
+
+    const before = await counts();
+    const callsBefore = bog.calls.length;
+    const refundOut = await attempt(() => refundPaidOrder(adminUserId, outPaid.orderId));
+    const reconOut = await attempt(() => reconcileOrderRefunds(outStuck.orderId));
+    const verifyOut = await attempt(() => checkPaymentReturn(outPending.greetingId, outPending.editToken));
+    const payOut = await attempt(() => acceptCheckoutTerms(outFresh.greetingId, outFresh.editToken, "ka", ALL_CHECKOUT_CONSENTS));
+    const after = await counts();
+    const scopeMsg = (r: { ok: boolean; error?: string }) => !r.ok && /outside this deployment's payment scope/.test((r as { error: string }).error);
+    check("17a. Admin refund of another partner's PAID order: refused, nothing sent to BOG", scopeMsg(refundOut) && !bog.calls.slice(callsBefore).some((c) => c.path.startsWith("/payment/refund/")), JSON.stringify(refundOut));
+    check("17b. A refund stuck REQUESTED on another partner's order: not re-sent, BOG not asked", scopeMsg(reconOut), JSON.stringify(reconOut));
+    check("17c. The return-page check on another partner's pending order: refused, no receipt lookup", scopeMsg(verifyOut), JSON.stringify(verifyOut));
+    check("17d. Pay on another partner's greeting: refused before consent and before any BOG order", scopeMsg(payOut), JSON.stringify(payOut));
+    check("17e. …all four made zero BOG calls and zero writes (refunds, payments, consents, audit log)", bog.calls.length === callsBefore && after.refunds === before.refunds && after.payments === before.payments && after.consents === before.consents && after.audits === before.audits, JSON.stringify({ before, after, calls: bog.calls.length - callsBefore }));
+    check("17f. The stuck refund is still REQUESTED, the PAID order untouched", (await refundRows(outStuck.orderId))[0]?.status === "REQUESTED" && (await orderRow(outPaid.orderId)).status === "PAID" && (await ledger(outPaid.orderId)) === "COMMISSION_EARNED:300");
+
+    const cbBefore = await counts();
+    const cb = await callback(callbackBody(outCallbackOrder.bogId));
+    const cbAfter = await counts();
+    check("17g. A genuine BOG callback for another partner's order: 400, order still PENDING_PAYMENT, nothing written", cb.status === 400 && (await orderRow(outCallbackOrder.orderId)).status === "PENDING_PAYMENT" && cbAfter.payments === cbBefore.payments && cbAfter.refunds === cbBefore.refunds, JSON.stringify(cb));
+
+    const reconCallsFrom = bog.calls.length;
+    const recon = await runPaymentReconciliation(adminUserId, { apply: true });
+    const reconCalls = bog.calls.slice(reconCallsFrom);
+    const touchedOut = recon.actions.some((a) => [outPending.orderId, outStuck.orderId, outPaid.orderId].includes(a.orderId));
+    check("17h. Scoped reconciliation lists only the fenced partner's anomalies", recon.scope?.partnerId === custom.partnerId && recon.anomalies.length > 0 && recon.scope.excluded > 0 && recon.anomalies.every((a) => a.orderId === inStale.orderId), JSON.stringify({ scope: recon.scope, kinds: recon.anomalies.map((a) => a.kind) }));
+    check("17i. …and repairs only it: the in-scope stale order is settled from BOG's receipt", !touchedOut && (await orderRow(inStale.orderId)).status === "PAID" && reconCalls.length > 0 && reconCalls.every((c) => c.path === "/token" || c.path.includes(inStale.bogId)) && (await orderRow(outPending.orderId)).status === "PENDING_PAYMENT" && (await refundRows(outStuck.orderId))[0]?.status === "REQUESTED", JSON.stringify({ actions: recon.actions, paths: reconCalls.map((c) => c.path) }));
+    const mismatch = await attempt(() => runPaymentReconciliation(adminUserId, { apply: false, partnerId: standard.partnerId }));
+    check("17j. Asking reconciliation for a different partner than the fence is refused", !mismatch.ok && mismatch.error === new ReconcileScopeError().message);
+
+    const inPaid = await newOrder(custom);
+    complete(inPaid.bogId);
+    const inCb = await callback(callbackBody(inPaid.bogId));
+    const inRefund = await refundPaidOrder(adminUserId, inPaid.orderId);
+    check("17k. The fenced partner's own order still works: callback → PAID, refund sent to BOG (pending)", inCb.status === 200 && inRefund.pending === true && (await refundRows(inPaid.orderId))[0]?.status === "REQUESTED" && bog.calls.some((c) => c.path === `/payment/refund/${inPaid.bogId}`));
+
+    mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = "not-a-partner";
+    const garbage = await attempt(() => refundPaidOrder(adminUserId, outPaid.orderId));
+    check("17l. A fence that matches no partner refuses everything (fail-closed)", !garbage.ok && garbage.error.includes("payment scope"));
+    check("17m. PaymentScopeError is a distinct, named error", new PaymentScopeError("x").name === "PaymentScopeError");
+    mutableEnv.PAYMENTS_SCOPE_PARTNER_ID = undefined;
+    const unfenced = await runPaymentReconciliation(adminUserId, { apply: false });
+    check("17n. Without the fence (production) reconciliation is unscoped, as before", unfenced.scope === undefined && unfenced.anomalies.some((a) => a.orderId === outPending.orderId && a.kind === "STALE_PENDING"));
+  }
+
+  console.log("\n--- 18. Minimum-amount lifecycle (1.00 GEL) ---");
+  {
+    check("18a. The app's price floor is 1.00 GEL; 0.10 GEL is refused by the admin price validation", MIN_PRICE_MINOR === 100 && !setPartnerPriceSchema.safeParse({ amountMinor: 10, expectedAmountMinor: 1000 }).success && setPartnerPriceSchema.safeParse({ amountMinor: 100, expectedAmountMinor: 1000 }).success);
+    const minimum = await newPartner(3000, 100);
+    const qrStatus = async (greetingId: string) => (await admin`select q.status from qr_codes q join greetings g on g.qr_code_id = q.id where g.id = ${greetingId}`)[0]!.status as string;
+
+    // Success via callback.
+    const ok = await newOrder(minimum);
+    const create = bog.calls.filter((c) => c.path === "/ecommerce/orders").find((c) => (c.body as { external_order_id: string }).external_order_id === ok.orderId)?.body as { purchase_units: { total_amount: number; basket: { unit_price: number; quantity: number }[] } } | undefined;
+    check("18b. Order snapshot 100 = 30 + 70; BOG receives total_amount 1 and unit_price 1 × 1", (await orderRow(ok.orderId)).gross_amount_minor === 100 && (await orderRow(ok.orderId)).partner_commission_minor === 30 && create?.purchase_units.total_amount === 1 && create.purchase_units.basket[0]!.unit_price === 1 && create.purchase_units.basket[0]!.quantity === 1, JSON.stringify(create?.purchase_units));
+    complete(ok.bogId);
+    const cb = await callback(callbackBody(ok.bogId));
+    const cb2 = await callback(callbackBody(ok.bogId));
+    check("18c. Success callback → PAID, greeting + QR ACTIVE, one 30 commission; duplicate callback changes nothing", cb.status === 200 && cb2.status === 200 && (await orderRow(ok.orderId)).status === "PAID" && (await greetingStatus(ok.greetingId)) === "ACTIVE" && (await qrStatus(ok.greetingId)) === "ACTIVE" && (await ledger(ok.orderId)) === "COMMISSION_EARNED:30");
+
+    // Full refund, asynchronous at BOG.
+    const refundCallsBefore = bog.calls.length;
+    const r = await refundPaidOrder(adminUserId, ok.orderId);
+    const refundCall = bog.calls.slice(refundCallsBefore).find((c) => c.path === `/payment/refund/${ok.bogId}`);
+    check("18d. Full refund sends amount 1 with an Idempotency-Key; pending until BOG confirms; no reversal yet", r.pending === true && (refundCall?.body as { amount: number } | undefined)?.amount === 1 && /^[0-9a-f-]{36}$/.test(refundCall?.headers["idempotency-key"] ?? "") && (await ledger(ok.orderId)) === "COMMISSION_EARNED:30");
+    settleRefund(ok.bogId, "completed");
+    await callback(callbackBody(ok.bogId));
+    check("18e. BOG confirms → REFUNDED, commission reversed exactly once (+30, −30)", (await orderRow(ok.orderId)).status === "REFUNDED" && (await ledger(ok.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+
+    // Cancel on BOG's page, then pay again.
+    const c = await newOrder(minimum);
+    reject(c.bogId);
+    await callback(callbackBody(c.bogId));
+    check("18f. Cancelled/rejected → order FAILED, no commission, greeting DRAFT", (await orderRow(c.orderId)).status === "FAILED" && (await ledger(c.orderId)) === "" && (await greetingStatus(c.greetingId)) === "DRAFT");
+    const retry = await getOrCreateCheckoutOrder(c.greetingId, c.editToken);
+    check("18g. …and Pay works again (a new order at the same 100 snapshot)", retry.summary.orderId !== c.orderId && retry.summary.grossAmountMinor === 100);
+
+    // Missed callback: the return-page check settles from the receipt.
+    const m = await newOrder(minimum);
+    complete(m.bogId);
+    const ret = await checkPaymentReturn(m.greetingId, m.editToken);
+    check("18h. Missed callback → return-page check settles from BOG's receipt (PAID, activated)", ret.status === "PAID" && ret.activated === true && (await ledger(m.orderId)) === "COMMISSION_EARNED:30");
+
+    // A receipt reporting 0.10 for a 1.00 order is refused.
+    const mm = await newOrder(minimum);
+    complete(mm.bogId);
+    bog.transferOverride.set(mm.bogId, 0.1);
+    const mmr = await callback(callbackBody(mm.bogId));
+    bog.transferOverride.delete(mm.bogId);
+    check("18i. BOG reporting 0.10 for a 1.00 order → refused (400), nothing paid", mmr.status === 400 && (await orderRow(mm.orderId)).status === "PENDING_PAYMENT");
+  }
+
+  console.log("\n--- 19. Refund edge cases (M6 readiness) ---");
+  {
+    const m19 = await newPartner(3000, 100);
+    const qrStatus19 = async (greetingId: string) => (await admin`select q.status from qr_codes q join greetings g on g.qr_code_id = q.id where g.id = ${greetingId}`)[0]!.status as string;
+    const refundCalls = (bogId: string) => bog.calls.filter((c) => c.path === `/payment/refund/${bogId}`);
+    const paidOrder = async () => {
+      const o = await newOrder(m19);
+      complete(o.bogId);
+      await callback(callbackBody(o.bogId));
+      return o;
+    };
+
+    // Concurrent admin clicks: one refund row, one call to BOG.
+    const c = await paidOrder();
+    const results = await Promise.allSettled([0, 1, 2].map(() => refundPaidOrder(adminUserId, c.orderId)));
+    const rowsC = await refundRows(c.orderId);
+    check("19a. Three concurrent refund requests → ONE refund row, ONE call to BOG (one bank refund action), none failed",
+      results.every((r) => r.status === "fulfilled") && rowsC.length === 1 && refundCalls(c.bogId).length === 1,
+      JSON.stringify({ results: results.map((r) => r.status === "fulfilled" ? r.value : String(r.reason)), rows: rowsC.length, calls: refundCalls(c.bogId).length }));
+
+    // BOG accepts the refund but the answer is lost (timeout after bank-side success).
+    const t = await paidOrder();
+    bog.refundLoseResponseStatus = 504;
+    const lost = await attempt(() => refundPaidOrder(adminUserId, t.orderId));
+    bog.refundLoseResponseStatus = null;
+    const rowsT = await refundRows(t.orderId);
+    check("19b. Bank accepted, answer lost → refund REQUESTED (not failed, not done), order still PAID, commission untouched",
+      lost.ok && rowsT.length === 1 && rowsT[0]!.status === "REQUESTED" && (await orderRow(t.orderId)).status === "PAID" && (await ledger(t.orderId)) === "COMMISSION_EARNED:30",
+      JSON.stringify({ lost, rowsT }));
+    const callsT0 = refundCalls(t.bogId).length;
+    const cT = await reconcileOrderRefunds(t.orderId);
+    check("19c. Reconciliation sees BOG's refund_requested and does NOT send a second refund", cT.pending === 1 && refundCalls(t.bogId).length === callsT0, JSON.stringify(cT));
+    settleRefund(t.bogId, "completed");
+    const doneT = await reconcileOrderRefunds(t.orderId);
+    check("19d. …BOG completes it (transfer_amount now 0) → REFUNDED, commission reversed once, no callback needed",
+      doneT.completed === 1 && (await orderRow(t.orderId)).status === "REFUNDED" && (await ledger(t.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+    const cbT = await callback(callbackBody(t.bogId));
+    check("19e. A late refund callback afterwards changes nothing (200, same ledger)", cbT.status === 200 && (await ledger(t.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+    {
+      // Refund Model C (migrations/0029): kept, but no longer public.
+      const { resolveQrState } = require("../src/lib/qr/resolve-state") as typeof import("../src/lib/qr/resolve-state");
+      const token19 = (await admin`select q.public_token from qr_codes q join greetings g on g.qr_code_id = q.id where g.id = ${t.greetingId}`)[0]!.public_token as string;
+      check("19f. After the full refund the greeting and QR are kept (not deleted) but public access is suspended (Model C)",
+        (await greetingStatus(t.greetingId)) === "ACTIVE" && (await qrStatus19(t.greetingId)) === "ACTIVE" && (await resolveQrState(token19)).kind === "suspended");
+    }
+    check("19g. A refunded order can't be refunded again (no BOG call)",
+      (await refundPaidOrder(adminUserId, t.orderId)).alreadyRefunded === true && refundCalls(t.bogId).length === callsT0);
+
+    // Accepted, answer lost, and the automatic retry is answered 409 (conflict while in flight).
+    const k = await paidOrder();
+    bog.refundLoseFirstAnswer = true;
+    bog.refundRepeatStatus = 409;
+    const callsK0 = bog.calls.filter((c) => c.path === `/payment/refund/${k.bogId}`).length;
+    const firstTry = await attempt(() => refundPaidOrder(adminUserId, k.orderId));
+    bog.refundLoseFirstAnswer = false;
+    bog.refundRepeatStatus = null;
+    check("19l0. (setup) the client retried the same key after the lost answer", bog.calls.filter((c) => c.path === `/payment/refund/${k.bogId}`).length >= callsK0 + 2);
+    const rowsK = await refundRows(k.orderId);
+    check("19l. Bank accepted, answer lost, retry answered 409 → NOT rejected: kept REQUESTED (the receipt shows refund_requested)",
+      rowsK.length === 1 && rowsK[0]!.status === "REQUESTED" && (await orderRow(k.orderId)).status === "PAID" &&
+      !(await findPaymentAnomalies(adminUserId)).some((a) => a.kind === "REFUND_REJECTED" && a.orderId === k.orderId), JSON.stringify({ firstTry, rowsK }));
+    settleRefund(k.bogId, "completed");
+    await callback(callbackBody(k.bogId));
+    check("19m. …then BOG's callback completes it: REFUNDED, commission reversed once", (await orderRow(k.orderId)).status === "REFUNDED" && (await ledger(k.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30");
+
+    // Worst case: answer lost, retry answered 409, AND the receipt lags (shows no refund yet).
+    const lag = await paidOrder();
+    bog.refundLoseFirstAnswer = true;
+    bog.refundRepeatStatus = 409;
+    bog.receiptHidesPendingRefund = true;
+    const lagTry = await attempt(() => refundPaidOrder(adminUserId, lag.orderId));
+    const lagRows = await refundRows(lag.orderId);
+    check("19o. Lost answer + 409 retry + lagging receipt → still REQUESTED (an uncertain answer is never a final REJECTED)",
+      lagRows.length === 1 && lagRows[0]!.status === "REQUESTED" && (await orderRow(lag.orderId)).status === "PAID", JSON.stringify({ lagTry, lagRows }));
+    bog.refundLoseFirstAnswer = false;
+    bog.refundRepeatStatus = null;
+    bog.receiptHidesPendingRefund = false;
+    const lagCalls0 = bog.calls.filter((c) => c.path === `/payment/refund/${lag.bogId}`).length;
+    const lagRec = await reconcileOrderRefunds(lag.orderId);
+    check("19p. …reconciliation then sees refund_requested and sends nothing new", lagRec.pending === 1 && bog.calls.filter((c) => c.path === `/payment/refund/${lag.bogId}`).length === lagCalls0);
+    settleRefund(lag.bogId, "completed");
+    await reconcileOrderRefunds(lag.orderId);
+    const lagMoney = bog.orders.get(lag.bogId)!.actions.filter((a) => a.action === "refund").length;
+    check("19q. …completes once: REFUNDED, one reversal, and BOG holds exactly ONE refund action for the order",
+      (await orderRow(lag.orderId)).status === "REFUNDED" && (await ledger(lag.orderId)) === "COMMISSION_EARNED:30,COMMISSION_REVERSAL:-30" && lagMoney === 1);
+
+    // A genuine refusal (bank holds no refund) is still REJECTED.
+    const g = await paidOrder();
+    bog.refundFailStatus = 400;
+    const gr = await attempt(() => refundPaidOrder(adminUserId, g.orderId));
+    bog.refundFailStatus = null;
+    check("19n. A real refusal (no refund at the bank) → REJECTED and listed REFUND_REJECTED",
+      !gr.ok && (await refundRows(g.orderId))[0]!.status === "REJECTED" && (await findPaymentAnomalies(adminUserId)).some((a) => a.kind === "REFUND_REJECTED" && a.orderId === g.orderId));
+
+    // The bank shows a status this integration doesn't know (e.g. a reversal reported differently).
+    const u = await paidOrder();
+    await refundPaidOrder(adminUserId, u.orderId);
+    const callsU0 = refundCalls(u.bogId).length;
+    bog.orders.get(u.bogId)!.status = "reversed_unknown";
+    const cU = await reconcileOrderRefunds(u.orderId);
+    const cbU = await callback(callbackBody(u.bogId));
+    check("19h. Unknown bank status after a refund request: nothing booked, nothing re-sent, refund stays REQUESTED",
+      cU.pending === 1 && cbU.status === 200 && refundCalls(u.bogId).length === callsU0 && (await refundRows(u.orderId))[0]!.status === "REQUESTED" &&
+      (await orderRow(u.orderId)).status === "PAID" && (await ledger(u.orderId)) === "COMMISSION_EARNED:30", JSON.stringify({ cU, cb: cbU.status }));
+    await admin.begin(async (t) => {
+      // Fixture only: pretend the request is 2 h old (the integrity trigger forbids this for real).
+      await t`set local session_replication_role = replica`;
+      await t`update payment_refunds set requested_at = now() - interval '2 hours' where order_id = ${u.orderId}`;
+    });
+    check("19i. …and after 1 h it is listed for a person (REFUND_AWAITING_PROVIDER)",
+      (await findPaymentAnomalies(adminUserId)).some((a) => a.kind === "REFUND_AWAITING_PROVIDER" && a.orderId === u.orderId));
+
+    // Wrong BOG order id: the refund goes only to the charge's own provider id.
+    const w = await paidOrder();
+    const before = bog.calls.length;
+    const refundTotal0 = bog.calls.filter((x) => x.path.startsWith("/payment/refund/")).length;
+    await refundPaidOrder(adminUserId, w.orderId);
+    const sent = bog.calls.slice(before).filter((x) => x.path.startsWith("/payment/refund/"));
+    check("19j. The refund is addressed to exactly this order's BOG id (amount 1)",
+      sent.length === 1 && sent[0]!.path === `/payment/refund/${w.bogId}` && (sent[0]!.body as { amount: number }).amount === 1);
+    check("19k. Refund of an unknown order id is refused before BOG is called",
+      !(await attempt(() => refundPaidOrder(adminUserId, crypto.randomUUID()))).ok && bog.calls.filter((x) => x.path.startsWith("/payment/refund/")).length === refundTotal0 + 1);
   }
 
   console.log(`\n${passed} passed, ${failed} failed`);

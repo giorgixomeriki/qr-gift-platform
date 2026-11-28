@@ -6,19 +6,29 @@ import { verifyGreetingEditAccess, InvalidEditTokenError } from "./access";
 import { isThemeKey, type ThemeKey } from "@/lib/themes/registry";
 import { getTemplate } from "@/lib/templates/catalog";
 import { greetingMessageSchema } from "@/lib/validation/greeting-text";
-import { validateMediaUpload, allowedMimeTypesFor, type SupportedContentType } from "@/lib/validation/content-types";
+import { validateMediaUpload, allowedMimeTypesFor, MEDIA_SLOT_LIMITS, type SupportedContentType } from "@/lib/validation/content-types";
 import { buildStorageKey, createSignedUploadUrl, createSignedReadUrl, deleteStorageObject } from "@/lib/storage/media";
 import { verifyUploadedContentMatchesMime, ContentVerificationError } from "@/lib/storage/verify-upload";
 import { recordAnalyticsEvent } from "@/lib/analytics";
+import { parseMusicInput, toStoredMusic, type MusicParseError, type MusicRef } from "@/lib/music/link";
+import { checkCountdownInstant, checkUnlockInstant, isValidTimeZone, zonedWallTimeToUtc, type ScheduleError } from "./schedule";
+import { countdownInputSchema, parseStoredCountdown, serializeCountdown, type CountdownInput, type EventCountdown } from "./countdown";
 
 export { InvalidEditTokenError };
 export class ContentActionError extends Error {}
+/** A rejected music link; `code` is mapped to localized copy by the client (never the raw input). */
+export class MusicLinkError extends ContentActionError {
+  constructor(readonly code: MusicParseError) {
+    super(`Invalid music link: ${code}`);
+  }
+}
 
-const SLOT_LIMITS: Record<Extract<SupportedContentType, "photo" | "video" | "audio">, number> = {
-  photo: 3,
-  video: 1,
-  audio: 1,
-};
+/** A refused date/time; `code` is mapped to localized copy by the client. */
+export class ScheduleInputError extends ContentActionError {
+  constructor(readonly code: ScheduleError | "before_unlock" | "invalid_input") {
+    super(`Invalid schedule: ${code}`);
+  }
+}
 
 /**
  * qr_codes is fully publicly readable by RLS design (qr_codes_select: `using
@@ -72,6 +82,23 @@ export async function loadDraftForEdit(greetingId: string, editToken: string) {
   };
 }
 
+/**
+ * A fresh signed URL for the draft's saved voice message (the sender's
+ * Preview plays it long after the upload signed it). Same edit-token gate and
+ * editable-greeting context as loadDraftForEdit; READY rows only.
+ */
+export async function signDraftVoiceUrl(greetingId: string, editToken: string): Promise<string | null> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  const [row] = await withEditableGreeting(greetingId, (tx) =>
+    tx
+      .select({ storageKey: greetingContent.storageKey })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "audio"), eq(greetingContent.status, "READY")))
+      .limit(1),
+  );
+  return row?.storageKey ? createSignedReadUrl(row.storageKey) : null;
+}
+
 export async function updateGreetingTheme(greetingId: string, editToken: string, themeKey: string) {
   await verifyGreetingEditAccess(greetingId, editToken);
   if (!isThemeKey(themeKey)) throw new ContentActionError("Unknown theme");
@@ -111,6 +138,45 @@ export async function updateGreetingMessage(greetingId: string, editToken: strin
 }
 
 /**
+ * "Our Song": attach (or replace) the greeting's one Spotify track/playlist or
+ * YouTube video. Same shape as the message: one greeting_content row (type
+ * "music", slot 0, status READY) whose text_value is the canonical
+ * `spotify:<kind>:<id>` / `youtube:<kind>:<id>` (lib/music/link.ts) —
+ * never the sender's raw input. Serialized per greeting so two quick saves
+ * can never leave two music rows. Other content rows are never touched, so
+ * editing the message/media can't drop the song and vice versa.
+ */
+export async function setGreetingMusic(greetingId: string, editToken: string, rawLink: string): Promise<MusicRef> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  const parsed = parseMusicInput(rawLink);
+  if (!parsed.ok) throw new MusicLinkError(parsed.error);
+  const uri = toStoredMusic(parsed.music);
+
+  await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-music:${greetingId}`}))`);
+    const rows = await tx
+      .select({ id: greetingContent.id })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "music")));
+    const [keep, ...extra] = rows;
+    if (keep) {
+      await tx.update(greetingContent).set({ textValue: uri, slot: 0, status: "READY", updatedAt: sql`now()` }).where(eq(greetingContent.id, keep.id));
+    } else {
+      await tx.insert(greetingContent).values({ greetingId, type: "music", slot: 0, textValue: uri, status: "READY" });
+    }
+    for (const r of extra) await tx.delete(greetingContent).where(eq(greetingContent.id, r.id));
+  });
+
+  return parsed.music;
+}
+
+/** Removes the greeting's song (idempotent: removing nothing is fine). */
+export async function removeGreetingMusic(greetingId: string, editToken: string): Promise<void> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  await withEditableGreeting(greetingId, (tx) => tx.delete(greetingContent).where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "music"))));
+}
+
+/**
  * Step 1 of a media upload: allocates a content row + a short-lived signed
  * Storage upload URL. The declared mimeType/sizeBytes are validated against
  * the allowlist (lib/validation/content-types.ts) purely to decide whether
@@ -125,7 +191,7 @@ export async function requestMediaUpload(
   await verifyGreetingEditAccess(greetingId, editToken);
   const validated = validateMediaUpload({ type: input.type, slot: input.slot, mimeType: input.mimeType, sizeBytes: input.sizeBytes });
 
-  const limit = SLOT_LIMITS[input.type];
+  const limit = MEDIA_SLOT_LIMITS[input.type];
   if (validated.slot < 0 || validated.slot >= limit) {
     throw new ContentActionError(`${input.type} supports at most ${limit} item(s)`);
   }
@@ -250,3 +316,99 @@ export async function markPreviewViewed(greetingId: string, editToken: string) {
 }
 
 export { allowedMimeTypesFor };
+
+/**
+ * Scheduled Reveal: when the recipient may open the greeting. `null` = as
+ * soon as it is activated. The wall time is converted to an instant here, on
+ * the server, in the zone the sender chose (lib/greetings/schedule.ts); the
+ * client's own conversion is never trusted. Editable only while DRAFT (edit
+ * token + greetings_update_by_token RLS), frozen afterwards (DB trigger).
+ *
+ * Refused when a countdown is already set for a moment before the new unlock
+ * time: the recipient could never see that countdown counting.
+ */
+export async function setGreetingSchedule(
+  greetingId: string,
+  editToken: string,
+  input: { date: string; time: string; timeZone: string } | null,
+): Promise<{ unlockAt: string | null; timeZone: string | null }> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  if (input === null) {
+    await withEditableGreeting(greetingId, (tx) =>
+      tx.update(greetings).set({ unlockAt: null, unlockTimeZone: null, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId)),
+    );
+    return { unlockAt: null, timeZone: null };
+  }
+  if (typeof input.date !== "string" || typeof input.time !== "string" || !isValidTimeZone(input.timeZone)) throw new ScheduleInputError("invalid_input");
+  const zoned = zonedWallTimeToUtc(input.date, input.time, input.timeZone);
+  if (!zoned.ok) throw new ScheduleInputError(zoned.error);
+  const problem = checkUnlockInstant(zoned.instant);
+  if (problem) throw new ScheduleInputError(problem);
+
+  await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-schedule:${greetingId}`}))`);
+    const [row] = await tx
+      .select({ textValue: greetingContent.textValue })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "countdown")))
+      .limit(1);
+    const countdown = parseStoredCountdown(row?.textValue);
+    if (countdown && new Date(countdown.at).getTime() <= zoned.instant.getTime()) throw new ScheduleInputError("before_unlock");
+    await tx.update(greetings).set({ unlockAt: zoned.instant, unlockTimeZone: input.timeZone, updatedAt: sql`now()` }).where(eq(greetings.id, greetingId));
+  });
+  return { unlockAt: zoned.instant.toISOString(), timeZone: input.timeZone };
+}
+
+/**
+ * Celebration Countdown: attach (or replace) the greeting's one countdown.
+ * Stored like "Our Song" — one greeting_content row, slot 0, READY — so it is
+ * gated exactly like the message (migrations/0030). Serialized per greeting
+ * (shared lock with the schedule) so two quick saves never leave two rows.
+ */
+export async function setGreetingCountdown(greetingId: string, editToken: string, raw: CountdownInput): Promise<EventCountdown> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  const parsed = countdownInputSchema.safeParse(raw);
+  if (!parsed.success) throw new ScheduleInputError("invalid_input");
+  const input = parsed.data;
+  const zoned = zonedWallTimeToUtc(input.date, input.time, input.timeZone);
+  if (!zoned.ok) throw new ScheduleInputError(zoned.error);
+  const problem = checkCountdownInstant(zoned.instant);
+  if (problem) throw new ScheduleInputError(problem);
+
+  const countdown: EventCountdown = {
+    title: input.title,
+    at: zoned.instant.toISOString(),
+    timeZone: input.timeZone,
+    style: input.style,
+    note: input.note || null,
+    occasion: input.occasion,
+  };
+  const value = serializeCountdown(countdown);
+
+  await withEditableGreeting(greetingId, async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`greeting-schedule:${greetingId}`}))`);
+    const [g] = await tx.select({ unlockAt: greetings.unlockAt }).from(greetings).where(eq(greetings.id, greetingId)).limit(1);
+    if (g?.unlockAt && zoned.instant.getTime() <= g.unlockAt.getTime()) throw new ScheduleInputError("before_unlock");
+    const rows = await tx
+      .select({ id: greetingContent.id })
+      .from(greetingContent)
+      .where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "countdown")));
+    const [keep, ...extra] = rows;
+    if (keep) {
+      await tx.update(greetingContent).set({ textValue: value, slot: 0, status: "READY", updatedAt: sql`now()` }).where(eq(greetingContent.id, keep.id));
+    } else {
+      await tx.insert(greetingContent).values({ greetingId, type: "countdown", slot: 0, textValue: value, status: "READY" });
+    }
+    for (const r of extra) await tx.delete(greetingContent).where(eq(greetingContent.id, r.id));
+  });
+
+  return countdown;
+}
+
+/** Removes the greeting's countdown (idempotent). */
+export async function removeGreetingCountdown(greetingId: string, editToken: string): Promise<void> {
+  await verifyGreetingEditAccess(greetingId, editToken);
+  await withEditableGreeting(greetingId, (tx) =>
+    tx.delete(greetingContent).where(and(eq(greetingContent.greetingId, greetingId), eq(greetingContent.type, "countdown"))),
+  );
+}

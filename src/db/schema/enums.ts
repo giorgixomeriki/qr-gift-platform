@@ -24,6 +24,19 @@ export const qrDistributionStatusEnum = pgEnum("qr_distribution_status", [
   "DISTRIBUTED",
 ]);
 
+/**
+ * Physical card handover from central stock to a partner (migrations/0026).
+ * PENDING reserves the cards; only the receiving partner can make it ACCEPTED
+ * (which moves ownership); DISPUTED keeps the reservation for an admin.
+ */
+export const qrHandoverStatusEnum = pgEnum("qr_handover_status", [
+  "PENDING",
+  "DISPUTED",
+  "ACCEPTED",
+  "REJECTED",
+  "CANCELLED",
+]);
+
 /** Greeting content lifecycle. Authoritative for moderation/content state. */
 export const greetingStatusEnum = pgEnum("greeting_status", [
   "DRAFT",
@@ -44,6 +57,10 @@ export const partnerStatusEnum = pgEnum("partner_status", [
   "ACTIVE",
   "SUSPENDED",
 ]);
+
+export const partnerInvitationChannelEnum = pgEnum("partner_invitation_channel", ["EMAIL", "PHONE"]);
+export const partnerInvitationPurposeEnum = pgEnum("partner_invitation_purpose", ["ACTIVATION", "RECOVERY"]);
+export const partnerInvitationStatusEnum = pgEnum("partner_invitation_status", ["PENDING", "ACCEPTED", "REVOKED"]);
 
 export const contentStatusEnum = pgEnum("content_status", [
   "PENDING",

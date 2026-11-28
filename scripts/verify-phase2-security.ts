@@ -1,6 +1,7 @@
 import Module from "node:module";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { resolveSecretKey } from "../src/lib/supabase/keys";
 
 // Same server-only shim as the other verify-*.ts scripts.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -34,7 +35,7 @@ if (!migrationsUrl) throw new Error("MIGRATIONS_DATABASE_URL is required");
 const admin = postgres(migrationsUrl, { max: 1 });
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const serviceRoleKey = resolveSecretKey(process.env)!.key;
 const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? "greeting-media";
 const storage = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
 

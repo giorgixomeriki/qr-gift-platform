@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
-import { getSessionUser } from "@/lib/auth/session";
-import { checkIsAdmin, withUserContext } from "@/db/client";
+import { resolveOperatorViewer } from "@/lib/auth/admin";
+import { ADMIN_MFA_CHALLENGE_PATH } from "@/lib/auth/assurance";
+import { withUserContext } from "@/db/client";
 import { getQrBatch, listQrCodesForBatch } from "@/lib/qr/batches";
 import { getPartnerById } from "@/lib/partners/service";
 import { generateQrSvg, publicQrUrl } from "@/lib/qr/asset";
@@ -37,10 +38,10 @@ export const dynamic = "force-dynamic";
 export default async function PrintBatchPage({ params }: { params: Promise<{ batchId: string }> }) {
   const { batchId } = await params;
 
-  const user = await getSessionUser();
-  if (!user) redirect("/admin/login");
-
-  const viewer = (await checkIsAdmin(user.id)) ? "ADMIN" : "PARTNER";
+  const operator = await resolveOperatorViewer();
+  if (operator.kind === "ANONYMOUS") redirect("/admin/login");
+  if (operator.kind === "MFA_REQUIRED") redirect(ADMIN_MFA_CHALLENGE_PATH); // which forwards to enrollment if there is no factor yet
+  const { user, kind: viewer } = operator;
 
   const data = await withUserContext(user.id, async (tx) => {
     const batch = await getQrBatch(tx, batchId);
@@ -103,7 +104,9 @@ export default async function PrintBatchPage({ params }: { params: Promise<{ bat
                 <p className="font-serif text-[11pt] leading-[1.2] text-ink">{messages.headline}</p>
                 <p className="text-[7pt] leading-snug text-ink-2">{messages.instruction}</p>
               </div>
-              <p className="truncate text-[6.5pt] tracking-wide text-ink-3">{partner.name}</p>
+              {/* Central-stock cards are unsorted and may go to any store: no
+                  partner or stock name on the customer-facing card. */}
+              <p className="truncate text-[6.5pt] tracking-wide text-ink-3">{partner.isCentralStock ? "" : partner.name}</p>
             </div>
           </div>
         ))}

@@ -1,0 +1,636 @@
+/*
+ * "Where to find QR STARR" — partner locations on the home page.
+ * Uses the home page tokens (home.css --hm-*), scoped under .hm-loc.
+ *
+ * MapLibre's own stylesheet (72 KB) is NOT loaded: the few rules the map
+ * needs (canvas placement, markers, touch-action, cooperative-gesture hint)
+ * are reproduced at the end of this file, so the home page's CSS stays small
+ * and the map library itself only arrives when the section is near.
+ *
+ * Layout: phones get search → chips → map (fixed height, no layout shift)
+ * → a horizontal, snap-scrolling row of cards. From 56rem the list sits in a
+ * scrolling column beside a taller map.
+ */
+
+.hm-locations {
+  background:
+    radial-gradient(120% 70% at 85% 0%, rgb(243 226 218 / 0.55), transparent 60%),
+    var(--hm-paper);
+}
+
+.hm-loc {
+  --loc-map-h: clamp(18rem, 62vw, 22rem);
+  margin-top: clamp(2rem, 1.4rem + 2vw, 3rem);
+  display: grid;
+  gap: 1.25rem;
+}
+
+/* ---------------------------------------------------------------- tools */
+.hm-loc > *,
+.hm-loc__tools > *,
+.hm-loc__body > * {
+  min-width: 0; /* the horizontal card row must scroll, not widen the grid */
+}
+.hm-loc__tools {
+  display: grid;
+  gap: 0.875rem;
+}
+.hm-loc__label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--hm-ink-2);
+}
+.hm-loc__field {
+  position: relative;
+  max-width: 34rem;
+}
+.hm-loc__field-icon {
+  position: absolute;
+  left: 1.05rem;
+  top: 50%;
+  width: 1.15rem;
+  height: 1.15rem;
+  translate: 0 -50%;
+  color: var(--hm-wine-2);
+  pointer-events: none;
+}
+.hm-loc__field input {
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 1.25rem 0.75rem 2.9rem;
+  border-radius: 999px;
+  background: var(--hm-card);
+  color: var(--hm-ink);
+  font-size: 1rem; /* 16px: no iOS zoom-on-focus */
+  box-shadow:
+    inset 0 0 0 1px var(--hm-line-2),
+    0 1px 2px rgb(46 15 25 / 0.04);
+  transition: box-shadow 200ms var(--ease-out);
+}
+.hm-loc__field input::placeholder {
+  color: var(--hm-ink-3);
+}
+.hm-loc__field input:focus-visible {
+  outline: none;
+  box-shadow:
+    inset 0 0 0 2px var(--hm-wine-2),
+    0 0 0 4px rgb(94 31 51 / 0.1);
+}
+
+.hm-loc__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+}
+.hm-loc__chips {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: calc(-1 * var(--hm-gutter));
+  padding: 0.125rem var(--hm-gutter);
+  max-width: calc(100% + 2 * var(--hm-gutter));
+}
+.hm-loc__chips::-webkit-scrollbar {
+  display: none;
+}
+@media (min-width: 40rem) {
+  .hm-loc__chips {
+    flex-wrap: wrap;
+    overflow: visible;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+}
+.hm-loc__chip,
+.hm-loc__near {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 1.05rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--hm-ink-2);
+  background: var(--hm-card);
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
+  transition:
+    background-color 200ms var(--ease-out),
+    color 200ms var(--ease-out),
+    box-shadow 200ms var(--ease-out);
+}
+.hm-loc__chip:hover,
+.hm-loc__near:hover {
+  color: var(--hm-ink);
+  box-shadow: inset 0 0 0 1px var(--hm-wine-2);
+}
+.hm-loc__chip[aria-pressed="true"] {
+  background: var(--hm-wine);
+  color: var(--hm-cream);
+  box-shadow: none;
+}
+.hm-loc__near svg {
+  width: 1rem;
+  height: 1rem;
+  color: var(--hm-wine-2);
+}
+.hm-loc__near[aria-pressed="true"] {
+  color: var(--hm-wine);
+  box-shadow: inset 0 0 0 1.5px var(--hm-wine);
+}
+.hm-loc__near:disabled {
+  opacity: 0.7;
+}
+.hm-loc__chip:focus-visible,
+.hm-loc__near:focus-visible,
+.hm-loc-card a:focus-visible,
+.hm-loc-card button:focus-visible,
+.hm-loc__controls button:focus-visible,
+.hm-loc-pin:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: 2px;
+}
+
+.hm-loc__status {
+  font-size: 0.8125rem;
+  color: var(--hm-ink-3);
+}
+.hm-loc__warn {
+  color: var(--hm-wine);
+}
+
+/* ---------------------------------------------------------------- body */
+.hm-loc__body {
+  display: grid;
+  gap: 1rem;
+}
+@media (min-width: 56rem) {
+  .hm-loc {
+    --loc-map-h: clamp(30rem, 52vh, 36rem);
+  }
+  .hm-loc__body {
+    grid-template-columns: minmax(19rem, 25rem) minmax(0, 1fr);
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .hm-loc__mapbox {
+    order: 2;
+  }
+}
+
+/* ----------------------------------------------------------------- map */
+.hm-loc__mapbox {
+  position: relative;
+  height: var(--loc-map-h);
+  border-radius: 1.5rem;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 47px, rgb(213 198 178 / 0.35) 47px 48px),
+    repeating-linear-gradient(90deg, transparent 0 47px, rgb(213 198 178 / 0.35) 47px 48px),
+    var(--hm-paper-2);
+  box-shadow:
+    inset 0 0 0 1px var(--hm-line),
+    var(--hm-shadow-soft);
+  isolation: isolate;
+  scroll-margin-top: 5rem;
+}
+.hm-loc__map {
+  position: absolute;
+  inset: 0;
+}
+.hm-loc__veil {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--hm-ink-2);
+}
+.hm-loc__loading {
+  animation: hm-loc-breathe 1.6s ease-in-out infinite;
+}
+@keyframes hm-loc-breathe {
+  50% {
+    opacity: 0.45;
+  }
+}
+.hm-loc__controls {
+  position: absolute;
+  z-index: 3;
+  right: 0.75rem;
+  top: 0.75rem;
+  display: grid;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: rgb(252 249 243 / 0.94);
+  box-shadow: var(--hm-shadow-soft), inset 0 0 0 1px var(--hm-line);
+  backdrop-filter: blur(6px);
+}
+.hm-loc__controls button {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: var(--hm-wine);
+  transition: background-color 150ms;
+}
+.hm-loc__controls button + button {
+  border-top: 1px solid var(--hm-line);
+}
+.hm-loc__controls button:hover {
+  background: var(--hm-rose);
+}
+.hm-loc__controls svg {
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.hm-loc__attrib {
+  position: absolute;
+  z-index: 3;
+  right: 0;
+  bottom: 0;
+  padding: 0.2rem 0.6rem;
+  border-top-left-radius: 0.6rem;
+  background: rgb(252 249 243 / 0.88);
+  font-size: 0.6875rem;
+  line-height: 1.4;
+  color: var(--hm-ink-3);
+}
+.hm-loc__attrib a:hover {
+  color: var(--hm-ink);
+  text-decoration: underline;
+}
+
+/* pins */
+.hm-loc-pin {
+  position: absolute;
+  display: block;
+  width: 2.75rem; /* 44px touch target around a 30px pin */
+  height: 3.25rem;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+.hm-loc-pin[hidden] {
+  display: none !important;
+}
+.hm-loc-pin__head {
+  position: absolute;
+  left: 50%;
+  bottom: 0.4rem; /* rotated about its centre, the tip lands on the anchor */
+  width: 1.9rem;
+  height: 1.9rem;
+  translate: -50% 0;
+  rotate: -45deg;
+  border-radius: 50% 50% 50% 0;
+  background: linear-gradient(135deg, #7a3244, var(--hm-wine) 55%, var(--hm-wine-deep));
+  box-shadow:
+    0 0 0 2px var(--hm-card),
+    0 0 0 3px rgb(179 138 74 / 0.75),
+    0 8px 14px -6px rgb(46 15 25 / 0.6);
+  transition:
+    scale 220ms var(--ease-out),
+    background 220ms;
+}
+.hm-loc-pin__dot {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--hm-candle);
+}
+.hm-loc-pin:hover .hm-loc-pin__head {
+  scale: 1.08;
+}
+.hm-loc-pin.is-selected .hm-loc-pin__head {
+  scale: 1.25;
+  background: linear-gradient(135deg, #c79c5b, var(--hm-gold) 55%, #8a6630);
+  box-shadow:
+    0 0 0 2px var(--hm-card),
+    0 0 0 3px var(--hm-wine),
+    0 10px 18px -6px rgb(46 15 25 / 0.65);
+}
+.hm-loc-pin.is-selected .hm-loc-pin__dot {
+  background: var(--hm-wine-deep);
+}
+.hm-loc-you {
+  display: block;
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 50%;
+  background: #3d6f86;
+  box-shadow:
+    0 0 0 3px #fff,
+    0 0 0 9px rgb(61 111 134 / 0.18);
+}
+
+/* ---------------------------------------------------------------- list */
+.hm-loc__list {
+  display: flex;
+  gap: 0.75rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-inline: var(--hm-gutter);
+  margin-inline: calc(-1 * var(--hm-gutter));
+  padding: 0.25rem var(--hm-gutter) 1rem;
+  scrollbar-width: thin;
+  overscroll-behavior-x: contain;
+}
+.hm-loc__item {
+  flex: 0 0 min(19rem, 84%);
+  scroll-snap-align: start;
+  display: flex;
+}
+@media (min-width: 56rem) {
+  .hm-loc__list {
+    flex-direction: column;
+    overflow-x: visible;
+    overflow-y: auto;
+    max-height: var(--loc-map-h);
+    margin-inline: 0;
+    padding: 0.25rem 0.5rem 0.25rem 0.25rem;
+    scroll-snap-type: none;
+    overscroll-behavior-y: contain;
+  }
+  .hm-loc__item {
+    flex: none;
+  }
+}
+
+.hm-loc-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 1.15rem 1.2rem 1.05rem;
+  border-radius: 1.25rem;
+  background: var(--hm-card);
+  box-shadow:
+    inset 0 0 0 1px var(--hm-line),
+    0 1px 2px rgb(46 15 25 / 0.04);
+  transition:
+    box-shadow 220ms var(--ease-out),
+    transform 220ms var(--ease-out);
+}
+.hm-loc__item[data-selected] .hm-loc-card {
+  box-shadow:
+    inset 0 0 0 1.5px var(--hm-wine),
+    0 14px 28px -18px rgb(46 15 25 / 0.55);
+}
+.hm-loc-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.hm-loc-card__cat {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--hm-wine-2);
+}
+:lang(ka) .hm-loc-card__cat {
+  font-size: 0.75rem;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.hm-loc-card__test {
+  margin-left: auto;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7a4a00;
+  background: #fbe7bf;
+  box-shadow: inset 0 0 0 1px #e7c27d;
+}
+.hm-loc-card__name {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 1.375rem;
+  line-height: 1.2;
+  color: var(--hm-ink);
+}
+:lang(ka) .hm-loc-card__name {
+  font-weight: 500;
+  font-size: 1.125rem;
+  line-height: 1.4;
+}
+.hm-loc-card__branch {
+  display: block;
+  margin-top: 0.1rem;
+  font-family: var(--font-sans, inherit);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--hm-ink-2);
+}
+.hm-loc-card__addr {
+  font-size: 0.9063rem;
+  line-height: 1.5;
+  color: var(--hm-ink-2);
+}
+.hm-loc-card__area {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--hm-ink-3);
+}
+.hm-loc-card__meta {
+  font-size: 0.8125rem;
+  color: var(--hm-ink-3);
+}
+.hm-loc-card__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  min-height: 0;
+}
+.hm-loc-card__flags:empty {
+  display: none;
+}
+.hm-loc-card__stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+}
+.hm-loc-card__stock::before {
+  content: "";
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.hm-loc-card__stock--available {
+  color: #2f6b4a;
+}
+.hm-loc-card__stock--out {
+  color: var(--hm-ink-3);
+}
+.hm-loc-card__km {
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--hm-ink-2);
+}
+.hm-loc-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+.hm-loc-card__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.9rem 0.5rem 1.05rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--hm-cream);
+  background: linear-gradient(180deg, #6b2539, var(--hm-wine));
+  box-shadow: 0 8px 18px -12px rgb(46 15 25 / 0.75);
+  transition: background 200ms;
+}
+.hm-loc-card__go:hover {
+  background: linear-gradient(180deg, #78304a, #6a2539);
+}
+.hm-loc-card__go svg {
+  width: 1rem;
+  height: 1rem;
+}
+.hm-loc-card__show {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.95rem;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--hm-wine);
+  box-shadow: inset 0 0 0 1px var(--hm-line-2);
+  transition: box-shadow 200ms;
+}
+.hm-loc-card__show:hover,
+.hm-loc-card__show[aria-pressed="true"] {
+  box-shadow: inset 0 0 0 1.5px var(--hm-wine);
+}
+
+.hm-loc__empty {
+  flex: 1 0 100%;
+  display: grid;
+  justify-items: start;
+  gap: 0.25rem;
+  padding: 1.25rem;
+  border-radius: 1.25rem;
+  background: var(--hm-card);
+  box-shadow: inset 0 0 0 1px var(--hm-line);
+  color: var(--hm-ink-2);
+}
+.hm-loc__partner {
+  margin-top: clamp(1.5rem, 1rem + 1.5vw, 2.25rem);
+  font-size: 0.9375rem;
+  color: var(--hm-ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hm-loc__loading {
+    animation: none;
+  }
+  .hm-loc-pin__head,
+  .hm-loc-card {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------- MapLibre (minimal set) */
+.hm-loc .maplibregl-map {
+  overflow: hidden; /* position stays absolute (.hm-loc__map) */
+  -webkit-tap-highlight-color: rgb(0 0 0 / 0);
+  font: inherit;
+}
+.hm-loc .maplibregl-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.hm-loc .maplibregl-canvas:focus-visible {
+  outline: 2px solid var(--hm-wine-2);
+  outline-offset: -2px;
+}
+.hm-loc .maplibregl-canvas-container.maplibregl-interactive {
+  cursor: grab;
+  user-select: none;
+}
+.hm-loc .maplibregl-canvas-container.maplibregl-interactive:active {
+  cursor: grabbing;
+}
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-zoom-rotate,
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-zoom-rotate .maplibregl-canvas {
+  touch-action: pan-x pan-y;
+}
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-drag-pan,
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-drag-pan .maplibregl-canvas {
+  touch-action: pinch-zoom;
+}
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan,
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-zoom-rotate.maplibregl-touch-drag-pan .maplibregl-canvas {
+  touch-action: none;
+}
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-drag-pan.maplibregl-cooperative-gestures,
+.hm-loc .maplibregl-canvas-container.maplibregl-touch-drag-pan.maplibregl-cooperative-gestures .maplibregl-canvas {
+  touch-action: pan-x pan-y;
+}
+.hm-loc .maplibregl-marker {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+}
+.hm-loc .maplibregl-cooperative-gesture-screen {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(46 15 25 / 0.42);
+  color: var(--hm-cream);
+  font-size: 1.0625rem;
+  line-height: 1.3;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1s 1s;
+}
+.hm-loc .maplibregl-cooperative-gesture-screen.maplibregl-show {
+  opacity: 1;
+  transition: opacity 0.05s;
+}
+.hm-loc .maplibregl-cooperative-gesture-screen .maplibregl-mobile-message {
+  display: none;
+}
+@media (hover: none), (pointer: coarse) {
+  .hm-loc .maplibregl-cooperative-gesture-screen .maplibregl-desktop-message {
+    display: none;
+  }
+  .hm-loc .maplibregl-cooperative-gesture-screen .maplibregl-mobile-message {
+    display: block;
+  }
+}

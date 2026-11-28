@@ -31,3 +31,21 @@ export function logServerError(scope: string, err: unknown, context: Record<stri
     }),
   );
 }
+
+/**
+ * A structured warning for something unexpected but not failed — e.g. a
+ * provider answering with a value the integration does not know yet. Same
+ * restricted context type as logServerError: ids, counts and short codes
+ * only, never bodies, tokens, card data or amounts tied to a person.
+ */
+export function logServerWarning(scope: string, diagnostic: string, context: Record<string, LogContextValue> = {}): void {
+  console.warn(
+    JSON.stringify({
+      level: "warn",
+      scope,
+      diagnostic,
+      ...context,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+}

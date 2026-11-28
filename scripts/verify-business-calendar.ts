@@ -217,6 +217,7 @@ async function main() {
     await admin`delete from partner_ledger_entries where partner_id = ${partnerId}`;
     await admin`delete from partner_payouts where partner_id = ${partnerId}`;
     await admin`delete from payments where order_id in (select id from orders where partner_id = ${partnerId})`;
+    await admin`delete from checkout_consents where order_id in (select id from orders where partner_id = ${partnerId})`;
     await admin`delete from orders where partner_id = ${partnerId}`;
     if (greetingIds.length) {
       await admin`delete from greeting_content where greeting_id in ${admin(greetingIds)}`;

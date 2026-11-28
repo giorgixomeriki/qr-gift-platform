@@ -70,11 +70,13 @@ export async function findGreetingForModeration(tx: Tx, query: string): Promise<
 }
 
 /** DRAFT greetings nobody has touched in a while — visibility only (Phase 4 §13), never auto-recycled. */
-export async function listStaleDrafts(tx: Tx, olderThanDays: number, limit = 25) {
-  const cutoff = new Date(Date.now() - olderThanDays * 24 * 60 * 60 * 1000);
+/** Drafts nobody has touched for `olderThanHours` (by the greeting row's updated_at). */
+export async function listStaleDrafts(tx: Tx, olderThanHours: number, limit = 50) {
+  const cutoff = new Date(Date.now() - olderThanHours * 60 * 60 * 1000);
   return tx
     .select({
       greetingId: greetings.id,
+      qrCodeId: qrCodes.id,
       qrPublicToken: qrCodes.publicToken,
       partnerName: partners.name,
       createdAt: greetings.createdAt,

@@ -8,7 +8,7 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "Permissions-Policy", value: "camera=(), geolocation=(), microphone=(self)" },
+  { key: "Permissions-Policy", value: "camera=(), geolocation=(self), microphone=(self)" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
   // Content-Security-Policy is NOT set here: it needs a fresh nonce per
   // request, so middleware.ts builds it (lib/security/csp.ts). A static CSP
@@ -29,7 +29,15 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   async headers() {
     if (process.env.NODE_ENV !== "production") return [];
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      // Camera ONLY for the admin card scanner document. The policy belongs
+      // to the document, so every link into the scanner is a full page load
+      // (plain <a>, not next/link) and the scanner gets this header. Every
+      // other page — public and admin — keeps camera=(). Later entries
+      // override earlier ones for the same key.
+      { source: "/admin/inventory/scan", headers: [{ key: "Permissions-Policy", value: "camera=(self), geolocation=(), microphone=(self)" }] },
+    ];
   },
 };
 

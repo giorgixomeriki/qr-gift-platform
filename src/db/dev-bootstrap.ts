@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import { createClient } from "@supabase/supabase-js";
 import { adminUsers, partners, partnerMembers } from "./schema";
+import { resolveSecretKey } from "../lib/supabase/keys";
 
 /**
  * LOCAL DEV ONLY. Creates a throwaway admin user and a throwaway partner +
@@ -26,9 +27,9 @@ async function main() {
 
   const migrationsUrl = process.env.MIGRATIONS_DATABASE_URL;
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const serviceRoleKey = resolveSecretKey(process.env)?.key;
   if (!migrationsUrl || !supabaseUrl || !serviceRoleKey) {
-    throw new Error("MIGRATIONS_DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required");
+    throw new Error("MIGRATIONS_DATABASE_URL, NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY (or legacy SUPABASE_SERVICE_ROLE_KEY) are required");
   }
 
   const supabase = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });

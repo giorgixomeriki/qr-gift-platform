@@ -16,6 +16,45 @@ const PUBLIC_DEV_APP_RUNTIME_PASSWORD = "HH1mUPcwnyz1NGyM8jbeLsQqbwc";
 // Supabase's pooler spells users as "<role>.<project-ref>".
 const SUPERUSER_ROLES = new Set(["postgres", "supabase_admin"]);
 
+/**
+ * "Hosted" means a real deployment, never a dev machine, and turns on the
+ * guards below. It must not depend on one vendor: the guards would silently
+ * switch off on any other host. Vercel sets VERCEL=1 and Render sets
+ * RENDER=true; any other platform opts in with APP_HOSTED=true.
+ */
+export function isHostedEnvironment(env: Record<string, string | undefined>): boolean {
+  return env.VERCEL === "1" || env.RENDER === "true" || env.APP_HOSTED === "true";
+}
+
+/**
+ * Rate limiting keys on the caller's IP (lib/rate-limit/client-ip.ts), so a
+ * hosted deployment must say where its trusted proxy puts it. Vercel
+ * overwrites X-Forwarded-For itself, so its first entry is the client and no
+ * setting is needed. Other platforms (e.g. Render) may APPEND to a
+ * client-supplied header, where the first entry is attacker-controlled, so
+ * they must set TRUSTED_PROXY_COUNT or CLIENT_IP_HEADER explicitly.
+ */
+export function clientIpConfigProblems(input: {
+  hosted: boolean;
+  vercel: boolean;
+  header: string | undefined;
+  proxyCount: string | undefined;
+}): string[] {
+  const problems: string[] = [];
+  if (input.proxyCount !== undefined && !/^[1-9]$/.test(input.proxyCount)) {
+    problems.push("TRUSTED_PROXY_COUNT must be a whole number from 1 to 9");
+  }
+  if (input.header !== undefined && !/^[a-z0-9-]+$/i.test(input.header)) {
+    problems.push("CLIENT_IP_HEADER must be a plain header name, e.g. true-client-ip");
+  }
+  if (input.hosted && !input.vercel && input.header === undefined && input.proxyCount === undefined) {
+    problems.push(
+      "Outside Vercel, set TRUSTED_PROXY_COUNT (or CLIENT_IP_HEADER) so rate limiting cannot be bypassed with a spoofed X-Forwarded-For (docs/RENDER_DEPLOYMENT.md)",
+    );
+  }
+  return problems;
+}
+
 export function isLoopbackHost(hostname: string): boolean {
   return LOOPBACK_HOSTS.has(hostname.toLowerCase());
 }
@@ -119,4 +158,45 @@ export function bogUrlProblems(input: { apiBaseUrl: string; tokenUrl: string; ho
     if (host !== "bog.ge" && !host.endsWith(".bog.ge")) problems.push(`${name} must be a bog.ge host on a hosted deployment`);
   }
   return problems;
+}
+
+/**
+ * Partner login access (lib/partners/login-access.ts). Email links need a
+ * real transport with its key and a sender; the "log" transport (links in the
+ * server log) exists for local development only. Phone sign-in in a hosted
+ * deployment needs the owner to name the real SMS provider configured in
+ * Supabase Auth: there is no mock OTP path in this app, and this keeps a
+ * test-number setup from being switched on by accident.
+ */
+export function partnerAuthConfigProblems(input: {
+  hosted: boolean;
+  emailTransport?: string;
+  resendApiKey?: string;
+  emailFrom?: string;
+  phoneEnabled: boolean;
+  smsProvider?: string;
+}): string[] {
+  const problems: string[] = [];
+  if (input.emailTransport === "log" && input.hosted) {
+    problems.push("PARTNER_EMAIL_TRANSPORT=log is for local development only; use resend in a hosted deployment");
+  }
+  if (input.emailTransport === "resend") {
+    if (!input.resendApiKey) problems.push("PARTNER_EMAIL_TRANSPORT=resend requires RESEND_API_KEY");
+    if (!input.emailFrom) problems.push("PARTNER_EMAIL_TRANSPORT=resend requires PARTNER_EMAIL_FROM");
+  }
+  if (input.phoneEnabled && input.hosted && !input.smsProvider) {
+    problems.push("PARTNER_PHONE_AUTH_ENABLED=true requires PARTNER_SMS_PROVIDER (the real provider configured in Supabase Auth)");
+  }
+  return problems;
+}
+
+/**
+ * PARTNER_MAP_MOCKS=1 shows test partner locations (lib/partner-locations/flag.ts).
+ * It is for local review only; a hosted deployment refuses to boot with it.
+ */
+export function partnerMapMockProblems(env: Record<string, string | undefined>): string[] {
+  if (env.PARTNER_MAP_MOCKS && isHostedEnvironment(env)) {
+    return ["PARTNER_MAP_MOCKS must not be set on a hosted deployment — it shows test partner locations"];
+  }
+  return [];
 }

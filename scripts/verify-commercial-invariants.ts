@@ -215,6 +215,7 @@ async function main() {
   console.log("\nCleaning up fixtures...");
   await admin`delete from partner_ledger_entries where partner_id in (${partnerA}, ${partnerB})`;
   await admin`delete from payments where order_id = ${order.id}`;
+  await admin`delete from checkout_consents where order_id in (select id from orders where id = ${order.id})`;
   await admin`delete from orders where id = ${order.id}`;
   await admin`delete from greeting_content where greeting_id in (${greetingA}, ${greetingUnpaid})`;
   await admin`delete from greetings where id in (${greetingA}, ${greetingUnpaid})`;
