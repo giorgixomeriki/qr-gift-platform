@@ -77,6 +77,8 @@ export function RecipientView({
             photos={galleryPhotos}
             phrases={[]}
             galaxy={galleryPhotos.length > 0}
+            // The whole automatic opening stays within 5 s (petals 2.3 s + galaxy 1.5 s + exit 1.1 s); the recipient can go on sooner.
+            galaxyHoldMs={1500}
             labels={{ skip: tg("cinematicSkip"), openLetter: tg("cinematicOpenLetter") }}
             reveal={reveal}
             done={done}
